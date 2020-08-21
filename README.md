@@ -1,2 +1,2 @@
-# data-processing
+# Data Processing
 Scripts for data processing
