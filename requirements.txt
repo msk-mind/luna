@@ -1,1 +1,8 @@
+click
+joblib
+medpy
+numpy
+pandas
+scikit-image
+pyspark
 wheel>=0.22

@@ -38,7 +38,7 @@ Feature table and feature file location will be written under  {base_directory}/
 
 Run:
 ```
-python preprocess_feature.py --base_directory {path/to/delta/table/parent/directory} --target_spacing {x_spacing} {y_spacing} {z_spacing}
+python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {path/to/delta/table/parent/directory} --target_spacing {x_spacing} {y_spacing} {z_spacing}
 ```
 
 

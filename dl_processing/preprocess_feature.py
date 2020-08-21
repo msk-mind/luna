@@ -3,16 +3,19 @@ This module pre-processes the CE-CT acquisitions and associated segmentations an
 a DataFrame tracking the file paths of the pre-processed items, stored as NumPy ndarrays.
 
 Usage: 
-    $ python preprocess_feature.py --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing}
+    $ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing}
 Parameters: 
 - base_directory: parent directory containing /tables directory, where {base_directory}/tables/scan and {base_directory}/tables/annotation are
                   the scan and annotation delta tables
 - target_spacing: target spacing for the x,y,and z dimensions
 Example:
-    $ python preprocess_feature.py --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/radiology/ --target_spacing 1.0 1.0 3.0
+    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/radiology/ --target_spacing 1.0 1.0 3.0
 """
 import os, click
 import sys
+sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../src/') ))
+
+from sparksession import SparkConfig
 
 import numpy as np
 import pandas as pd
@@ -120,24 +123,24 @@ def resample_volume(volume, order, target_shape):
 
 
 @click.command()
-@click.option('--base_directory', type=click.Path( exists=True))
-@click.option('--target_spacing', nargs=3, type=float)
-def main(base_directory, target_spacing): 
+@click.option('-b', '--base_directory', type=click.Path( exists=True))
+@click.option('-t', '--target_spacing', nargs=3, type=float)
+@click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]')
+@click.option('-h', '--hdfs', is_flag=True, default=False, show_default=True, help="(optional) base directory is on hdfs or local filesystem")
+def main(spark_master_uri, base_directory, target_spacing, hdfs): 
 
+    if hdfs:
+        base_directory = "hdfs:///" + base_directory
+    else:
+        base_directory = "file:///" + base_directory
 
     annotation_table = os.path.join(base_directory, "tables/annotation")
     scan_table = os.path.join(base_directory, "tables/scan")
     feature_table =   os.path.join(base_directory, "features/feature_table/")
-    feature_files =  os.path.join(base_directory, "features/feature_files/")
+    feature_files =  os.path.join(base_directory, "features/feature_files/")[7:] # truncate prefix hdfs:// or file://
 
     # Setup Spark context
-    spark = SparkSession.builder \
-        .appName("create-mock-scan-annotation") \
-        .config("spark.jars.packages", "io.delta:delta-core_2.12:0.7.0") \
-        .config("spark.delta.logStore.class", "org.apache.spark.sql.delta.storage.HDFSLogStore") \
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-        .config("spark.executor.memory", "2g").config("spark.default.parallelism", "6").config("spark.cores.max", "6").getOrCreate()
+    spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri)
 
     # Load Scan and Annotaiton tables
     from delta.tables import DeltaTable
@@ -146,7 +149,7 @@ def main(base_directory, target_spacing):
 
     # Add new columns and save feature tables
     generate_preprocessed_filename_udf = udf(generate_preprocessed_filename, StringType())
-    df = annot_df.join(scan_df, ['SeriesInstanceUID', 'ct_accession', 'ring-seg','img', 'ct_dates'])
+    df = annot_df.join(scan_df, ['SeriesInstanceUID'])
 
     df = df.withColumn("preprocessed_seg_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_seg'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_img_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_img'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
