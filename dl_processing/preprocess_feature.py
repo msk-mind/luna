@@ -136,17 +136,16 @@ def cli(spark_master_uri, base_directory, target_spacing, hdfs):
 
     # Setup Spark context
     spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri)
+    generate_feature_table(base_directory, target_spacing, spark, hdfs)
 
-    generate_feature_table(base_directory, target_spacing, spark)
 
-
-def generate_feature_table(base_directory, target_spacing, spark): 
-
+def generate_feature_table(base_directory, target_spacing, spark, hdfs): 
     annotation_table = os.path.join(base_directory, "tables/annotation")
     scan_table = os.path.join(base_directory, "tables/scan")
     feature_table =   os.path.join(base_directory, "features/feature_table/")
-    feature_files =  os.path.join(base_directory, "features/feature_files/")[7:] # truncate prefix hdfs:// or file://
-
+    feature_files =  os.path.join(base_directory, "features/feature_files/") # truncate prefix hdfs:// or file://
+    if not hdfs:
+        feature_files =  feature_files[7:]  # truncate prefix file://
 
     # Load Scan and Annotaiton tables
     from delta.tables import DeltaTable
@@ -170,10 +169,12 @@ def generate_feature_table(base_directory, target_spacing, spark):
     feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
 
     # Resample segmentation and images
-    if not(os.path.exists(feature_files)):
+    # print("feature files", feature_files)
+    if not os.path.exists(feature_files) and not hdfs:
         os.mkdir(feature_files)
 
     results = Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
+
     print("Finished preprocessing.")
 
 if __name__ == "__main__":
