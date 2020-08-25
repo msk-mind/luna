@@ -27,7 +27,8 @@ def test_local_feature_table(runner):
     # os.sys("python dl_processing/preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables --target_spacing 1.0 1.0 3.0")
     feature_table_path = os.path.join(BASE_DIR, "features/feature_table")
     
-    # Read Delta Table and Verify Correct
+    # Read Delta Table and Verify 
+    feature_table = DeltaTable.forPath(SPARK, feature_table_path)
     spark.read.format("delta").load(feature_table_path)
     assert feature_table.toDF().count() == 15
     print ("Test Local feature table passed.")
