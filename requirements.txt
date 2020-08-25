@@ -5,4 +5,7 @@ numpy
 pandas
 scikit-image
 pyspark
+pytest
+pytest-cov
+pytest-runner
 wheel>=0.22
