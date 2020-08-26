@@ -13,7 +13,7 @@ Example:
 """
 import os, click
 import sys
-sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../src/') ))
+sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../') ))
 
 from sparksession import SparkConfig
 
@@ -123,29 +123,37 @@ def resample_volume(volume, order, target_shape):
 
 
 @click.command()
-@click.option('-b', '--base_directory', type=click.Path( exists=True))
+@click.option('-b', '--base_directory', type=click.Path(exists=True))
 @click.option('-t', '--target_spacing', nargs=3, type=float)
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]')
 @click.option('-h', '--hdfs', is_flag=True, default=False, show_default=True, help="(optional) base directory is on hdfs or local filesystem")
-def main(spark_master_uri, base_directory, target_spacing, hdfs): 
-
+def cli(spark_master_uri, base_directory, target_spacing, hdfs): 
+    # Set up Spark session and kick off feature table generation
     if hdfs:
         base_directory = "hdfs:///" + base_directory
     else:
         base_directory = "file:///" + base_directory
 
+    # Setup Spark context
+    spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri)
+    generate_feature_table(base_directory, target_spacing, spark, hdfs)
+
+
+def generate_feature_table(base_directory, target_spacing, spark, hdfs): 
     annotation_table = os.path.join(base_directory, "tables/annotation")
     scan_table = os.path.join(base_directory, "tables/scan")
     feature_table =   os.path.join(base_directory, "features/feature_table/")
-    feature_files =  os.path.join(base_directory, "features/feature_files/")[7:] # truncate prefix hdfs:// or file://
-
-    # Setup Spark context
-    spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri)
+    feature_files =  os.path.join(base_directory, "features/feature_files/") # truncate prefix hdfs:// or file://
+    if not hdfs:
+        feature_files =  feature_files[7:]  # truncate prefix file://
 
     # Load Scan and Annotaiton tables
     from delta.tables import DeltaTable
     annot_df = DeltaTable.forPath(spark, annotation_table).toDF()
+    annot_df.show()
     scan_df = DeltaTable.forPath(spark, scan_table).toDF()
+    scan_df.show()
+
 
     # Add new columns and save feature tables
     generate_preprocessed_filename_udf = udf(generate_preprocessed_filename, StringType())
@@ -161,10 +169,13 @@ def main(spark_master_uri, base_directory, target_spacing, hdfs):
     feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
 
     # Resample segmentation and images
-    if not(os.path.exists(feature_files)):
+    # print("feature files", feature_files)
+    if not os.path.exists(feature_files) and not hdfs:
         os.mkdir(feature_files)
 
-    Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
+    results = Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
+
+    print("Finished preprocessing.")
 
 if __name__ == "__main__":
-    main()
+    cli()    
