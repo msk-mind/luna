@@ -1,12 +1,12 @@
 import os, click, shutil
 import sys
 sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../src/') ))
-sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../dl_processing/') ))
+sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../src/dl_processing/') ))
 
 from sparksession import SparkConfig
 from unittest import TestCase, mock
 import pytest
-from preprocess_feature import *
+from preprocess_feature import cli, generate_feature_table
 from click.testing import CliRunner
 
 """
@@ -31,7 +31,7 @@ def test_local_feature_table():
     from delta.tables import DeltaTable
     
     # Need to add python dependencies to the spark context, otherwise get module not found error
-    sc.sparkContext.addPyFile("dl_processing/preprocess_feature.py")
+    sc.sparkContext.addPyFile("src/dl_processing/preprocess_feature.py")
     sc.sparkContext.addPyFile("src/sparksession.py")
 
     # Build Feature Table

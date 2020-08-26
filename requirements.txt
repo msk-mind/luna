@@ -4,6 +4,7 @@ medpy
 numpy
 pandas
 scikit-image
+pandas
 pyspark
 pytest
 pytest-cov
