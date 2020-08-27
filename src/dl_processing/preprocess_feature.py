@@ -5,11 +5,19 @@ a DataFrame tracking the file paths of the pre-processed items, stored as NumPy 
 Usage: 
     $ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing}
 Parameters: 
-- base_directory: parent directory containing /tables directory, where {base_directory}/tables/scan and {base_directory}/tables/annotation are
+--base_directory: parent directory containing /tables directory, where {base_directory}/tables/scan and {base_directory}/tables/annotation are
                   the scan and annotation delta tables
-- target_spacing: target spacing for the x,y,and z dimensions
+--target_spacing: target spacing for the x,y,and z dimensions
+--query: WHERE component of SQL query to filter feature table, make sure to wrap with quotes to be interpretted correctly
+    Queriable Columns to Filter By:
+        - SeriesInstanceUID,AccessionNumber,ct_dates,ct_accession,img,ring-seg,annotation_uid,0_1,vendor,ST,kvP,mA,ID,Rad_segm,R_ovary,L_ovary,Omentum,Notes,subtype,seg
+    examples:
+        filtering by subtype: --query "subtype='BRCA1' or subtype='BRCA2'"
+        filtering by AccessionID: --query "AccessionNumber = '12345'"
+--feature_table_output_name: name of feature table that is created, default is feature-table,
+        feature table will be created at {base_directory}/tables/features/{feature_table_output_name}
 Example:
-    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/radiology/ --target_spacing 1.0 1.0 3.0
+    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table
 """
 import os, click
 import sys
@@ -123,24 +131,27 @@ def resample_volume(volume, order, target_shape):
 
 
 @click.command()
+@click.option('-q', '--query', default = None)
 @click.option('-b', '--base_directory', type=click.Path(exists=True), required=True)
 @click.option('-t', '--target_spacing', nargs=3, type=float, required=True)
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
 @click.option('-h', '--hdfs', is_flag=True, default=False, show_default=True, help="(optional) base directory is on hdfs or local filesystem")
-def cli(spark_master_uri, base_directory, target_spacing, hdfs): 
+@click.option('-n', '--feature_table_output_name', default="feature-table", help= "name of new feature table that is created.")
+def cli(spark_master_uri, base_directory, target_spacing, hdfs, query, feature_table_output_name): 
 
     # Setup Spark context
     spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri, hdfs)
-    generate_feature_table(base_directory, target_spacing, spark, hdfs)
+    table_dir = generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name)
+    print("Feature Table written to ", table_dir)
 
-
-def generate_feature_table(base_directory, target_spacing, spark, hdfs): 
+def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name): 
     annotation_table = os.path.join(base_directory, "tables/annotation")
     scan_table = os.path.join(base_directory, "tables/scan")
-    feature_table =   os.path.join(base_directory, "features/feature_table/")
-    feature_files =  os.path.join(base_directory, "features/feature_files/")
+    feature_table = os.path.join(base_directory, "features/"+str(feature_table_output_name)+"/")
+    feature_dir = os.path.join(base_directory, "features")
+    feature_files = os.path.join(base_directory, "features/feature_files/")
 
-    # Load Scan and Annotaiton tables
+    # Load Scan and Annotation tables
     annot_df = spark.read.format("delta").load(annotation_table)
     annot_df.show()
     scan_df = spark.read.format("delta").load(scan_table)
@@ -154,20 +165,31 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs):
     df = df.withColumn("preprocessed_seg_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_seg'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_img_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_img'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_target_spacing", lit(str(target_spacing)))
+    if query:
+        sql_query = "SELECT * from feature where " + str(query)
+        df.createOrReplaceTempView("feature")   
+        df = spark.sql(sql_query)
     df.write.format("delta").mode("overwrite").save(feature_table)
 
-    print("------ check feature table ------")
-    feature_df = spark.read.format("delta").load(feature_table)
-    feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
-
     # Resample segmentation and images
-    # print("feature files", feature_files)
+
+    # Create new local directories if needed
+    if not os.path.exists(feature_dir) and not hdfs:
+        os.mkdir(feature_dir)
     if not os.path.exists(feature_files) and not hdfs:
         os.mkdir(feature_files)
-
+    # Call parallel resampling jobs
     results = Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
 
+
+    print("-----Feature table generated:------")
+    feature_df = spark.read.format("delta").load(feature_table)
+    feature_df.show()
+
+    print("-----Columns Added:------")
+    feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
     print("Finished preprocessing.")
+    return feature_table
 
 if __name__ == "__main__":
     cli()    
