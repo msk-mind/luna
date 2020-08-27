@@ -9,4 +9,5 @@ pyspark
 pytest
 pytest-cov
 pytest-runner
+pytest-spark
 wheel>=0.22
