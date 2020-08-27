@@ -38,7 +38,7 @@ def test_local_feature_table(spark_session):
     spark_session.sparkContext.addPyFile("src/sparksession.py")
 
     # Build Feature Table
-    generate_feature_table("file:///"+BASE_DIR, TARGET_SPACING, spark_session, False)
+    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, False)
 
     # read and verify correct feature table generated
     feature_table_path = os.path.join(BASE_DIR, "features/feature_table")
