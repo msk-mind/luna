@@ -4,7 +4,6 @@ sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../
 sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../src/dl_processing/') ))
 
 from sparksession import SparkConfig
-from unittest import TestCase, mock
 import pytest
 from preprocess_feature import cli, generate_feature_table
 from click.testing import CliRunner

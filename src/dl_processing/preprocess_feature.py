@@ -148,10 +148,9 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs):
         feature_files =  feature_files[7:]  # truncate prefix file://
 
     # Load Scan and Annotaiton tables
-    from delta.tables import DeltaTable
-    annot_df = DeltaTable.forPath(spark, annotation_table).toDF()
+    annot_df = spark.read.format("delta").load(annotation_table)
     annot_df.show()
-    scan_df = DeltaTable.forPath(spark, scan_table).toDF()
+    scan_df = spark.read.format("delta").load(scan_table)
     scan_df.show()
 
 
@@ -165,7 +164,7 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs):
     df.write.format("delta").mode("overwrite").save(feature_table)
 
     print("------ check feature table ------")
-    feature_df = DeltaTable.forPath(spark, feature_table).toDF()
+    feature_df = spark.read.format("delta").load(feature_table)
     feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
 
     # Resample segmentation and images
