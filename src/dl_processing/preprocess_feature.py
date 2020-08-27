@@ -123,9 +123,9 @@ def resample_volume(volume, order, target_shape):
 
 
 @click.command()
-@click.option('-b', '--base_directory', type=click.Path(exists=True))
-@click.option('-t', '--target_spacing', nargs=3, type=float)
-@click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]')
+@click.option('-b', '--base_directory', type=click.Path(exists=True), required=True)
+@click.option('-t', '--target_spacing', nargs=3, type=float, required=True)
+@click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
 @click.option('-h', '--hdfs', is_flag=True, default=False, show_default=True, help="(optional) base directory is on hdfs or local filesystem")
 def cli(spark_master_uri, base_directory, target_spacing, hdfs): 
     # Set up Spark session and kick off feature table generation
