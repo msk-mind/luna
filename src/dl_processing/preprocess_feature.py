@@ -123,19 +123,14 @@ def resample_volume(volume, order, target_shape):
 
 
 @click.command()
-@click.option('-b', '--base_directory', type=click.Path(exists=True))
-@click.option('-t', '--target_spacing', nargs=3, type=float)
-@click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]')
+@click.option('-b', '--base_directory', type=click.Path(exists=True), required=True)
+@click.option('-t', '--target_spacing', nargs=3, type=float, required=True)
+@click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
 @click.option('-h', '--hdfs', is_flag=True, default=False, show_default=True, help="(optional) base directory is on hdfs or local filesystem")
 def cli(spark_master_uri, base_directory, target_spacing, hdfs): 
-    # Set up Spark session and kick off feature table generation
-    if hdfs:
-        base_directory = "hdfs:///" + base_directory
-    else:
-        base_directory = "file:///" + base_directory
 
     # Setup Spark context
-    spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri)
+    spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri, hdfs)
     generate_feature_table(base_directory, target_spacing, spark, hdfs)
 
 
@@ -143,15 +138,12 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs):
     annotation_table = os.path.join(base_directory, "tables/annotation")
     scan_table = os.path.join(base_directory, "tables/scan")
     feature_table =   os.path.join(base_directory, "features/feature_table/")
-    feature_files =  os.path.join(base_directory, "features/feature_files/") # truncate prefix hdfs:// or file://
-    if not hdfs:
-        feature_files =  feature_files[7:]  # truncate prefix file://
+    feature_files =  os.path.join(base_directory, "features/feature_files/")
 
     # Load Scan and Annotaiton tables
-    from delta.tables import DeltaTable
-    annot_df = DeltaTable.forPath(spark, annotation_table).toDF()
+    annot_df = spark.read.format("delta").load(annotation_table)
     annot_df.show()
-    scan_df = DeltaTable.forPath(spark, scan_table).toDF()
+    scan_df = spark.read.format("delta").load(scan_table)
     scan_df.show()
 
 
@@ -165,7 +157,7 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs):
     df.write.format("delta").mode("overwrite").save(feature_table)
 
     print("------ check feature table ------")
-    feature_df = DeltaTable.forPath(spark, feature_table).toDF()
+    feature_df = spark.read.format("delta").load(feature_table)
     feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
 
     # Resample segmentation and images
