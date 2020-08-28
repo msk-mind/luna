@@ -3,19 +3,24 @@ This module pre-processes the CE-CT acquisitions and associated segmentations an
 a DataFrame tracking the file paths of the pre-processed items, stored as NumPy ndarrays.
 
 Usage: 
-    $ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing}
+    $ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing}  --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created}
+    
 Parameters: 
---base_directory: parent directory containing /tables directory, where {base_directory}/tables/scan and {base_directory}/tables/annotation are
-                  the scan and annotation delta tables
---target_spacing: target spacing for the x,y,and z dimensions
---query: WHERE component of SQL query to filter feature table, make sure to wrap with quotes to be interpretted correctly
-    Queriable Columns to Filter By:
-        - SeriesInstanceUID,AccessionNumber,ct_dates,ct_accession,img,ring-seg,annotation_uid,0_1,vendor,ST,kvP,mA,ID,Rad_segm,R_ovary,L_ovary,Omentum,Notes,subtype,seg
-    examples:
-        filtering by subtype: --query "subtype='BRCA1' or subtype='BRCA2'"
-        filtering by AccessionID: --query "AccessionNumber = '12345'"
---feature_table_output_name: name of feature table that is created, default is feature-table,
-        feature table will be created at {base_directory}/tables/features/{feature_table_output_name}
+    REQUIRED PARAMETERS:
+        --base_directory: parent directory containing /tables directory, where {base_directory}/tables/scan and {base_directory}/tables/annotation are
+                            the scan and annotation delta tables
+        --target_spacing: target spacing for the x,y,and z dimensions
+        --spark_master_uri: spark master uri e.g. spark://master-ip:7077 or local[*]
+    OPTIONAL PARAMETERS:
+        --query: where clause of SQL query to filter feature tablE. WHERE does not need to be included, make sure to wrap with quotes to be interpretted correctly
+            - Queriable Columns to Filter By:
+                - SeriesInstanceUID,AccessionNumber,ct_dates,ct_accession,img,ring-seg,annotation_uid,0_1,vendor,ST,kvP,mA,ID,Rad_segm,R_ovary,L_ovary,Omentum,Notes,subtype,seg
+            - examples:
+                - filtering by subtype: --query "subtype='BRCA1' or subtype='BRCA2'"
+                - filtering by AccessionID: --query "AccessionNumber = '12345'"
+        --feature_table_output_name: name of feature table that is created, default is feature-table,
+                feature table will be created at {base_directory}/tables/features/{feature_table_output_name}
+        --hdfs: base directory is on hdfs or local filesystem
 Example:
     $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table
 """
@@ -131,7 +136,7 @@ def resample_volume(volume, order, target_shape):
 
 
 @click.command()
-@click.option('-q', '--query', default = None)
+@click.option('-q', '--query', default = None, help = "where clause of SQL query to filter feature table, 'WHERE' does not need to be included, but make sure to wrap with quotes to be interpretted correctly")
 @click.option('-b', '--base_directory', type=click.Path(exists=True), required=True)
 @click.option('-t', '--target_spacing', nargs=3, type=float, required=True)
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
@@ -141,15 +146,15 @@ def cli(spark_master_uri, base_directory, target_spacing, hdfs, query, feature_t
 
     # Setup Spark context
     spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri, hdfs)
-    table_dir = generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name)
-    print("Feature Table written to ", table_dir)
+    generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name)
+    # print("Feature Table written to ", table_dir)
 
 def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name): 
     annotation_table = os.path.join(base_directory, "tables/annotation")
     scan_table = os.path.join(base_directory, "tables/scan")
     feature_table = os.path.join(base_directory, "features/"+str(feature_table_output_name)+"/")
     feature_dir = os.path.join(base_directory, "features")
-    feature_files = os.path.join(base_directory, "features/feature_files/")
+    feature_files = os.path.join(base_directory, "features/feature-files/")
 
     # Load Scan and Annotation tables
     annot_df = spark.read.format("delta").load(annotation_table)
@@ -188,8 +193,7 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
 
     print("-----Columns Added:------")
     feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
-    print("Finished preprocessing.")
-    return feature_table
+    print("Feature Table written to ", feature_table)
 
 if __name__ == "__main__":
     cli()    
