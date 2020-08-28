@@ -49,13 +49,14 @@ def process_patient(patient, target_spacing):
     :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
     :return: None
     """
+    # TODO add multiprocess logging if spark performance doesn't work out.
     img_col = patient.img
     seg_col = patient.seg
     img_output = patient.preprocessed_img_path
     seg_output = patient.preprocessed_seg_path
 
     if os.path.exists(img_output) and os.path.exists(seg_output):
-        LOG.error(img_output + " and " + seg_output + " already exists.")
+        print(img_output + " and " + seg_output + " already exists.")
         return
 
     img, img_header = load(img_col)
@@ -63,12 +64,12 @@ def process_patient(patient, target_spacing):
 
     img = resample_volume(img, 3, target_shape)
     np.save(img_output, img)
-    LOG.info("saved img at " + img_output)
+    print("saved img at " + img_output)
 
     seg, _ = load(seg_col)
     seg = interpolate_segmentation_masks(seg, target_shape)
     np.save(seg_output, seg)
-    LOG.info("saved seg at " + seg_output)
+    print("saved seg at " + seg_output)
 
     return seg_output
 
