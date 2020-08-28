@@ -40,6 +40,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType
 
+LOG = None
 
 def process_patient(patient, target_spacing):
     """
@@ -54,7 +55,7 @@ def process_patient(patient, target_spacing):
     seg_output = patient.preprocessed_seg_path
 
     if os.path.exists(img_output) and os.path.exists(seg_output):
-        print(img_output + " and " + seg_output + " already exists.")
+        LOG.error(img_output + " and " + seg_output + " already exists.")
         return
 
     img, img_header = load(img_col)
@@ -62,12 +63,12 @@ def process_patient(patient, target_spacing):
 
     img = resample_volume(img, 3, target_shape)
     np.save(img_output, img)
-    print("saved img at " + img_output)
+    LOG.info("saved img at " + img_output)
 
     seg, _ = load(seg_col)
     seg = interpolate_segmentation_masks(seg, target_shape)
     np.save(seg_output, seg)
-    print("saved seg at " + seg_output)
+    LOG.info("saved seg at " + seg_output)
 
     return seg_output
 
@@ -146,6 +147,13 @@ def cli(spark_master_uri, base_directory, target_spacing, hdfs, query, feature_t
 
     # Setup Spark context
     spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri, hdfs)
+
+    # Setup logger
+    # TODO configure log4j.properties in spark cluster. 
+    sc = spark.sparkContext
+    log4jLogger = sc._jvm.org.apache.log4j
+    LOG = log4jLogger.LogManager.getLogger(__name__)
+
     generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name)
     # print("Feature Table written to ", table_dir)
 
@@ -170,10 +178,18 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     df = df.withColumn("preprocessed_seg_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_seg'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_img_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_img'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_target_spacing", lit(str(target_spacing)))
+    
     if query:
         sql_query = "SELECT * from feature where " + str(query)
         df.createOrReplaceTempView("feature")   
         df = spark.sql(sql_query)
+        
+        # If query doesn't return anything, do not proceed.
+        if df.count() == 0:
+            err_msg = "query {} had no match. Please revisit your query.".format(query)
+            LOG.error(err_msg)
+            return
+
     df.write.format("delta").mode("overwrite").save(feature_table)
 
     # Resample segmentation and images
@@ -187,13 +203,14 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     results = Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
 
 
-    print("-----Feature table generated:------")
+    LOG.info("-----Feature table generated:------")
     feature_df = spark.read.format("delta").load(feature_table)
     feature_df.show()
 
-    print("-----Columns Added:------")
+    LOG.info("-----Columns Added:------")
     feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
-    print("Feature Table written to ", feature_table)
+    
+    LOG.info("Feature Table written to ", feature_table)
 
 if __name__ == "__main__":
     cli()    
