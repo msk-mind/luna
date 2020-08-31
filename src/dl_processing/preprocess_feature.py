@@ -24,11 +24,12 @@ Parameters:
 Example:
     $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table
 """
-import os, click
-import sys
+import os, sys
+import click
 sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../') ))
 
 from sparksession import SparkConfig
+from custom_logger import init_logger
 
 import numpy as np
 import pandas as pd
@@ -40,7 +41,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType
 
-LOG = None
+logger = init_logger()
 
 def process_patient(patient, target_spacing):
     """
@@ -149,14 +150,8 @@ def cli(spark_master_uri, base_directory, target_spacing, hdfs, query, feature_t
     # Setup Spark context
     spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri, hdfs)
 
-    # Setup logger
-    # TODO configure log4j.properties in spark cluster. 
-    sc = spark.sparkContext
-    log4jLogger = sc._jvm.org.apache.log4j
-    LOG = log4jLogger.LogManager.getLogger(__name__)
-
     generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name)
-    # print("Feature Table written to ", table_dir)
+
 
 def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name): 
     annotation_table = os.path.join(base_directory, "tables/annotation")
@@ -204,14 +199,14 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     results = Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
 
 
-    LOG.info("-----Feature table generated:------")
+    logger.info("-----Feature table generated:------")
     feature_df = spark.read.format("delta").load(feature_table)
     feature_df.show()
 
-    LOG.info("-----Columns Added:------")
+    logger.info("-----Columns Added:------")
     feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
     
-    LOG.info("Feature Table written to ", feature_table)
+    logger.info("Feature Table written to ", feature_table)
 
 if __name__ == "__main__":
     cli()    
