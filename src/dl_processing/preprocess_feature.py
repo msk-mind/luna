@@ -24,11 +24,12 @@ Parameters:
 Example:
     $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table
 """
-import os, click
-import sys
+import os, sys
+import click
 sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../') ))
 
 from sparksession import SparkConfig
+from custom_logger import init_logger
 
 import numpy as np
 import pandas as pd
@@ -40,6 +41,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType
 
+logger = init_logger()
 
 def process_patient(patient, target_spacing):
     """
@@ -48,13 +50,22 @@ def process_patient(patient, target_spacing):
     :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
     :return: None
     """
+    # TODO add multiprocess logging if spark performance doesn't work out.
     img_col = patient.img
     seg_col = patient.seg
     img_output = patient.preprocessed_img_path
     seg_output = patient.preprocessed_seg_path
 
     if os.path.exists(img_output) and os.path.exists(seg_output):
-        print(img_output + " and " + seg_output + " already exists.")
+        logger.warn(img_output + " and " + seg_output + " already exists.")
+        return
+
+    if not os.path.exists(img_col):
+        logger.warn(img_col + " does not exist.")
+        return
+
+    if not os.path.exists(seg_col):
+        logger.warn(seg_col + " does not exist.")
         return
 
     img, img_header = load(img_col)
@@ -62,12 +73,12 @@ def process_patient(patient, target_spacing):
 
     img = resample_volume(img, 3, target_shape)
     np.save(img_output, img)
-    print("saved img at " + img_output)
+    logger.info("saved img at " + img_output)
 
     seg, _ = load(seg_col)
     seg = interpolate_segmentation_masks(seg, target_shape)
     np.save(seg_output, seg)
-    print("saved seg at " + seg_output)
+    logger.info("saved seg at " + seg_output)
 
     return seg_output
 
@@ -146,8 +157,9 @@ def cli(spark_master_uri, base_directory, target_spacing, hdfs, query, feature_t
 
     # Setup Spark context
     spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri, hdfs)
+
     generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name)
-    # print("Feature Table written to ", table_dir)
+
 
 def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name): 
     annotation_table = os.path.join(base_directory, "tables/annotation")
@@ -170,10 +182,21 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     df = df.withColumn("preprocessed_seg_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_seg'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_img_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_img'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_target_spacing", lit(str(target_spacing)))
+    
     if query:
         sql_query = "SELECT * from feature where " + str(query)
-        df.createOrReplaceTempView("feature")   
-        df = spark.sql(sql_query)
+        df.createOrReplaceTempView("feature")  
+        try: 
+            df = spark.sql(sql_query)
+        except Exception as err:
+            logger.error("Exception while running spark sql query \"{}\"".format(sql_query), err)
+            return
+        # If query doesn't return anything, do not proceed.
+        if df.count() == 0:
+            err_msg = "query \"{}\" has no match. Please revisit your query.".format(query)
+            logger.error(err_msg)
+            return
+
     df.write.format("delta").mode("overwrite").save(feature_table)
 
     # Resample segmentation and images
@@ -187,13 +210,15 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     results = Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
 
 
-    print("-----Feature table generated:------")
+    logger.info("-----Feature table generated:------")
     feature_df = spark.read.format("delta").load(feature_table)
     feature_df.show()
 
-    print("-----Columns Added:------")
+    logger.info("-----Columns Added:------")
     feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
-    print("Feature Table written to ", feature_table)
+    
+    logger.info("Feature Table written to ")
+    logger.info(feature_table)
 
 if __name__ == "__main__":
     cli()    
