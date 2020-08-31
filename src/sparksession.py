@@ -8,7 +8,7 @@ class SparkConfig:
 
 		default_fs = "file:///"
 		if hdfs:
-			default_fs = "hdfs:///"
+			default_fs = "hdfs://"
 			
 		return SparkSession.builder \
 			.appName(app_name) \
@@ -21,6 +21,8 @@ class SparkConfig:
 			.config("spark.driver.port", "8001") \
 			.config("spark.blockManager.port", "8002") \
 			.config("spark.driver.bindAddress", "0.0.0.0") \
-			# .config("spark.sql.execution.arrow.enabled", "true") \
+			.config("spark.sql.execution.arrow.pyspark.enabled", "true") \
 			.config("fs.defaultFS", default_fs) \
+			.config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
+			.config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.getOrCreate()

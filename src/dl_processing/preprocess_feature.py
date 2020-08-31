@@ -53,7 +53,7 @@ def process_patient(df):
     # img_col = patient.img
     # seg_col = patient.seg
 
-    target_spacing = (float(df.target_spacing_x), float(df.preprocessed_target_spacing_y), float(df.preprocessed_target_spacing_z))
+    target_spacing = (float(df.preprocessed_target_spacing_x), float(df.preprocessed_target_spacing_y), float(df.preprocessed_target_spacing_z))
     img, img_header = load(img_col)
     target_shape = calculate_target_shape(img, img_header, target_spacing)
     img = resample_volume(img, 3, target_shape)
@@ -79,36 +79,6 @@ def process_patient(df):
 
     return df
     
-
-def process_patient_archived(patient, target_spacing):
-    """
-    Given a row with source and destination file paths for a single case, resamples segmentation
-    and acquisition. Also, clips acquisition range to abdominal window.
-    :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
-    :return: None
-    """
-    img_col = patient.img
-    seg_col = patient.seg
-    img_output = patient.preprocessed_img_path
-    seg_output = patient.preprocessed_seg_path
-
-    # if patient.preprocessed_img and patient.preprocessed_seg:
-    #     print(img_output + " and " + seg_output + " already exists.")
-    #     return img_output, seg_output
-
-    img, img_header = load(img_col)
-    target_shape = calculate_target_shape(img, img_header, target_spacing)
-
-    img = resample_volume(img, 3, target_shape)
-    # np.save(img_output, img)
-    print("saved img at " + img_output)
-
-    seg, _ = load(seg_col)
-    seg = interpolate_segmentation_masks(seg, target_shape)
-    # np.save(seg_output, seg)
-    print("saved seg at " + seg_output)
-
-    return img, seg
 
 
 def interpolate_segmentation_masks(seg, target_shape):
@@ -232,7 +202,7 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
 
     # play around with using DF's schema or just selecting certain columns to pass into UDF
     # schema = "img string, seg string, preprocessed_img string, preprocessed_seg string"
-    df.groupBy("subtype").applyInPandas(process_patient, schema = df.schema)
+    df = df.groupBy("subtype").applyInPandas(process_patient, schema = df.schema)
     df.select("seg", "preprocessed_img", "preprocessed_seg").show()
 
     # Write Table to File   
