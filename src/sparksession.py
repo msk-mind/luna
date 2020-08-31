@@ -23,6 +23,8 @@ class SparkConfig:
 			.config("spark.driver.bindAddress", "0.0.0.0") \
 			.config("spark.sql.execution.arrow.pyspark.enabled", "true") \
 			.config("fs.defaultFS", default_fs) \
+			.config("spark.executor.memory", "10g") \
+			.config("spark.driver.memory", "10g") \
 			.config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.getOrCreate()

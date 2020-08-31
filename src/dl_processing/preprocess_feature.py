@@ -37,23 +37,57 @@ from medpy.io import load
 from skimage.transform import resize        
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import udf, lit, pandas_udf, PandasUDFType
+from pyspark.sql.functions import udf, lit, pandas_udf, PandasUDFType, array
 from pyspark.sql.types import StringType
 
+
+def process_patient_archived(patient, target_spacing):	
+    """	
+    Given a row with source and destination file paths for a single case, resamples segmentation	
+    and acquisition. Also, clips acquisition range to abdominal window.	
+    :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"	
+    :return: None	
+    """	
+    img_col = patient.img	
+    seg_col = patient.seg	
+    img_output = patient.preprocessed_img_path	
+    seg_output = patient.preprocessed_seg_path	
+
+    # if patient.preprocessed_img and patient.preprocessed_seg:	
+    #     print(img_output + " and " + seg_output + " already exists.")	
+    #     return img_output, seg_output	
+
+    img, img_header = load(img_col)	
+    target_shape = calculate_target_shape(img, img_header, target_spacing)	
+
+    img = resample_volume(img, 3, target_shape)	
+    np.save(img_output, img)	
+    print("saved img at " + img_output)	
+
+    seg, _ = load(seg_col)	
+    seg = interpolate_segmentation_masks(seg, target_shape)	
+    np.save(seg_output, seg)	
+    print("saved seg at " + seg_output)	
+
+    return img, seg
+
 def process_patient(df):
-    print("******************IN THE UDF**********************")
     """
     Given a row with source and destination file paths for a single case, resamples segmentation
     and acquisition. Also, clips acquisition range to abdominal window.
     :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
     :return: None
     """
-    img_col = df.img
-    seg_col = df.seg
+    print("******************IN THE UDF**********************")
+
+    img_col = df.img.item()
+    print(img_col)
+    seg_col = df.seg.item()
     # img_col = patient.img
     # seg_col = patient.seg
 
-    target_spacing = (float(df.preprocessed_target_spacing_x), float(df.preprocessed_target_spacing_y), float(df.preprocessed_target_spacing_z))
+    target_spacing = (df.preprocessed_target_spacing_x, df.preprocessed_target_spacing_y, df.preprocessed_target_spacing_z)
+
     img, img_header = load(img_col)
     target_shape = calculate_target_shape(img, img_header, target_spacing)
     img = resample_volume(img, 3, target_shape)
@@ -64,18 +98,16 @@ def process_patient(df):
     seg = interpolate_segmentation_masks(seg, target_shape)
     # np.save(seg_output, seg)
 
-
-    # update new columns
     
     # attempt 1 - directly assign
-    # df['preprocessed_img'] = img.dumps()
-    # df['preprocessed_seg'] = seg.dumps()
+    df['preprocessed_img'] = img.tobytes()
+    df['preprocessed_seg'] = seg.tobytes()
 
     # use assign function
-    preprocessed_img = df.preprocessed_img
-    preprocessed_seg = df.preprocessed_seg
-    df.assign(preprocessed_img = str(img.dumps()))
-    df.assign(preprocessed_seg = str(seg.dumps()))
+    # preprocessed_img = df.preprocessed_img
+    # preprocessed_seg = df.preprocessed_seg
+    # df.assign(preprocessed_img = str(img.dumps()))
+    # df.assign(preprocessed_seg = str(seg.dumps()))
 
     return df
     
@@ -112,6 +144,7 @@ def generate_preprocessed_filename(id, suffix, processed_dir, target_spacing_x, 
     return file_name
 
 
+
 def calculate_target_shape(volume, header, target_spacing):
     """
     :param volume: as numpy.ndarray
@@ -144,6 +177,8 @@ def resample_volume(volume, order, target_shape):
     return volume
 
 
+
+        
 @click.command()
 @click.option('-q', '--query', default = None, help = "where clause of SQL query to filter feature table, 'WHERE' does not need to be included, but make sure to wrap with quotes to be interpretted correctly")
 @click.option('-b', '--base_directory', type=click.Path(exists=True), required=True)
@@ -175,18 +210,19 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     generate_preprocessed_filename_udf = udf(generate_preprocessed_filename, StringType())
     df = annot_df.join(scan_df, ['SeriesInstanceUID'])
 
+    target_spacing_arr = [spacing for spacing in target_spacing]
     df = df.withColumn("preprocessed_seg_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_seg'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_img_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_img'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
-    df = df.withColumn("preprocessed_target_spacing", lit(str(target_spacing)))
-    df = df.withColumn("preprocessed_target_spacing_x", lit(str(target_spacing[0])))
-    df = df.withColumn("preprocessed_target_spacing_y", lit(str(target_spacing[1])))
-    df = df.withColumn("preprocessed_target_spacing_z", lit(str(target_spacing[2])))
+    # df = df.withColumn("preprocessed_target_spacing", lit(target_spacing_arr))
+    df = df.withColumn("preprocessed_target_spacing_x", lit(target_spacing[0]))
+    df = df.withColumn("preprocessed_target_spacing_y", lit(target_spacing[1]))
+    df = df.withColumn("preprocessed_target_spacing_z", lit(target_spacing[2]))
     if query:
         sql_query = "SELECT * from feature where " + str(query)
         df.createOrReplaceTempView("feature")   
         df = spark.sql(sql_query)
 
-    df.select("img", "seg").show()
+    df.select("preprocessed_seg_path", "preprocessed_img_path", "img", "seg").show()
     # Create new local directories if needed
     if not os.path.exists(feature_dir) and not hdfs:
         os.mkdir(feature_dir)
@@ -194,18 +230,43 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
         os.mkdir(feature_files)
 
     # Call parallel resampling jobs
-    # results = Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
+    results = Parallel(n_jobs=8)(delayed(process_patient_archived)(row, target_spacing) for row in df.rdd.collect())
     
     # Try generating columns before calling pandas UDF
-    df = df.withColumn("preprocessed_img", lit(""))
-    df = df.withColumn("preprocessed_seg", lit(""))
+    # df = df.withColumn("preprocessed_img",)
+    # df = df.withColumn("preprocessed_seg",)
+
+    # read the written resampled numpy binaries and merge into delta table
+    img_bin_df = spark.read.format("binaryFile") \
+        .option("pathGlobFilter", "*_img_*.npy") \
+        .option("recursiveFileLookup", "false") \
+        .load(feature_files)
+
+    # show() causes out of memory exception
+    # img_bin_df.show(truncate=True)
+    img_cond = [df.preprocessed_img_path == img_bin_df.path]
+    df = df.join(img_bin_df.select("path", "content"), img_cond)
+    df = df.withColumnRenamed("content", "preprocessed_img")
+
+
+    seg_bin_df = spark.read.format("binaryFile") \
+        .option("pathGlobFilter", "*_seg_*.npy") \
+        .option("recursiveFileLookup", "false") \
+        .load(feature_files)
+    # seg_bin_df.show(truncate=True)
+    seg_cond = [df.preprocessed_img_path == seg_bin_df.path]
+    df = df.join(seg_bin_df.select("path", "content"), seg_cond)
+    df = df.withColumnRenamed("content", "preprocessed_seg")
+    df= df.drop('path')
+
 
     # play around with using DF's schema or just selecting certain columns to pass into UDF
     # schema = "img string, seg string, preprocessed_img string, preprocessed_seg string"
-    df = df.groupBy("subtype").applyInPandas(process_patient, schema = df.schema)
-    df.select("seg", "preprocessed_img", "preprocessed_seg").show()
+    # df.groupBy("annotation_uid").applyInPandas(process_patient, schema = (str(df.schema) + 'preprocessed_img binary, preprocessed_seg binary'))
+    # df.select("annotation_uid", "preprocessed_img", "preprocessed_seg").show()
 
     # Write Table to File   
+    spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
     df.write.format("delta").mode("overwrite").save(feature_table)
     
 
