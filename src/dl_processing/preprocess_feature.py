@@ -57,7 +57,15 @@ def process_patient(patient, target_spacing):
     seg_output = patient.preprocessed_seg_path
 
     if os.path.exists(img_output) and os.path.exists(seg_output):
-        logger.info(img_output + " and " + seg_output + " already exists.")
+        logger.warn(img_output + " and " + seg_output + " already exists.")
+        return
+
+    if not os.path.exists(img_col):
+        logger.warn(img_col + " does not exist.")
+        return
+
+    if not os.path.exists(seg_col):
+        logger.warn(seg_col + " does not exist.")
         return
 
     img, img_header = load(img_col)
@@ -181,11 +189,11 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
         try: 
             df = spark.sql(sql_query)
         except Exception as err:
-            logger.error("Exception while running spark sql query {}".format(sql_query), err)
+            logger.error("Exception while running spark sql query \"{}\"".format(sql_query), err)
             return
         # If query doesn't return anything, do not proceed.
         if df.count() == 0:
-            err_msg = "query {} had no match. Please revisit your query.".format(query)
+            err_msg = "query \"{}\" has no match. Please revisit your query.".format(query)
             logger.error(err_msg)
             return
 
