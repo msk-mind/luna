@@ -21,7 +21,6 @@ TARGET_SPACING = (1.0, 1.0, 3.0)
 # Test CLI parameters
 runner = CliRunner()
 
-#TODO write tests with Mock
 #TODO increase test coverage
 #TODO Test HDFS Feature Table Generation
 
@@ -36,6 +35,7 @@ def test_local_feature_table_generation(spark_session):
     # Need to add python dependencies to the spark context, otherwise get module not found error
     spark_session.sparkContext.addPyFile("src/dl_processing/preprocess_feature.py")
     spark_session.sparkContext.addPyFile("src/sparksession.py")
+    spark_session.sparkContext.addPyFile("src/custom_logger.py")
 
     # Test no query, default naming
     # Build Feature Table
@@ -55,10 +55,11 @@ def test_local_feature_table_generation_malformed_query(spark_session):
     # Need to add python dependencies to the spark context, otherwise get module not found error
     spark_session.sparkContext.addPyFile("src/dl_processing/preprocess_feature.py")
     spark_session.sparkContext.addPyFile("src/sparksession.py")
+    spark_session.sparkContext.addPyFile("src/custom_logger.py")
 
     # Test no query, default naming
     # Build Feature Table
-    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, False, "subtype='BRCA1' || subbtype='BRCA2'", "")
+    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, False, "subtype='BRCA1' || subtype='BRCA2'", "")
 
     # read and verify correct feature table generated
     feature_table_path = os.path.join(BASE_DIR, "features/feature-table-test-name")

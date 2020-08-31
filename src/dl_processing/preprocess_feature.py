@@ -57,7 +57,7 @@ def process_patient(patient, target_spacing):
     seg_output = patient.preprocessed_seg_path
 
     if os.path.exists(img_output) and os.path.exists(seg_output):
-        print(img_output + " and " + seg_output + " already exists.")
+        logger.info(img_output + " and " + seg_output + " already exists.")
         return
 
     img, img_header = load(img_col)
@@ -65,12 +65,12 @@ def process_patient(patient, target_spacing):
 
     img = resample_volume(img, 3, target_shape)
     np.save(img_output, img)
-    print("saved img at " + img_output)
+    logger.info("saved img at " + img_output)
 
     seg, _ = load(seg_col)
     seg = interpolate_segmentation_masks(seg, target_shape)
     np.save(seg_output, seg)
-    print("saved seg at " + seg_output)
+    logger.info("saved seg at " + seg_output)
 
     return seg_output
 
@@ -177,13 +177,16 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     
     if query:
         sql_query = "SELECT * from feature where " + str(query)
-        df.createOrReplaceTempView("feature")   
-        df = spark.sql(sql_query)
-        
+        df.createOrReplaceTempView("feature")  
+        try: 
+            df = spark.sql(sql_query)
+        except Exception as err:
+            logger.error("Exception while running spark sql query {}".format(sql_query), err)
+            return
         # If query doesn't return anything, do not proceed.
         if df.count() == 0:
             err_msg = "query {} had no match. Please revisit your query.".format(query)
-            LOG.error(err_msg)
+            logger.error(err_msg)
             return
 
     df.write.format("delta").mode("overwrite").save(feature_table)
@@ -206,7 +209,8 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     logger.info("-----Columns Added:------")
     feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
     
-    logger.info("Feature Table written to ", feature_table)
+    logger.info("Feature Table written to ")
+    logger.info(feature_table)
 
 if __name__ == "__main__":
     cli()    
