@@ -27,5 +27,6 @@ def init_logger():
     logger.addHandler(ch)
     logger.addHandler(fh)
 
-    print("log file at: " + log_file)
+    print(">>>>>>>> log file at: " + log_file)
     return logger
+
