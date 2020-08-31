@@ -24,7 +24,7 @@ Parameters:
 Example:
     $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table
 """
-import os, click
+import os, click, pickle
 import sys
 sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../') ))
 
@@ -34,14 +34,53 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from medpy.io import load
-from skimage.transform import resize
+from skimage.transform import resize        
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import udf, lit
+from pyspark.sql.functions import udf, lit, pandas_udf, PandasUDFType
 from pyspark.sql.types import StringType
 
+def process_patient(df):
+    print("******************IN THE UDF**********************")
+    """
+    Given a row with source and destination file paths for a single case, resamples segmentation
+    and acquisition. Also, clips acquisition range to abdominal window.
+    :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
+    :return: None
+    """
+    img_col = df.img
+    seg_col = df.seg
+    # img_col = patient.img
+    # seg_col = patient.seg
 
-def process_patient(patient, target_spacing):
+    target_spacing = (float(df.target_spacing_x), float(df.preprocessed_target_spacing_y), float(df.preprocessed_target_spacing_z))
+    img, img_header = load(img_col)
+    target_shape = calculate_target_shape(img, img_header, target_spacing)
+    img = resample_volume(img, 3, target_shape)
+    # np.save(img_output, img)
+    # print("saved img at " + img_output)
+
+    seg, _ = load(seg_col)
+    seg = interpolate_segmentation_masks(seg, target_shape)
+    # np.save(seg_output, seg)
+
+
+    # update new columns
+    
+    # attempt 1 - directly assign
+    # df['preprocessed_img'] = img.dumps()
+    # df['preprocessed_seg'] = seg.dumps()
+
+    # use assign function
+    preprocessed_img = df.preprocessed_img
+    preprocessed_seg = df.preprocessed_seg
+    df.assign(preprocessed_img = str(img.dumps()))
+    df.assign(preprocessed_seg = str(seg.dumps()))
+
+    return df
+    
+
+def process_patient_archived(patient, target_spacing):
     """
     Given a row with source and destination file paths for a single case, resamples segmentation
     and acquisition. Also, clips acquisition range to abdominal window.
@@ -53,23 +92,23 @@ def process_patient(patient, target_spacing):
     img_output = patient.preprocessed_img_path
     seg_output = patient.preprocessed_seg_path
 
-    if os.path.exists(img_output) and os.path.exists(seg_output):
-        print(img_output + " and " + seg_output + " already exists.")
-        return
+    # if patient.preprocessed_img and patient.preprocessed_seg:
+    #     print(img_output + " and " + seg_output + " already exists.")
+    #     return img_output, seg_output
 
     img, img_header = load(img_col)
     target_shape = calculate_target_shape(img, img_header, target_spacing)
 
     img = resample_volume(img, 3, target_shape)
-    np.save(img_output, img)
+    # np.save(img_output, img)
     print("saved img at " + img_output)
 
     seg, _ = load(seg_col)
     seg = interpolate_segmentation_masks(seg, target_shape)
-    np.save(seg_output, seg)
+    # np.save(seg_output, seg)
     print("saved seg at " + seg_output)
 
-    return seg_output
+    return img, seg
 
 
 def interpolate_segmentation_masks(seg, target_shape):
@@ -143,7 +182,6 @@ def resample_volume(volume, order, target_shape):
 @click.option('-h', '--hdfs', is_flag=True, default=False, show_default=True, help="(optional) base directory is on hdfs or local filesystem")
 @click.option('-n', '--feature_table_output_name', default="feature-table", help= "name of new feature table that is created.")
 def cli(spark_master_uri, base_directory, target_spacing, hdfs, query, feature_table_output_name): 
-
     # Setup Spark context
     spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri, hdfs)
     generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name)
@@ -160,7 +198,7 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     annot_df = spark.read.format("delta").load(annotation_table)
     annot_df.show()
     scan_df = spark.read.format("delta").load(scan_table)
-    scan_df.show()
+    scan_df.show()      
 
 
     # Add new columns and save feature tables
@@ -170,30 +208,47 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     df = df.withColumn("preprocessed_seg_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_seg'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_img_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_img'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_target_spacing", lit(str(target_spacing)))
+    df = df.withColumn("preprocessed_target_spacing_x", lit(str(target_spacing[0])))
+    df = df.withColumn("preprocessed_target_spacing_y", lit(str(target_spacing[1])))
+    df = df.withColumn("preprocessed_target_spacing_z", lit(str(target_spacing[2])))
     if query:
         sql_query = "SELECT * from feature where " + str(query)
         df.createOrReplaceTempView("feature")   
         df = spark.sql(sql_query)
-    df.write.format("delta").mode("overwrite").save(feature_table)
 
-    # Resample segmentation and images
-
+    df.select("img", "seg").show()
     # Create new local directories if needed
     if not os.path.exists(feature_dir) and not hdfs:
         os.mkdir(feature_dir)
     if not os.path.exists(feature_files) and not hdfs:
         os.mkdir(feature_files)
-    # Call parallel resampling jobs
-    results = Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
 
+    # Call parallel resampling jobs
+    # results = Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
+    
+    # Try generating columns before calling pandas UDF
+    df = df.withColumn("preprocessed_img", lit(""))
+    df = df.withColumn("preprocessed_seg", lit(""))
+
+    # play around with using DF's schema or just selecting certain columns to pass into UDF
+    # schema = "img string, seg string, preprocessed_img string, preprocessed_seg string"
+    df.groupBy("subtype").applyInPandas(process_patient, schema = df.schema)
+    df.select("seg", "preprocessed_img", "preprocessed_seg").show()
+
+    # Write Table to File   
+    df.write.format("delta").mode("overwrite").save(feature_table)
+    
 
     print("-----Feature table generated:------")
     feature_df = spark.read.format("delta").load(feature_table)
     feature_df.show()
 
-    print("-----Columns Added:------")
-    feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
-    print("Feature Table written to ", feature_table)
+    # print("-----Columns Added:------")
+    # feature_df.select("preprocessed_img","preprocessed_seg", "preprocessed_target_spacing").show(20, False)
+    # print("Feature Table written to ", feature_table)
 
 if __name__ == "__main__":
     cli()    
+
+    
+

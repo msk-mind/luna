@@ -21,5 +21,6 @@ class SparkConfig:
 			.config("spark.driver.port", "8001") \
 			.config("spark.blockManager.port", "8002") \
 			.config("spark.driver.bindAddress", "0.0.0.0") \
+			# .config("spark.sql.execution.arrow.enabled", "true") \
 			.config("fs.defaultFS", default_fs) \
 			.getOrCreate()

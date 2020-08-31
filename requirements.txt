@@ -5,6 +5,7 @@ numpy
 pandas
 scikit-image
 pandas
+pyarrow
 pyspark
 pytest
 pytest-cov
