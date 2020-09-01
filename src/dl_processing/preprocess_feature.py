@@ -38,7 +38,7 @@ from medpy.io import load
 from skimage.transform import resize
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import udf, lit
+from pyspark.sql.functions import udf, lit, expr
 from pyspark.sql.types import StringType
 
 logger = init_logger()
@@ -182,7 +182,8 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     df = df.withColumn("preprocessed_seg_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_seg'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_img_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_img'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_target_spacing", lit(str(target_spacing)))
-    
+    df = df.withColumn("feature_uuid", expr("uuid()"))
+
     if query:
         sql_query = "SELECT * from feature where " + str(query)
         df.createOrReplaceTempView("feature")  
@@ -215,7 +216,7 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     feature_df.show()
 
     logger.info("-----Columns Added:------")
-    feature_df.select("preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
+    feature_df.select("feature_uuid", "preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
     
     logger.info("Feature Table written to ")
     logger.info(feature_table)
