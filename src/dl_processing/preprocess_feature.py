@@ -34,14 +34,15 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from medpy.io import load
-from skimage.transform import resize        
+from skimage.transform import resize  
+import databricks.koalas as ks      
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, lit, pandas_udf, PandasUDFType, array
 from pyspark.sql.types import StringType
 
 
-def process_patient_archived(patient, target_spacing):	
+def process_patient_archived(patient,target_spacing):	
     """	
     Given a row with source and destination file paths for a single case, resamples segmentation	
     and acquisition. Also, clips acquisition range to abdominal window.	
@@ -53,6 +54,7 @@ def process_patient_archived(patient, target_spacing):
     img_output = patient.preprocessed_img_path	
     seg_output = patient.preprocessed_seg_path	
 
+    # target_spacing = patient.preprocessed_target_spacing_x, preprocessed_target_spacing_x,preprocessed_target_spacing_x
     # if patient.preprocessed_img and patient.preprocessed_seg:	
     #     print(img_output + " and " + seg_output + " already exists.")	
     #     return img_output, seg_output	
@@ -70,6 +72,49 @@ def process_patient_archived(patient, target_spacing):
     print("saved seg at " + seg_output)	
 
     return img, seg
+
+def process_patient_ks(df):
+    """
+    Given a row with source and destination file paths for a single case, resamples segmentation
+    and acquisition. Also, clips acquisition range to abdominal window.
+    :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
+    :return: None
+    """
+
+    img_col = df.img.item()
+    # print(img_col)
+    seg_col = df.seg.item()
+    # img_col = patient.img
+    # seg_col = patient.seg
+    img_output = df.preprocessed_img_path.item()
+    seg_output = df.preprocessed_seg_path.item()
+
+    target_spacing = (df.preprocessed_target_spacing_x, df.preprocessed_target_spacing_y, df.preprocessed_target_spacing_z)
+
+    img, img_header = load(img_col)
+    target_shape = calculate_target_shape(img, img_header, target_spacing)
+    img = resample_volume(img, 3, target_shape)
+    np.save(img_output, img)
+    print("saved img at " + img_output)
+
+    seg, _ = load(seg_col)
+    seg = interpolate_segmentation_masks(seg, target_shape)
+    np.save(seg_output, seg)
+    print("saved seg at " + seg_output)
+
+    
+    # attempt 1 - directly assign
+    # df['preprocessed_img'] = img.tobytes()
+    # df['preprocessed_seg'] = seg.tobytes()
+
+    # use assign function
+    # preprocessed_img = df.preprocessed_img
+    # preprocessed_seg = df.preprocessed_seg
+    # df.assign(preprocessed_img = str(img.dumps()))
+    # df.assign(preprocessed_seg = str(seg.dumps()))
+
+    return df
+    
 
 def process_patient(df):
     """
@@ -177,6 +222,10 @@ def resample_volume(volume, order, target_shape):
     return volume
 
 
+def write_segmented_files(pdf):
+    process_patient_ks(pdf)
+    return pdf
+
 
         
 @click.command()
@@ -230,11 +279,16 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
         os.mkdir(feature_files)
 
     # Call parallel resampling jobs
-    results = Parallel(n_jobs=8)(delayed(process_patient_archived)(row, target_spacing) for row in df.rdd.collect())
-    
+    # results = Parallel(n_jobs=8)(delayed(process_patient_archived)(row, target_spacing) for row in df.rdd.collect())
+    # try with koalas
+    ks.set_option("compute.default_index_type", "distributed") 
+    kdf = df.to_koalas()  
+    kdf = kdf.groupby('annotation_uid').apply(write_segmented_files)
+
+
     # Try generating columns before calling pandas UDF
-    # df = df.withColumn("preprocessed_img",)
-    # df = df.withColumn("preprocessed_seg",)
+    df = df.withColumn("preprocessed_img",)
+    df = df.withColumn("preprocessed_seg",)
 
     # read the written resampled numpy binaries and merge into delta table
     img_bin_df = spark.read.format("binaryFile") \
@@ -242,8 +296,9 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
         .option("recursiveFileLookup", "false") \
         .load(feature_files)
 
-    # show() causes out of memory exception
+    # # show() causes out of memory exception
     # img_bin_df.show(truncate=True)
+
     img_cond = [df.preprocessed_img_path == img_bin_df.path]
     df = df.join(img_bin_df.select("path", "content"), img_cond)
     df = df.withColumnRenamed("content", "preprocessed_img")
@@ -267,6 +322,8 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
 
     # Write Table to File   
     spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
+
+    # can't write binaries, causes memory errors.
     df.write.format("delta").mode("overwrite").save(feature_table)
     
 
@@ -274,9 +331,9 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     feature_df = spark.read.format("delta").load(feature_table)
     feature_df.show()
 
-    # print("-----Columns Added:------")
-    # feature_df.select("preprocessed_img","preprocessed_seg", "preprocessed_target_spacing").show(20, False)
-    # print("Feature Table written to ", feature_table)
+    print("-----Columns Added:------")
+    feature_df.select("preprocessed_img","preprocessed_seg", "preprocessed_target_spacing").show(20, False)
+    print("Feature Table written to ", feature_table)
 
 if __name__ == "__main__":
     cli()    
