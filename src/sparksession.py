@@ -4,11 +4,11 @@ from pyspark.sql import SparkSession
 
 class SparkConfig:
 
-	def spark_session(self, app_name, spark_master_uri, hdfs):
+	def spark_session(self, app_name, spark_master_uri, hdfs=False):
 
 		default_fs = "file:///"
 		if hdfs:
-			default_fs = "hdfs:///"
+			default_fs = "hdfs://"
 			
 		return SparkSession.builder \
 			.appName(app_name) \
