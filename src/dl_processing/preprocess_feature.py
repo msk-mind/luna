@@ -32,6 +32,7 @@ from sparksession import SparkConfig
 from custom_logger import init_logger
 
 import numpy as np
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import pandas as pd
 from joblib import Parallel, delayed
 import databricks.koalas as ks  
@@ -101,7 +102,7 @@ def process_patient_koalas_udf(patient):
     img_output = patient.preprocessed_img_path.item()
     seg_output = patient.preprocessed_seg_path.item()
     target_spacing = (patient.preprocessed_target_spacing_x, patient.preprocessed_target_spacing_y, patient.preprocessed_target_spacing_z)
-
+    
     if os.path.exists(img_output) and os.path.exists(seg_output):
         logger.warning(img_output + " and " + seg_output + " already exists.")
         return
@@ -397,7 +398,7 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
 
     # Using Pandas DF and applyInPandas() [Apache Arrow]:
     print("** Testing Pandas UDF **")
-    df.groupBy("feature_uuid").applyInPandas(process_patient_pandas_udf, schema = df.schema)
+    df = df.groupBy("feature_uuid").applyInPandas(process_patient_pandas_udf, schema = df.schema)
 
     # koalas - apply udf [single processing]
     # print("  ** Testing: Apply Koalas UDF **")
@@ -407,12 +408,12 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     # df = df.to_spark()
 
     # koalas - batch apply udf - and PARALLEL processing on batches
-    # print("  ** Testing: Koalas apply_batch udf and parallel processing on each batch **")
-    # ks.set_option("compute.default_index_type", "distributed") 
-    # df = df.to_koalas()         
-    # # df.groupby('feature_uuid').apply(process_patient_koalas_udf)
-    # df.koalas.apply_batch(process_patient_koalas_udf_iterate)
-    # df = df.to_spark()
+    #print("  ** Testing: Koalas apply_batch udf and parallel processing on each batch **")
+    #ks.set_option("compute.default_index_type", "distributed") 
+    #df = df.to_koalas()         
+    #df.groupby('feature_uuid').apply(process_patient_koalas_udf)
+    #df.koalas.apply_batch(process_patient_koalas_udf_iterate)
+    #df = df.to_spark()
     
     # write table
     df.write.format("delta").mode("overwrite").save(feature_table)
