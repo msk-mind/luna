@@ -24,7 +24,7 @@ Parameters:
 Example:
     $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table
 """
-import os, sys
+import os, sys, subprocess, time
 import click
 sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../') ))
 
@@ -34,6 +34,7 @@ from custom_logger import init_logger
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+import databricks.koalas as ks  
 from medpy.io import load
 from skimage.transform import resize
 
@@ -50,6 +51,7 @@ def process_patient(patient, target_spacing):
     :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
     :return: None
     """
+    
     # TODO add multiprocess logging if spark performance doesn't work out.
     img_col = patient.img
     seg_col = patient.seg
@@ -57,15 +59,15 @@ def process_patient(patient, target_spacing):
     seg_output = patient.preprocessed_seg_path
 
     if os.path.exists(img_output) and os.path.exists(seg_output):
-        logger.warn(img_output + " and " + seg_output + " already exists.")
+        logger.warning(img_output + " and " + seg_output + " already exists.")
         return
 
     if not os.path.exists(img_col):
-        logger.warn(img_col + " does not exist.")
+        logger.warning(img_col + " does not exist.")
         return
 
     if not os.path.exists(seg_col):
-        logger.warn(seg_col + " does not exist.")
+        logger.warning(seg_col + " does not exist.")
         return
 
     img, img_header = load(img_col)
@@ -80,8 +82,180 @@ def process_patient(patient, target_spacing):
     np.save(seg_output, seg)
     logger.info("saved seg at " + seg_output)
 
-    return seg_output
+    # since spark df is immutable, can't condition path columns (preprocessed_seg_path and preprocessed_img_path)
+    # based on results of resampling volumes
 
+    return
+
+def process_patient_koalas_udf(patient):
+    """
+    Given a row with source and destination file paths for a single case, resamples segmentation
+    and acquisition. Also, clips acquisition range to abdominal window.
+    :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
+    :return: None
+    """
+    # TODO add multiprocess logging if spark performance doesn't work out.
+    img_col = patient.img.item()
+    seg_col = patient.seg.item()
+
+    img_output = patient.preprocessed_img_path.item()
+    seg_output = patient.preprocessed_seg_path.item()
+    target_spacing = (patient.preprocessed_target_spacing_x, patient.preprocessed_target_spacing_y, patient.preprocessed_target_spacing_z)
+
+    if os.path.exists(img_output) and os.path.exists(seg_output):
+        logger.warning(img_output + " and " + seg_output + " already exists.")
+        return
+
+    if not os.path.exists(img_col):
+        logger.warning(img_col + " does not exist.")
+        patient['preprocessed_img_path'] = ""
+        patient['preprocessed_seg_path'] = ""
+        return
+
+    if not os.path.exists(seg_col):
+        logger.warning(seg_col + " does not exist.")
+        patient['preprocessed_img_path'] = ""
+        patient['preprocessed_seg_path'] = ""
+        return
+
+    try: 
+        img, img_header = load(img_col)
+        target_shape = calculate_target_shape(img, img_header, target_spacing)
+
+        img = resample_volume(img, 3, target_shape)
+        np.save(img_output, img)
+        logger.info("saved img at " + img_output)
+
+        seg, _ = load(seg_col)
+        seg = interpolate_segmentation_masks(seg, target_shape)
+        np.save(seg_output, seg)
+        logger.info("saved seg at " + seg_output)
+    except:
+        logger.warning("failed to generate resampled volume.")
+        patient['preprocessed_img_path'] = ""
+        patient['preprocessed_seg_path'] = ""
+
+    return patient
+
+def process_patient_koalas_udf_iterate_row(patient):
+    """
+    Given a row with source and destination file paths for a single case, resamples segmentation
+    and acquisition. Also, clips acquisition range to abdominal window.
+    :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
+    :return: None
+    """
+    # TODO add multiprocess logging if spark performance doesn't work out.
+    # for index, patient in df.iterrows():
+
+    img_col = patient.img
+    seg_col = patient.seg
+
+    img_output = patient.preprocessed_img_path
+    seg_output = patient.preprocessed_seg_path
+    target_spacing = (patient.preprocessed_target_spacing_x, patient.preprocessed_target_spacing_y, patient.preprocessed_target_spacing_z)
+
+    if os.path.exists(img_output) and os.path.exists(seg_output):
+        logger.warning(img_output + " and " + seg_output + " already exists.")
+        return
+
+    if not os.path.exists(img_col):
+        logger.warning(img_col + " does not exist.")
+        patient['preprocessed_img_path'] = ""
+        patient['preprocessed_seg_path'] = ""
+        return
+
+    if not os.path.exists(seg_col):
+        logger.warning(seg_col + " does not exist.")
+        patient['preprocessed_img_path'] = ""
+        patient['preprocessed_seg_path'] = ""
+        return
+
+    try: 
+        img, img_header = load(img_col)
+        target_shape = calculate_target_shape(img, img_header, target_spacing)
+
+        img = resample_volume(img, 3, target_shape)
+        np.save(img_output, img)
+        logger.info("saved img at " + img_output)
+
+        seg, _ = load(seg_col)
+        seg = interpolate_segmentation_masks(seg, target_shape)
+        np.save(seg_output, seg)
+        logger.info("saved seg at " + seg_output)
+    except:
+        logger.warning("failed to generate resampled volume.")
+        patient['preprocessed_img_path'] = ""
+        patient['preprocessed_seg_path'] = ""
+
+    return patient
+
+
+def process_patient_koalas_udf_iterate(df):
+    """
+    Given a row with source and destination file paths for a single case, resamples segmentation
+    and acquisition. Also, clips acquisition range to abdominal window.
+    :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
+    :return: None
+    """
+
+    Parallel(n_jobs=8)(delayed(process_patient_koalas_udf_iterate_row)(patient) for _, patient in df.iterrows())
+    return df
+
+def process_patient_pandas_udf(patient):
+    """
+    Given a row with source and destination file paths for a single case, resamples segmentation
+    and acquisition. Also, clips acquisition range to abdominal window.
+    :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
+    :return: None
+    """
+    # TODO add multiprocess logging if spark performance doesn't work out.
+    img_col = patient.img.item()
+    seg_col = patient.seg.item()
+
+    img_output = patient.preprocessed_img_path.item()
+    seg_output = patient.preprocessed_seg_path.item()   
+    target_spacing = (patient.preprocessed_target_spacing_x, patient.preprocessed_target_spacing_y, patient.preprocessed_target_spacing_z)
+
+    if os.path.exists(img_output) and os.path.exists(seg_output):
+        print(img_output + " and " + seg_output + " already exists.")
+        logger.warning(img_output + " and " + seg_output + " already exists.")
+        return patient
+
+    if not os.path.exists(img_col):
+        print(img_col + " does not exist.")
+        logger.warning(img_col + " does not exist.")
+        patient['preprocessed_img_path'] = ""
+        patient['preprocessed_seg_path'] = ""
+        return patient
+
+    if not os.path.exists(seg_col):
+        print(seg_col + " does not exist.")
+        logger.warning(seg_col + " does not exist.")
+        patient['preprocessed_img_path'] = ""
+        patient['preprocessed_seg_path'] = ""
+        return patient
+
+    try: 
+        img, img_header = load(img_col)
+        target_shape = calculate_target_shape(img, img_header, target_spacing)
+
+        img = resample_volume(img, 3, target_shape)
+        np.save(img_output, img)
+        logger.info("saved img at " + img_output)
+        print("saved img at " + img_output)
+
+        seg, _ = load(seg_col)
+        seg = interpolate_segmentation_masks(seg, target_shape)
+        np.save(seg_output, seg)
+        logger.info("saved seg at " + seg_output)
+        print("saved seg at " + seg_output)
+    except:
+        logger.warning("failed to generate resampled volume.")
+        print("failed to generate resampled volume.")
+        patient['preprocessed_img_path'] = ""
+        patient['preprocessed_seg_path'] = ""
+
+    return patient
 
 def interpolate_segmentation_masks(seg, target_shape):
     """
@@ -156,9 +330,11 @@ def resample_volume(volume, order, target_shape):
 def cli(spark_master_uri, base_directory, target_spacing, hdfs, query, feature_table_output_name): 
 
     # Setup Spark context
-    spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri, hdfs)
-
+    import time
+    start_time = time.time()
+    spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri, hdfs) 
     generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name)
+    print("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 
 def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name): 
@@ -178,11 +354,17 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     # Add new columns and save feature tables
     generate_preprocessed_filename_udf = udf(generate_preprocessed_filename, StringType())
     df = annot_df.join(scan_df, ['SeriesInstanceUID'])
-
     df = df.withColumn("preprocessed_seg_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_seg'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
-    df = df.withColumn("preprocessed_img_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_img'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
+    df = df.withColumn("preprocessed_img_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_img'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))    
     df = df.withColumn("preprocessed_target_spacing", lit(str(target_spacing)))
+
+    # Add target spacing individually so they can be extracted during row processing
+    df = df.withColumn("preprocessed_target_spacing_x", lit(target_spacing[0]))
+    df = df.withColumn("preprocessed_target_spacing_y", lit(target_spacing[1]))
+    df = df.withColumn("preprocessed_target_spacing_z", lit(target_spacing[2]))
+    
     df = df.withColumn("feature_uuid", expr("uuid()"))
+
 
     if query:
         sql_query = "SELECT * from feature where " + str(query)
@@ -198,7 +380,6 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
             logger.error(err_msg)
             return
 
-    df.write.format("delta").mode("overwrite").save(feature_table)
 
     # Resample segmentation and images
 
@@ -207,10 +388,36 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
         os.mkdir(feature_dir)
     if not os.path.exists(feature_files) and not hdfs:
         os.mkdir(feature_files)
-    # Call parallel resampling jobs
-    results = Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
+    
+    
+    # Performance Testing, uncomment for type you want to run
+    
+    # Using Sparkdf + Parallel processing
+    # results = Parallel(n_jobs=8)(delayed(process_patient)(row, target_spacing) for row in df.rdd.collect())
 
+    # Using Pandas DF and applyInPandas() [Apache Arrow]:
+    print("** Testing Pandas UDF **")
+    df.groupBy("feature_uuid").applyInPandas(process_patient_pandas_udf, schema = df.schema)
 
+    # koalas - apply udf [single processing]
+    # print("  ** Testing: Apply Koalas UDF **")
+    # ks.set_option("compute.default_index_type", "distributed") 
+    # df = df.to_koalas()         
+    # df.groupby('feature_uuid').apply(process_patient_koalas_udf)
+    # df = df.to_spark()
+
+    # koalas - batch apply udf - and PARALLEL processing on batches
+    # print("  ** Testing: Koalas apply_batch udf and parallel processing on each batch **")
+    # ks.set_option("compute.default_index_type", "distributed") 
+    # df = df.to_koalas()         
+    # # df.groupby('feature_uuid').apply(process_patient_koalas_udf)
+    # df.koalas.apply_batch(process_patient_koalas_udf_iterate)
+    # df = df.to_spark()
+    
+    # write table
+    df.write.format("delta").mode("overwrite").save(feature_table)
+
+    
     logger.info("-----Feature table generated:------")
     feature_df = spark.read.format("delta").load(feature_table)
     feature_df.show()
