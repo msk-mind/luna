@@ -32,6 +32,7 @@ from sparksession import SparkConfig
 from custom_logger import init_logger
 
 import numpy as np
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import pandas as pd
 from joblib import Parallel, delayed
 from medpy.io import load
