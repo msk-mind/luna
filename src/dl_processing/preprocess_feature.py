@@ -43,6 +43,13 @@ from pyspark.sql.functions import udf, lit, expr
 from pyspark.sql.types import StringType
 
 logger = init_logger()
+GPFS_MOUNT_DIR = "/gpfs/mskmindhdp_emc"
+
+def generate_absolute_path_from_hdfs(absolute_hdfs_path_col, filename_col):
+    if absolute_hdfs_path_col[0] == '/':
+        absolute_hdfs_path_col = absolute_hdfs_path_col[1:]
+    return os.path.join(GPFS_MOUNT_DIR, absolute_hdfs_path_col, filename_col)
+
 
 def process_patient_pandas_udf(patient):
     """
@@ -52,51 +59,52 @@ def process_patient_pandas_udf(patient):
     :return: None
     """
     # TODO add multiprocess logging if spark performance doesn't work out.
-    img_col = patient.img.item()
-    seg_col = patient.seg.item()
-
-    img_output = patient.preprocessed_img_path.item()
-    seg_output = patient.preprocessed_seg_path.item()   
+    scan_absolute_hdfs_path = generate_absolute_path_from_hdfs(patient.scan_absolute_hdfs_path.item(), patient.scan_filename.item())
+    print("scan path", scan_absolute_hdfs_path)
+    annotation_absolute_hdfs_path = generate_absolute_path_from_hdfs(patient.annotation_absolute_hdfs_path.item(), patient.annotation_filename.item())
+    print("annot path", annotation_absolute_hdfs_path)
+    preprocessed_scan_path = patient.preprocessed_scan_path.item()
+    preprocessed_annotation_path = patient.preprocessed_annotation_path.item()   
     target_spacing = (patient.preprocessed_target_spacing_x, patient.preprocessed_target_spacing_y, patient.preprocessed_target_spacing_z)
 
-    if os.path.exists(img_output) and os.path.exists(seg_output):
-        print(img_output + " and " + seg_output + " already exists.")
-        logger.warning(img_output + " and " + seg_output + " already exists.")
+    if os.path.exists(preprocessed_scan_path) and os.path.exists(preprocessed_annotation_path):
+        print(preprocessed_scan_path + " and " + preprocessed_annotation_path + " already exists.")
+        logger.warning(preprocessed_scan_path + " and " + preprocessed_annotation_path + " already exists.")
         return patient
 
-    if not os.path.exists(img_col):
-        print(img_col + " does not exist.")
-        logger.warning(img_col + " does not exist.")
-        patient['preprocessed_img_path'] = ""
-        patient['preprocessed_seg_path'] = ""
+    if not os.path.exists(scan_absolute_hdfs_path):
+        print(scan_absolute_hdfs_path + " does not exist.")
+        logger.warning(scan_absolute_hdfs_path + " does not exist.")
+        patient['preprocessed_scan_path'] = ""
+        patient['preprocessed_annotation_path'] = ""
         return patient
 
-    if not os.path.exists(seg_col):
-        print(seg_col + " does not exist.")
-        logger.warning(seg_col + " does not exist.")
-        patient['preprocessed_img_path'] = ""
-        patient['preprocessed_seg_path'] = ""
+    if not os.path.exists(annotation_absolute_hdfs_path):
+        print(annotation_absolute_hdfs_path + " does not exist.")
+        logger.warning(annotation_absolute_hdfs_path + " does not exist.")
+        patient['preprocessed_scan_path'] = ""
+        patient['preprocessed_annotation_path'] = ""
         return patient
 
     try: 
-        img, img_header = load(img_col)
+        img, img_header = load(scan_absolute_hdfs_path)
         target_shape = calculate_target_shape(img, img_header, target_spacing)
 
         img = resample_volume(img, 3, target_shape)
-        np.save(img_output, img)
-        logger.info("saved img at " + img_output)
-        print("saved img at " + img_output)
+        np.save(preprocessed_scan_path, img)
+        logger.info("saved img at " + preprocessed_scan_path)
+        print("saved img at " + preprocessed_scan_path)
 
-        seg, _ = load(seg_col)
+        seg, _ = load(annotation_absolute_hdfs_path)
         seg = interpolate_segmentation_masks(seg, target_shape)
-        np.save(seg_output, seg)
-        logger.info("saved seg at " + seg_output)
-        print("saved seg at " + seg_output)
+        np.save(preprocessed_annotation_path, seg)
+        logger.info("saved seg at " + preprocessed_annotation_path)
+        print("saved seg at " + preprocessed_annotation_path)
     except:
         logger.warning("failed to generate resampled volume.")
         print("failed to generate resampled volume.")
-        patient['preprocessed_img_path'] = ""
-        patient['preprocessed_seg_path'] = ""
+        patient['preprocessed_scan_path'] = ""
+        patient['preprocessed_annotation_path'] = ""
 
     return patient
 
@@ -181,34 +189,42 @@ def cli(spark_master_uri, base_directory, target_spacing, hdfs, query, feature_t
 
 
 def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name): 
-    annotation_table = os.path.join(base_directory, "tables/annotation")
-    scan_table = os.path.join(base_directory, "tables/scan")
+    annotation_table = os.path.join(base_directory, "tables/radiology.annotations")
+    scan_table = os.path.join(base_directory, "tables/radiology.scans")
     feature_table = os.path.join(base_directory, "features/"+str(feature_table_output_name)+"/")
     feature_dir = os.path.join(base_directory, "features")
     feature_files = os.path.join(base_directory, "features/feature-files/")
 
-    # Load Scan and Annotation tables
+    # Load Annotation table and rename columns before merge
     annot_df = spark.read.format("delta").load(annotation_table)
-    annot_df.show()
+    rename_annotation_columns = ["absolute_hdfs_path", "absolute_hdfs_host", "filename", "type","payload_number"]
+    for col in rename_annotation_columns:
+        annot_df = annot_df.withColumnRenamed(col,("annotation_"+col))
+    annot_df.show(truncate=False)
+
+    # Load Scan Table, filter by mhd [no zraw] and rename columns for merging
     scan_df = spark.read.format("delta").load(scan_table)
-    scan_df.show()
+    rename_scan_columns = ["absolute_hdfs_path", "absolute_hdfs_host", "filename", "type","payload_number", "item_number"]
+    for col in rename_scan_columns:
+        scan_df = scan_df.withColumnRenamed(col,("scan_"+col))
+    scan_df.createOrReplaceTempView("scan")  
+    scan_df = spark.sql("SELECT * from scan where scan_type='.mhd'")
+    scan_df.show(truncate=False)
 
 
-    # Add new columns and save feature tables
+    # join scan and annotation tables 
     generate_preprocessed_filename_udf = udf(generate_preprocessed_filename, StringType())
     df = annot_df.join(scan_df, ['SeriesInstanceUID'])
-    df = df.withColumn("preprocessed_seg_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_seg'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
-    df = df.withColumn("preprocessed_img_path", lit(generate_preprocessed_filename_udf(df.SeriesInstanceUID, lit('_img'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))    
-    df = df.withColumn("preprocessed_target_spacing", lit(str(target_spacing)))
-
+    df = df.withColumn("preprocessed_annotation_path", lit(generate_preprocessed_filename_udf(df.scan_record_uuid, lit('_annotation'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
+    df = df.withColumn("preprocessed_scan_path", lit(generate_preprocessed_filename_udf(df.scan_record_uuid, lit('_scan'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))    
+    
     # Add target spacing individually so they can be extracted during row processing
     df = df.withColumn("preprocessed_target_spacing_x", lit(target_spacing[0]))
     df = df.withColumn("preprocessed_target_spacing_y", lit(target_spacing[1]))
     df = df.withColumn("preprocessed_target_spacing_z", lit(target_spacing[2]))
-    
     df = df.withColumn("feature_uuid", expr("uuid()"))
 
-
+    # sql processing on joined table if specified
     if query:
         sql_query = "SELECT * from feature where " + str(query)
         df.createOrReplaceTempView("feature")  
@@ -237,13 +253,14 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     # write table
     df.write.format("delta").mode("overwrite").save(feature_table)
 
+    # verify table produced is valid
     logger.info("-----Feature table generated:------")
     feature_df = spark.read.format("delta").load(feature_table)
     feature_df.show()
 
-    logger.info("-----Columns Added:------")
-    feature_df.select("feature_uuid", "preprocessed_seg_path","preprocessed_img_path", "preprocessed_target_spacing").show(20, False)
-    
+    logger.info("-----Columns Added:------") 
+    feature_df.select("feature_uuid", "preprocessed_annotation_path","preprocessed_scan_path", "preprocessed_target_spacing_y","preprocessed_target_spacing_x","preprocessed_target_spacing_z").show(20, False)
+
     logger.info("Feature Table written to ")
     logger.info(feature_table)
 
