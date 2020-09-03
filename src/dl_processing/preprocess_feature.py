@@ -232,7 +232,7 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
         os.mkdir(feature_files)
     
     # Preprocess Features Using Pandas DF and applyInPandas() [Apache Arrow]:
-    df.groupBy("feature_uuid").applyInPandas(process_patient_pandas_udf, schema = df.schema).show()
+    df = df.groupBy("feature_uuid").applyInPandas(process_patient_pandas_udf, schema = df.schema)
 
     # write table
     df.write.format("delta").mode("overwrite").save(feature_table)
