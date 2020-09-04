@@ -188,16 +188,12 @@ def cli(spark_master_uri, base_directory, target_spacing, query, feature_table_o
 
 
 def generate_feature_table(base_directory, target_spacing, spark, query, feature_table_output_name): 
-    annotation_table = os.path.join(base_directory, "/data/radiology/tables/radiology.annotations")
-    scan_table = os.path.join(base_directory, "/data/radiolgy/tables/radiology.scans")
-    feature_table = os.path.join(base_directory, "/data/radiology/tables/radiology."+str(feature_table_output_name))
-    feature_files = os.path.join(base_directory, "/data/radiology/features/")
-
-    print(annotation_table)
-    print(scan_table)
-    print(feature_table)
-    print(feature_files)
-    # Load Annotation table and rename columns before merge
+    annotation_table = os.path.join(base_directory, "data/radiology/tables/radiology.annotations")
+    scan_table = os.path.join(base_directory, "data/radiology/tables/radiology.scans")
+    feature_table = os.path.join(base_directory, "data/radiology/tables/radiology."+str(feature_table_output_name)+"/")
+    feature_files = os.path.join(base_directory, "data/radiology/features/")
+    
+# Load Annotation table and rename columns before merge
     annot_df = spark.read.format("delta").load(annotation_table)
     rename_annotation_columns = ["absolute_hdfs_path", "absolute_hdfs_host", "filename", "type","payload_number"]
     for col in rename_annotation_columns:
@@ -225,7 +221,7 @@ def generate_feature_table(base_directory, target_spacing, spark, query, feature
     df = df.withColumn("preprocessed_target_spacing_y", lit(target_spacing[1]))
     df = df.withColumn("preprocessed_target_spacing_z", lit(target_spacing[2]))
     df = df.withColumn("feature_record_uuid", expr("uuid()"))
-
+    df.show(truncate=False)
     # sql processing on joined table if specified
     if query:
         sql_query = "SELECT * from feature where " + str(query)
