@@ -4,12 +4,8 @@ from pyspark.sql import SparkSession
 
 class SparkConfig:
 
-	def spark_session(self, app_name, spark_master_uri, hdfs):
+	def spark_session(self, app_name, spark_master_uri):
 
-		default_fs = "file:///"
-		if hdfs:
-			default_fs = "hdfs://"
-			
 		return SparkSession.builder \
 			.appName(app_name) \
 			.master(spark_master_uri) \
@@ -22,7 +18,6 @@ class SparkConfig:
 			.config("spark.blockManager.port", "8002") \
 			.config("spark.driver.bindAddress", "0.0.0.0") \
 			.config("spark.sql.execution.arrow.pyspark.enabled", "true") \
-			.config("fs.defaultFS", default_fs) \
 			.config("spark.executor.memory", "6g") \
 			.config("spark.driver.memory", "6g") \
 			.config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \

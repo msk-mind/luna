@@ -7,12 +7,11 @@ Usage:
     
 Parameters: 
     REQUIRED PARAMETERS:
-        --base_directory: parent directory containing /tables directory, where {base_directory}/tables/scan and {base_directory}/tables/annotation are
-                            the scan and annotation delta tables
         --target_spacing: target spacing for the x,y,and z dimensions
         --spark_master_uri: spark master uri e.g. spark://master-ip:7077 or local[*]
     OPTIONAL PARAMETERS:
-        --query: where clause of SQL query to filter feature tablE. WHERE does not need to be included, make sure to wrap with quotes to be interpretted correctly
+        --base_directory: path to write feature table and files. We assume scan/annotation refined tables are at a specific path on gpfs.
+	--query: where clause of SQL query to filter feature tablE. WHERE does not need to be included, make sure to wrap with quotes to be interpretted correctly
             - Queriable Columns to Filter By:
                 - SeriesInstanceUID,AccessionNumber,ct_dates,ct_accession,img,ring-seg,annotation_uid,0_1,vendor,ST,kvP,mA,ID,Rad_segm,R_ovary,L_ovary,Omentum,Notes,subtype,seg
             - examples:
@@ -20,7 +19,6 @@ Parameters:
                 - filtering by AccessionID: --query "AccessionNumber = '12345'"
         --feature_table_output_name: name of feature table that is created, default is feature-table,
                 feature table will be created at {base_directory}/tables/features/{feature_table_output_name}
-        --hdfs: base directory is on hdfs or local filesystem
 Example:
     $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table
 """
@@ -46,6 +44,7 @@ logger = init_logger()
 GPFS_MOUNT_DIR = "/gpfs/mskmindhdp_emc"
 
 def generate_absolute_path_from_hdfs(absolute_hdfs_path_col, filename_col):
+    # do we need this if?
     if absolute_hdfs_path_col[0] == '/':
         absolute_hdfs_path_col = absolute_hdfs_path_col[1:]
     return os.path.join(GPFS_MOUNT_DIR, absolute_hdfs_path_col, filename_col)
@@ -58,7 +57,6 @@ def process_patient_pandas_udf(patient):
     :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
     :return: None
     """
-    # TODO add multiprocess logging if spark performance doesn't work out.
     scan_absolute_hdfs_path = generate_absolute_path_from_hdfs(patient.scan_absolute_hdfs_path.item(), patient.scan_filename.item())
     print("scan path", scan_absolute_hdfs_path)
     annotation_absolute_hdfs_path = generate_absolute_path_from_hdfs(patient.annotation_absolute_hdfs_path.item(), patient.annotation_filename.item())
@@ -100,9 +98,9 @@ def process_patient_pandas_udf(patient):
         np.save(preprocessed_annotation_path, seg)
         logger.info("saved seg at " + preprocessed_annotation_path)
         print("saved seg at " + preprocessed_annotation_path)
-    except:
-        logger.warning("failed to generate resampled volume.")
-        print("failed to generate resampled volume.")
+    except Exception as err:
+        logger.warning("failed to generate resampled volume.", err)
+        print("failed to generate resampled volume.", err)
         patient['preprocessed_scan_path'] = ""
         patient['preprocessed_annotation_path'] = ""
 
@@ -173,28 +171,32 @@ def resample_volume(volume, order, target_shape):
 
 @click.command()
 @click.option('-q', '--query', default = None, help = "where clause of SQL query to filter feature table, 'WHERE' does not need to be included, but make sure to wrap with quotes to be interpretted correctly")
-@click.option('-b', '--base_directory', type=click.Path(exists=True), required=True)
-@click.option('-t', '--target_spacing', nargs=3, type=float, required=True)
+@click.option('-b', '--base_directory', type=click.Path(exists=True), default="/gpfs/mskmindhdp_emc/", help="location to find scan/annotation tables and to create feature table")
+@click.option('-t', '--target_spacing', nargs=3, type=float, required=True, help="target spacing for x,y and z dimensions")
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
-@click.option('-h', '--hdfs', is_flag=True, default=False, show_default=True, help="(optional) base directory is on hdfs or local filesystem")
-@click.option('-n', '--feature_table_output_name', default="feature-table", help= "name of new feature table that is created.")
-def cli(spark_master_uri, base_directory, target_spacing, hdfs, query, feature_table_output_name): 
-
+@click.option('-n', '--feature_table_output_name', default="feature-table", help="name of new feature table that is created.")
+def cli(spark_master_uri, base_directory, target_spacing, query, feature_table_output_name): 
+    """
+    TODO: add examples for help string
+    """
     # Setup Spark context
     import time
     start_time = time.time()
-    spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri, hdfs) 
-    generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name)
+    spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri) 
+    generate_feature_table(base_directory, target_spacing, spark, query, feature_table_output_name)
     print("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 
-def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, feature_table_output_name): 
-    annotation_table = os.path.join(base_directory, "tables/radiology.annotations")
-    scan_table = os.path.join(base_directory, "tables/radiology.scans")
-    feature_table = os.path.join(base_directory, "features/"+str(feature_table_output_name)+"/")
-    feature_dir = os.path.join(base_directory, "features")
-    feature_files = os.path.join(base_directory, "features/feature-files/")
+def generate_feature_table(base_directory, target_spacing, spark, query, feature_table_output_name): 
+    annotation_table = os.path.join(base_directory, "/data/radiology/tables/radiology.annotations")
+    scan_table = os.path.join(base_directory, "/data/radiolgy/tables/radiology.scans")
+    feature_table = os.path.join(base_directory, "/data/radiology/tables/radiology."+str(feature_table_output_name))
+    feature_files = os.path.join(base_directory, "/data/radiology/features/")
 
+    print(annotation_table)
+    print(scan_table)
+    print(feature_table)
+    print(feature_files)
     # Load Annotation table and rename columns before merge
     annot_df = spark.read.format("delta").load(annotation_table)
     rename_annotation_columns = ["absolute_hdfs_path", "absolute_hdfs_host", "filename", "type","payload_number"]
@@ -222,7 +224,7 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     df = df.withColumn("preprocessed_target_spacing_x", lit(target_spacing[0]))
     df = df.withColumn("preprocessed_target_spacing_y", lit(target_spacing[1]))
     df = df.withColumn("preprocessed_target_spacing_z", lit(target_spacing[2]))
-    df = df.withColumn("feature_uuid", expr("uuid()"))
+    df = df.withColumn("feature_record_uuid", expr("uuid()"))
 
     # sql processing on joined table if specified
     if query:
@@ -240,15 +242,8 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
             return
 
     # Resample segmentation and images
-
-    # Create new local directories if needed
-    if not os.path.exists(feature_dir) and not hdfs:
-        os.mkdir(feature_dir)
-    if not os.path.exists(feature_files) and not hdfs:
-        os.mkdir(feature_files)
-    
     # Preprocess Features Using Pandas DF and applyInPandas() [Apache Arrow]:
-    df = df.groupBy("feature_uuid").applyInPandas(process_patient_pandas_udf, schema = df.schema)
+    df = df.groupBy("feature_record_uuid").applyInPandas(process_patient_pandas_udf, schema = df.schema)
 
     # write table
     df.write.format("delta").mode("overwrite").save(feature_table)
@@ -259,7 +254,7 @@ def generate_feature_table(base_directory, target_spacing, spark, hdfs, query, f
     feature_df.show()
 
     logger.info("-----Columns Added:------") 
-    feature_df.select("feature_uuid", "preprocessed_annotation_path","preprocessed_scan_path", "preprocessed_target_spacing_y","preprocessed_target_spacing_x","preprocessed_target_spacing_z").show(20, False)
+    feature_df.select("feature_record_uuid", "preprocessed_annotation_path","preprocessed_scan_path", "preprocessed_target_spacing_y","preprocessed_target_spacing_x","preprocessed_target_spacing_z").show(20, False)
 
     logger.info("Feature Table written to ")
     logger.info(feature_table)
