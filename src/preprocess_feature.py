@@ -11,7 +11,7 @@ Parameters:
         --spark_master_uri: spark master uri e.g. spark://master-ip:7077 or local[*]
     OPTIONAL PARAMETERS:
         --base_directory: path to write feature table and files. We assume scan/annotation refined tables are at a specific path on gpfs.
-	--query: where clause of SQL query to filter feature tablE. WHERE does not need to be included, make sure to wrap with quotes to be interpretted correctly
+	    --query: where clause of SQL query to filter feature tablE. WHERE does not need to be included, make sure to wrap with quotes to be interpretted correctly
             - Queriable Columns to Filter By:
                 - SeriesInstanceUID,AccessionNumber,ct_dates,ct_accession,img,ring-seg,annotation_uid,0_1,vendor,ST,kvP,mA,ID,Rad_segm,R_ovary,L_ovary,Omentum,Notes,subtype,seg
             - examples:
@@ -19,8 +19,9 @@ Parameters:
                 - filtering by AccessionID: --query "AccessionNumber = '12345'"
         --feature_table_output_name: name of feature table that is created, default is feature-table,
                 feature table will be created at {base_directory}/tables/features/{feature_table_output_name}
+        --custom_preprocessing_script: path to preprocessing script containing "process_patient" function. By default, uses process_patient_default() function for preprocessing
 Example:
-    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table
+    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table --custom_preprocessing_script  /gpfs/mskmindhdp_emc/user/pateld6/test_external_process_patient.py
 """
 import os, sys, subprocess, time,importlib
 import click
@@ -174,7 +175,7 @@ def resample_volume(volume, order, target_shape):
 @click.option('-t', '--target_spacing', nargs=3, type=float, required=True, help="target spacing for x,y and z dimensions")
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
 @click.option('-n', '--feature_table_output_name', default="feature-table", help="name of new feature table that is created.")
-@click.option('-c', '--custom_preprocessing_script', default = None, help="Path to python file containing custom 'process_patient' method. By default, uses process_patient_default method for preprocessing")
+@click.option('-c', '--custom_preprocessing_script', default = None, help="Path to python file containing custom 'process_patient' method. By default, uses process_patient_default() for preprocessing")
 def cli(spark_master_uri, base_directory, target_spacing, query, feature_table_output_name, custom_preprocessing_script): 
     """
     This module pre-processes the CE-CT acquisitions and associated segmentations and generates
