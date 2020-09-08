@@ -177,7 +177,10 @@ def resample_volume(volume, order, target_shape):
 @click.option('-n', '--feature_table_output_name', default="feature-table", help="name of new feature table that is created.")
 def cli(spark_master_uri, base_directory, target_spacing, query, feature_table_output_name): 
     """
-    TODO: add examples for help string
+    This module pre-processes the CE-CT acquisitions and associated segmentations and generates
+    a DataFrame tracking the file paths of the pre-processed items, stored as NumPy ndarrays.
+
+    Example: python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing} --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created}
     """
     # Setup Spark context
     import time
@@ -193,7 +196,7 @@ def generate_feature_table(base_directory, target_spacing, spark, query, feature
     feature_table = os.path.join(base_directory, "data/radiology/tables/radiology."+str(feature_table_output_name)+"/")
     feature_files = os.path.join(base_directory, "data/radiology/features/")
     
-# Load Annotation table and rename columns before merge
+    # Load Annotation table and rename columns before merge
     annot_df = spark.read.format("delta").load(annotation_table)
     rename_annotation_columns = ["absolute_hdfs_path", "absolute_hdfs_host", "filename", "type","payload_number"]
     for col in rename_annotation_columns:
@@ -213,7 +216,7 @@ def generate_feature_table(base_directory, target_spacing, spark, query, feature
     # join scan and annotation tables 
     generate_preprocessed_filename_udf = udf(generate_preprocessed_filename, StringType())
     df = annot_df.join(scan_df, ['SeriesInstanceUID'])
-    df = df.withColumn("preprocessed_annotation_path", lit(generate_preprocessed_filename_udf(df.scan_record_uuid, lit('_annotation'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
+    df = df.withColumn("preprocessed_annotation_path", lit(generate_preprocessed_filename_udf(df.annotation_record_uuid, lit('_annotation'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
     df = df.withColumn("preprocessed_scan_path", lit(generate_preprocessed_filename_udf(df.scan_record_uuid, lit('_scan'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))    
     
     # Add target spacing individually so they can be extracted during row processing
@@ -238,6 +241,9 @@ def generate_feature_table(base_directory, target_spacing, spark, query, feature
             return
 
     # Resample segmentation and images
+    if not os.path.exists(feature_files):
+        os.mkdir(feature_files)
+
     # Preprocess Features Using Pandas DF and applyInPandas() [Apache Arrow]:
     df = df.groupBy("feature_record_uuid").applyInPandas(process_patient_pandas_udf, schema = df.schema)
 
