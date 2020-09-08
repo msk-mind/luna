@@ -24,10 +24,9 @@ Example:
 """
 import os, sys, subprocess, time
 import click
-sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../') ))
 
-from sparksession import SparkConfig
-from custom_logger import init_logger
+from common.sparksession import SparkConfig
+from common.custom_logger import init_logger
 
 import numpy as np
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
