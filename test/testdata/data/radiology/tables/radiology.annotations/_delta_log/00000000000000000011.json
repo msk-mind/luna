@@ -1,3 +1,0 @@
-{"commitInfo":{"timestamp":1599148950914,"operation":"WRITE","operationParameters":{"mode":"Append","partitionBy":"[]"},"readVersion":10,"isBlindAppend":true,"operationMetrics":{"numFiles":"2","numOutputBytes":"4994","numOutputRows":"1"}}}
-{"add":{"path":"part-00000-654161e4-e065-4069-8b05-745035a7681d-c000.snappy.parquet","partitionValues":{},"size":919,"modificationTime":1599148950793,"dataChange":true}}
-{"add":{"path":"part-00011-09479e80-b902-4508-80d5-c172bd18e6ff-c000.snappy.parquet","partitionValues":{},"size":4075,"modificationTime":1599148950792,"dataChange":true}}

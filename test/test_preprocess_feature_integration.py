@@ -41,16 +41,14 @@ def test_local_feature_table_generation(spark_session):
 
     # Test no query, default naming
     # Build Feature Table
-    # TODO: find query with results and update count check
-    #generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID = '1.2.840.113619.2.55.3.2743925538.934.1319713655.579'", "feature-table-test-name")
-    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "", "feature-table-test-name")
+    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID = '1.2.840.113619.2.55.3.2743925538.934.1319713655.582'", "feature-table-test-name")
 
     # read and verify correct feature table generated
     feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table-test-name")
     
     # Read Delta Table and Verify 
     feature_df = spark_session.read.format("delta").load(feature_table_path)
-    assert feature_df.count() == 0
+    assert feature_df.count() == 1
     print ("test_local_feature_table_generation passed.")
 
 
@@ -63,7 +61,7 @@ def test_local_feature_table_generation_malformed_query(spark_session):
 
     # Test no query, default naming
     # Build Feature Table
-    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID == '1.2.840.113619.2.55.3.2743925538.934.1319713655.579'", "feature-table")
+    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID = '123' || scan_record_uuid = '123'", "feature-table")
 
     # read and verify correct feature table generated
     feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table")
