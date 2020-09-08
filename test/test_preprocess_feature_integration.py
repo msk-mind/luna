@@ -14,19 +14,21 @@ To run the test,
 cd data-processing
 pytest -s --cov=src test
 """
-#BASE_DIR = "/gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/"
-BASE_DIR = "/gpfs/mskmind_ess/rosed2"
+BASE_DIR = "./test/testdata/"
 TARGET_SPACING = (1.0, 1.0, 3.0)
 
 # Test CLI parameters
 runner = CliRunner()
 
 #TODO increase test coverage
-#TODO Test HDFS Feature Table Generation
 
 @pytest.fixture(autouse=True)
 def cleanup():
-    feature_dir = os.path.join(BASE_DIR, "features")
+    feature_table = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table-test-name")
+    if os.path.exists(feature_table):
+        shutil.rmtree(feature_table)
+
+    feature_dir = os.path.join(BASE_DIR, "data/radiology/features")
     if os.path.exists(feature_dir):
         shutil.rmtree(feature_dir)
 
@@ -39,14 +41,14 @@ def test_local_feature_table_generation(spark_session):
 
     # Test no query, default naming
     # Build Feature Table
-    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, False, "subtype='BRCA1' or subtype='BRCA2'", "feature-table-test-name")
+    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID = '1.2.840.113619.2.55.3.2743925538.934.1319713655.582'", "feature-table-test-name")
 
     # read and verify correct feature table generated
-    feature_table_path = os.path.join(BASE_DIR, "features/feature-table-test-name")
+    feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table-test-name")
     
     # Read Delta Table and Verify 
     feature_df = spark_session.read.format("delta").load(feature_table_path)
-    assert feature_df.count() == 11
+    assert feature_df.count() == 1
     print ("test_local_feature_table_generation passed.")
 
 
@@ -59,24 +61,23 @@ def test_local_feature_table_generation_malformed_query(spark_session):
 
     # Test no query, default naming
     # Build Feature Table
-    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, False, "subtype='BRCA1' || subtype='BRCA2'", "")
+    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID = '123' || scan_record_uuid = '123'", "feature-table")
 
     # read and verify correct feature table generated
-    feature_table_path = os.path.join(BASE_DIR, "features/feature-table-test-name")
+    feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table")
     
     assert not os.path.exists(feature_table_path)
     print ("test_local_feature_table_generation_malformed_query passed.")
 
 
 def test_feature_table_cli():
-    result = runner.invoke(cli, "--spark_master_uri local[*] --base_directory {} --target_spacing 1 1 3 --query \"subtype=\'CCNE1\'\" --feature_table_output_name test-cli-2".format(BASE_DIR))
+    result = runner.invoke(cli, "--spark_master_uri local[*] --base_directory {} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2".format(BASE_DIR))
     assert result.exit_code == 0
     print("CLI test passed.")
 
 
 def test_feature_table_cli_missing_params():
-    test_args = ["--spark_master_uri local[*] --target_spacing 1.0 1.0 3.0",
-            "--base_directory {} --target_spacing 1 1 3".format(BASE_DIR),
+    test_args = ["--base_directory {} --target_spacing 1 1 3".format(BASE_DIR),
             "--spark_master_uri local[*] --base_directory {}".format(BASE_DIR),
             "--spark_master_uri local[*] --base_directory {} --target_spacing 1.0 1.0 3.0".format("/path/does/not/exist")]
 
