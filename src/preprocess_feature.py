@@ -1,7 +1,6 @@
 """
 This module pre-processes the CE-CT acquisitions and associated segmentations and generates
 a DataFrame tracking the file paths of the pre-processed items, stored as NumPy ndarrays.
-
 Usage: 
     $ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing}  --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created} --custom_preprocessing_script {path/to/preprocessing/script}
     
@@ -11,17 +10,35 @@ Parameters:
         --spark_master_uri: spark master uri e.g. spark://master-ip:7077 or local[*]
     OPTIONAL PARAMETERS:
         --base_directory: path to write feature table and files. We assume scan/annotation refined tables are at a specific path on gpfs.
-	    --query: where clause of SQL query to filter feature tablE. WHERE does not need to be included, make sure to wrap with quotes to be interpretted correctly
+        --query: where clause of SQL query to filter feature tablE. WHERE does not need to be included, make sure to wrap with quotes to be interpretted correctly
             - Queriable Columns to Filter By:
-                - SeriesInstanceUID,AccessionNumber,ct_dates,ct_accession,img,ring-seg,annotation_uid,0_1,vendor,ST,kvP,mA,ID,Rad_segm,R_ovary,L_ovary,Omentum,Notes,subtype,seg
+                SeriesInstanceUID
+                annotation_record_uuid
+                annotation_absolute_hdfs_path
+                annotation_filename
+                annotation_type
+                annotation_payload_number
+                annotation_absolute_hdfs_host
+                scan_record_uuid
+                scan_absolute_hdfs_path
+                scan_filename
+                scan_type
+                scan_absolute_hdfs_host
+                scan_payload_number
+                preprocessed_annotation_path
+                preprocessed_scan_path
+                preprocessed_target_spacing_x
+                preprocessed_target_spacing_y
+                preprocessed_target_spacing_z
+                feature_record_uuid
             - examples:
-                - filtering by subtype: --query "subtype='BRCA1' or subtype='BRCA2'"
-                - filtering by AccessionID: --query "AccessionNumber = '12345'"
+                - filtering by feature_record_uuid: --query "feature_record_uuid='123' or feature_record_uuid='456'"
+                - filtering by SeriesInstanceUID: --query "SeriesInstanceUID = '123456abc'"
         --feature_table_output_name: name of feature table that is created, default is feature-table,
                 feature table will be created at {base_directory}/tables/features/{feature_table_output_name}
         --custom_preprocessing_script: path to preprocessing script containing "process_patient" function. By default, uses process_patient_default() function for preprocessing
 Example:
-    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table --custom_preprocessing_script  external_process_patient.py
+    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "SeriesInstanceUID = '123456abc'" --feature_table_output_name brca-feature-table --custom_preprocessing_script  external_process_patient.py
 """
 import os, sys, subprocess, time,importlib
 import click
@@ -122,7 +139,7 @@ def interpolate_segmentation_masks(seg, target_shape):
     return new_seg
 
 
-def generate_preprocessed_filename(id, suffix, processed_dir, target_spacing_x, target_spacing_y, target_spacing_z):
+def generate_preprocessed_filename(id, suffix, processed_dir):
     """
     Generates target NumPy file path for preprocessed segmentation or acquisition.
     :param idx: case ID
@@ -133,7 +150,7 @@ def generate_preprocessed_filename(id, suffix, processed_dir, target_spacing_x, 
     :param target_spacing_z target z-dimension spacing
     :return: target file path
     """
-    file_name = "".join((processed_dir, str(id), suffix, "_", str(target_spacing_x), "_", str(target_spacing_y), "_", str(target_spacing_z), ".npy"))
+    file_name = "".join((processed_dir, str(id), suffix, ".npy"))
     return file_name
 
 
@@ -195,7 +212,7 @@ def generate_feature_table(base_directory, target_spacing, spark, query, feature
     annotation_table = os.path.join(base_directory, "data/radiology/tables/radiology.annotations")
     scan_table = os.path.join(base_directory, "data/radiology/tables/radiology.scans")
     feature_table = os.path.join(base_directory, "data/radiology/tables/radiology."+str(feature_table_output_name)+"/")
-    feature_files = os.path.join(base_directory, "data/radiology/features/")
+    feature_files = os.path.join(base_directory, "data/radiology/features/"+str(feature_table_output_name)+"/")
     
     # Load Annotation table and rename columns before merge
     annot_df = spark.read.format("delta").load(annotation_table)
@@ -217,8 +234,8 @@ def generate_feature_table(base_directory, target_spacing, spark, query, feature
     # join scan and annotation tables 
     generate_preprocessed_filename_udf = udf(generate_preprocessed_filename, StringType())
     df = annot_df.join(scan_df, ['SeriesInstanceUID'])
-    df = df.withColumn("preprocessed_annotation_path", lit(generate_preprocessed_filename_udf(df.annotation_record_uuid, lit('_annotation'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))
-    df = df.withColumn("preprocessed_scan_path", lit(generate_preprocessed_filename_udf(df.scan_record_uuid, lit('_scan'), lit(feature_files), lit(target_spacing[0]),  lit(target_spacing[1]),  lit(target_spacing[2]) )))    
+    df = df.withColumn("preprocessed_annotation_path", lit(generate_preprocessed_filename_udf(df.annotation_record_uuid, lit('_annotation'), lit(feature_files) )))
+    df = df.withColumn("preprocessed_scan_path", lit(generate_preprocessed_filename_udf(df.scan_record_uuid, lit('_scan'), lit(feature_files) )))    
     
     # Add target spacing individually so they can be extracted during row processing
     df = df.withColumn("preprocessed_target_spacing_x", lit(target_spacing[0]))
@@ -243,7 +260,7 @@ def generate_feature_table(base_directory, target_spacing, spark, query, feature
 
     # Resample segmentation and images
     if not os.path.exists(feature_files):
-        os.mkdir(feature_files)
+        os.makedirs(feature_files)
 
     # Preprocess Features Using Pandas DF and applyInPandas() [Apache Arrow]:
     if custom_preprocessing_script:
