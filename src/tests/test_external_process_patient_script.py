@@ -1,7 +1,21 @@
 import os, sys, subprocess, time
-import openslide, itk
-import click
 
+# Test Imports:
+
+'''
+This was used to test whether c++ libraries would run without pointer/pickling errors when called through a pandasUDF. 
+This was tested by importing the openslide library and was successful. No need to import these libraries.
+'''
+# import openslide
+
+'''
+This was to show that libraries not imported in the original preprocess_feature script would still be able to be imported 
+successfully when called through a pandas UDF
+'''
+# import databricks.koalas as ks
+
+
+import click
 from common.sparksession import SparkConfig
 from common.custom_logger import init_logger
 
@@ -16,8 +30,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, lit, expr
 from pyspark.sql.types import StringType
 
-# for testing purposes
-import databricks.koalas as ks
+
 
 
 logger = init_logger()
