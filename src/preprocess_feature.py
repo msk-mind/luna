@@ -3,7 +3,7 @@ This module pre-processes the CE-CT acquisitions and associated segmentations an
 a DataFrame tracking the file paths of the pre-processed items, stored as NumPy ndarrays.
 
 Usage: 
-    $ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing}  --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created}
+    $ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing}  --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created} --custom_preprocessing_script {path/to/preprocessing/script}
     
 Parameters: 
     REQUIRED PARAMETERS:
@@ -21,7 +21,7 @@ Parameters:
                 feature table will be created at {base_directory}/tables/features/{feature_table_output_name}
         --custom_preprocessing_script: path to preprocessing script containing "process_patient" function. By default, uses process_patient_default() function for preprocessing
 Example:
-    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table --custom_preprocessing_script  /gpfs/mskmindhdp_emc/user/pateld6/test_external_process_patient.py
+    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table --custom_preprocessing_script  external_process_patient.py
 """
 import os, sys, subprocess, time,importlib
 import click
