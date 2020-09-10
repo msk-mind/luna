@@ -13,10 +13,28 @@ Parameters:
         --base_directory: path to write feature table and files. We assume scan/annotation refined tables are at a specific path on gpfs.
 	    --query: where clause of SQL query to filter feature tablE. WHERE does not need to be included, make sure to wrap with quotes to be interpretted correctly
             - Queriable Columns to Filter By:
-                - SeriesInstanceUID,AccessionNumber,ct_dates,ct_accession,img,ring-seg,annotation_uid,0_1,vendor,ST,kvP,mA,ID,Rad_segm,R_ovary,L_ovary,Omentum,Notes,subtype,seg
+                SeriesInstanceUID
+                annotation_record_uuid
+                annotation_absolute_hdfs_path
+                annotation_filename
+                annotation_type
+                annotation_payload_number
+                annotation_absolute_hdfs_host
+                scan_record_uuid
+                scan_absolute_hdfs_path
+                scan_filename
+                scan_type
+                scan_absolute_hdfs_host
+                scan_payload_number
+                preprocessed_annotation_path
+                preprocessed_scan_path
+                preprocessed_target_spacing_x
+                preprocessed_target_spacing_y
+                preprocessed_target_spacing_z
+                feature_record_uuid
             - examples:
-                - filtering by subtype: --query "subtype='BRCA1' or subtype='BRCA2'"
-                - filtering by AccessionID: --query "AccessionNumber = '12345'"
+                - filtering by feature_record_uuid: --query "feature_record_uuid='123' or feature_record_uuid='456'"
+                - filtering by SeriesInstanceUID: --query "SeriesInstanceUID = '123456abc'"
         --feature_table_output_name: name of feature table that is created, default is feature-table,
                 feature table will be created at {base_directory}/tables/features/{feature_table_output_name}
         --custom_preprocessing_script: path to preprocessing script containing "process_patient" function. By default, uses process_patient_default() function for preprocessing
@@ -54,7 +72,7 @@ def process_patient_default(patient: pd.DataFrame) -> pd.DataFrame:
     """
     Given a row with source and destination file paths for a single case, resamples segmentation
     and acquisition. Also, clips acquisition range to abdominal window.
-    :param case_row: pandas DataFrame row with fields "preprocessed_seg_path" and "preprocessed_img_path"
+    :param case_row: pandas DataFrame row with fields "preprocessed_scan_path" and "preprocessed_annotation_path"
     :return: None
     """
     scan_absolute_hdfs_path = generate_absolute_path_from_hdfs(patient.scan_absolute_hdfs_path.item(), patient.scan_filename.item())
@@ -126,7 +144,7 @@ def generate_preprocessed_filename(id, suffix, processed_dir, target_spacing_x, 
     """
     Generates target NumPy file path for preprocessed segmentation or acquisition.
     :param idx: case ID
-    :param suffix: _seg or _img, depending on which Series is being populated.
+    :param suffix: _scan or _annotation, depending on which Series is being populated.
     :param processed_dir: path to save .npy files.
     :param target_spacing_x  target x-dimension spacing
     :param target_spacing_y target y-dimension spacing
