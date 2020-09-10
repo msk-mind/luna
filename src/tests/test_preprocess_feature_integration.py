@@ -41,7 +41,7 @@ def test_local_feature_table_generation(spark_session):
 
     # Test no query, default naming
     # Build Feature Table
-    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID = '1.2.840.113619.2.55.3.2743925538.934.1319713655.582'", "feature-table-test-name")
+    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID = '1.2.840.113619.2.55.3.2743925538.934.1319713655.582'", "feature-table-test-name", "tests/test_external_process_patient_script.py")
 
     # read and verify correct feature table generated
     feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table-test-name")
@@ -61,7 +61,7 @@ def test_local_feature_table_generation_malformed_query(spark_session):
 
     # Test no query, default naming
     # Build Feature Table
-    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID = '123' || scan_record_uuid = '123'", "feature-table")
+    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID = '123' || scan_record_uuid = '123'", "feature-table", "tests/test_external_process_patient_script.py")
 
     # read and verify correct feature table generated
     feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table")
@@ -71,7 +71,7 @@ def test_local_feature_table_generation_malformed_query(spark_session):
 
 
 def test_feature_table_cli():
-    result = runner.invoke(cli, "--spark_master_uri local[*] --base_directory {} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2".format(BASE_DIR))
+    result = runner.invoke(cli, "--spark_master_uri local[*] --base_directory {} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2 --custom_preprocessing_script tests/test_external_process_patient_script.py".format(BASE_DIR))
     assert result.exit_code == 0
     print("CLI test passed.")
 
