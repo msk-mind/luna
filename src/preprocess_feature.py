@@ -3,7 +3,7 @@ This module pre-processes the CE-CT acquisitions and associated segmentations an
 a DataFrame tracking the file paths of the pre-processed items, stored as NumPy ndarrays.
 
 Usage: 
-    $ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing}  --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created}
+    $ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing}  --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created} --custom_preprocessing_script {path/to/preprocessing/script}
     
 Parameters: 
     REQUIRED PARAMETERS:
@@ -11,7 +11,7 @@ Parameters:
         --spark_master_uri: spark master uri e.g. spark://master-ip:7077 or local[*]
     OPTIONAL PARAMETERS:
         --base_directory: path to write feature table and files. We assume scan/annotation refined tables are at a specific path on gpfs.
-	--query: where clause of SQL query to filter feature tablE. WHERE does not need to be included, make sure to wrap with quotes to be interpretted correctly
+	    --query: where clause of SQL query to filter feature tablE. WHERE does not need to be included, make sure to wrap with quotes to be interpretted correctly
             - Queriable Columns to Filter By:
                 - SeriesInstanceUID,AccessionNumber,ct_dates,ct_accession,img,ring-seg,annotation_uid,0_1,vendor,ST,kvP,mA,ID,Rad_segm,R_ovary,L_ovary,Omentum,Notes,subtype,seg
             - examples:
@@ -19,10 +19,11 @@ Parameters:
                 - filtering by AccessionID: --query "AccessionNumber = '12345'"
         --feature_table_output_name: name of feature table that is created, default is feature-table,
                 feature table will be created at {base_directory}/tables/features/{feature_table_output_name}
+        --custom_preprocessing_script: path to preprocessing script containing "process_patient" function. By default, uses process_patient_default() function for preprocessing
 Example:
-    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table
+    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "subtype='BRCA1' or subtype='BRCA2'" --feature_table_output_name brca-feature-table --custom_preprocessing_script  external_process_patient.py
 """
-import os, sys, subprocess, time
+import os, sys, subprocess, time,importlib
 import click
 
 from common.sparksession import SparkConfig
@@ -49,7 +50,7 @@ def generate_absolute_path_from_hdfs(absolute_hdfs_path_col, filename_col):
     return os.path.join(GPFS_MOUNT_DIR, absolute_hdfs_path_col, filename_col)
 
 
-def process_patient_pandas_udf(patient):
+def process_patient_default(patient: pd.DataFrame) -> pd.DataFrame:
     """
     Given a row with source and destination file paths for a single case, resamples segmentation
     and acquisition. Also, clips acquisition range to abdominal window.
@@ -174,7 +175,8 @@ def resample_volume(volume, order, target_shape):
 @click.option('-t', '--target_spacing', nargs=3, type=float, required=True, help="target spacing for x,y and z dimensions")
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
 @click.option('-n', '--feature_table_output_name', default="feature-table", help="name of new feature table that is created.")
-def cli(spark_master_uri, base_directory, target_spacing, query, feature_table_output_name): 
+@click.option('-c', '--custom_preprocessing_script', default = None, help="Path to python file containing custom 'process_patient' method. By default, uses process_patient_default() for preprocessing")
+def cli(spark_master_uri, base_directory, target_spacing, query, feature_table_output_name, custom_preprocessing_script): 
     """
     This module pre-processes the CE-CT acquisitions and associated segmentations and generates
     a DataFrame tracking the file paths of the pre-processed items, stored as NumPy ndarrays.
@@ -185,11 +187,11 @@ def cli(spark_master_uri, base_directory, target_spacing, query, feature_table_o
     import time
     start_time = time.time()
     spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri) 
-    generate_feature_table(base_directory, target_spacing, spark, query, feature_table_output_name)
+    generate_feature_table(base_directory, target_spacing, spark, query, feature_table_output_name, custom_preprocessing_script)
     print("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 
-def generate_feature_table(base_directory, target_spacing, spark, query, feature_table_output_name): 
+def generate_feature_table(base_directory, target_spacing, spark, query, feature_table_output_name, custom_preprocessing_script): 
     annotation_table = os.path.join(base_directory, "data/radiology/tables/radiology.annotations")
     scan_table = os.path.join(base_directory, "data/radiology/tables/radiology.scans")
     feature_table = os.path.join(base_directory, "data/radiology/tables/radiology."+str(feature_table_output_name)+"/")
@@ -244,7 +246,23 @@ def generate_feature_table(base_directory, target_spacing, spark, query, feature
         os.mkdir(feature_files)
 
     # Preprocess Features Using Pandas DF and applyInPandas() [Apache Arrow]:
-    df = df.groupBy("feature_record_uuid").applyInPandas(process_patient_pandas_udf, schema = df.schema)
+    if custom_preprocessing_script:
+        # use external preprocessing script
+
+        # add path to python os sys
+        sys.path.append(os.path.dirname(custom_preprocessing_script))
+        
+        # import python file containing process_patient method (without the .py extension)
+        custom_preprocessing_script_base = os.path.basename(custom_preprocessing_script.replace(".py", ""))
+        module = importlib.import_module(custom_preprocessing_script_base)
+        process_patient_func = getattr(module, "process_patient")
+        spark.sparkContext.addPyFile(custom_preprocessing_script)
+
+        # call custom preprocessing function
+        df = df.groupBy("feature_record_uuid").applyInPandas(process_patient_func, schema = df.schema)
+    else:
+        # use default preprocessing function  (process_patient_default)
+        df = df.groupBy("feature_record_uuid").applyInPandas(process_patient_default, schema = df.schema)
 
     # write table
     df.write.format("delta").mode("overwrite").save(feature_table)
