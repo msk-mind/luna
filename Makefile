@@ -20,10 +20,17 @@ clean-pyc:
 	find . -name '*.pyo' -exec rm -f {} +
 	find . -name '*~' -exec rm -f {} +
 
+clean-test:      ## remove test and coverage artifacts
+	rm -fr .pytest_cache
+	rm -fr .tox/
+	rm -f .coverage
+	rm -fr htmlcov/
+
 lint:
 	flake8 data-processing test
 
-test:
+test: clean-test clean-pyc    ## run tests quickly with the default Python
+	pip install -r requirements.txt
 	py.test
 
 coverage:
