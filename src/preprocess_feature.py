@@ -63,9 +63,6 @@ from pyspark.sql.types import StringType
 logger = init_logger()
 GPFS_MOUNT_DIR = "/gpfs/mskmindhdp_emc"
 
-def get_dmp_patient_id(conn, spark, sqlc, SeriesInstanceUID):
-    return conn.create_id_lookup_table(spark.sparkContext, sqlc, "SeriesInstanceUID", "dmp_patient_id", SeriesInstanceUID).collect()[0][1]
-
 def generate_absolute_path_from_hdfs(absolute_hdfs_path_col, filename_col):
     # do we need this if?
     if absolute_hdfs_path_col[0] == '/':
