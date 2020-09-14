@@ -16,8 +16,8 @@ successfully when called through a pandas UDF
 
 
 import click
-from common.sparksession import SparkConfig
-from common.custom_logger import init_logger
+from data_processing.common.sparksession import SparkConfig
+from data_processing.common.custom_logger import init_logger
 
 import numpy as np
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
