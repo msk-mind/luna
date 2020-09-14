@@ -187,6 +187,11 @@ def resample_volume(volume, order, target_shape):
                     preserve_range=True, anti_aliasing=anti_alias)
     return volume
 
+def lookup_dmp_patient_id(conn, spark_context, sql_context, SeriesInstanceUID):
+    dmp_patient_id = conn.create_id_lookup_table(spark_context, sql_context, "SeriesInstanceUID", "dmp_patient_id", SeriesInstanceUID).collect()
+    if dmp_patient_id and len (dmp_patient_id) >= 1:
+        return dmp_patient_id[0][1]
+    return ""
 
 @click.command()
 @click.option('-q', '--query', default = None, help = "where clause of SQL query to filter feature table, 'WHERE' does not need to be included, but make sure to wrap with quotes to be interpretted correctly")
@@ -284,15 +289,15 @@ def generate_feature_table(base_directory, target_spacing, spark, query, feature
         df = df.groupBy("feature_record_uuid").applyInPandas(process_patient_default, schema = df.schema)
 
     # Join with clinical proxy tables
-
     # setup contexts for graph DB
+    spark.sparkContext.addPyFile("common/Neo4jConnection.py")
     conn = Neo4jConnection(uri='bolt://dlliskimind1.mskcc.org:7687', user="neo4j", pwd="password")
-    sqlc = SQLContext(spark)
+    sql_context = SQLContext(spark)
 
     # Add dmp_patient_id column
     uid_join_table = df.select("SeriesInstanceUID")
     uid_join_table = uid_join_table.toPandas()
-    uid_join_table["dmp_patient_id"] = uid_join_table.apply(lambda x: conn.create_id_lookup_table(spark.sparkContext, sqlc, "SeriesInstanceUID", "dmp_patient_id", x.SeriesInstanceUID).collect()[0][1], axis=1) 
+    uid_join_table["dmp_patient_id"] = uid_join_table.apply(lambda x: lookup_dmp_patient_id(conn, spark.sparkContext, sql_context, x.SeriesInstanceUID), axis=1) 
     uid_join_table = spark.createDataFrame(uid_join_table)
     df = df.join(uid_join_table, ['SeriesInstanceUID'])
     
