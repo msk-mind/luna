@@ -38,13 +38,15 @@ Parameters:
                 feature table will be created at {base_directory}/tables/features/{feature_table_output_name}
         --custom_preprocessing_script: path to preprocessing script containing "process_patient" function. By default, uses process_patient_default() function for preprocessing
 Example:
-    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmind_ess/pateld6/work/sandbox/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "SeriesInstanceUID = '123456abc'" --feature_table_output_name brca-feature-table --custom_preprocessing_script  external_process_patient.py
+    $ python preprocess_feature.py --spark_master_uri local[*] --base_directory /gpfs/mskmindhdp_emc/user/pateld6/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "SeriesInstanceUID = '123456abc'" --feature_table_output_name brca-feature-table --custom_preprocessing_script  external_process_patient.py
 """
 import os, sys, subprocess, time,importlib
 import click
 
 from common.sparksession import SparkConfig
 from common.custom_logger import init_logger
+from common.Neo4jConnection import Neo4jConnection
+
 
 import numpy as np
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -54,6 +56,7 @@ from medpy.io import load
 from skimage.transform import resize
 
 from pyspark.sql import SparkSession
+from pyspark.sql import SQLContext
 from pyspark.sql.functions import udf, lit, expr
 from pyspark.sql.types import StringType
 
@@ -65,7 +68,6 @@ def generate_absolute_path_from_hdfs(absolute_hdfs_path_col, filename_col):
     if absolute_hdfs_path_col[0] == '/':
         absolute_hdfs_path_col = absolute_hdfs_path_col[1:]
     return os.path.join(GPFS_MOUNT_DIR, absolute_hdfs_path_col, filename_col)
-
 
 def process_patient_default(patient: pd.DataFrame) -> pd.DataFrame:
     """
@@ -185,6 +187,11 @@ def resample_volume(volume, order, target_shape):
                     preserve_range=True, anti_aliasing=anti_alias)
     return volume
 
+def lookup_dmp_patient_id(conn, spark_context, sql_context, SeriesInstanceUID):
+    dmp_patient_id = conn.create_id_lookup_table(spark_context, sql_context, "SeriesInstanceUID", "dmp_patient_id", SeriesInstanceUID).collect()
+    if dmp_patient_id and len (dmp_patient_id) >= 1:
+        return dmp_patient_id[0][1]
+    return ""
 
 @click.command()
 @click.option('-q', '--query', default = None, help = "where clause of SQL query to filter feature table, 'WHERE' does not need to be included, but make sure to wrap with quotes to be interpretted correctly")
@@ -280,6 +287,36 @@ def generate_feature_table(base_directory, target_spacing, spark, query, feature
     else:
         # use default preprocessing function  (process_patient_default)
         df = df.groupBy("feature_record_uuid").applyInPandas(process_patient_default, schema = df.schema)
+
+    # Join with clinical proxy tables
+    # setup contexts for graph DB
+    spark.sparkContext.addPyFile("common/Neo4jConnection.py")
+    conn = Neo4jConnection(uri='bolt://dlliskimind1.mskcc.org:7687', user="neo4j", pwd="password")
+    sql_context = SQLContext(spark)
+
+    # Add dmp_patient_id column
+    uid_join_table = df.select("SeriesInstanceUID")
+    uid_join_table = uid_join_table.toPandas()
+    uid_join_table["dmp_patient_id"] = uid_join_table.apply(lambda x: lookup_dmp_patient_id(conn, spark.sparkContext, sql_context, x.SeriesInstanceUID), axis=1) 
+    uid_join_table = spark.createDataFrame(uid_join_table)
+    df = df.join(uid_join_table, ['SeriesInstanceUID'])
+    
+    # Load Clinical Data, rename table-specific uuid columns, and join tables by dmp_patient_id
+    diagnosis_table = os.path.join(base_directory, "data/clinical/diagnosis")
+    diagnosis_df = spark.read.format("delta").load(diagnosis_table)
+    diagnosis_df = diagnosis_df.withColumnRenamed("uuid", "diagnosis_uuid")
+    df = df.join(diagnosis_df, ['dmp_patient_id'])
+
+    medications_table = os.path.join(base_directory, "data/clinical/medications")
+    medications_df = spark.read.format("delta").load(medications_table)
+    medications_df = medications_df.withColumnRenamed("uuid", "medications_uuid")
+    df = df.join(medications_df, ['msk_mind_patient_id', 'dmp_patient_id'])
+
+    patients_table = os.path.join(base_directory, "data/clinical/patients")
+    patients_df = spark.read.format("delta").load(patients_table)
+    patients_df = patients_df.withColumnRenamed("uuid", "patients_uuid")
+    df = df.join(patients_df, ['msk_mind_patient_id', 'dmp_patient_id'])
+    df.show()
 
     # write table
     df.write.format("delta").mode("overwrite").save(feature_table)
