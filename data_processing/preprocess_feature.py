@@ -42,7 +42,7 @@ Example:
 """
 import os, sys, subprocess, time,importlib
 import click
-
+from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 
