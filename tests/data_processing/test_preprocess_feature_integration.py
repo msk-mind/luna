@@ -33,7 +33,7 @@ def test_local_feature_table_generation(spark_session):
     
     # Read Delta Table and Verify 
     feature_df = spark_session.read.format("delta").load(feature_table_path)
-    assert feature_df.count() == 1
+    assert feature_df.count() == 8
     print ("test_local_feature_table_generation passed.")
 
 
