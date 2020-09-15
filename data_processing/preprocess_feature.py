@@ -43,9 +43,9 @@ Example:
 import os, sys, subprocess, time,importlib
 import click
 
-from common.sparksession import SparkConfig
-from common.custom_logger import init_logger
-from common.Neo4jConnection import Neo4jConnection
+from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.sparksession import SparkConfig
+from data_processing.common.custom_logger import init_logger
 
 
 import numpy as np
@@ -290,7 +290,6 @@ def generate_feature_table(base_directory, target_spacing, spark, query, feature
 
     # Join with clinical proxy tables
     # setup contexts for graph DB
-    spark.sparkContext.addPyFile("common/Neo4jConnection.py")
     conn = Neo4jConnection(uri='bolt://dlliskimind1.mskcc.org:7687', user="neo4j", pwd="password")
     sql_context = SQLContext(spark)
 

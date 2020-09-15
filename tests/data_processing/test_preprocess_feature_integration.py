@@ -1,20 +1,9 @@
-import os, click, shutil
-import sys
-sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../') ))
-sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../common/') ))
-print(sys.path)
-
+import os, shutil
 import pytest
-from preprocess_feature import cli, generate_feature_table
+from data_processing.preprocess_feature import cli, generate_feature_table
 from click.testing import CliRunner
 
-"""
-To run the test,
-
-cd data-processing/src
-pytest -s --cov=. tests
-"""
-BASE_DIR = "./tests/testdata/"
+BASE_DIR = "./tests/data_processing/testdata/"
 TARGET_SPACING = (1.0, 1.0, 3.0)
 
 # Test CLI parameters
@@ -34,10 +23,6 @@ def cleanup():
 
 def test_local_feature_table_generation(spark_session):
     
-    # Need to add python dependencies to the spark context, otherwise get module not found error
-    spark_session.sparkContext.addPyFile("preprocess_feature.py")
-    spark_session.sparkContext.addPyFile("common/sparksession.py")
-    spark_session.sparkContext.addPyFile("common/custom_logger.py")
 
     # Test no query, default naming
     # Build Feature Table
@@ -53,11 +38,6 @@ def test_local_feature_table_generation(spark_session):
 
 
 def test_local_feature_table_generation_malformed_query(spark_session):
-    
-    # Need to add python dependencies to the spark context, otherwise get module not found error
-    spark_session.sparkContext.addPyFile("preprocess_feature.py")
-    spark_session.sparkContext.addPyFile("common/sparksession.py")
-    spark_session.sparkContext.addPyFile("common/custom_logger.py")
 
     # Test no query, default naming
     # Build Feature Table
