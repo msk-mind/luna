@@ -6,11 +6,11 @@ Created on September 11, 2020
 This module generates a delta table for clinical data stored in a csv or tsv file with tab delimiters.
 '''
 import click
-from common.custom_logger import init_logger
+from data_processing.common.custom_logger import init_logger
 from pyspark.sql.functions import expr
 from pyspark.sql.utils import AnalysisException
 
-from common.sparksession import SparkConfig
+from data_processing.common.sparksession import SparkConfig
 
 logger = init_logger()
 
@@ -57,9 +57,6 @@ def cli(spark_master_uri, source_file, destination_dir):
     import time
     start_time = time.time()
     spark = SparkConfig().spark_session("clinical-proxy-preprocessing", spark_master_uri)
-    print('>>>>>>>>>>>>>source: '+source_file)
-    print('>>>>>>>>>>>>>destination: ' + destination_dir)
-    print('>>>>>>>>>>>>>spark_master_uri: ' + spark_master_uri)
     generate_proxy_table(source_file, destination_dir, spark)
     print("--- Finished in %s seconds ---" % (time.time() - start_time))
 

@@ -1,0 +1,4 @@
+msk_mind_patient_id	dmp_patient_id	gender	race	ethnicity	vital_status	patient_last_known_alive_age
+1743585.0	P-0019027	FEMALE	ASIAN-FAR EAST/INDIAN SUBCONT	Non-Spanish; Non-Hispanic	DECEASED	14918.0
+1749771.0	P-0016190	FEMALE	ASIAN-FAR EAST/INDIAN SUBCONT	Non-Spanish; Non-Hispanic	ALIVE	22773.0
+1750666.0	P-0009001	FEMALE	WHITE	Non-Spanish; Non-Hispanic	ALIVE	19696.0
