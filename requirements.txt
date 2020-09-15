@@ -9,6 +9,5 @@ pyspark
 pytest
 pytest-cov
 pytest-runner
-pytest-spark
 scikit-image
 wheel>=0.22

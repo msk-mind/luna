@@ -1,6 +1,7 @@
 import os, shutil
 import pytest
 from data_processing.preprocess_feature import cli, generate_feature_table
+from data_processing.common.sparksession import SparkConfig
 from click.testing import CliRunner
 
 BASE_DIR = "./tests/data_processing/testdata/"
@@ -12,7 +13,12 @@ runner = CliRunner()
 #TODO increase test coverage
 
 @pytest.fixture(autouse=True)
-def cleanup():
+def spark():
+    print('------setup------')
+    spark = SparkConfig().spark_session('test-preprocessing-feature', 'local[2]')
+    yield spark
+
+    print('------teardown------')
     feature_table = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table-test-name")
     if os.path.exists(feature_table):
         shutil.rmtree(feature_table)
@@ -21,27 +27,27 @@ def cleanup():
     if os.path.exists(feature_dir):
         shutil.rmtree(feature_dir)
 
-def test_local_feature_table_generation(spark_session):
+def test_local_feature_table_generation(spark):
     
 
     # Test no query, default naming
     # Build Feature Table
-    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID = '1.2.840.113619.2.55.3.2743925538.934.1319713655.582'", "feature-table-test-name", "tests/external_process_patient_script.py")
+    generate_feature_table(BASE_DIR, TARGET_SPACING, spark, "SeriesInstanceUID = '1.2.840.113619.2.55.3.2743925538.934.1319713655.582'", "feature-table-test-name", "tests/external_process_patient_script.py")
 
     # read and verify correct feature table generated
     feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table-test-name")
     
     # Read Delta Table and Verify 
-    feature_df = spark_session.read.format("delta").load(feature_table_path)
+    feature_df = spark.read.format("delta").load(feature_table_path)
     assert feature_df.count() == 8
     print ("test_local_feature_table_generation passed.")
 
 
-def test_local_feature_table_generation_malformed_query(spark_session):
+def test_local_feature_table_generation_malformed_query(spark):
 
     # Test no query, default naming
     # Build Feature Table
-    generate_feature_table(BASE_DIR, TARGET_SPACING, spark_session, "SeriesInstanceUID = '123' || scan_record_uuid = '123'", "feature-table", "tests/test_external_process_patient_script.py")
+    generate_feature_table(BASE_DIR, TARGET_SPACING, spark, "SeriesInstanceUID = '123' || scan_record_uuid = '123'", "feature-table", "tests/test_external_process_patient_script.py")
 
     # read and verify correct feature table generated
     feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table")
