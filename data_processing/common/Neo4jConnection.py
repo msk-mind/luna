@@ -98,6 +98,18 @@ class Neo4jConnection:
         cSchema = StructType([StructField(SINK_TYPE, StringType(), True)])
         return sqlc.createDataFrame(sc.parallelize([(x.data()['sink']['value'],) for x in result]),schema=cSchema)
 
+    def commute_record_id_to_spark (self, sc, sqlc, SOURCE_TYPE, SINK_TYPE):
+        """
+        Spark connector for an input cohort id
+        Returns a dataframe with one column named the sink/target ID
+        """
+        result = self.query(f"""
+            MATCH (source:{SOURCE_TYPE})-[:HAS_RECORD*1..1]-(sink:{SINK_TYPE})
+            RETURN source,sink """
+        )
+        cSchema = StructType([StructField(SINK_TYPE, StringType(), True)])
+        return sqlc.createDataFrame(sc.parallelize([(x.data()['sink']['value'],) for x in result]),schema=cSchema)
+
     def commute_sink_id_to_spark (self, sc, sqlc, SINK_TYPE, QUERY_ID):
         """
         A pass through function for consistency
