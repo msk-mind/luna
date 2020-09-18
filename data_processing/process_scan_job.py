@@ -20,14 +20,18 @@ import socket
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.custom_logger import init_logger
 
+logger = init_logger()
+
 # pydoop.hdfs.cp("file:///Users/aukermaa/DB/test.txt", "/Users/aukermaa/")
 
 @click.command()
+# TODO: query?
 @click.option('-q', '--query', default = None, help = "where clause of SQL query to filter feature table, 'WHERE' does not need to be included, but make sure to wrap with quotes to be interpretted correctly")
 @click.option('-b', '--base_directory', type=click.Path(exists=True), default="/gpfs/mskmindhdp_emc/", help="location to find scan/annotation tables and to create feature table")
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
-@click.option('-n', '--feature_table_output_name', default="feature-table", help="name of new feature table that is created.")
-@click.option('-c', '--custom_preprocessing_script', default = None, help="Path to python file containing custom 'process_patient' method. By default, uses process_patient_default() for preprocessing")
+@click.option('-g', '--graph_uri', help='spark master uri e.g. bold://host:7883', required=True)
+@click.option('-c', '--custom_preprocessing_script', default = None, help="Path to python file to execute in the working directory")
+@click.option('-t', '--tag', default = 'default', help="Provencence tag")
 def cli(spark_master_uri, base_directory, target_spacing, query, feature_table_output_name, custom_preprocessing_script):
     """
     This module ....
@@ -46,11 +50,8 @@ def cli(spark_master_uri, base_directory, target_spacing, query, feature_table_o
 parser = argparse.ArgumentParser(description='Submission script to run dicom-to-scan concept transformations')
 parser.add_argument('--id', dest='id', type=str, help='Specify query ID (ex. DMP-0001)')
 parser.add_argument('--type', dest='type', type=str, help='Specify query ID type (ex. dmp_patient_id')
-parser.add_argument('--py', dest='py', type=str, help='Python script to run (ex. /path/to/generateMHD.py)')
-parser.add_argument('--spark', dest='spark', type=str, help='Spark Cluster to use (ex. spark://localhost:7070)')
 parser.add_argument('--hdfs', dest='hdfs', type=str, help='HDFS host')
 parser.add_argument('--db', dest='db', type=str, help='DB root directory (ex. /DB/')
-parser.add_argument('--graph', dest='graph', type=str, help='Graph DB hostname')
 parser.add_argument('--gpfs', dest='gpfs', type=str, help='GPFS host')
 parser.add_argument('--mount', dest='mount', type=str, help='GPFS mount')
 parser.add_argument('--tag', dest='tag', type=str, help='Provencence Tag')
@@ -60,8 +61,8 @@ print (os.getlogin())
 
 query_type = args.type
 query_id   = args.id
-pyjob_path   = args.py
-spark_cluster   = args.spark
+custom_preprocessing_script   = args.py
+spark_master_uri   = args.spark
 hdfs_host  = args.hdfs
 hdfs_db_root = args.db
 graph_host      = args.graph
@@ -98,7 +99,7 @@ from pyspark.sql.types import StringType,StructType,StructField
 import pyarrow as pa
 conf = SparkConf()\
     .setAppName("generate_ct") \
-    .setMaster(spark_cluster) \
+    .setMaster(spark_master_uri) \
     .set("spark.jars.packages", "io.delta:delta-core_2.12:0.7.0") \
     .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
     .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
@@ -200,7 +201,7 @@ def python_def_generate_mhd(concept_id, input_paths, filenames):
 
         # Execute some modularized python script
         # Expects intputs at WORK_DIR, puts outputs into WORK_DIR/outputs
-        proc = subprocess.Popen(["/usr/local/bin/python3", pyjob_path, WORK_DIR], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(["/usr/local/bin/python3", custom_preprocessing_script, WORK_DIR], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = proc.communicate()
 
         # Send write message to scan io server
