@@ -1,16 +1,47 @@
-import os
-import subprocess
-import logging
-import argparse
-import sys
+"""
+This module groups dicom images via SeriesInstanceUID, calls a script to generate volumetric images, and interfaces outputs to an IO service.
+
+This module is to be run from the top-level data-processing directory using the -m flag as follows ?
+Usage:
+
+Parameters:
+    REQUIRED PARAMETERS:
+        --spark_master_uri: spark master uri e.g. spark://master-ip:7077 or local[*]
+    OPTIONAL PARAMETERS:
+
+    EXAMPLE:
+"""
+import sys, os, subprocess, argparse
 
 import pydoop
 import pydoop.hdfs as hdfs
 import socket
 
-from Neo4jConnection import Neo4jConnection
+from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.custom_logger import init_logger
 
 # pydoop.hdfs.cp("file:///Users/aukermaa/DB/test.txt", "/Users/aukermaa/")
+
+@click.command()
+@click.option('-q', '--query', default = None, help = "where clause of SQL query to filter feature table, 'WHERE' does not need to be included, but make sure to wrap with quotes to be interpretted correctly")
+@click.option('-b', '--base_directory', type=click.Path(exists=True), default="/gpfs/mskmindhdp_emc/", help="location to find scan/annotation tables and to create feature table")
+@click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
+@click.option('-n', '--feature_table_output_name', default="feature-table", help="name of new feature table that is created.")
+@click.option('-c', '--custom_preprocessing_script', default = None, help="Path to python file containing custom 'process_patient' method. By default, uses process_patient_default() for preprocessing")
+def cli(spark_master_uri, base_directory, target_spacing, query, feature_table_output_name, custom_preprocessing_script):
+    """
+    This module ....
+
+    Example: python3 ...    """
+    # Setup Spark context
+    import time
+    start_time = time.time()
+    spark = SparkConfig().spark_session("dicom-to-scan", spark_master_uri)
+    generate_feature_table(base_directory, target_spacing, spark, query, feature_table_output_name, custom_preprocessing_script)
+    print("--- Finished in %s seconds ---" % (time.time() - start_time))
+
+
+
 
 parser = argparse.ArgumentParser(description='Submission script to run dicom-to-scan concept transformations')
 parser.add_argument('--id', dest='id', type=str, help='Specify query ID (ex. DMP-0001)')
@@ -136,7 +167,6 @@ def python_def_generate_mhd(concept_id, input_paths, filenames):
         import uuid
         import subprocess
         import sys
-        import logging
         from paramiko import SSHClient
         from scp import SCPClient
 
@@ -152,9 +182,6 @@ def python_def_generate_mhd(concept_id, input_paths, filenames):
         os.makedirs(OUTPUT_DIR)
         os.makedirs(INPUTS_DIR)
 
-        # logging.basicConfig(filename=f'{WORK_DIR}/exec_log.txt',level=logging.INFO)
-        # logging.info("Starting execution")
-        # logging.info(f"WORKDIR: {WORK_DIR}")
 
         # # Data pull request into temporary working directory
         # # TODO:  Will actally be much more streamlined as binary data can be read-out from proxy table
@@ -175,9 +202,6 @@ def python_def_generate_mhd(concept_id, input_paths, filenames):
         # Expects intputs at WORK_DIR, puts outputs into WORK_DIR/outputs
         proc = subprocess.Popen(["/usr/local/bin/python3", pyjob_path, WORK_DIR], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = proc.communicate()
-        # logging.info('pyjob outputs:')
-        # logging.debug(str(out))
-        # logging.debug(str(err))
 
         # Send write message to scan io server
         # Message format is 5 arguements [command], [working directory path], [concept ID to attach], [record ID to ingest], [tag]
@@ -212,4 +236,5 @@ print (" >>> Jobs done: ", df_ct.count())
 df_ct.show()
 
 
-exit()
+if __name__ == "__main__":
+    cli()
