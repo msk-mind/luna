@@ -15,9 +15,6 @@ successfully when called through a pandas UDF
 # import databricks.koalas as ks
 
 
-import click
-from data_processing.common.sparksession import SparkConfig
-from data_processing.common.custom_logger import init_logger
 
 import numpy as np
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -33,7 +30,6 @@ from pyspark.sql.types import StringType
 
 
 
-logger = init_logger()
 GPFS_MOUNT_DIR = "/gpfs/mskmindhdp_emc"
 
 
@@ -193,19 +189,19 @@ def process_patient(patient: pd.DataFrame) -> pd.DataFrame:
 
     if os.path.exists(preprocessed_scan_path) and os.path.exists(preprocessed_annotation_path):
         print(preprocessed_scan_path + " and " + preprocessed_annotation_path + " already exists.")
-        logger.warning(preprocessed_scan_path + " and " + preprocessed_annotation_path + " already exists.")
+        print(preprocessed_scan_path + " and " + preprocessed_annotation_path + " already exists.")
         return patient
 
     if not os.path.exists(scan_absolute_hdfs_path):
         print(scan_absolute_hdfs_path + " does not exist.")
-        logger.warning(scan_absolute_hdfs_path + " does not exist.")
+        print(scan_absolute_hdfs_path + " does not exist.")
         patient['preprocessed_scan_path'] = ""
         patient['preprocessed_annotation_path'] = ""
         return patient
 
     if not os.path.exists(annotation_absolute_hdfs_path):
         print(annotation_absolute_hdfs_path + " does not exist.")
-        logger.warning(annotation_absolute_hdfs_path + " does not exist.")
+        print(annotation_absolute_hdfs_path + " does not exist.")
         patient['preprocessed_scan_path'] = ""
         patient['preprocessed_annotation_path'] = ""
         return patient
@@ -216,16 +212,16 @@ def process_patient(patient: pd.DataFrame) -> pd.DataFrame:
 
         img = resample_volume(img, 3, target_shape)
         np.save(preprocessed_scan_path, img)
-        logger.info("saved img at " + preprocessed_scan_path)
+        print("saved img at " + preprocessed_scan_path)
         print("saved img at " + preprocessed_scan_path)
 
         seg, _ = load(annotation_absolute_hdfs_path)
         seg = interpolate_segmentation_masks(seg, target_shape)
         np.save(preprocessed_annotation_path, seg)
-        logger.info("saved seg at " + preprocessed_annotation_path)
+        print("saved seg at " + preprocessed_annotation_path)
         print("saved seg at " + preprocessed_annotation_path)
     except Exception as err:
-        logger.warning("failed to generate resampled volume.", err)
+        print("failed to generate resampled volume.", err)
         print("failed to generate resampled volume.", err)
         patient['preprocessed_scan_path'] = ""
         patient['preprocessed_annotation_path'] = ""
