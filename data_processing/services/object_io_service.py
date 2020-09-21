@@ -4,7 +4,7 @@ import logging
 import argparse
 import uuid
 import shutil
-from Neo4jConnection import Neo4jConnection
+from data_processing.common.Neo4jConnection import Neo4jConnection
 import logging
 import glob
 import socket
