@@ -17,7 +17,6 @@ import datetime
 # Parse arguements
 parser = argparse.ArgumentParser(description='Start a WRITE SCAN I/O service with a persistent spark context')
 parser.add_argument('--hdfs', dest='hdfs', type=str, help='HDFS host (ex. hdfs://pllimsksparky1.mskcc.org:8020)')
-parser.add_argument('--db', dest='db', type=str, help='DB/datalake root directory (ex. /data/')
 parser.add_argument('--spark', dest='spark', type=str, help='Spark Cluster URI to use (ex. spark://localhost:7070)')
 parser.add_argument('--graph', dest='graph', type=str, help='Graph DB URI (ex. bolt://dlliskimind1.mskcc.org:7687)')
 parser.add_argument('--host', dest='host', type=str, help='Target host for server (ex. localhost)')

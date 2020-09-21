@@ -50,17 +50,16 @@ export MIND_WORK_DIR=/data/working/
 ```
 ### Start an IO service
 
-``` 
+```
 python3 -m data_processing.services.object_io_service \
 	--spark spark://LM620001:7077 \
 	--hdfs file:// \
-	--db /Users/aukermaa/DB/ \
 	--graph bolt://localhost:7687 \
 	--host localhost
 ```
 
-### Run process scan job 
-``` 
+### Run process scan job
+```
 python3 -m data_processing.process_scan_job \
 	--query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
 	--spark_master_uri spark://LM620001:7077 \
@@ -69,11 +68,10 @@ python3 -m data_processing.process_scan_job \
 	--custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
 	--tag test \
 	--base_directory /
-``` 
+```
 ### TODO
 
 DONE - Take target spacing parameter, table paths as arguments (using click)
 - Embed .npy in the parquet/delta tables if needed
 - Using Spark UDF, foreachPartition resulted in degraded performance (~5 min) compared to using Parallel (~1 min). Investigate if there is a better way to iterate over rows in Spark.
 - Performance test on Spark cluster
-
