@@ -166,8 +166,8 @@ def generate_scan_table(base_directory, spark, query, graph_uri, hdfs_uri, custo
     # Run jobs
     logger.info (" >>> Calling jobs on selected patient:")
     df_ct = df_queue.withColumn('payload', udf_generate_mhd(concept_id_TYPE, 'absolute_hdfs_paths', 'filenames'))
-    logger.info (" >>> Jobs done")
     df_ct.show()
+    logger.info (" >>> Jobs done")
 
 
 if __name__ == "__main__":
