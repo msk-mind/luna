@@ -42,6 +42,29 @@ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_direct
 ```
 
 
+## Generate scans
+### Start an IO service
+
+``` 
+python3 -m data_processing.services.object_io_service \
+	--spark spark://LM620001:7077 \
+	--hdfs file:// \
+	--db /Users/aukermaa/DB/ \
+	--graph bolt://localhost:7687 \
+	--host localhost
+```
+
+### Run process scan job 
+``` 
+python3 -m data_processing.process_scan_job \
+	--query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
+	--spark_master_uri spark://LM620001:7077 \
+	--graph_uri bolt://localhost:7687 \
+	--hdfs_uri file:// \
+	--custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
+	--tag test \
+	--base_directory /
+``` 
 ### TODO
 
 DONE - Take target spacing parameter, table paths as arguments (using click)
