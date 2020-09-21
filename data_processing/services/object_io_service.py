@@ -13,6 +13,7 @@ import logging
 import threading
 import os
 import datetime
+import time
 
 # Parse arguements
 parser = argparse.ArgumentParser(description='Start a WRITE SCAN I/O service with a persistent spark context')
@@ -106,6 +107,7 @@ class ClientThread(threading.Thread):
 
     def run(self):
         ''' Run in a separate thread '''
+        start_time = time.time()
         # Annoying
         WORK_DIR    = self.WORK_DIR
         CONCEPT_ID  = self.CONCEPT_ID
@@ -191,7 +193,7 @@ class ClientThread(threading.Thread):
 
             # 5. Integrate in the graph DB
             result = conn.query(query)
-        print ("Thread finished.")
+        print("--- Thread finished successfully in %s seconds ---" % (time.time() - start_time))
 
 # Main server program
 def server_program():

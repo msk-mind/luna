@@ -11,7 +11,7 @@ Parameters:
         MIND_WORK_DIR: POSIX accessable directory for spark workers to use as scratch space
     REQUIRED PARAMETERS:
         --spark_master_uri: spark master uri e.g. spark://master-ip:7077 or local[*]
-        --hdfs_uri: HDFS namenode uri e.g. hdfs://master-ip:8020 
+        --hdfs_uri: HDFS namenode uri e.g. hdfs://master-ip:8020
         --query: a cypher where clause to filter sink IDs based on source ID and relationship fields
         --graph_uri: Neo4j graph URI/bolt Connection
         --tag: Experimental tag for run
@@ -36,6 +36,7 @@ import socket
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
+
 from pyspark import SQLContext, SparkContext
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType,StructType,StructField
