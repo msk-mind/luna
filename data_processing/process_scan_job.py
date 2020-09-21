@@ -1,15 +1,32 @@
 """
 This module groups dicom images via SeriesInstanceUID, calls a script to generate volumetric images, and interfaces outputs to an IO service.
 
-This module is to be run from the top-level data-processing directory using the -m flag as follows ?
+This module is to be run from the top-level data-processing directory using the -m flag as follows:
 Usage:
+    $ python3 -m data_processing.process_scan_job --query ... [args]
 
 Parameters:
+    ENVIRONMENTAL VARIABLES:
+        MIND_ROOT_DIR: The root directory for the delta lake
+        MIND_WORK_DIR: POSIX accessable directory for spark workers to use as scratch space
     REQUIRED PARAMETERS:
         --spark_master_uri: spark master uri e.g. spark://master-ip:7077 or local[*]
+        --hdfs_uri: HDFS namenode uri e.g. hdfs://master-ip:8020 
+        --query: a cypher where clause to filter sink IDs based on source ID and relationship fields
+        --graph_uri: Neo4j graph URI/bolt Connection
+        --tag: Experimental tag for run
+        --custom_preprocessing_script: path to preprocessing script to be executed in working directory
     OPTIONAL PARAMETERS:
-
+        All are required.
     EXAMPLE:
+        python3 -m data_processing.process_scan_job \
+    	--query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
+    	--spark_master_uri spark://LM620001:7077 \
+    	--graph_uri bolt://localhost:7687 \
+    	--hdfs_uri file:// \
+    	--custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
+    	--tag test \
+    	--base_directory /
 """
 import sys, os, subprocess, argparse
 
