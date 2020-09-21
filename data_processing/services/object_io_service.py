@@ -24,10 +24,12 @@ parser.add_argument('--host', dest='host', type=str, help='Target host for serve
 args = parser.parse_args()
 
 hdfs_host       = args.hdfs
-hdfs_db_root    = args.db
 spark_cluster   = args.spark
 graph_host      = args.graph
 io_host         = args.host
+
+
+hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
 
 # Open a connection to the ID graph database
 conn = Neo4jConnection(uri=graph_host, user="neo4j", pwd="password")
