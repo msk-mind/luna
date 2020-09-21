@@ -75,8 +75,8 @@ sqlc =  SQLContext(sc)
 # sqlc =  SQLContext(sc)
 
 # Setup logging
-logging.basicConfig(filename='/Users/aukermaa/DB/logs/io_service_log.txt',level=logging.INFO)
-logging.info ("Imported spark")
+from data_processing.common.custom_logger import init_logger
+logger = init_logger()
 
 #
 # from delta.tables import DeltaTable

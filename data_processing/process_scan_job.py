@@ -20,17 +20,20 @@ Parameters:
         All are required.
     EXAMPLE:
         python3 -m data_processing.process_scan_job \
-    	--query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
-    	--spark_master_uri spark://LM620001:7077 \
-    	--graph_uri bolt://localhost:7687 \
-    	--hdfs_uri file:// \
-    	--custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
-    	--tag test \
+		--query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
+		--spark_master_uri spark://LM620001:7077 \
+		--graph_uri bolt://localhost:7687 \
+		--hdfs_uri file:// \
+		--custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
+		--tag test \
 """
-import sys, os, subprocess, argparse
+import glob, shutil, os, uuid, subprocess, sys, argparse, time
 
 import click
 import socket
+
+from paramiko import SSHClient
+from scp import SCPClient
 
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.sparksession import SparkConfig
@@ -59,7 +62,6 @@ def cli(spark_master_uri, query, hdfs_uri, graph_uri, custom_preprocessing_scrip
     Example: python3 ...    """
     # Setup Spark context
     print (query)
-    import time
     start_time = time.time()
     spark = SparkConfig().spark_session("dicom-to-scan", spark_master_uri)
     generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_script, tag)
@@ -69,9 +71,10 @@ def cli(spark_master_uri, query, hdfs_uri, graph_uri, custom_preprocessing_scrip
 def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_script, tag):
     hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
     spark_workspace = os.environ["MIND_WORK_DIR"]
-    gpfs_mount 	    = os.environ['MIND_GPFS_DIR'] 
+    gpfs_mount      = os.environ['MIND_GPFS_DIR'] 
+    print (hdfs_db_root, spark_workspace, gpfs_mount)
     concept_id_TYPE = "SeriesInstanceUID"
-    gpfs_host = 'localhost'
+    gpfs_host = 'pllimsksparky1'
 
     # Open a connection to the ID graph database
     logger.info (f'''Conncting to uri={graph_uri}, user="neo4j", pwd="password" ''')
@@ -87,8 +90,8 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
     df_driver_ids.show()
 
     # Reading dicom and opdata
-    df_dcmdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm"))
-    df_optdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_op"))
+    df_dcmdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_light"))
+    df_optdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_op_light"))
     df_dcmdata.printSchema()
     df_optdata.printSchema()
     logger.info (" >>> Loaded dicom DB")
@@ -105,50 +108,48 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
                     Zero error checking, incomplete
             '''
 
-            import glob, shutil, os, uuid, subprocess, sys
-            from paramiko import SSHClient
-            from scp import SCPClient
 
-            sys.path.insert(0, '/usr/local/Cellar/hadoop/3.2.1_1/bin/')
-
+            print ("hello")
             scan_record_uuid  = "SCAN-" + str(uuid.uuid4())
-
+            print (scan_record_uuid)
             # Initialize a working directory
-            WORK_DIR   = os.path.join(spark_workspace, scan_record_uuid)
+            WORK_DIR   = os.path.join(gpfs_mount + spark_workspace, scan_record_uuid)
             OUTPUT_DIR = os.path.join(WORK_DIR, 'outputs')
             INPUTS_DIR = os.path.join(WORK_DIR, 'inputs')
+            print (WORK_DIR)
             os.makedirs(WORK_DIR)
             os.makedirs(OUTPUT_DIR)
             os.makedirs(INPUTS_DIR)
+
+            logger.info(scan_record_uuid)
 
             # # Data pull request into temporary working directory
             # # TODO:  Will actally be much more streamlined as binary data can be read-out from proxy table
             pull_req_dcm = [ os.path.join(path,file) for path, file in zip(input_paths, filenames)]
 
-            #for dcm in pull_req_dcm: shutil.copy(dcm, WORK_DIR)
-            ssh = SSHClient()
-            ssh.load_system_host_keys()
-            ssh.connect(gpfs_host)
-            with SCPClient(ssh.get_transport()) as scp:
-                for dcm in pull_req_dcm:
-                    scp.get(gpfs_mount + dcm, INPUTS_DIR)
-
-            # Execute some modularized python script
-            # Expects intputs at WORK_DIR, puts outputs into WORK_DIR/outputs
-            proc = subprocess.Popen(["/usr/local/bin/python3", custom_preprocessing_script, WORK_DIR], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for dcm in pull_req_dcm:
+                logger.info(gpfs_mount + dcm, INPUTS_DIR)
+                shutil.copy(gpfs_mount + dcm, INPUTS_DIR)
+#
+#            # Execute some modularized python script
+#            # Expects intputs at WORK_DIR, puts outputs into WORK_DIR/outputs
+            proc = subprocess.Popen(["/gpfs/mskmindhdp_emc/sw/env/bin/python", custom_preprocessing_script, WORK_DIR], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = proc.communicate()
+            print (out, err)
 
-            # Send write message to scan io server
-            # Message format is 5 arguements [command], [search directory path], [concept ID], [record ID], [tag]
-            message = ','.join(["WRITE", OUTPUT_DIR, concept_id, scan_record_uuid, tag])
-            client_socket = socket.socket()  # instantiate
-            client_socket.setblocking(1)
-            client_socket.connect(("localhost", 5090))  # connect to the server
-            client_socket.send(message.encode())  # send message
-            client_socket.close()  # close the connection
-
-            # Were all done here, the write service takes care of the rest!!!
-            # Returning record ID
+            shutil.rmtree(INPUTS_DIR)
+#
+#            # Send write message to scan io server
+#            # Message format is 5 arguements [command], [search directory path], [concept ID], [record ID], [tag]
+#            message = ','.join(["WRITE", OUTPUT_DIR, concept_id, scan_record_uuid, tag])
+#            client_socket = socket.socket()  # instantiate
+#            client_socket.setblocking(1)
+#            client_socket.connect(("pllimsksparky1", 5090))  # connect to the server
+#            client_socket.send(message.encode())  # send message
+#            client_socket.close()  # close the connection
+#
+#            # Were all done here, the write service takes care of the rest!!!
+#            # Returning record ID
             return scan_record_uuid
 
     # Make our UDF
@@ -161,11 +162,13 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
         .agg(F.sort_array( F.collect_list("absolute_hdfs_path")).alias("absolute_hdfs_paths"), \
              F.sort_array( F.collect_list("filename")).alias("filenames") )
 
+    job_start_time = time.time()
     # Run jobs
     logger.info (" >>> Calling jobs on selected patient:")
     df_ct = df_queue.withColumn('payload', udf_generate_mhd(concept_id_TYPE, 'absolute_hdfs_paths', 'filenames'))
     df_ct.show()
     logger.info (" >>> Jobs done")
+    logger.info("--- Execute in %s seconds ---" % (time.time() - job_start_time))
 
 
 if __name__ == "__main__":
