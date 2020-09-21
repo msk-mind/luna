@@ -43,6 +43,11 @@ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_direct
 
 
 ## Generate scans
+First set some environment:
+```
+export MIND_ROOT_DIR=/data/
+export MIND_WORK_DIR=/data/working/
+```
 ### Start an IO service
 
 ``` 
