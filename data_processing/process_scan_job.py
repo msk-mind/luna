@@ -26,7 +26,6 @@ Parameters:
     	--hdfs_uri file:// \
     	--custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
     	--tag test \
-    	--base_directory /
 """
 import sys, os, subprocess, argparse
 
@@ -48,13 +47,12 @@ logger.info("Starting process_scan_job.py")
 
 @click.command()
 @click.option('-q', '--query', default = None, help = "where clause of CYPHER query to filter ID table, 'WHERE' does not need to be included, wrap with double quotes")
-@click.option('-b', '--base_directory', type=click.Path(exists=True), default="/gpfs/mskmindhdp_emc/", help="location to find scan/annotation tables and to create feature table")
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
 @click.option('-g', '--graph_uri', help='spark master uri e.g. bolt://localhost:7883', required=True)
 @click.option('-d', '--hdfs_uri', help='hdfs URI uri e.g. hdfs://localhost:8020', required=True)
 @click.option('-c', '--custom_preprocessing_script', default = None, help="Path to python file to execute in the working directory")
 @click.option('-t', '--tag', default = 'default', help="Provencence tag")
-def cli(spark_master_uri, base_directory, query, hdfs_uri, graph_uri, custom_preprocessing_script, tag):
+def cli(spark_master_uri, query, hdfs_uri, graph_uri, custom_preprocessing_script, tag):
     """
     This module ....
 
@@ -64,18 +62,16 @@ def cli(spark_master_uri, base_directory, query, hdfs_uri, graph_uri, custom_pre
     import time
     start_time = time.time()
     spark = SparkConfig().spark_session("dicom-to-scan", spark_master_uri)
-    generate_scan_table(base_directory, spark, query, graph_uri, hdfs_uri, custom_preprocessing_script, tag)
+    generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_script, tag)
     logger.info("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 
-def generate_scan_table(base_directory, spark, query, graph_uri, hdfs_uri, custom_preprocessing_script, tag):
-    os.environ["PYSPARK_PYTHON"]="/usr/local/bin/python3"
-    os.environ["PYSPARK_DRIVER_PYTHON"]="/usr/local/bin/python3"
+def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_script, tag):
     hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
     spark_workspace = os.environ["MIND_WORK_DIR"]
+    gpfs_mount 	    = os.environ['MIND_GPFS_DIR'] 
     concept_id_TYPE = "SeriesInstanceUID"
     gpfs_host = 'localhost'
-    gpfs_mount = '/'
 
     # Open a connection to the ID graph database
     logger.info (f'''Conncting to uri={graph_uri}, user="neo4j", pwd="password" ''')
@@ -93,6 +89,8 @@ def generate_scan_table(base_directory, spark, query, graph_uri, hdfs_uri, custo
     # Reading dicom and opdata
     df_dcmdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm"))
     df_optdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_op"))
+    df_dcmdata.printSchema()
+    df_optdata.printSchema()
     logger.info (" >>> Loaded dicom DB")
 
     def python_def_generate_mhd(concept_id, input_paths, filenames):

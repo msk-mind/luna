@@ -47,6 +47,7 @@ First set some environment:
 ```
 export MIND_ROOT_DIR=/data/
 export MIND_WORK_DIR=/data/working/
+export MIND_GPFS_DIR=/gpfs/mskmindhdp_emc/
 ```
 ### Start an IO service
 
