@@ -71,6 +71,19 @@ class Neo4jConnection:
         cSchema = StructType([StructField(SINK_TYPE, StringType(), True)])
         return sqlc.createDataFrame(sc.parallelize([(x.data()['sink']['value'],) for x in result]),schema=cSchema)
 
+    def commute_source_id_to_spark_query(self, sc, sqlc, WHERE_CLAUSE, SINK_TYPE ):
+        """
+        Spark connector for an input source id
+        Returns a dataframe with one column named the sink/target ID
+        """
+        result = self.query(f"""
+            MATCH (source)-[r*]-(sink:{SINK_TYPE}) \
+            {WHERE_CLAUSE} \
+            RETURN source,sink """
+        )
+        cSchema = StructType([StructField(SINK_TYPE, StringType(), True)])
+        return sqlc.createDataFrame(([(x.data()['sink']['value'],) for x in result]),schema=cSchema)
+
     def create_id_lookup_table(self, sc, sqlc, SOURCE_TYPE, SINK_TYPE, QUERY_ID ):
         """
         Spark connector for an input source id
