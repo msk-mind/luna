@@ -176,8 +176,7 @@ class ClientThread(threading.Thread):
             df2.unpersist()
             record.unpersist()
 
-            # 5. Integrate in the graph DB
-            result = conn.query(f"""
+            query = f"""
                 MATCH (tag_node)
                 WHERE tag_node.value = '{TAG_ID}'
                 MATCH (concept_node)
@@ -187,7 +186,10 @@ class ClientThread(threading.Thread):
                 MERGE (concept_node)-[rid:HAS_RECORD]->(record_node)
                 MERGE (tag_node)-[rtag:TAGGED]->(record_node)
                 """
-            )
+            print (f"\nRunning {query}\n")
+
+            # 5. Integrate in the graph DB
+            result = conn.query(query)
         print ("Thread finished.")
 
 # Main server program

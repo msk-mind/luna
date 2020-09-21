@@ -54,6 +54,8 @@ def cli(spark_master_uri, base_directory, query, hdfs_uri, graph_uri, custom_pre
 def generate_scan_table(base_directory, spark, query, graph_uri, hdfs_uri, custom_preprocessing_script, tag):
     os.environ["PYSPARK_PYTHON"]="/usr/local/bin/python3"
     os.environ["PYSPARK_DRIVER_PYTHON"]="/usr/local/bin/python3"
+    hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
+    spark_workspace = os.environ["MIND_WORK_DIR"]
 
     sc = spark
     sqlc =  SQLContext(spark)
@@ -62,7 +64,6 @@ def generate_scan_table(base_directory, spark, query, graph_uri, hdfs_uri, custo
 
     # We identify scan concepts with the series instance uid
     concept_id_TYPE = "SeriesInstanceUID"
-    SPARK_SCRATCH_SPACE = "/Users/aukermaa/DB/working/"
 
     # Open a connection to the ID graph database
     logger.info (f'''Conncting to uri={graph_uri}, user="neo4j", pwd="password" ''')
@@ -75,7 +76,7 @@ def generate_scan_table(base_directory, spark, query, graph_uri, hdfs_uri, custo
     logger.info (" >>> Graph Query Complete:")
     df_driver_ids.show()
 
-    hdfs_db_root = os.environ["MIND_ROOT_DIR"]
+
     gpfs_host = 'localhost'
     gpfs_mount = '/'
     # Reading dicom and opdata
@@ -95,12 +96,7 @@ def generate_scan_table(base_directory, spark, query, graph_uri, hdfs_uri, custo
                     Zero error checking, incomplete
             '''
 
-            import glob
-            import shutil
-            import os
-            import uuid
-            import subprocess
-            import sys
+            import glob, shutil, os, uuid, subprocess, sys
             from paramiko import SSHClient
             from scp import SCPClient
 
@@ -109,13 +105,12 @@ def generate_scan_table(base_directory, spark, query, graph_uri, hdfs_uri, custo
             scan_record_uuid  = "SCAN-" + str(uuid.uuid4())
 
             # Initialize a working directory
-            WORK_DIR   = os.path.join(SPARK_SCRATCH_SPACE, scan_record_uuid)
+            WORK_DIR   = os.path.join(spark_workspace, scan_record_uuid)
             OUTPUT_DIR = os.path.join(WORK_DIR, 'outputs')
             INPUTS_DIR = os.path.join(WORK_DIR, 'inputs')
             os.makedirs(WORK_DIR)
             os.makedirs(OUTPUT_DIR)
             os.makedirs(INPUTS_DIR)
-
 
             # # Data pull request into temporary working directory
             # # TODO:  Will actally be much more streamlined as binary data can be read-out from proxy table
@@ -128,9 +123,6 @@ def generate_scan_table(base_directory, spark, query, graph_uri, hdfs_uri, custo
             with SCPClient(ssh.get_transport()) as scp:
                 for dcm in pull_req_dcm:
                     scp.get(gpfs_mount + dcm, INPUTS_DIR)
-                # Awful and slow bc it spins up a new jvm 100 times per scan being processed
-                # subprocess.call(['/bin/sh', '/usr/local/bin/hadoop', 'fs', '-get', hdfs_uri + dcm, WORK_DIR])
-                # pydoop.hdfs.cp( os.path.join(hdfs_uri, dcm), WORK_DIR )
 
             # Execute some modularized python script
             # Expects intputs at WORK_DIR, puts outputs into WORK_DIR/outputs
@@ -138,7 +130,7 @@ def generate_scan_table(base_directory, spark, query, graph_uri, hdfs_uri, custo
             out, err = proc.communicate()
 
             # Send write message to scan io server
-            # Message format is 5 arguements [command], [working directory path], [concept ID to attach], [record ID to ingest], [tag]
+            # Message format is 5 arguements [command], [search directory path], [concept ID], [record ID], [tag]
             message = ','.join(["WRITE", OUTPUT_DIR, concept_id, scan_record_uuid, tag])
             client_socket = socket.socket()  # instantiate
             client_socket.setblocking(1)

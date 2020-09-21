@@ -177,8 +177,11 @@ class ClientThread(threading.Thread):
                 print (data_update)
                 sqlc.createDataFrame([data_update]).write.format("delta").mode("append").option("mergeSchema", "true").save(TABLE_PATH)
 
-                # 5. Integrate in the graph DB
-                result = conn.query(f"""
+                df1.unpersist()
+                df2.unpersist()
+                record.unpersist()
+
+                query = f"""
                     MATCH (tag_node)
                     WHERE tag_node.value = '{TAG_ID}'
                     MATCH (concept_node)
@@ -188,7 +191,10 @@ class ClientThread(threading.Thread):
                     MERGE (concept_node)-[rid:HAS_RECORD]->(record_node)
                     MERGE (tag_node)-[rtag:TAGGED]->(record_node)
                     """
-                )
+                print (f"\nRunning {query}\n")
+
+                # 5. Integrate in the graph DB
+                result = conn.query(query)
         print ("Thread finished.")
 
 # Main server program
