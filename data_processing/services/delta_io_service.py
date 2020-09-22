@@ -1,17 +1,17 @@
 import os
 import subprocess
-import logging
 import argparse
 import uuid
 import shutil
-from data_processing.common.Neo4jConnection import Neo4jConnection
-import logging
 import glob
 import socket
 import time
-import logging
 import threading
 import os
+
+from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.sparksession import SparkConfig
+from data_processing.common.custom_logger import init_logger
 
 # Parse arguements
 parser = argparse.ArgumentParser(description='Start a WRITE SCAN I/O service with a persistent spark context')
@@ -23,17 +23,16 @@ parser.add_argument('--host', dest='host', type=str, help='Target host for serve
 args = parser.parse_args()
 
 hdfs_host       = args.hdfs
-hdfs_db_root    = args.db
-spark_cluster   = args.spark
+spark_master_uri   = args.spark
 graph_host      = args.graph
 io_host         = args.host
 
+hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
+spark_workspace = os.environ["MIND_WORK_DIR"]
+gpfs_mount      = os.environ["MIND_GPFS_DIR"] 
+
 # Open a connection to the ID graph database
 conn = Neo4jConnection(uri=graph_host, user="neo4j", pwd="password")
-
-# Setup spark context and processing
-os.environ["PYSPARK_PYTHON"]="/usr/local/bin/python3"
-os.environ["PYSPARK_DRIVER_PYTHON"]="/usr/local/bin/python3"
 
 # Spark setup, persistent spark context for all threads/write/ETL jobs
 from pyspark.sql import SparkSession
@@ -44,40 +43,14 @@ from pyspark.sql import functions as F
 from pyspark.sql import Row
 from pyspark.sql.types import StringType,StructType,StructField
 import pyarrow as pa
-conf = SparkConf()\
-    .setAppName("scan_io_service") \
-    .setMaster(spark_cluster) \
-    .set("spark.jars.packages", "io.delta:delta-core_2.12:0.7.0") \
-    .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-    .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-    .set("spark.driver.bindAddress", "0.0.0.0") \
-    .set("spark.driver.memory", "4g") \
-    .set("spark.cores.max", "6")
 
-sc = SparkContext(conf=conf)
-sqlc =  SQLContext(sc)
-#
-# sc = SparkSession.builder \
-#     .appName('scan_io_service') \
-#     .config("spark.jars.packages", "io.delta:delta-core_2.12:0.7.0") \
-#     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-#     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-#     .config("spark.driver.bindAddress", "0.0.0.0") \
-#     .config("spark.driver.memory", "4g") \
-#     .config("spark.cores.max", "6") \
-#     .getOrCreate()
-#
-# print ("SPARK VERSION ", sc.version)
-# sqlc =  SQLContext(sc)
+spark = SparkConfig().spark_session("scan-io-service", spark_master_uri)
+sqlc = SQLContext(spark)
 
 # Setup logging
-logging.basicConfig(filename='/Users/aukermaa/DB/logs/io_service_log.txt',level=logging.INFO)
-logging.info ("Imported spark")
+logger = init_logger()
+logger.info ("Imported spark")
 
-#
-# from delta.tables import DeltaTable
-# scan_table_dthandle     = DeltaTable.forPath(sc, hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.scans"))
-#
 
 class ClientThread(threading.Thread):
     ''' Basic thread class '''
@@ -105,43 +78,48 @@ class ClientThread(threading.Thread):
         RECORD_ID   = self.RECORD_ID
         TAG_ID      = self.TAG_ID
 
+        CONCEPT_ID_TYPE = 'SeriesInstanceUID'
 
         # Get output directory to read raw files from
         OUTPUT_DIR = WORK_DIR
+        # Set write paths depending on input record type
+        if "SCAN" in RECORD_ID:
+            RECORD_ID_TYPE = 'scan_record_uuid'
+            DATA_PATH = "radiology/scans"
+            TABLE_PATH = hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.scans")
+        elif "ANNOTATION" in RECORD_ID:
+            RECORD_ID_TYPE = 'annotation_record_uuid'
+            DATA_PATH = "radiology/annotations"
+            TABLE_PATH = hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.annotations")
+        elif "FEATURE" in RECORD_ID:
+            RECORD_ID_TYPE = 'feature_record_uuid'
+            DATA_PATH = "radiology/features"
+            TABLE_PATH = hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.features")
+        else:
+            logger.error("Not a valid or supported record ID " + RECORD_ID)
 
-        logging.info ("Looping")
-        logging.info (str(glob.glob(os.path.join(OUTPUT_DIR,"*"))))
+        # 2. Add files to HDFS/GPFS
+        destination_path = os.path.join(hdfs_db_root, DATA_PATH, f"{CONCEPT_ID}/{RECORD_ID}/")
+        os.makedirs(gpfs_mount + destination_path)
+
+        logger.info ("Looping")
+        logger.info (str(glob.glob(os.path.join(OUTPUT_DIR,"*"))))
 
         # Loop over raw files to ingest
         for PAYLOAD_NO, FILE_PATH in enumerate(glob.glob(os.path.join(OUTPUT_DIR,"*"))):
-            logging.info("New raw file!")
-            logging.info(FILE_PATH)
+            logger.info("New raw file!")
+            logger.info(FILE_PATH)
 
             # Make sure there is an associated concept ID in the graph database
             result = conn.match_concept_node(CONCEPT_ID)
-            logging.info(result)
+            logger.info(result)
 
-            CONCEPT_ID_TYPE = 'SeriesInstanceUID'
 
-            # Set write paths depending on input record type
-            if "SCAN" in RECORD_ID:
-                RECORD_ID_TYPE = 'scan_record_uuid'
-                DATA_PATH = "radiology/scans"
-                TABLE_PATH = hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.scans")
-            elif "ANNOTATION" in RECORD_ID:
-                RECORD_ID_TYPE = 'annotation_record_uuid'
-                DATA_PATH = "radiology/annotations"
-                TABLE_PATH = hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.annotations")
-            elif "FEATURE" in RECORD_ID:
-                RECORD_ID_TYPE = 'feature_record_uuid'
-                DATA_PATH = "radiology/features"
-                TABLE_PATH = hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.features")
-            else:
-                logging.error("Not a valid or supported record ID " + RECORD_ID)
+
 
             # Main write operations
             if (len(result)) == 1:
-                logging.info ("Found concept node! ")
+                logger.info ("Found concept node! ")
 
                 # 1. Add a new record node to the graph database if it doesn't already exist
                 result = conn.query(f"""
@@ -149,14 +127,12 @@ class ClientThread(threading.Thread):
                     MERGE (tag_node:tag_id{{value:'{TAG_ID}'}})
                     """
                 )
+                print (result)
 
-                # 2. Add files to HDFS/GPFS
-                destination_path = os.path.join(hdfs_db_root, DATA_PATH, f"{CONCEPT_ID}/{RECORD_ID}/")
-                subprocess.call(['/bin/sh', '/usr/local/bin/hadoop', 'fs', '-mkdir', "-p", hdfs_host + destination_path])
-                subprocess.call(['/bin/sh', '/usr/local/bin/hadoop', 'fs', '-put', FILE_PATH, hdfs_host + destination_path])
+                
 
                 # 3. Prepare an opdata record
-                logging.info("Writing record to dt...")
+                logger.info("Writing record to dt...")
                 data_update = {
                     RECORD_ID_TYPE: RECORD_ID,
                     CONCEPT_ID_TYPE: CONCEPT_ID,
@@ -176,10 +152,6 @@ class ClientThread(threading.Thread):
                 print ("Appending spark delta table...")
                 print (data_update)
                 sqlc.createDataFrame([data_update]).write.format("delta").mode("append").option("mergeSchema", "true").save(TABLE_PATH)
-
-                df1.unpersist()
-                df2.unpersist()
-                record.unpersist()
 
                 query = f"""
                     MATCH (tag_node)

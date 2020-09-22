@@ -144,11 +144,11 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
 #            # Message format is 5 arguements [command], [search directory path], [concept ID], [record ID], [tag]
             message = ','.join(["WRITE", OUTPUT_DIR, concept_id, scan_record_uuid, tag])
             print (message)
-#            client_socket = socket.socket()  # instantiate
-#            client_socket.setblocking(1)
-#            client_socket.connect(("pllimsksparky1", 5090))  # connect to the server
-#            client_socket.send(message.encode())  # send message
-#            client_socket.close()  # close the connection
+            client_socket = socket.socket()  # instantiate
+            client_socket.setblocking(1)
+            client_socket.connect(("pllimsksparky1", 5090))  # connect to the server
+            client_socket.send(message.encode())  # send message
+            client_socket.close()  # close the connection
 #
 #            # Were all done here, the write service takes care of the rest!!!
 #            # Returning record ID
