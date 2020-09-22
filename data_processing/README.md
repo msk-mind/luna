@@ -72,7 +72,7 @@ python -m data_processing.process_scan_job \
 --spark_master_uri spark://pllimsksparky2.mskcc.org:7077 \
 --graph_uri neo4j://dlliskimind1.mskcc.org:7687 \
 --hdfs_uri hdfs://pllimsksparky1.mskcc.org:8020 \
---custom_preprocessing_script /home/aukermaa/data-processing/data_processing/generateMHD.py \
+--custom_preprocessing_script /gpfs/mskmindhdp_emc/tmp/generateMHD.py \
 --tag test
 ```
 You should see some new folders and outputs at /tmp/working/SCAN-ajdj3-...
