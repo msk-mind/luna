@@ -76,6 +76,8 @@ python -m data_processing.process_scan_job \
 --tag test
 ```
 You should see some new folders and outputs at /tmp/working/SCAN-ajdj3-...
+
+The where clause is technically a modifier on the allowed types of relationship paths to which the sink ID type (SeriesInstanceUID).  In this example, we are looking for scans with an ID_LINK relationship to any xnat accession number node.
 ### TODO
 
 DONE - Take target spacing parameter, table paths as arguments (using click)
