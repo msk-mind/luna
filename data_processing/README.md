@@ -44,7 +44,7 @@ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_direct
 
 ## Generate scans
 First set common python environment:
-`source /gpfs/mskmindhdp_emc/sw/env/bin/activate`
+```source /gpfs/mskmindhdp_emc/sw/env/bin/activate```
 
 Then some variables, root dir is the data lake base directory /data/, while the work directory is in /tmp/.  The GPFS mount directory is given too as we've moved from hadoop for I/O.
 ```
