@@ -56,13 +56,13 @@ export MIND_GPFS_DIR=/gpfs/mskmindhdp_emc/
 ```
 ### Start an IO service
 
-Can skip for now
+Works now.
 ```
-python3 -m data_processing.services.object_io_service \
-	--spark spark://LM620001:7077 \
-	--hdfs file:// \
-	--graph bolt://localhost:7687 \
-	--host localhost
+python3 -m data_processing.services.delta_io_service \
+	--spark spark://pllimsksparky2.mskcc.org:7077 \
+	--hdfs hdfs://pllimsksparky1.mskcc.org:8020 \
+	--graph neo4j://dlliskimind1.mskcc.org:7687 \
+	--host pllimsksparky1
 ```
 
 ### Run process scan job
