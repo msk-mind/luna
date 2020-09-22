@@ -57,9 +57,13 @@ logger.info("Starting process_scan_job.py")
 @click.option('-t', '--tag', default = 'default', help="Provencence tag")
 def cli(spark_master_uri, query, hdfs_uri, graph_uri, custom_preprocessing_script, tag):
     """
-    This module ....
+    This module groups dicom images via SeriesInstanceUID, calls a script to generate volumetric images, and interfaces outputs to an IO service.
+    
+    This module is to be run from the top-level data-processing directory using the -m flag as follows:
 
-    Example: python3 ...    """
+    Usage: python3 -m data_processing.process_scan_job --query ... [args]
+
+    """
     # Setup Spark context
     print (query)
     start_time = time.time()
@@ -71,7 +75,7 @@ def cli(spark_master_uri, query, hdfs_uri, graph_uri, custom_preprocessing_scrip
 def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_script, tag):
     hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
     spark_workspace = os.environ["MIND_WORK_DIR"]
-    gpfs_mount      = os.environ['MIND_GPFS_DIR'] 
+    gpfs_mount      = os.environ["MIND_GPFS_DIR"] 
     print (hdfs_db_root, spark_workspace, gpfs_mount)
     concept_id_TYPE = "SeriesInstanceUID"
     gpfs_host = 'pllimsksparky1'
@@ -128,7 +132,7 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
             pull_req_dcm = [ os.path.join(path,file) for path, file in zip(input_paths, filenames)]
 
             for dcm in pull_req_dcm:
-                logger.info(gpfs_mount + dcm, INPUTS_DIR)
+                print (gpfs_mount + dcm, INPUTS_DIR)
                 shutil.copy(gpfs_mount + dcm, INPUTS_DIR)
 #
 #            # Execute some modularized python script

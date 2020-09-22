@@ -1,8 +1,8 @@
 import os
 from pyspark.sql import SparkSession
 
-os.environ["PYSPARK_PYTHON"]='/gpfs/mskmindhdp_emc/sw/env/bin/python' 
-os.environ["PYSPARK_DRIVER_PYTHON"]='/gpfs/mskmindhdp_emc/sw/env/bin/python' 
+os.environ["PYSPARK_PYTHON"] =        '/gpfs/mskmindhdp_emc/sw/env/bin/python' 
+os.environ["PYSPARK_DRIVER_PYTHON"] = '/gpfs/mskmindhdp_emc/sw/env/bin/python' 
 
 """Common spark session"""
 class SparkConfig:
