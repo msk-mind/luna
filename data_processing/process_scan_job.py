@@ -164,6 +164,8 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
         .agg(F.sort_array( F.collect_list("absolute_hdfs_path")).alias("absolute_hdfs_paths"), \
              F.sort_array( F.collect_list("filename")).alias("filenames") )
 
+    logger.info("Jobs to run: {0}".format(df_queue.count()))
+
     job_start_time = time.time()
     # Run jobs
     logger.info (" >>> Calling jobs on selected patient:")

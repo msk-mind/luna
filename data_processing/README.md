@@ -78,6 +78,11 @@ python -m data_processing.process_scan_job \
 You should see some new folders and outputs at /tmp/working/SCAN-ajdj3-...
 
 The where clause is technically a modifier on the allowed types of relationship paths to which the sink ID type (SeriesInstanceUID).  In this example, we are looking for scans with an ID_LINK relationship to any xnat accession number node.
+
+To only run on scans for which an annotation is available, use:
+```
+"WHERE source:annotation_record_uuid AND ALL(rel IN r WHERE TYPE(rel) IN ['HAS_RECORD'])"
+```
 ### TODO
 
 DONE - Take target spacing parameter, table paths as arguments (using click)
