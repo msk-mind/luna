@@ -32,6 +32,7 @@ import glob, shutil, os, uuid, subprocess, sys, argparse, time
 import click
 import socket
 
+from checksumdir import dirhash
 from paramiko import SSHClient
 from scp import SCPClient
 
@@ -90,14 +91,11 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
 
     # Begin query/commute process
     df_driver_ids = conn.commute_source_id_to_spark_query(spark, sqlc, WHERE_CLAUSE=query, SINK_TYPE=concept_id_TYPE)
-    logger.info (" >>> Graph Query Complete:")
-    df_driver_ids.show()
+    logger.info (" >>> Graph Query Complete")
 
     # Reading dicom and opdata
     df_dcmdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_light"))
     df_optdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_op_light"))
-    df_dcmdata.printSchema()
-    df_optdata.printSchema()
     logger.info (" >>> Loaded dicom DB")
 
     def python_def_generate_mhd(concept_id, input_paths, filenames):
@@ -114,10 +112,10 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
 
 
             print ("hello")
-            scan_record_uuid  = "SCAN-" + str(uuid.uuid4())
-            print (scan_record_uuid)
+            job_uuid  = "job-" + str(uuid.uuid4())
+            print ("Starting " + job_uuid)
             # Initialize a working directory
-            WORK_DIR   = os.path.join(gpfs_mount + spark_workspace, scan_record_uuid)
+            WORK_DIR   = os.path.join(gpfs_mount + spark_workspace, job_uuid)
             OUTPUT_DIR = os.path.join(WORK_DIR, 'outputs')
             INPUTS_DIR = os.path.join(WORK_DIR, 'inputs')
             print (WORK_DIR)
@@ -125,14 +123,12 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
             os.makedirs(OUTPUT_DIR)
             os.makedirs(INPUTS_DIR)
 
-            logger.info(scan_record_uuid)
 
             # # Data pull request into temporary working directory
             # # TODO:  Will actally be much more streamlined as binary data can be read-out from proxy table
             pull_req_dcm = [ os.path.join(path,file) for path, file in zip(input_paths, filenames)]
 
             for dcm in pull_req_dcm:
-                print (gpfs_mount + dcm, INPUTS_DIR)
                 shutil.copy(gpfs_mount + dcm, INPUTS_DIR)
 #
 #            # Execute some modularized python script
@@ -142,10 +138,12 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
             print (out, err)
 
             shutil.rmtree(INPUTS_DIR)
+            scan_record_uuid = "SCAN-" + dirhash(OUTPUT_DIR, "sha256")
 #
 #            # Send write message to scan io server
 #            # Message format is 5 arguements [command], [search directory path], [concept ID], [record ID], [tag]
-#            message = ','.join(["WRITE", OUTPUT_DIR, concept_id, scan_record_uuid, tag])
+            message = ','.join(["WRITE", OUTPUT_DIR, concept_id, scan_record_uuid, tag])
+            print (message)
 #            client_socket = socket.socket()  # instantiate
 #            client_socket.setblocking(1)
 #            client_socket.connect(("pllimsksparky1", 5090))  # connect to the server
