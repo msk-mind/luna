@@ -102,71 +102,51 @@ class ClientThread(threading.Thread):
         destination_path = os.path.join(hdfs_db_root, DATA_PATH, f"{CONCEPT_ID}/{RECORD_ID}/")
         os.makedirs(gpfs_mount + destination_path)
 
-        logger.info ("Looping")
-        logger.info (str(glob.glob(os.path.join(OUTPUT_DIR,"*"))))
+        # Make sure there is exactly 1 concept ID and 0 record IDs
+        if not len(conn.match_concept_node(CONCEPT_ID)) == 1: 
+            logger.error("No concept node in DB: " + CONCEPT_ID)
+            return
+        if not len(conn.match_concept_node(RECORD_ID))  == 0: 
+            logger.warning("Identical record already exists: " + RECORD_ID)
+            return
+
+        logger.info ("Writing new files:")
+        conn.query(f"""MERGE (record_node:{RECORD_ID_TYPE}{{value:'{RECORD_ID}', tag:'{TAG_ID}', status:'PENDING'}})""")
 
         # Loop over raw files to ingest
         for PAYLOAD_NO, FILE_PATH in enumerate(glob.glob(os.path.join(OUTPUT_DIR,"*"))):
-            logger.info("New raw file!")
-            logger.info(FILE_PATH)
+            logger.info("Processing " + FILE_PATH)
 
-            # Make sure there is an associated concept ID in the graph database
-            result = conn.match_concept_node(CONCEPT_ID)
-            logger.info(result)
+            shutil.copy( FILE_PATH , gpfs_mount + destination_path )
 
+            # 3. Prepare an opdata record
+            logger.info("Writing record to dt...")
+            data_update = {
+                RECORD_ID_TYPE: RECORD_ID,
+                CONCEPT_ID_TYPE: CONCEPT_ID,
+                "payload_number": str(PAYLOAD_NO),
+                "absolute_hdfs_path": destination_path,
+                "absolute_hdfs_host": hdfs_host,
+                "filename": os.path.split(FILE_PATH)[1],
+                "type": os.path.splitext(FILE_PATH)[1]
+            }
 
+            print ("Appending spark delta table...")
+            print (data_update)
+            sqlc.createDataFrame([data_update]).write.format("delta").mode("append").option("mergeSchema", "true").save(TABLE_PATH)
 
+        query = f"""
+            MATCH (concept_node)
+            WHERE concept_node.value = '{CONCEPT_ID}'
+            MATCH (record_node:{RECORD_ID_TYPE})
+            WHERE record_node.value = '{RECORD_ID}'
+            MERGE (concept_node)-[rid:HAS_RECORD]->(record_node)
+            SET record_node.status = 'VALID' 
+            """
+        print (f"\nRunning {query}\n")
 
-            # Main write operations
-            if (len(result)) == 1:
-                logger.info ("Found concept node! ")
-
-                # 1. Add a new record node to the graph database if it doesn't already exist
-                result = conn.query(f"""
-                    MERGE (record_node:{RECORD_ID_TYPE}{{value:'{RECORD_ID}'}})
-                    MERGE (tag_node:tag_id{{value:'{TAG_ID}'}})
-                    """
-                )
-                print (result)
-
-                
-
-                # 3. Prepare an opdata record
-                logger.info("Writing record to dt...")
-                data_update = {
-                    RECORD_ID_TYPE: RECORD_ID,
-                    CONCEPT_ID_TYPE: CONCEPT_ID,
-                    "payload_number": str(PAYLOAD_NO),
-                    "absolute_hdfs_path": destination_path,
-                    "absolute_hdfs_host": hdfs_host,
-                    "filename": os.path.split(FILE_PATH)[1],
-                    "type": os.path.splitext(FILE_PATH)[1]
-                }
-
-                # 4. Upsert
-                # scan_table_dthandle.alias("radiology_scans")\
-                #     .merge(sqlc.createDataFrame([data_update]).alias("updates"), "radiology_scans.scan_record_uuid = updates.scan_record_uuid")\
-                #     .whenMatchedUpdateAll() \
-                #     .whenNotMatchedInsertAll() \
-                #     .execute()
-                print ("Appending spark delta table...")
-                print (data_update)
-                sqlc.createDataFrame([data_update]).write.format("delta").mode("append").option("mergeSchema", "true").save(TABLE_PATH)
-
-                query = f"""
-                    MATCH (tag_node)
-                    WHERE tag_node.value = '{TAG_ID}'
-                    MATCH (concept_node)
-                    WHERE concept_node.value = '{CONCEPT_ID}'
-                    MATCH (record_node:{RECORD_ID_TYPE})
-                    WHERE record_node.value = '{RECORD_ID}'
-                    MERGE (concept_node)-[rid:HAS_RECORD]->(record_node)
-                    MERGE (tag_node)-[rtag:TAGGED]->(record_node)
-                    """
-                print (f"\nRunning {query}\n")
-
-                # 5. Integrate in the graph DB
-                result = conn.query(query)
+        # 5. Integrate in the graph DB
+        result = conn.query(query)
         print ("Thread finished.")
 
 # Main server program
