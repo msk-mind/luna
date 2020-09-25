@@ -94,8 +94,8 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
     logger.info (" >>> Graph Query Complete")
 
     # Reading dicom and opdata
-    df_dcmdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_light"))
-    df_optdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_op_light"))
+    df_dcmdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm"))
+    df_optdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_op"))
     logger.info (" >>> Loaded dicom DB")
 
     def python_def_generate_mhd(concept_id, input_paths, filenames):
@@ -129,16 +129,17 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
             pull_req_dcm = [ os.path.join(path,file) for path, file in zip(input_paths, filenames)]
 
             for dcm in pull_req_dcm:
+                print ("Pulling " + gpfs_mount + dcm)
                 shutil.copy(gpfs_mount + dcm, INPUTS_DIR)
 #
 #            # Execute some modularized python script
 #            # Expects intputs at WORK_DIR, puts outputs into WORK_DIR/outputs
-            proc = subprocess.Popen(["/gpfs/mskmindhdp_emc/sw/env/bin/python", custom_preprocessing_script, WORK_DIR], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            proc = subprocess.Popen(["/gpfs/mskmindhdp_emc/sw/env/bin/python3", custom_preprocessing_script, WORK_DIR], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = proc.communicate()
             print (out, err)
 
             shutil.rmtree(INPUTS_DIR)
-            scan_record_uuid = "SCAN-" + dirhash(OUTPUT_DIR, "sha256")
+            scan_record_uuid = "-".join(["SCAN", tag, dirhash(OUTPUT_DIR, "sha256")])
 #
 #            # Send write message to scan io server
 #            # Message format is 5 arguements [command], [search directory path], [concept ID], [record ID], [tag]
@@ -170,7 +171,7 @@ def generate_scan_table(spark, query, graph_uri, hdfs_uri, custom_preprocessing_
     # Run jobs
     logger.info (" >>> Calling jobs on selected patient:")
     df_ct = df_queue.withColumn('payload', udf_generate_mhd(concept_id_TYPE, 'absolute_hdfs_paths', 'filenames'))
-    df_ct.show()
+    df_ct.select("SeriesInstanceUID", "payload").show(200, truncate=False)
     logger.info (" >>> Jobs done")
     logger.info("--- Execute in %s seconds ---" % (time.time() - job_start_time))
 
