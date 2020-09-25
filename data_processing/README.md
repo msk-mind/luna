@@ -56,14 +56,24 @@ export MIND_GPFS_DIR=/gpfs/mskmindhdp_emc/
 ```
 ### Start an IO service
 
-Works now.
+Works now. Accepts a restful message from the UDF upon completition with a WRITE instruction:
+
+`[command], [working directory path], [concept ID to attach], [record ID to ingest], [tag]`
+
+Checks that a concept ID exists and that the record ID does not exist. Assumes record IDs look like `{datatype}-{tag}-{hash}` such that there is exactly 1 record per data type, per tag, per output.  
+
+A node in the graph DB is created in the `PENDING` state as the delta table operations run, and then is updated to the `VALID` state upon successful completition of the write operation. If something fails, the node will remain in the `PENDING` state. 
+
+You can see the nodes switch from pending to valid as the backlog to the service completes!
 ```
 python3 -m data_processing.services.delta_io_service \
 	--spark spark://pllimsksparky2.mskcc.org:7077 \
 	--hdfs hdfs://pllimsksparky1.mskcc.org:8020 \
 	--graph neo4j://dlliskimind1.mskcc.org:7687 \
-	--host pllimsksparky1
+	--host pllimsksparky1 \
+	&> service.log &
 ```
+
 
 ### Run process scan job
 ```
@@ -75,7 +85,7 @@ python -m data_processing.process_scan_job \
 --custom_preprocessing_script /gpfs/mskmindhdp_emc/tmp/generateMHD.py \
 --tag test
 ```
-You should see some new folders and outputs at /tmp/working/SCAN-ajdj3-...
+You should see some new folders and outputs at /tmp/working/job-ajdj3-...
 
 The where clause is technically a modifier on the allowed types of relationship paths to which the sink ID type (SeriesInstanceUID).  In this example, we are looking for scans with an ID_LINK relationship to any xnat accession number node.
 
@@ -83,6 +93,8 @@ To only run on scans for which an annotation is available, use:
 ```
 "WHERE source:annotation_record_uuid AND ALL(rel IN r WHERE TYPE(rel) IN ['HAS_RECORD'])"
 ```
+If you run this command twice with the same tag, no change in the state of the data lake should occur.
+
 ### TODO
 
 DONE - Take target spacing parameter, table paths as arguments (using click)
