@@ -13,3 +13,4 @@ scikit-image
 wheel>=0.22
 paramiko
 scp
+checksumdir
