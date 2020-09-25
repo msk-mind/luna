@@ -1,8 +1,8 @@
 import os
 from pyspark.sql import SparkSession
 
-os.environ["PYSPARK_PYTHON"] =        '/gpfs/mskmindhdp_emc/sw/env/bin/python' 
-os.environ["PYSPARK_DRIVER_PYTHON"] = '/gpfs/mskmindhdp_emc/sw/env/bin/python' 
+os.environ["PYSPARK_PYTHON"] =        '/gpfs/mskmindhdp_emc/sw/env/bin/python3' 
+os.environ["PYSPARK_DRIVER_PYTHON"] = '/gpfs/mskmindhdp_emc/sw/env/bin/python3' 
 
 """Common spark session"""
 class SparkConfig:
@@ -22,5 +22,6 @@ class SparkConfig:
 			.config("fs.defaultFS", "file:///") \
 			.config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
+                        .config("spark.cores.max", "32") \
 			.getOrCreate()
 							
