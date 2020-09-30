@@ -102,6 +102,13 @@ class Neo4jConnection:
         Spark connector for an input source id
         Returns a dataframe with one column named the sink/target ID
         """
+        import re
+
+        banned_words = ['delete', 'merge', 'create', 'set', 'remove']
+        if re.compile('|'.join(banned_words),re.IGNORECASE).search(WHERE_CLAUSE): #re.IGNORECASE is used to ignore case
+            raise Exception("You tried to alter the database, goodbye")
+            return 
+
         print (f""">>> QUERY >>> \n\tMATCH (source:{source})-[r:{r}*]-(sink:{sink}), \n\tpath=shortestPath( (source)-[:{r}*..15]-(sink) ) \n\t{WHERE_CLAUSE} RETURN DISTINCT source,sink,path""")
 
         result = self.query(f"""
