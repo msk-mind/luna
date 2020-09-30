@@ -195,31 +195,54 @@ def lookup_dmp_patient_id(conn, spark_context, sql_context, SeriesInstanceUID):
 
 @click.command()
 @click.option('-q', '--query', default = None, help = "where clause of SQL query to filter feature table, 'WHERE' does not need to be included, but make sure to wrap with quotes to be interpretted correctly")
-@click.option('-b', '--base_directory', type=click.Path(exists=True), default="/gpfs/mskmindhdp_emc/", help="location to find scan/annotation tables and to create feature table")
+@click.option('-b', '--base_directory', type=click.Path(exists=True), default="/gpfs/mskmindhdp_emc/", help="location to find scan/annotation tables")
+@click.option('-d', '--destination_directory', type=click.Path(exists=False), default="", help="location where feature table should be written. If not specified, destination_directory defaults to base directory")
 @click.option('-t', '--target_spacing', nargs=3, type=float, required=True, help="target spacing for x,y and z dimensions")
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
 @click.option('-n', '--feature_table_output_name', default="feature-table", help="name of new feature table that is created.")
 @click.option('-c', '--custom_preprocessing_script', default = None, help="Path to python file containing custom 'process_patient' method. By default, uses process_patient_default() for preprocessing")
-def cli(spark_master_uri, base_directory, target_spacing, query, feature_table_output_name, custom_preprocessing_script): 
+def cli(spark_master_uri,
+        base_directory,
+        destination_directory,
+        target_spacing,
+        query,
+        feature_table_output_name,
+        custom_preprocessing_script):
     """
     This module pre-processes the CE-CT acquisitions and associated segmentations and generates
     a DataFrame tracking the file paths of the pre-processed items, stored as NumPy ndarrays.
 
     Example: python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing} --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created}
     """
+    if len(destination_directory) == 0:
+        destination_directory = base_directory
+
+    if not os.path.exists(destination_directory):
+        os.makedirs(destination_directory)
+
     # Setup Spark context
     import time
     start_time = time.time()
+
+
     spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri) 
-    generate_feature_table(base_directory, target_spacing, spark, query, feature_table_output_name, custom_preprocessing_script)
+    generate_feature_table(base_directory,
+                           destination_directory,
+                           target_spacing,
+                           spark,
+                           query,
+                           feature_table_output_name,
+                           custom_preprocessing_script)
     print("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 
-def generate_feature_table(base_directory, target_spacing, spark, query, feature_table_output_name, custom_preprocessing_script): 
+
+
+def generate_feature_table(base_directory, destination_directory, target_spacing, spark, query, feature_table_output_name, custom_preprocessing_script):
     annotation_table = os.path.join(base_directory, "data/radiology/tables/radiology.annotations")
     scan_table = os.path.join(base_directory, "data/radiology/tables/radiology.scans")
-    feature_table = os.path.join(base_directory, "data/radiology/tables/radiology."+str(feature_table_output_name)+"/")
-    feature_files = os.path.join(base_directory, "data/radiology/features/"+str(feature_table_output_name)+"/")
+    feature_table = os.path.join(destination_directory, "data/radiology/tables/radiology."+str(feature_table_output_name)+"/")
+    feature_files = os.path.join(destination_directory, "data/radiology/features/"+str(feature_table_output_name)+"/")
     
     # Load Annotation table and rename columns before merge
     annot_df = spark.read.format("delta").load(annotation_table)
