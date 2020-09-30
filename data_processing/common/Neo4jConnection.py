@@ -2,7 +2,19 @@ from neo4j import GraphDatabase
 from neo4j import __version__ as neo4j_version
 
 from pyspark.sql.types import StringType,StructType,StructField
+from termcolor import colored 
 
+def pretty_path(path): 
+    to_print = ''
+    for i,x in enumerate(path): 
+        if type(x)==dict: 
+            node_desc = '(' + ','.join([key+":"+x[key] for key in x.keys()]) + ')'
+            if   i==0: 		   to_print += colored("SOURCE:", 'blue') + node_desc # First
+            elif i==(len(path)-1): to_print += colored("SINK:", 'green') + node_desc # Last
+            else:                  to_print += node_desc # Middle
+        if type(x)==str: 
+            to_print += '-[' + colored("REL:", 'red') + x + ']-'
+    return to_print
 
 class Neo4jConnection:
 
@@ -77,12 +89,26 @@ class Neo4jConnection:
         Returns a dataframe with one column named the sink/target ID
         """
         result = self.query(f"""
-            MATCH (source)-[r*]-(sink:{SINK_TYPE}) \
+            MATCH path=(source)-[r*]-(sink:{SINK_TYPE}) \
             {WHERE_CLAUSE} \
-            RETURN source,sink """
+            RETURN source,sink,path """
         )
+        for x in result: print (pretty_path(x.data()['path']))
         cSchema = StructType([StructField(SINK_TYPE, StringType(), True)])
         return sqlc.createDataFrame(([(x.data()['sink']['value'],) for x in result]),schema=cSchema)
+
+    def create_id_lookup_table_where(self, sc, sqlc, WHERE_CLAUSE, SINK_TYPE ):
+        """
+        Spark connector for an input source id
+        Returns a dataframe with one column named the sink/target ID
+        """
+        result = self.query(f"""
+            MATCH path=(source)-[r*]-(sink:{SINK_TYPE}) \
+            {WHERE_CLAUSE} \
+            RETURN source,sink,path """
+        )
+        cSchema = StructType([StructField(SOURCE_TYPE, StringType(), True), StructField(SINK_TYPE, StringType(), True), StructField("pathspec", StringType(), True)])
+        return sqlc.createDataFrame(sc.parallelize([(x.data()['source']['value'],x.data()['sink']['value'], pretty_path(x.data())) for x in result]),schema=cSchema)
 
     def create_id_lookup_table(self, sc, sqlc, SOURCE_TYPE, SINK_TYPE, QUERY_ID ):
         """
