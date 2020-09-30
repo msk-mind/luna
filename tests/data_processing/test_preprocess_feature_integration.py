@@ -5,6 +5,7 @@ from data_processing.common.sparksession import SparkConfig
 from click.testing import CliRunner
 
 BASE_DIR = "./tests/data_processing/testdata/"
+DESTINATION_DIR = "./tests/data_processing/testdata/outputdir"
 TARGET_SPACING = (1.0, 1.0, 3.0)
 
 # Test CLI parameters
@@ -26,6 +27,9 @@ def spark():
     feature_dir = os.path.join(BASE_DIR, "data/radiology/features")
     if os.path.exists(feature_dir):
         shutil.rmtree(feature_dir)
+
+    if os.path.exists(DESTINATION_DIR):
+        shutil.rmtree(DESTINATION_DIR)
 
 def test_local_feature_table_generation(spark):
     
@@ -59,6 +63,13 @@ def test_local_feature_table_generation_malformed_query(spark):
 def test_feature_table_cli():
     result = runner.invoke(cli, "--spark_master_uri local[*] --base_directory {} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2 --custom_preprocessing_script tests/test_external_process_patient_script.py".format(BASE_DIR))
     assert result.exit_code == 0
+    print("CLI test passed.")
+
+def test_feature_table_cli_with_destination_directory():
+    assert os.path.exists(DESTINATION_DIR) == False
+    result = runner.invoke(cli, "--spark_master_uri local[*] --base_directory {0} --destination_directory {1} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2 --custom_preprocessing_script tests/test_external_process_patient_script.py".format(BASE_DIR, DESTINATION_DIR))
+    assert result.exit_code == 0
+    assert os.path.exists(DESTINATION_DIR) == True
     print("CLI test passed.")
 
 

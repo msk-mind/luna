@@ -214,11 +214,16 @@ def cli(spark_master_uri,
 
     Example: python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing} --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created}
     """
+    if len(destination_directory) == 0:
+        destination_directory = base_directory
+
+    if not os.path.exists(destination_directory):
+        os.makedirs(destination_directory)
+
     # Setup Spark context
     import time
     start_time = time.time()
 
-    if len(destination_directory) == 0: destination_directory = base_directory
 
     spark = SparkConfig().spark_session("dl-preprocessing", spark_master_uri) 
     generate_feature_table(base_directory,
