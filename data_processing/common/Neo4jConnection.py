@@ -9,11 +9,11 @@ def pretty_path(path):
     for i,x in enumerate(path): 
         if type(x)==dict: 
             node_desc = '(' + ','.join([key+":"+x[key] for key in x.keys()]) + ')'
-            if   i==0: 		   to_print += colored("SOURCE:", 'blue') + node_desc # First
-            elif i==(len(path)-1): to_print += colored("SINK:", 'green') + node_desc # Last
+            if   i==0: 		   to_print += "SOURCE:" + node_desc # First
+            elif i==(len(path)-1): to_print += "SINK:" + node_desc # Last
             else:                  to_print += node_desc # Middle
         if type(x)==str: 
-            to_print += '-[' + colored("REL:", 'red') + x + ']-'
+            to_print += '-[' + x + ']-'
     return to_print
 
 class Neo4jConnection:
@@ -97,18 +97,24 @@ class Neo4jConnection:
         cSchema = StructType([StructField(SINK_TYPE, StringType(), True)])
         return sqlc.createDataFrame(([(x.data()['sink']['value'],) for x in result]),schema=cSchema)
 
-    def create_id_lookup_table_where(self, sc, sqlc, WHERE_CLAUSE, SINK_TYPE ):
+    def create_id_lookup_table_where(self, sqlc, source, sink, r="ID_LINK|HAS_RECORD", WHERE_CLAUSE=""):
         """
         Spark connector for an input source id
         Returns a dataframe with one column named the sink/target ID
         """
+        print (f""">>> QUERY >>> \n\tMATCH (source:{source})-[r:{r}*]-(sink:{sink}), \n\tpath=shortestPath( (source)-[:{r}*..15]-(sink) ) \n\t{WHERE_CLAUSE} RETURN DISTINCT source,sink,path""")
+
         result = self.query(f"""
-            MATCH path=(source)-[r*]-(sink:{SINK_TYPE}) \
+            MATCH (source:{source})-[r:{r}*]-(sink:{sink}), path=shortestPath( (source)-[:{r}*..15]-(sink) ) \
             {WHERE_CLAUSE} \
-            RETURN source,sink,path """
+            RETURN DISTINCT source,sink,path 
+            """
         )
-        cSchema = StructType([StructField(SOURCE_TYPE, StringType(), True), StructField(SINK_TYPE, StringType(), True), StructField("pathspec", StringType(), True)])
-        return sqlc.createDataFrame(sc.parallelize([(x.data()['source']['value'],x.data()['sink']['value'], pretty_path(x.data())) for x in result]),schema=cSchema)
+        if result is None: 
+            print ("Improper query returning null")
+            return None 
+        cSchema = StructType([StructField(source, StringType(), True), StructField(sink, StringType(), True), StructField("pathspec", StringType(), True)])
+        return sqlc.createDataFrame(([(x.data()['source']['value'],x.data()['sink']['value'], pretty_path(x.data()['path'])) for x in result]),schema=cSchema)
 
     def create_id_lookup_table(self, sc, sqlc, SOURCE_TYPE, SINK_TYPE, QUERY_ID ):
         """
