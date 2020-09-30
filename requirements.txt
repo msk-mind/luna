@@ -11,3 +11,7 @@ pytest-cov
 pytest-runner
 scikit-image
 wheel>=0.22
+
+# for creating a distribution
+pyinstaller==4.0
+tornado==6.0.4
