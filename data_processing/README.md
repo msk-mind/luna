@@ -43,12 +43,9 @@ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_direct
 
 
 ## Generate scans
-First set common python environment:
-```
-source /gpfs/mskmindhdp_emc/sw/env/bin/activate
-```
+Your python and spark environement should be automatically setup at login.
 
-Then some variables, root dir is the data lake base directory /data/, while the work directory is in /tmp/.  The GPFS mount directory is given too as we've moved from hadoop for I/O.
+Manually set some path variables; root dir is the data lake base directory /data/, while the work directory is in /tmp/.  The GPFS mount directory is given too as we've moved from hadoop for I/O.
 ```
 export MIND_ROOT_DIR=/data/
 export MIND_WORK_DIR=/tmp/working
@@ -68,8 +65,7 @@ You can see the nodes switch from pending to valid as the backlog to the service
 ```
 python3 -m data_processing.services.delta_io_service \
 	--hdfs hdfs://pllimsksparky1.mskcc.org:8020 \
-	--host pllimsksparky1 \
-	&> service.log &
+	--host pllimsksparky1  & 
 ```
 
 
