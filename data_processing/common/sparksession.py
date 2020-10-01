@@ -20,6 +20,7 @@ class SparkConfig:
 			.config("spark.sql.execution.arrow.pyspark.enabled", "true") \
 			.config("spark.executor.memory", "6g") \
 			.config("spark.driver.memory", "6g") \
+                        .config("spark.cores.max", "32") \
 			.config("fs.defaultFS", "file:///") \
 			.config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
