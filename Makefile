@@ -3,6 +3,7 @@
 help:
 	@echo "clean-build - remove build artifacts"
 	@echo "clean-pyc - remove Python file artifacts"
+	@echo "dist - create a distribution"
 	@echo "lint - check style with flake8"
 	@echo "test - run tests quickly with the default Python"
 	@echo "test-all - run tests on every Python version with tox"
@@ -25,6 +26,11 @@ clean-test:      ## remove test and coverage artifacts
 	rm -fr .tox/
 	rm -f .coverage
 	rm -fr htmlcov/
+
+dist: clean
+	pip install -r requirements.txt
+	pyinstaller -F --clean --hidden-import py4j.java_collections --exclude-module tkinter data_processing/preprocess_feature.py
+
 
 lint:
 	flake8 data-processing test
