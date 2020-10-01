@@ -65,7 +65,7 @@ class ClientThread(threading.Thread):
         self.CONCEPT_ID = CONCEPT_ID
         self.RECORD_ID  = RECORD_ID
         self.TAG_ID     = TAG_ID
-        print ("New thread")
+        logger.info ("New thread")
 
     def run(self):
         ''' Run in a separate thread '''
@@ -95,9 +95,6 @@ class ClientThread(threading.Thread):
         else:
             logger.error("Not a valid or supported record ID " + RECORD_ID)
 
-        # 2. Add files to HDFS/GPFS
-        destination_path = os.path.join(hdfs_db_root, DATA_PATH, f"{CONCEPT_ID}/{RECORD_ID}/")
-        os.makedirs(gpfs_mount + destination_path)
 
         # Make sure there is exactly 1 concept ID and 0 record IDs
         if not len(conn.match_concept_node(CONCEPT_ID)) == 1: 
@@ -106,6 +103,10 @@ class ClientThread(threading.Thread):
         if not len(conn.match_concept_node(RECORD_ID))  == 0: 
             logger.warning("Identical record already exists: " + RECORD_ID)
             return
+
+        # 2. Add files to HDFS/GPFS
+        destination_path = os.path.join(hdfs_db_root, DATA_PATH, f"{CONCEPT_ID}/{RECORD_ID}/")
+        os.makedirs(gpfs_mount + destination_path)
 
         logger.info ("Writing new files:")
         conn.query(f"""MERGE (record_node:{RECORD_ID_TYPE}{{value:'{RECORD_ID}', tag:'{TAG_ID}', status:'PENDING'}})""")
@@ -128,8 +129,8 @@ class ClientThread(threading.Thread):
                 "type": os.path.splitext(FILE_PATH)[1]
             }
 
-            print ("Appending spark delta table...")
-            print (data_update)
+            logger.info ("Appending spark delta table...")
+            logger.info ("%s", data_update)
             sqlc.createDataFrame([data_update]).write.format("delta").mode("append").option("mergeSchema", "true").save(TABLE_PATH)
 
         query = f"""
@@ -140,18 +141,18 @@ class ClientThread(threading.Thread):
             MERGE (concept_node)-[rid:HAS_RECORD]->(record_node)
             SET record_node.status = 'VALID' 
             """
-        print (f"\nRunning {query}\n")
+        logger.info (f"\nRunning {query}\n")
 
         # 5. Integrate in the graph DB
         result = conn.query(query)
-        print ("Thread finished.")
+        logger.info ("Thread finished.")
 
 # Main server program
 def server_program():
     # get the hostname
     host = io_host
     port = 5090  # initiate port no above 1024
-    print (f"io_service is STARTING on {host} at {port}")
+    logger.info (f"io_service is STARTING on {host} at {port}")
 
     server_socket = socket.socket()  # get instance
     server_socket.bind((host, port))  # bind host address and port together
@@ -161,24 +162,24 @@ def server_program():
 
     # configure how many client the server can listen simultaneously
     server_socket.listen(128)
-    print (f"io_service is LISTENING on {host} at {port}")
+    logger.info (f"io_service is LISTENING on {host} at {port}")
 
     while True:
         conn, address = server_socket.accept()  # accept new connection
-        print("Connection from: " + str(address))
+        logger.info ("Connection from: " + str(address))
         # receive data stream. it won't accept data packet greater than 1024 bytes
         data = conn.recv(1024).decode()
         args = data.split(",")
         if not data:
             break
-        print("Message from connected user: ", args)
+        logger.info ("Message from connected user: " + data)
 
         # Try executing command in a thread
         try:
             newthread = ClientThread(args[1], args[2], args[3], args[4])
             newthread.start()
         except:
-            print ("Something failed!")
+            logger.error ("Something failed!")
 
         time.sleep(1)
 
@@ -186,5 +187,5 @@ def server_program():
 
 
 if __name__ == "__main__":
-    print ("Starting...")
+    logger.info ("Starting...")
     server_program()
