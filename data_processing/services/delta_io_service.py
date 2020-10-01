@@ -16,23 +16,20 @@ from data_processing.common.custom_logger import init_logger
 # Parse arguements
 parser = argparse.ArgumentParser(description='Start a WRITE SCAN I/O service with a persistent spark context')
 parser.add_argument('--hdfs', dest='hdfs', type=str, help='HDFS host (ex. hdfs://pllimsksparky1.mskcc.org:8020)')
-parser.add_argument('--db', dest='db', type=str, help='DB/datalake root directory (ex. /data/')
-parser.add_argument('--spark', dest='spark', type=str, help='Spark Cluster URI to use (ex. spark://localhost:7070)')
-parser.add_argument('--graph', dest='graph', type=str, help='Graph DB URI (ex. bolt://dlliskimind1.mskcc.org:7687)')
 parser.add_argument('--host', dest='host', type=str, help='Target host for server (ex. localhost)')
 args = parser.parse_args()
 
 hdfs_host       = args.hdfs
-spark_master_uri   = args.spark
-graph_host      = args.graph
 io_host         = args.host
 
 hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
 spark_workspace = os.environ["MIND_WORK_DIR"]
 gpfs_mount      = os.environ["MIND_GPFS_DIR"] 
+graph_uri	 = os.environ["GRAPH_URI"]
+spark_master_uri = os.environ["SPARK_MASTER_URL"]
 
 # Open a connection to the ID graph database
-conn = Neo4jConnection(uri=graph_host, user="neo4j", pwd="password")
+conn = Neo4jConnection(uri=graph_uri, user="neo4j", pwd="password")
 
 # Spark setup, persistent spark context for all threads/write/ETL jobs
 from pyspark.sql import SparkSession
