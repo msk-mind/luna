@@ -67,9 +67,7 @@ A node in the graph DB is created in the `PENDING` state as the delta table oper
 You can see the nodes switch from pending to valid as the backlog to the service completes!
 ```
 python3 -m data_processing.services.delta_io_service \
-	--spark spark://pllimsksparky2.mskcc.org:7077 \
 	--hdfs hdfs://pllimsksparky1.mskcc.org:8020 \
-	--graph neo4j://dlliskimind1.mskcc.org:7687 \
 	--host pllimsksparky1 \
 	&> service.log &
 ```
@@ -79,8 +77,6 @@ python3 -m data_processing.services.delta_io_service \
 ```
 python -m data_processing.process_scan_job \
 --query "WHERE source:xnat_accession_number AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
---spark_master_uri spark://pllimsksparky2.mskcc.org:7077 \
---graph_uri neo4j://dlliskimind1.mskcc.org:7687 \
 --hdfs_uri hdfs://pllimsksparky1.mskcc.org:8020 \
 --custom_preprocessing_script /gpfs/mskmindhdp_emc/tmp/generateMHD.py \
 --tag test
