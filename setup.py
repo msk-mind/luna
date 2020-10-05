@@ -13,7 +13,7 @@ if sys.argv[-1] == 'publish':
     os.system('python setup.py sdist upload')
     sys.exit()
 
-readme = open('README.rst').read()
+readme = open('README.md').read()
 doclink = """
 Documentation
 -------------
@@ -30,7 +30,7 @@ setup(
     author_email='rosed2@mskcc.org',
     url='https://github.com/doori/data-processing',
     packages=[
-        'data-processing',
+        'data_processing',
     ],
     package_dir={'data-processing': 'data-processing'},
     include_package_data=True,
@@ -44,11 +44,13 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
+        "Programming Language :: Python :: 2",
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: Implementation :: PyPy',
     ],
 )

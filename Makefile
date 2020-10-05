@@ -30,6 +30,9 @@ clean-test:      ## remove test and coverage artifacts
 dist: clean
 	pip install -r requirements.txt
 	pyinstaller -F --clean --hidden-import py4j.java_collections --exclude-module tkinter data_processing/preprocess_feature.py
+	python setup.py sdist
+	python setup.py bdist_wheel
+	ls -l dist
 
 
 lint:
