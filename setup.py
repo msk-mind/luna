@@ -31,6 +31,8 @@ setup(
     url='https://github.com/doori/data-processing',
     packages=[
         'data_processing',
+        'data_processing.common',
+        'data_processing.services',
     ],
     package_dir={'data-processing': 'data-processing'},
     include_package_data=True,
