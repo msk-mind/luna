@@ -4,7 +4,7 @@ a DataFrame tracking the file paths of the pre-processed items, stored as NumPy 
 
 This module is to be run from the top-level data-processing directory using the -m flag as follows:
 Usage: 
-    $ python -m data_processing.preprocess_feature --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing}  --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created} --custom_preprocessing_script {path/to/preprocessing/script}
+    $ python -m data_processing.preprocess_feature --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} destination_directory {directory/to/where/feature/table/to/be/outputted} --target_spacing {x_spacing} {y_spacing} {z_spacing}  --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created} --custom_preprocessing_script {path/to/preprocessing/script}
     
 Parameters: 
     REQUIRED PARAMETERS:
@@ -12,6 +12,7 @@ Parameters:
         --spark_master_uri: spark master uri e.g. spark://master-ip:7077 or local[*]
     OPTIONAL PARAMETERS:
         --base_directory: path to write feature table and files. We assume scan/annotation refined tables are at a specific path on gpfs.
+        --destination_directory: specify where feature table should be written, if not specified, will default to writing feature table to base_directory
         --query: where clause of SQL query to filter feature tablE. WHERE does not need to be included, make sure to wrap with quotes to be interpretted correctly
             - Queriable Columns to Filter By:
                 SeriesInstanceUID
@@ -40,8 +41,9 @@ Parameters:
                 feature table will be created at {base_directory}/tables/features/{feature_table_output_name}
         --custom_preprocessing_script: path to preprocessing script containing "process_patient" function. By default, uses process_patient_default() function for preprocessing
 Example:
-    $ python -m data_processing.preprocess_feature --spark_master_uri local[*] --base_directory /gpfs/mskmindhdp_emc/user/pateld6/data-processing/test-tables/ --target_spacing 1.0 1.0 3.0  --query "SeriesInstanceUID = '123456abc'" --feature_table_output_name brca-feature-table --custom_preprocessing_script  /gpfs/mskmindhdp_emc/user/pateld6/data-processing/tests/test_external_process_patient_script.py
+    $ python -m data_processing.preprocess_feature --spark_master_uri local[*] --base_directory /gpfs/mskmindhdp_emc/user/pateld6/data-processing/test-tables/ --destination_directory /gpfs/mskmindhdp_emc/user/pateld6/data-processing/feature-tables/  --target_spacing 1.0 1.0 3.0  --query "SeriesInstanceUID = '123456abc'" --feature_table_output_name brca-feature-table --custom_preprocessing_script  /gpfs/mskmindhdp_emc/user/pateld6/data-processing/tests/test_external_process_patient_script.py
 """
+
 import os, sys, subprocess, time,importlib
 import click
 from data_processing.common.Neo4jConnection import Neo4jConnection
