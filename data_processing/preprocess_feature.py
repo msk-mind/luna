@@ -4,6 +4,7 @@ a DataFrame tracking the file paths of the pre-processed items, stored as NumPy 
 
 This module is to be run from the top-level data-processing directory using the -m flag as follows:
 Usage: 
+
     $ python -m data_processing.preprocess_feature --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --destination_directory {directory/to/where/feature/table/to/be/outputted} --target_spacing {x_spacing} {y_spacing} {z_spacing}  --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created} --custom_preprocessing_script {path/to/preprocessing/script}
     
 Parameters: 

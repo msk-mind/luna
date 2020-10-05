@@ -11,7 +11,9 @@ pytest-cov
 pytest-runner
 scikit-image
 wheel>=0.22
-
-# for creating a distribution
+itk
+paramiko
+scp
+checksumdir
 pyinstaller==4.0
 tornado==6.0.4

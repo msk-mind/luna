@@ -42,10 +42,54 @@ python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_direct
 ```
 
 
+## Generate scans
+Your python and spark environement should be automatically setup at login.
+
+Manually set some path variables; root dir is the data lake base directory /data/, while the work directory is in /tmp/.  The GPFS mount directory is given too as we've moved from hadoop for I/O.
+```
+export MIND_ROOT_DIR=/data/
+export MIND_WORK_DIR=/tmp/working
+export MIND_GPFS_DIR=/gpfs/mskmindhdp_emc/
+```
+### Start an IO service
+
+Works now. Accepts a restful message from the UDF upon completition with a WRITE instruction:
+
+`[command], [working directory path], [concept ID to attach], [record ID to ingest], [tag]`
+
+Checks that a concept ID exists and that the record ID does not exist. Assumes record IDs look like `{datatype}-{tag}-{hash}` such that there is exactly 1 record per data type, per tag, per output.  
+
+A node in the graph DB is created in the `PENDING` state as the delta table operations run, and then is updated to the `VALID` state upon successful completition of the write operation. If something fails, the node will remain in the `PENDING` state. 
+
+You can see the nodes switch from pending to valid as the backlog to the service completes!
+```
+python3 -m data_processing.services.delta_io_service \
+	--hdfs hdfs://pllimsksparky1.mskcc.org:8020 \
+	--host pllimsksparky1  & 
+```
+
+
+### Run process scan job
+```
+python -m data_processing.process_scan_job \
+--query "WHERE source:xnat_accession_number AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
+--hdfs_uri hdfs://pllimsksparky1.mskcc.org:8020 \
+--custom_preprocessing_script /gpfs/mskmindhdp_emc/tmp/generateMHD.py \
+--tag test
+```
+You should see some new folders and outputs at /tmp/working/job-ajdj3-...
+
+The where clause is technically a modifier on the allowed types of relationship paths to which the sink ID type (SeriesInstanceUID).  In this example, we are looking for scans with an ID_LINK relationship to any xnat accession number node.
+
+To only run on scans for which an annotation is available, use:
+```
+"WHERE source:annotation_record_uuid AND ALL(rel IN r WHERE TYPE(rel) IN ['HAS_RECORD'])"
+```
+If you run this command twice with the same tag, no change in the state of the data lake should occur.
+
 ### TODO
 
 DONE - Take target spacing parameter, table paths as arguments (using click)
 - Embed .npy in the parquet/delta tables if needed
 - Using Spark UDF, foreachPartition resulted in degraded performance (~5 min) compared to using Parallel (~1 min). Investigate if there is a better way to iterate over rows in Spark.
 - Performance test on Spark cluster
-

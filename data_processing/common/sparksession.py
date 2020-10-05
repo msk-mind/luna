@@ -1,8 +1,4 @@
-import os
 from pyspark.sql import SparkSession
-
-# os.environ["PYSPARK_PYTHON"]= os.path.join(os.path.dirname(os.getcwd()), 'env/bin/python3')
-# os.environ["PYSPARK_DRIVER_PYTHON"]= os.path.join(os.path.dirname(os.getcwd()), 'env/bin/python3')
 
 """Common spark session"""
 class SparkConfig:
@@ -20,6 +16,8 @@ class SparkConfig:
 			.config("spark.sql.execution.arrow.pyspark.enabled", "true") \
 			.config("spark.executor.memory", "6g") \
 			.config("spark.driver.memory", "6g") \
+                        .config("spark.cores.max", "32") \
+                        .config("spark.sql.shuffle.partitions", 300) \
 			.config("fs.defaultFS", "file:///") \
 			.config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
