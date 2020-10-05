@@ -169,6 +169,7 @@ def server_program():
         logger.info ("Message from connected user: " + data)
 
         # Try executing command in a thread
+	# This whole driver part will likely change, waiting for  that
         try:
             newthread = ClientThread(args[1], args[2], args[3], args[4])
             newthread.start()
