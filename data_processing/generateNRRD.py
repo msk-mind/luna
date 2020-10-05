@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+"""
+This script reads a folder of dicoms (passed as arguement), and calls ITK methods to generate a NRRD (scan) image in the same folder
+"""
 import os
 import sys
 import itk

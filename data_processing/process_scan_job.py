@@ -44,6 +44,7 @@ spark_workspace  = os.environ["MIND_WORK_DIR"]
 gpfs_mount       = os.environ["MIND_GPFS_DIR"] 
 graph_uri	 = os.environ["GRAPH_URI"]
 spark_master_uri = os.environ["SPARK_MASTER_URL"]
+bin_python	 = os.environ["PYSPARK_PYTHON"]
 max_retries = 10
 
 # pydoop.hdfs.cp("file:///Users/aukermaa/DB/test.txt", "/Users/aukermaa/")
@@ -78,6 +79,7 @@ def cli(query, hdfs_uri,  custom_preprocessing_script, tag):
 def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, tag):
 
     concept_id_TYPE = "SeriesInstanceUID"
+    io_service	 = tuple("pllimsksparky1:5090".split(":"))
 
     # Open a connection to the ID graph database
     logger.info (f'''Conncting to uri={graph_uri}, user="neo4j", pwd="password" ''')
@@ -104,12 +106,9 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
                     filenames: list of dcm filenames
             Returns:
                     scan_record_uuid - UUID of the request process
-            Notes:
-                    Zero error checking, incomplete
             '''
 
 
-            print ("hello")
             job_uuid  = "job-" + str(uuid.uuid4())
             print ("Starting " + job_uuid)
 
@@ -117,7 +116,7 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
             WORK_DIR   = os.path.join(gpfs_mount + spark_workspace, job_uuid)
             OUTPUT_DIR = os.path.join(WORK_DIR, 'outputs')
             INPUTS_DIR = os.path.join(WORK_DIR, 'inputs')
-            print (WORK_DIR)
+            print (f"{job_uuid} - Workdir={WORK_DIR}")
             os.makedirs(WORK_DIR)
             os.makedirs(OUTPUT_DIR)
             os.makedirs(INPUTS_DIR)
@@ -128,14 +127,15 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
             pull_req_dcm = [ gpfs_mount + os.path.join(path,file) for path, file in zip(input_paths, filenames)]
 
             for dcm in pull_req_dcm:
-                print ("Pulling " + dcm)
+                print (f"{job_uuid} - Pulling " + dcm)
                 shutil.copy(dcm, INPUTS_DIR)
 
             # Execute some modularized python script
             # Expects intputs at WORK_DIR, puts outputs into WORK_DIR/outputs
-            proc = subprocess.Popen(["/gpfs/mskmindhdp_emc/sw/env/bin/python3", custom_preprocessing_script, WORK_DIR], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            proc = subprocess.Popen([bin_python, custom_preprocessing_script, WORK_DIR], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = proc.communicate()
-            print (out, err)
+            print (f"{job_uuid} - Output from script: {out}")
+            print (f"{job_uuid} - Errors from script: {err}")
 
             shutil.rmtree(INPUTS_DIR)
             scan_record_uuid = "-".join(["SCAN", tag, dirhash(OUTPUT_DIR, "sha256")])
@@ -143,24 +143,26 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
             # Send write message to scan io server
             # Message format is 5 arguements [command], [search directory path], [concept ID], [record ID], [tag]
             message = ','.join(["WRITE", OUTPUT_DIR, concept_id, scan_record_uuid, tag])
-            print (message)
+            print (f"{job_uuid} - Connecting to IO service with {message}")
 
+            # Were all done here, the write service takes care of the rest!!!
             retries = 0
             connected = False
             while not connected and retries < max_retries:
                 try:
                     client_socket = socket.socket()  # instantiate
                     client_socket.setblocking(1)
-                    client_socket.connect(("pllimsksparky1", 5090))  # connect to the server
+                    client_socket.connect(io_service)  # connect to the server
                     client_socket.send(message.encode())  # send message
                     client_socket.close()  # close the connection
                     connected = True
                 except:
-                    logger.warning("Could not connect to IO service, trying again in 5 seconds!")
+                    logger.warning(f"{job_uuid} - Could not connect to IO service, trying again in 5 seconds!")
                     time.sleep(5)
                     retries += 1
 
-            # Were all done here, the write service takes care of the rest!!!
+            if not connected: print (f"{job_uuid} - Abandoned IO service, your results will not be saved") 
+
             # Returning record ID
             return scan_record_uuid
 

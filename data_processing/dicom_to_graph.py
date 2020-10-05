@@ -28,10 +28,6 @@ import glob, shutil, os, uuid, subprocess, sys, argparse, time
 import click
 import socket
 
-from checksumdir import dirhash
-from paramiko import SSHClient
-from scp import SCPClient
-
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
@@ -69,22 +65,25 @@ def update_graph_with_scans(spark, graph_uri, hdfs_uri):
     hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
     spark_workspace = os.environ["MIND_WORK_DIR"]
     gpfs_mount      = os.environ["MIND_GPFS_DIR"] 
-    print (hdfs_db_root, spark_workspace, gpfs_mount)
+    logger.info (f"hdfs_db_root={hdfs_db_root}, spark_workspace={spark_workspace}, gpfs_mount={gpfs_mount}")
     gpfs_host = 'pllimsksparky1'
 
     # Open a connection to the ID graph database
     logger.info (f'''Conncting to uri={graph_uri}, user="neo4j", pwd="password" ''')
     conn = Neo4jConnection(uri=graph_uri, user="neo4j", pwd="password")
 
-    sqlc =  SQLContext(spark)
-
     logger.info ("-------------------------------------- SETUP COMPLETE -------------------------------------------")
     job_start_time = time.time()
 
     # Reading dicom and opdata
-    df_dcmdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm"))
+    df_dcmdata = spark.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm"))
     logger.info (" >>> Loaded dicom DB")
-    tuple_to_add = df_dcmdata.select("PatientName", "SeriesInstanceUID").groupBy("PatientName", "SeriesInstanceUID").count().withColumnRenamed("PatientName", "xnat_accession_number").toPandas()
+
+    tuple_to_add = df_dcmdata.select("PatientName", "SeriesInstanceUID")\
+	.groupBy("PatientName", "SeriesInstanceUID")\
+	.count()\
+	.withColumnRenamed("PatientName", "xnat_accession_number")\
+	.toPandas()
 
     id_1 = "xnat_accession_number"
     id_2 = "SeriesInstanceUID"
@@ -92,7 +91,7 @@ def update_graph_with_scans(spark, graph_uri, hdfs_uri):
 
     for index, row in tuple_to_add.iterrows():
         query ='''MERGE (id1:{0} {{value: "{1}"}}) MERGE (id2:{2} {{value: "{3}"}}) MERGE (id1)-[r:{4}]->(id2)'''.format(id_1, row[id_1], id_2, row[id_2], link)
-        print (query)
+        logger.info (query)
         conn.query(query, db="neo4j")
     logger.info (" >>> Jobs done")
     logger.info("--- Execute in %s seconds ---" % (time.time() - job_start_time))

@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+"""
+This script reads a folder of dicoms (passed as arguement) at DIR/inputs, and calls ITK methods to generate a MHD (scan) and associated ZRAW at DIR/outputs 
+"""
 import os
 import sys
 import itk

@@ -14,6 +14,7 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 
 # Parse arguements
+# TODO: Use click instead of ArgumentParser
 parser = argparse.ArgumentParser(description='Start a WRITE SCAN I/O service with a persistent spark context')
 parser.add_argument('--hdfs', dest='hdfs', type=str, help='HDFS host (ex. hdfs://pllimsksparky1.mskcc.org:8020)')
 parser.add_argument('--host', dest='host', type=str, help='Target host for server (ex. localhost)')
@@ -32,15 +33,7 @@ spark_master_uri = os.environ["SPARK_MASTER_URL"]
 conn = Neo4jConnection(uri=graph_uri, user="neo4j", pwd="password")
 
 # Spark setup, persistent spark context for all threads/write/ETL jobs
-from pyspark.sql import SparkSession
-from pyspark import SparkConf
 from pyspark import SparkContext
-from pyspark import SQLContext
-from pyspark.sql import functions as F
-from pyspark.sql import Row
-from pyspark.sql.types import StringType,StructType,StructField
-import pyarrow as pa
-
 spark = SparkConfig().spark_session("scan-io-service", spark_master_uri)
 sqlc = SQLContext(spark)
 
@@ -131,6 +124,7 @@ class ClientThread(threading.Thread):
 
             logger.info ("Appending spark delta table...")
             logger.info ("%s", data_update)
+            # Append JSON formatted data_update to delta table
             sqlc.createDataFrame([data_update]).write.format("delta").mode("append").option("mergeSchema", "true").save(TABLE_PATH)
 
         query = f"""
