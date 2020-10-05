@@ -11,6 +11,7 @@ pytest-cov
 pytest-runner
 scikit-image
 wheel>=0.22
+itk
 paramiko
 scp
 checksumdir
