@@ -3,7 +3,11 @@ This module groups dicom images via SeriesInstanceUID, calls a script to generat
 
 This module is to be run from the top-level data-processing directory using the -m flag as follows:
 Usage:
-    $ python3 -m data_processing.process_scan_job --query ... [args]
+    $ python3 -m data_processing.process_scan_job \
+		--query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
+		--hdfs_uri file:// \
+		--custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
+		--tag aukerman.test \
 
 Parameters:
     ENVIRONMENTAL VARIABLES:
@@ -16,12 +20,6 @@ Parameters:
         --custom_preprocessing_script: path to preprocessing script to be executed in working directory
     OPTIONAL PARAMETERS:
         All are required.
-    EXAMPLE:
-        python3 -m data_processing.process_scan_job \
-		--query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
-		--hdfs_uri file:// \
-		--custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
-		--tag test \
 """
 import glob, shutil, os, uuid, subprocess, sys, argparse, time
 
@@ -29,8 +27,6 @@ import click
 import socket
 
 from checksumdir import dirhash
-from paramiko import SSHClient
-from scp import SCPClient
 
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.sparksession import SparkConfig
@@ -48,6 +44,7 @@ spark_workspace  = os.environ["MIND_WORK_DIR"]
 gpfs_mount       = os.environ["MIND_GPFS_DIR"] 
 graph_uri	 = os.environ["GRAPH_URI"]
 spark_master_uri = os.environ["SPARK_MASTER_URL"]
+max_retries = 10
 
 # pydoop.hdfs.cp("file:///Users/aukermaa/DB/test.txt", "/Users/aukermaa/")
 
@@ -62,7 +59,12 @@ def cli(query, hdfs_uri,  custom_preprocessing_script, tag):
     
     This module is to be run from the top-level data-processing directory using the -m flag as follows:
 
-    Usage: python3 -m data_processing.process_scan_job --query ... [args]
+    Example:
+    $ python3 -m data_processing.process_scan_job \
+		--query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
+		--hdfs_uri file:// \
+		--custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
+		--tag aukerman.test \
 
     """
     # Setup Spark context
@@ -75,9 +77,7 @@ def cli(query, hdfs_uri,  custom_preprocessing_script, tag):
 
 def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, tag):
 
-    print (hdfs_db_root, spark_workspace, gpfs_mount)
     concept_id_TYPE = "SeriesInstanceUID"
-    gpfs_host = 'pllimsksparky1'
 
     # Open a connection to the ID graph database
     logger.info (f'''Conncting to uri={graph_uri}, user="neo4j", pwd="password" ''')
@@ -92,8 +92,8 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
     logger.info (" >>> Graph Query Complete")
 
     # Reading dicom and opdata
-    df_dcmdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm"))
-    df_optdata = sqlc.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_op"))
+    df_dcmdata = spark.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm"))
+    df_optdata = spark.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_op"))
     logger.info (" >>> Loaded dicom DB")
 
     def python_def_generate_mhd(concept_id, input_paths, filenames):
@@ -125,11 +125,11 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
 
             # Data pull request into temporary working directory
             # TODO:  Will actally be much more streamlined as binary data can be read-out from proxy table
-            pull_req_dcm = [ os.path.join(path,file) for path, file in zip(input_paths, filenames)]
+            pull_req_dcm = [ gpfs_mount + os.path.join(path,file) for path, file in zip(input_paths, filenames)]
 
             for dcm in pull_req_dcm:
-                print ("Pulling " + gpfs_mount + dcm)
-                shutil.copy(gpfs_mount + dcm, INPUTS_DIR)
+                print ("Pulling " + dcm)
+                shutil.copy(dcm, INPUTS_DIR)
 
             # Execute some modularized python script
             # Expects intputs at WORK_DIR, puts outputs into WORK_DIR/outputs
@@ -144,11 +144,21 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
             # Message format is 5 arguements [command], [search directory path], [concept ID], [record ID], [tag]
             message = ','.join(["WRITE", OUTPUT_DIR, concept_id, scan_record_uuid, tag])
             print (message)
-            client_socket = socket.socket()  # instantiate
-            client_socket.setblocking(1)
-            client_socket.connect(("pllimsksparky1", 5090))  # connect to the server
-            client_socket.send(message.encode())  # send message
-            client_socket.close()  # close the connection
+
+            retries = 0
+            connected = False
+            while not connected and retries < max_retries:
+                try:
+                    client_socket = socket.socket()  # instantiate
+                    client_socket.setblocking(1)
+                    client_socket.connect(("pllimsksparky1", 5090))  # connect to the server
+                    client_socket.send(message.encode())  # send message
+                    client_socket.close()  # close the connection
+                    connected = True
+                except:
+                    logger.warning("Could not connect to IO service, trying again in 5 seconds!")
+                    time.sleep(5)
+                    retries += 1
 
             # Were all done here, the write service takes care of the rest!!!
             # Returning record ID
