@@ -79,7 +79,7 @@ def cli(query, hdfs_uri,  custom_preprocessing_script, tag):
 def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, tag):
 
     concept_id_TYPE = "SeriesInstanceUID"
-    io_service	 = tuple("pllimsksparky1:5090".split(":"))
+    io_service   = ("pllimsksparky1:5090".split(":")[0], int("pllimsksparky1:5090".split(":")[1]))
 
     # Open a connection to the ID graph database
     logger.info (f'''Conncting to uri={graph_uri}, user="neo4j", pwd="password" ''')
@@ -142,7 +142,7 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
 
             # Send write message to scan io server
             # Message format is 5 arguements [command], [search directory path], [concept ID], [record ID], [tag]
-            message = ','.join(["WRITE", OUTPUT_DIR, concept_id, scan_record_uuid, tag])
+            message = ','.join(["WRITE", OUTPUT_DIR, concept_id, "SCAN", tag])
             print (f"{job_uuid} - Connecting to IO service with {message}")
 
             # Were all done here, the write service takes care of the rest!!!
