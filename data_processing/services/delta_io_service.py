@@ -82,7 +82,7 @@ class ClientThread(threading.Thread):
             OUTPUTS_GLOB = glob.glob(WORK_DIR) 
             record_hash = FileHash('sha256').hash_file(WORK_DIR)
         else:
-            logger.error("Not a valid payload path")
+            logger.error("Not a valid payload path: " + WORK_DIR)
             return
 
         # Set write paths depending on input record type
@@ -99,7 +99,7 @@ class ClientThread(threading.Thread):
             DATA_PATH = "radiology/features"
             TABLE_PATH = hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.features")
         else:
-            logger.error("Not a valid or supported record ID " + RECORD_ID)
+            logger.error("Not a valid or supported data type: " + DATA_TYPE)
             return
 
         RECORD_ID = f"{DATA_TYPE}-{TAG_ID}-{record_hash}"
