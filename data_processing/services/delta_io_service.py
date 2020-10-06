@@ -13,6 +13,10 @@ from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 
+from checksumdir import dirhash
+from filehash import FileHash        
+
+
 # Parse arguements
 # TODO: Use click instead of ArgumentParser
 parser = argparse.ArgumentParser(description='Start a WRITE SCAN I/O service with a persistent spark context')
@@ -33,7 +37,7 @@ spark_master_uri = os.environ["SPARK_MASTER_URL"]
 conn = Neo4jConnection(uri=graph_uri, user="neo4j", pwd="password")
 
 # Spark setup, persistent spark context for all threads/write/ETL jobs
-from pyspark import SparkContext
+from pyspark import SparkContext, SQLContext
 spark = SparkConfig().spark_session("scan-io-service", spark_master_uri)
 sqlc = SQLContext(spark)
 
@@ -63,31 +67,42 @@ class ClientThread(threading.Thread):
     def run(self):
         ''' Run in a separate thread '''
         # Annoying
-        WORK_DIR    = self.WORK_DIR
-        CONCEPT_ID  = self.CONCEPT_ID
-        RECORD_ID   = self.RECORD_ID
-        TAG_ID      = self.TAG_ID
+        WORK_DIR       = self.WORK_DIR
+        CONCEPT_ID     = self.CONCEPT_ID
+        DATA_TYPE = self.RECORD_ID
+        TAG_ID         = self.TAG_ID
 
         CONCEPT_ID_TYPE = 'SeriesInstanceUID'
 
         # Get output directory to read raw files from
-        OUTPUT_DIR = WORK_DIR
+        if os.path.isdir(WORK_DIR):
+            OUTPUTS_GLOB = glob.glob(os.path.join(WORK_DIR,"*")) 
+            record_hash = dirhash(WORK_DIR, "sha256")
+        elif os.path.isfile(WORK_DIR):
+            OUTPUTS_GLOB = glob.glob(WORK_DIR) 
+            record_hash = FileHash('sha256').hash_file(WORK_DIR)
+        else:
+            logger.error("Not a valid payload path")
+            return
+
         # Set write paths depending on input record type
-        if "SCAN" in RECORD_ID:
+        if DATA_TYPE=="SCAN":
             RECORD_ID_TYPE = 'scan_record_uuid'
             DATA_PATH = "radiology/scans"
             TABLE_PATH = hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.scans")
-        elif "ANNOTATION" in RECORD_ID:
+        elif DATA_TYPE=="ANNOTATION":
             RECORD_ID_TYPE = 'annotation_record_uuid'
             DATA_PATH = "radiology/annotations"
             TABLE_PATH = hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.annotations")
-        elif "FEATURE" in RECORD_ID:
+        elif DATA_TYPE=="FEATURE":
             RECORD_ID_TYPE = 'feature_record_uuid'
             DATA_PATH = "radiology/features"
             TABLE_PATH = hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.features")
         else:
             logger.error("Not a valid or supported record ID " + RECORD_ID)
+            return
 
+        RECORD_ID = f"{DATA_TYPE}-{TAG_ID}-{record_hash}"
 
         # Make sure there is exactly 1 concept ID and 0 record IDs
         if not len(conn.match_concept_node(CONCEPT_ID)) == 1: 
@@ -105,7 +120,7 @@ class ClientThread(threading.Thread):
         conn.query(f"""MERGE (record_node:{RECORD_ID_TYPE}{{value:'{RECORD_ID}', tag:'{TAG_ID}', status:'PENDING'}})""")
 
         # Loop over raw files to ingest
-        for PAYLOAD_NO, FILE_PATH in enumerate(glob.glob(os.path.join(OUTPUT_DIR,"*"))):
+        for PAYLOAD_NO, FILE_PATH in enumerate(OUTPUTS_GLOB):
             logger.info("Processing " + FILE_PATH)
 
             shutil.copy( FILE_PATH , gpfs_mount + destination_path )
