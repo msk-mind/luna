@@ -43,7 +43,7 @@ test: clean-test clean-pyc    ## run tests quickly with the default Python
 	py.test
 
 coverage:
-	pytest -s --cov=src test
+	pytest -s --cov=data_processing tests
 	coverage report -m
 	coverage html
 	open htmlcov/index.html
