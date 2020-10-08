@@ -20,7 +20,7 @@ from filehash import FileHash
 # Parse arguements
 # TODO: Use click instead of ArgumentParser
 parser = argparse.ArgumentParser(description='Start a WRITE SCAN I/O service with a persistent spark context')
-parser.add_argument('--hdfs', dest='hdfs', type=str, help='HDFS host (ex. hdfs://pllimsksparky1.mskcc.org:8020)')
+parser.add_argument('--hdfs', dest='hdfs', type=str, help='HDFS host (ex. hdfs://some_ip:8020)')
 parser.add_argument('--host', dest='host', type=str, help='Target host for server (ex. localhost)')
 args = parser.parse_args()
 
@@ -42,7 +42,7 @@ spark = SparkConfig().spark_session("scan-io-service", spark_master_uri)
 sqlc = SQLContext(spark)
 
 # Setup logging
-logger = init_logger()
+logger = init_logger('io-service.log')
 logger.info ("Imported spark")
 
 

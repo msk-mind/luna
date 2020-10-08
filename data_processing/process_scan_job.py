@@ -13,6 +13,9 @@ Parameters:
     ENVIRONMENTAL VARIABLES:
         MIND_ROOT_DIR: The root directory for the delta lake
         MIND_WORK_DIR: POSIX accessable directory for spark workers to use as scratch space
+        MIND_GPFS_DIR: gpfs mount directory on the gpfs cluster
+        IO_SERVICE_HOST: host where IO service is running
+        IO_SERVICE_PORT: post where IO service is running
     REQUIRED PARAMETERS:
         --hdfs_uri: HDFS namenode uri e.g. hdfs://master-ip:8020
         --query: a cypher where clause to filter sink IDs based on source ID and relationship fields
@@ -45,6 +48,8 @@ gpfs_mount       = os.environ["MIND_GPFS_DIR"]
 graph_uri	 = os.environ["GRAPH_URI"]
 spark_master_uri = os.environ["SPARK_MASTER_URL"]
 bin_python	 = os.environ["PYSPARK_PYTHON"]
+io_service_host = os.environ["IO_SERVICE_HOST"]
+io_service_port = os.environ["IO_SERVICE_PORT"]
 max_retries = 10
 
 # pydoop.hdfs.cp("file:///Users/aukermaa/DB/test.txt", "/Users/aukermaa/")
@@ -79,7 +84,6 @@ def cli(query, hdfs_uri,  custom_preprocessing_script, tag):
 def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, tag):
 
     concept_id_TYPE = "SeriesInstanceUID"
-    io_service   = ("pllimsksparky1:5090".split(":")[0], int("pllimsksparky1:5090".split(":")[1]))
 
     # Open a connection to the ID graph database
     logger.info (f'''Conncting to uri={graph_uri}, user="neo4j", pwd="password" ''')
@@ -131,7 +135,7 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
                 shutil.copy(dcm, INPUTS_DIR)
 
             # Execute some modularized python script
-            # Expects intputs at WORK_DIR, puts outputs into WORK_DIR/outputs
+            # Expects inputs at WORK_DIR, puts outputs into WORK_DIR/outputs
             proc = subprocess.Popen([bin_python, custom_preprocessing_script, WORK_DIR], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = proc.communicate()
             print (f"{job_uuid} - Output from script: {out}")
@@ -152,7 +156,7 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
                 try:
                     client_socket = socket.socket()  # instantiate
                     client_socket.setblocking(1)
-                    client_socket.connect(io_service)  # connect to the server
+                    client_socket.connect((io_service_host, int(io_service_port)))  # connect to the server
                     client_socket.send(message.encode())  # send message
                     client_socket.close()  # close the connection
                     connected = True

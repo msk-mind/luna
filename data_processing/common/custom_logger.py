@@ -3,7 +3,7 @@ import tempfile
 import os
 
 
-def init_logger():
+def init_logger(filename='data-processing.log'):
     # Logging configuration
     log_location = os.path.join(tempfile.gettempdir(), 'log')
     if not os.path.exists(log_location):
@@ -13,7 +13,7 @@ def init_logger():
 
     logger.setLevel(logging.INFO)
     # create file handler which logs even debug messages
-    log_file = os.path.join(log_location, 'data-processing.log')
+    log_file = os.path.join(log_location, filename)
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.INFO)
     # create console handler with a higher log level

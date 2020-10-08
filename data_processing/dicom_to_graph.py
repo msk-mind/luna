@@ -10,7 +10,6 @@ Usage:
 Parameters:
     ENVIRONMENTAL VARIABLES:
         MIND_ROOT_DIR: The root directory for the delta lake
-        MIND_WORK_DIR: POSIX accessable directory for spark workers to use as scratch space
     REQUIRED PARAMETERS:
         --spark_master_uri: spark master uri e.g. spark://master-ip:7077 or local[*]
         --hdfs_uri: HDFS namenode uri e.g. hdfs://master-ip:8020
@@ -39,20 +38,20 @@ from pyspark.sql.types import StringType,StructType,StructField
 logger = init_logger()
 logger.info("Starting process_scan_job.py")
 
-# pydoop.hdfs.cp("file:///Users/aukermaa/DB/test.txt", "/Users/aukermaa/")
-
 @click.command()
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
 @click.option('-g', '--graph_uri', help='spark master uri e.g. bolt://localhost:7883', required=True)
-@click.option('-d', '--hdfs_uri', help='hdfs URI uri e.g. hdfs://localhost:8020', required=True)
+@click.option('-h', '--hdfs_uri', help='hdfs URI uri e.g. hdfs://localhost:8020', required=True)
 def cli(spark_master_uri, hdfs_uri, graph_uri) :
     """
     This module groups dicom images via SeriesInstanceUID, calls a script to generate volumetric images, and interfaces outputs to an IO service.
     
     This module is to be run from the top-level data-processing directory using the -m flag as follows:
 
-    Usage: python3 -m data_processing.process_scan_job --query ... [args]
-
+    Usage: python3 -m data_processing.proxy_to_graph \
+        --spark_master_uri spark://spark-ip:7077 \
+        --graph_uri bolt://localhost:7687 \
+        --hdfs_uri file:// 
     """
     # Setup Spark context
     start_time = time.time()
@@ -63,10 +62,7 @@ def cli(spark_master_uri, hdfs_uri, graph_uri) :
 
 def update_graph_with_scans(spark, graph_uri, hdfs_uri):
     hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
-    spark_workspace = os.environ["MIND_WORK_DIR"]
-    gpfs_mount      = os.environ["MIND_GPFS_DIR"] 
-    logger.info (f"hdfs_db_root={hdfs_db_root}, spark_workspace={spark_workspace}, gpfs_mount={gpfs_mount}")
-    gpfs_host = 'pllimsksparky1'
+    logger.info (f"hdfs_db_root={hdfs_db_root}")
 
     # Open a connection to the ID graph database
     logger.info (f'''Conncting to uri={graph_uri}, user="neo4j", pwd="password" ''')
