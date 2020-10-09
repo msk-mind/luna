@@ -26,7 +26,7 @@ parser.add_argument('--host', dest='host', type=str, help='Target host for serve
 args = parser.parse_args()
 
 hdfs_host       = args.hdfs
-spark_cluster   = args.spark
+spark_uri       = args.spark
 graph_host      = args.graph
 io_host         = args.host
 port = 5090  # initiate port no above 1024
@@ -37,7 +37,7 @@ hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
 conn = Neo4jConnection(uri=graph_host, user="neo4j", pwd="password")
 
 # Spark setup, persistent spark context for all threads/write/ETL jobs
-spark = SparkConfig().spark_session("object-io-service", spark_master_uri)
+spark = SparkConfig().spark_session("object-io-service", spark_uri)
 sqlc = SQLContext(spark)
 
 # Setup logging
