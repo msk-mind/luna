@@ -25,8 +25,8 @@ class Neo4jConnection:
         self.__driver = None
         try:
             self.__driver = GraphDatabase.driver(self.__uri, auth=(self.__user, self.__pwd))
-        except Exception as e:
-            print("Failed to create the driver:", e)
+        except Exception as ex:
+            print("Failed to create the driver: ", ex)
 
     def close(self):
         if self.__driver is not None:

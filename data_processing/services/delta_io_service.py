@@ -7,7 +7,7 @@ import glob
 import socket
 import time
 import threading
-import os
+from pyspark import SQLContext
 
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.sparksession import SparkConfig
@@ -26,6 +26,7 @@ args = parser.parse_args()
 
 hdfs_host       = args.hdfs
 io_host         = args.host
+port = 5090  # initiate port no above 1024
 
 hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
 spark_workspace = os.environ["MIND_WORK_DIR"]
@@ -37,12 +38,11 @@ spark_master_uri = os.environ["SPARK_MASTER_URL"]
 conn = Neo4jConnection(uri=graph_uri, user="neo4j", pwd="password")
 
 # Spark setup, persistent spark context for all threads/write/ETL jobs
-from pyspark import SparkContext, SQLContext
-spark = SparkConfig().spark_session("scan-io-service", spark_master_uri)
+spark = SparkConfig().spark_session("delta-io-service", spark_master_uri)
 sqlc = SQLContext(spark)
 
 # Setup logging
-logger = init_logger('io-service.log')
+logger = init_logger('delta-io-service.log')
 logger.info ("Imported spark")
 
 
@@ -157,36 +157,36 @@ class ClientThread(threading.Thread):
         logger.info ("Thread finished.")
 
 # Main server program
-def server_program():
-    # get the hostname
-    host = io_host
-    port = 5090  # initiate port no above 1024
-    logger.info (f"io_service is STARTING on {host} at {port}")
+@click.command()
+@click.option('-d', '--hdfs', help="where clause of SQL query to filter feature table, 'WHERE' does not need to be included, but make sure to wrap with quotes to be interpretted correctly")
+@click.option('-h', '--host', help="location to find scan/annotation tables")
+def server_program(hdfs, host):
+    logger.info (f"delta_io_service is STARTING on {io_host} at {port}")
 
     server_socket = socket.socket()  # get instance
-    server_socket.bind((host, port))  # bind host address and port together
+    server_socket.bind((io_host, port))  # bind host address and port together
 
     server_socket.setblocking(1)
     server_socket.settimeout(None)
 
     # configure how many client the server can listen simultaneously
     server_socket.listen(128)
-    logger.info (f"io_service is LISTENING on {host} at {port}")
+    logger.info (f"delta_io_service is LISTENING on {io_host} at {port}")
 
     while True:
         conn, address = server_socket.accept()  # accept new connection
         logger.info ("Connection from: " + str(address))
         # receive data stream. it won't accept data packet greater than 1024 bytes
         data = conn.recv(1024).decode()
-        args = data.split(",")
         if not data:
             break
-        logger.info ("Message from connected user: " + data)
+        action, work_dir, concept_id, record_id, tag_id = data.split(",")
+        logger.info("Message from connected user: " + data)
 
         # Try executing command in a thread
 	# This whole driver part will likely change, waiting for  that
         try:
-            newthread = ClientThread(args[1], args[2], args[3], args[4])
+            newthread = ClientThread(work_dir, concept_id, record_id, tag_id)
             newthread.start()
         except:
             logger.error ("Something failed!")
