@@ -29,7 +29,6 @@ io_host         = args.host
 port = 5090  # initiate port no above 1024
 
 hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
-spark_workspace = os.environ["MIND_WORK_DIR"]
 gpfs_mount      = os.environ["MIND_GPFS_DIR"] 
 graph_uri	 = os.environ["GRAPH_URI"]
 spark_master_uri = os.environ["SPARK_MASTER_URL"]
@@ -157,10 +156,7 @@ class ClientThread(threading.Thread):
         logger.info ("Thread finished.")
 
 # Main server program
-@click.command()
-@click.option('-d', '--hdfs', help="where clause of SQL query to filter feature table, 'WHERE' does not need to be included, but make sure to wrap with quotes to be interpretted correctly")
-@click.option('-h', '--host', help="location to find scan/annotation tables")
-def server_program(hdfs, host):
+def server_program():
     logger.info (f"delta_io_service is STARTING on {io_host} at {port}")
 
     server_socket = socket.socket()  # get instance
