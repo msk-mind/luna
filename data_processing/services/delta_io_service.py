@@ -190,6 +190,7 @@ def server_program():
         time.sleep(1)
 
     conn.close()  # Close the connection
+    logger.info (f"delta_io_service is CLOSED on {io_host} at {port}")
 
 
 if __name__ == "__main__":
