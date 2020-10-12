@@ -1,7 +1,6 @@
 import pytest
 from pytest_mock import mocker
-from unittest import mock
-import os, shutil
+import os, shutil, subprocess
 from pyspark import SQLContext
 from pyspark.sql.types import StringType,StructType,StructField
 from click.testing import CliRunner
@@ -13,9 +12,26 @@ from data_processing.process_scan_job import generate_scan_table, cli
 current_dir = os.getcwd()
 
 @pytest.fixture(autouse=True)
-def spark():
+def spark(monkeypatch):
     print('------setup------')
+    # setup env
+    monkeypatch.setenv("MIND_ROOT_DIR", current_dir+"/tests/data_processing/testdata/data")
+    monkeypatch.setenv("MIND_WORK_DIR", "/work/")
+    monkeypatch.setenv("MIND_GPFS_DIR", current_dir+"/tests/data_processing/testdata")
+    monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
+    monkeypatch.setenv("PYSPARK_PYTHON", "/usr/bin/python3")
+    monkeypatch.setenv("SPARK_MASTER_URL", "local[*]")
+    monkeypatch.setenv("IO_SERVICE_HOST", "localhost")
+    monkeypatch.setenv("IO_SERVICE_PORT", "5090")
+
     spark = SparkConfig().spark_session('test-dicom-to-graph', 'local[2]')
+
+    # start delta_io_service
+    #os.system("python3 -m data_processing.services.delta_io_service --hdfs file:/// --host localhost")
+    proc = subprocess.Popen(["python3", "-m", "data_processing.services.delta_io_service", "--hdfs","file:///", "--host","localhost"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate()
+    print (f"Output from script: {out}")
+    print (f"Errors from script: {err}")
     yield spark
 
     print('------teardown------')
@@ -23,17 +39,11 @@ def spark():
     if os.path.exists(work_dir):
         shutil.rmtree(work_dir)
 
+    proc.kill()
 
-def test_cli(mocker, spark, monkeypatch):
-    # setup env
-    monkeypatch.setenv("MIND_ROOT_DIR", current_dir+"/tests/data_processing/testdata/data")
-    monkeypatch.setenv("MIND_WORK_DIR", current_dir+"/tests/data_processing/testdata/work")
-    monkeypatch.setenv("MIND_GPFS_DIR", current_dir+"/tests/data_processing/testdata")
-    monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
-    monkeypatch.setenv("PYSPARK_PYTHON", "/usr/bin/python3")
-    monkeypatch.setenv("SPARK_MASTER_URL", "local[*]")
-    monkeypatch.setenv("IO_SERVICE_HOST", "localhost")
-    monkeypatch.setenv("IO_SERVICE_PORT", "5090")
+
+
+def test_cli(mocker, spark):
 
     # mock neo4j
     mocker.patch('data_processing.common.Neo4jConnection.Neo4jConnection')
@@ -43,7 +53,6 @@ def test_cli(mocker, spark, monkeypatch):
     cSchema = StructType([StructField('SeriesInstanceUID', StringType(), True)])
     ids = sqlc.createDataFrame([('1.2.840.113619.2.340.3.2743924432.468.1441191460.240',)],schema=cSchema)
     Neo4jConnection.commute_source_id_to_spark_query.return_value = ids
-
 
     runner = CliRunner()
     generate_mhd_script_path = os.path.join(current_dir, "data_processing/generateMHD.py")
