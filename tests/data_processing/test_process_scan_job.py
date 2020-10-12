@@ -1,6 +1,6 @@
 import pytest
 from pytest_mock import mocker
-import os, shutil, subprocess
+import os, shutil
 from pyspark import SQLContext
 from pyspark.sql.types import StringType,StructType,StructField
 from click.testing import CliRunner
@@ -19,27 +19,18 @@ def spark(monkeypatch):
     monkeypatch.setenv("MIND_WORK_DIR", "/work/")
     monkeypatch.setenv("MIND_GPFS_DIR", current_dir+"/tests/data_processing/testdata")
     monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
-    monkeypatch.setenv("PYSPARK_PYTHON", "/usr/bin/python3")
+    monkeypatch.setenv("PYSPARK_PYTHON", current_dir+"/env/bin/python")
     monkeypatch.setenv("SPARK_MASTER_URL", "local[*]")
     monkeypatch.setenv("IO_SERVICE_HOST", "localhost")
     monkeypatch.setenv("IO_SERVICE_PORT", "5090")
 
     spark = SparkConfig().spark_session('test-dicom-to-graph', 'local[2]')
-
-    # start delta_io_service
-    #os.system("python3 -m data_processing.services.delta_io_service --hdfs file:/// --host localhost")
-    proc = subprocess.Popen(["python3", "-m", "data_processing.services.delta_io_service", "--hdfs","file:///", "--host","localhost"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate()
-    print (f"Output from script: {out}")
-    print (f"Errors from script: {err}")
     yield spark
 
     print('------teardown------')
     work_dir = current_dir+"/tests/data_processing/testdata/work"
     if os.path.exists(work_dir):
         shutil.rmtree(work_dir)
-
-    proc.kill()
 
 
 
@@ -61,7 +52,6 @@ def test_cli(mocker, spark):
         '-c', generate_mhd_script_path,
         '-t', 'scan.unittest'])
 
-    print(result.exc_info)
     assert result.exit_code == 0
     # radiology.dcm in testdata has only 1 row
     Neo4jConnection.commute_source_id_to_spark_query.assert_called_once()
