@@ -8,8 +8,7 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.dicom_to_graph import update_graph_with_scans, cli
 
-os.environ["MIND_ROOT_DIR"] = os.getcwd() + "/tests/data_processing/testdata/data"
-os.environ["MIND_WORK_DIR"] = os.getcwd() + "/tests/data_processing/testdata/work"
+current_dir = os.getcwd()
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -20,7 +19,11 @@ def spark():
     print('------teardown------')
 
 
-def test_cli(mocker, spark):
+def test_cli(mocker, spark, monkeypatch):
+    # setup env
+    monkeypatch.setenv("MIND_ROOT_DIR", current_dir+"/tests/data_processing/testdata/data")
+    monkeypatch.setenv("MIND_WORK_DIR", current_dir+"/tests/data_processing/testdata/work")
+
     # mock neo4j
     mocker.patch('data_processing.common.Neo4jConnection.Neo4jConnection')
     Neo4jConnection.__init__.return_value = mock.Mock()
