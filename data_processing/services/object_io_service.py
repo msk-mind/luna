@@ -3,88 +3,46 @@
 # TODO: Mirgration and cleanup (later)
 import os
 import subprocess
-import logging
 import argparse
 import uuid
 import shutil
-from data_processing.common.Neo4jConnection import Neo4jConnection
-import logging
 import glob
 import socket
 import time
-import logging
 import threading
-import os
 import datetime
-import time
+from pyspark import SQLContext
+
+from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.sparksession import SparkConfig
+from data_processing.common.custom_logger import init_logger
 
 # Parse arguements
 parser = argparse.ArgumentParser(description='Start a WRITE SCAN I/O service with a persistent spark context')
-parser.add_argument('--hdfs', dest='hdfs', type=str, help='HDFS host (ex. hdfs://pllimsksparky1.mskcc.org:8020)')
+parser.add_argument('--hdfs', dest='hdfs', type=str, help='HDFS host (ex. hdfs://localhost:8020)')
 parser.add_argument('--spark', dest='spark', type=str, help='Spark Cluster URI to use (ex. spark://localhost:7070)')
-parser.add_argument('--graph', dest='graph', type=str, help='Graph DB URI (ex. bolt://dlliskimind1.mskcc.org:7687)')
+parser.add_argument('--graph', dest='graph', type=str, help='Graph DB URI (ex. bolt://localhost:7687)')
 parser.add_argument('--host', dest='host', type=str, help='Target host for server (ex. localhost)')
 args = parser.parse_args()
 
 hdfs_host       = args.hdfs
-spark_cluster   = args.spark
+spark_uri       = args.spark
 graph_host      = args.graph
 io_host         = args.host
-
+port = 5090  # initiate port no above 1024
 
 hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
 
 # Open a connection to the ID graph database
 conn = Neo4jConnection(uri=graph_host, user="neo4j", pwd="password")
 
-# Setup spark context and processing
-os.environ["PYSPARK_PYTHON"]="/usr/local/bin/python3"
-os.environ["PYSPARK_DRIVER_PYTHON"]="/usr/local/bin/python3"
-
 # Spark setup, persistent spark context for all threads/write/ETL jobs
-from pyspark.sql import SparkSession
-from pyspark import SparkConf
-from pyspark import SparkContext
-from pyspark import SQLContext
-from pyspark.sql import functions as F
-from pyspark.sql import Row
-from pyspark.sql.types import StringType,StructType,StructField
-import pyarrow as pa
-conf = SparkConf()\
-    .setAppName("scan_io_service") \
-    .setMaster(spark_cluster) \
-    .set("spark.jars.packages", "io.delta:delta-core_2.12:0.7.0") \
-    .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-    .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-    .set("spark.driver.bindAddress", "0.0.0.0") \
-    .set("spark.driver.memory", "2g") \
-    .set("spark.executor.memory", "2g") \
-    .set("spark.cores.max", "1")
-
-sc = SparkContext(conf=conf)
-sqlc =  SQLContext(sc)
-#
-# sc = SparkSession.builder \
-#     .appName('scan_io_service') \
-#     .config("spark.jars.packages", "io.delta:delta-core_2.12:0.7.0") \
-#     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-#     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-#     .config("spark.driver.bindAddress", "0.0.0.0") \
-#     .config("spark.driver.memory", "4g") \
-#     .config("spark.cores.max", "6") \
-#     .getOrCreate()
-#
-# print ("SPARK VERSION ", sc.version)
-# sqlc =  SQLContext(sc)
+spark = SparkConfig().spark_session("object-io-service", spark_uri)
+sqlc = SQLContext(spark)
 
 # Setup logging
-from data_processing.common.custom_logger import init_logger
-logger = init_logger()
+logger = init_logger("object-io-service.log")
 
-#
-# from delta.tables import DeltaTable
-# scan_table_dthandle     = DeltaTable.forPath(sc, hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.scans"))
-#
 
 def getBlock():
     c_timestamp = datetime.datetime.now()
@@ -121,15 +79,15 @@ class ClientThread(threading.Thread):
         # Get output directory to read raw files from
         OUTPUT_DIR = WORK_DIR
 
-        logging.info ("Files to ingest")
-        logging.info (str(glob.glob(os.path.join(OUTPUT_DIR,"*"))))
+        logger.info ("Files to ingest")
+        logger.info (str(glob.glob(os.path.join(OUTPUT_DIR,"*"))))
 
         # Loop over raw files to ingest
     #    for PAYLOAD_NO, FILE_PATH in enumerate(glob.glob(os.path.join(OUTPUT_DIR,"*"))):
 
         # Make sure there is an associated concept ID in the graph database
         result = conn.match_concept_node(CONCEPT_ID)
-        logging.info(result)
+        logger.info(result)
 
         CONCEPT_ID_TYPE = 'SeriesInstanceUID'
 
@@ -147,11 +105,11 @@ class ClientThread(threading.Thread):
             DATA_PATH = "radiology/features"
             TABLE_PATH = hdfs_host + os.path.join(hdfs_db_root, "radiology/tables/radiology.features.object")
         else:
-            logging.error("Not a valid or supported record ID " + RECORD_ID)
+            logger.error("Not a valid or supported record ID " + RECORD_ID)
 
         # Main write operations
         if (len(result)) == 1:
-            logging.info ("Found concept node! ")
+            logger.info ("Found concept node! ")
 
             # 1. Add a new record node to the graph database if it doesn't already exist
             result = conn.query(f"""
@@ -192,45 +150,43 @@ class ClientThread(threading.Thread):
                 MERGE (concept_node)-[rid:HAS_RECORD]->(record_node)
                 MERGE (tag_node)-[rtag:TAGGED]->(record_node)
                 """
-            print (f"\nRunning {query}\n")
+            logger.info(f"\nRunning {query}\n")
 
             # 5. Integrate in the graph DB
             result = conn.query(query)
-        print("--- Thread finished successfully in %s seconds ---" % (time.time() - start_time))
+        logger.info("--- Thread finished successfully in %s seconds ---" % (time.time() - start_time))
 
 # Main server program
 def server_program():
-    # get the hostname
-    host = io_host
-    port = 5090  # initiate port no above 1024
-    print (f"io_service is STARTING on {host} at {port}")
+    logger.info(f"io_service is STARTING on {io_host} at {port}")
 
     server_socket = socket.socket()  # get instance
-    server_socket.bind((host, port))  # bind host address and port together
+    server_socket.bind((io_host, port))  # bind host address and port together
 
     server_socket.setblocking(1)
     server_socket.settimeout(None)
 
     # configure how many client the server can listen simultaneously
     server_socket.listen(128)
-    print (f"io_service is LISTENING on {host} at {port}")
+    logger.info(f"io_service is LISTENING on {io_host} at {port}")
 
     while True:
         conn, address = server_socket.accept()  # accept new connection
-        print("Connection from: " + str(address))
+        logger.info("Connection from: " + str(address))
         # receive data stream. it won't accept data packet greater than 1024 bytes
         data = conn.recv(1024).decode()
-        args = data.split(",")
         if not data:
             break
-        print("Message from connected user: ", args)
+        action, work_dir, concept_id, record_id, tag_id = data.split(",")
+        logger.info("Message from connected user: " + data)
 
         # Try executing command in a thread
         try:
-            newthread = ClientThread(args[1], args[2], args[3], args[4])
+            # WORK_DIR, CONCEPT_ID, RECORD_ID, TAG_ID
+            newthread = ClientThread(work_dir, concept_id, record_id, tag_id)
             newthread.start()
-        except:
-            print ("Something failed!")
+        except Exception as ex:
+            logger.error("Something failed!: ", ex)
 
         time.sleep(1)
 
@@ -238,5 +194,5 @@ def server_program():
 
 
 if __name__ == "__main__":
-    print ("Starting...")
+    logger.info("Starting...")
     server_program()
