@@ -56,7 +56,7 @@ def cli(spark_master_uri, source_file, destination_dir):
     # Setup Spark context
     import time
     start_time = time.time()
-    spark = SparkConfig().spark_session("clinical-proxy-preprocessing", spark_master_uri)
+    spark = SparkConfig().spark_session("config.yaml", "clinical-proxy-preprocessing")
     generate_proxy_table(source_file, destination_dir, spark)
     print("--- Finished in %s seconds ---" % (time.time() - start_time))
 

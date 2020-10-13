@@ -55,7 +55,7 @@ def cli(spark_master_uri, hdfs_uri, graph_uri) :
     """
     # Setup Spark context
     start_time = time.time()
-    spark = SparkConfig().spark_session("dicom-to-graph", spark_master_uri)
+    spark = SparkConfig().spark_session("config.yaml", "dicom-to-graph")
     update_graph_with_scans(spark, graph_uri, hdfs_uri) 
     logger.info("--- Finished in %s seconds ---" % (time.time() - start_time))
 

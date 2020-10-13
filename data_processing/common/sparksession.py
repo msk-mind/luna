@@ -1,9 +1,22 @@
 from pyspark.sql import SparkSession
+from data_processing.common.config import Config
 
 """Common spark session"""
 class SparkConfig:
 
-	def spark_session(self, app_name, spark_uri, spark_driver_host="127.0.0.1"):
+	def spark_session(self, config_file, app_name):
+
+
+		config = Config(config_file='config.yaml')
+
+		spark_uri = config.get_value('spark_cluster_config/spark.uri')
+		spark_driver_host = config.get_value('spark_cluster_config/spark.driver.host')
+		spark_executor_cores = config.get_value('spark_application_config/spark.executor.cores')
+		spark_cores_max = config.get_value('spark_application_config/spark.cores.max')
+		spark_executor_memory = config.get_value('spark_application_config/spark.executor.memory')
+		spark_executor_pyspark_memory = config.get_value('spark_application_config/spark.executor.pyspark.memory')
+		spark_sql_shuffle_partitions = config.get_value('spark_application_config/spark.sql.shuffle.partitions')
+
 		return SparkSession.builder \
 			.appName(app_name) \
 			.master(spark_uri) \
@@ -14,10 +27,12 @@ class SparkConfig:
 			.config("spark.hadoop.dfs.client.use.datanode.hostname", "true") \
 			.config("spark.driver.host", spark_driver_host) \
 			.config("spark.sql.execution.arrow.pyspark.enabled", "true") \
-			.config("spark.executor.memory", "6g") \
-			.config("spark.driver.memory", "6g") \
-                        .config("spark.cores.max", "32") \
-                        .config("spark.sql.shuffle.partitions", 300) \
+			.config("spark.executor.memory", spark_executor_memory) \
+			.config("spark.driver.memory", spark_executor_memory) \
+			.config("spark.executor.cores", spark_executor_cores) \
+			.config("spark.cores.max", spark_cores_max) \
+			.config("spark.executor.pyspark.memory", spark_executor_pyspark_memory) \
+			.config("spark.sql.shuffle.partitions", spark_sql_shuffle_partitions) \
 			.config("fs.defaultFS", "file:///") \
 			.config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \

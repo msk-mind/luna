@@ -76,7 +76,7 @@ def cli(query, hdfs_uri,  custom_preprocessing_script, tag):
     # Setup Spark context
     print (query)
     start_time = time.time()
-    spark = SparkConfig().spark_session("dicom-to-scan", spark_master_uri)
+    spark = SparkConfig().spark_session("config.yaml", "dicom-to-scan")
     generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, tag)
     logger.info("--- Finished in %s seconds ---" % (time.time() - start_time))
 

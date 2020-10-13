@@ -20,7 +20,8 @@ destination_dir = 'tests/data_processing/testdata/data/clinical/patients'
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('test-clinical-proxy-preprocessing', 'local[2]')
+    spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml',
+                                        'test-clinical-proxy-preprocessing')
     yield spark
 
     print('------teardown------')

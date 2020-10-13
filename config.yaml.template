@@ -1,6 +1,12 @@
 # copy-paste this template into a config.yaml before using
 
 
+spark_cluster_config:
+
+  - spark.uri: local[2]
+
+  - spark.driver.host: 127.0.0.1
+
 spark_application_config:
 
   # 5% total number of cores in cluster
@@ -14,3 +20,5 @@ spark_application_config:
 
   # 80% executor memory
   - spark.executor.pyspark.memory: 30g
+
+  - spark.sql.shuffle.partitions: 300
