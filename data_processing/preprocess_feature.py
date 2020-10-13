@@ -316,7 +316,8 @@ def generate_feature_table(base_directory, destination_directory, target_spacing
 
     # Join with clinical proxy tables
     # setup contexts for graph DB
-    conn = Neo4jConnection(uri='bolt://dlliskimind1.mskcc.org:7687', user="neo4j", pwd="password")
+    GRAPH_URI    = os.environ["GRAPH_URI"]
+    conn = Neo4jConnection(uri=GRAPH_URI, user="neo4j", pwd="password")
     sql_context = SQLContext(spark)
 
     # Add dmp_patient_id column

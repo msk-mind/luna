@@ -1,6 +1,5 @@
 import pytest
 from pytest_mock import mocker
-from unittest import mock
 import os
 from click.testing import CliRunner
 
@@ -26,7 +25,6 @@ def test_cli(mocker, spark, monkeypatch):
 
     # mock neo4j
     mocker.patch('data_processing.common.Neo4jConnection.Neo4jConnection')
-    Neo4jConnection.__init__.return_value = mock.Mock()
     mocker.patch.object(Neo4jConnection, 'query')
     Neo4jConnection.query.return_value = []
 

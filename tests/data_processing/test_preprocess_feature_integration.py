@@ -1,8 +1,12 @@
 import os, shutil
 import pytest
+from pytest_mock import mocker
+from click.testing import CliRunner
+from pyspark import SQLContext
+from neo4j import GraphDatabase, Record
 from data_processing.preprocess_feature import cli, generate_feature_table
 from data_processing.common.sparksession import SparkConfig
-from click.testing import CliRunner
+from data_processing.common.Neo4jConnection import Neo4jConnection
 
 BASE_DIR = "./tests/data_processing/testdata/"
 DESTINATION_DIR = "./tests/data_processing/testdata/outputdir"
@@ -14,8 +18,10 @@ runner = CliRunner()
 #TODO increase test coverage
 
 @pytest.fixture(autouse=True)
-def spark():
+def spark(monkeypatch):
     print('------setup------')
+    monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
+
     spark = SparkConfig().spark_session('test-preprocessing-feature', 'local[2]')
     yield spark
 
@@ -31,8 +37,18 @@ def spark():
     if os.path.exists(DESTINATION_DIR):
         shutil.rmtree(DESTINATION_DIR)
 
-def test_local_feature_table_generation(spark):
-    
+def test_local_feature_table_generation(mocker, spark):
+    # mock graph connection
+    sqlc = SQLContext(spark)
+    mocker.patch('data_processing.common.Neo4jConnection.Neo4jConnection')
+    mocker.patch.object(Neo4jConnection, 'query')
+    record1 = {'source': {'value': 'P-0019027'}, 'sink': {'value': '1.1.1'}, 'path': [{'value': 'P-123'}, 'ID_LINK', {'value': 'RIA_11-111_111'}, 'ID_LINK', {'value': '1.1.1'}]}
+    r1 = Record(record1)
+    Neo4jConnection.query.return_value = [r1]
+
+    mocker.patch.object(Neo4jConnection, 'create_id_lookup_table_where')
+    Neo4jConnection.create_id_lookup_table_where.return_value = []
+    #sqlc.createDataFrame([('P-0019027', '1.1.1', 'some_path1'), ('P-123', '1.2.2', 'some_path2')], ['dmp_patient_id', 'SeriesInstanceUID', 'pathspec'])
 
     # Test no query, default naming
     # Build Feature Table

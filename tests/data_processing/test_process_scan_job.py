@@ -1,6 +1,6 @@
 import pytest
 from pytest_mock import mocker
-import os, shutil
+import os, shutil, subprocess
 from pyspark import SQLContext
 from pyspark.sql.types import StringType,StructType,StructField
 from click.testing import CliRunner
@@ -19,12 +19,15 @@ def spark(monkeypatch):
     monkeypatch.setenv("MIND_WORK_DIR", "/work/")
     monkeypatch.setenv("MIND_GPFS_DIR", current_dir+"/tests/data_processing/testdata")
     monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
-    monkeypatch.setenv("PYSPARK_PYTHON", current_dir+"/env/bin/python")
+    monkeypatch.setenv("PYSPARK_PYTHON", current_dir+"/env/bin/python") # python in venv
     monkeypatch.setenv("SPARK_MASTER_URL", "local[*]")
     monkeypatch.setenv("IO_SERVICE_HOST", "localhost")
     monkeypatch.setenv("IO_SERVICE_PORT", "5090")
 
-    spark = SparkConfig().spark_session('test-dicom-to-graph', 'local[2]')
+    # start delta_io_service
+    os.system("python3 -m data_processing.services.delta_io_service --hdfs file:/// --host localhost &")
+
+    spark = SparkConfig().spark_session('test-process-scan', 'local[2]')
     yield spark
 
     print('------teardown------')
@@ -33,14 +36,13 @@ def spark(monkeypatch):
         shutil.rmtree(work_dir)
 
 
-
 def test_cli(mocker, spark):
 
     # mock neo4j
     mocker.patch('data_processing.common.Neo4jConnection.Neo4jConnection')
+    mocker.patch.object(Neo4jConnection, 'commute_source_id_to_spark_query')
 
     sqlc = SQLContext(spark)
-    mocker.patch.object(Neo4jConnection, 'commute_source_id_to_spark_query')
     cSchema = StructType([StructField('SeriesInstanceUID', StringType(), True)])
     ids = sqlc.createDataFrame([('1.2.840.113619.2.340.3.2743924432.468.1441191460.240',)],schema=cSchema)
     Neo4jConnection.commute_source_id_to_spark_query.return_value = ids
