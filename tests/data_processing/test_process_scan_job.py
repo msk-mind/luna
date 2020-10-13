@@ -19,7 +19,7 @@ def spark(monkeypatch):
     monkeypatch.setenv("MIND_WORK_DIR", "/work/")
     monkeypatch.setenv("MIND_GPFS_DIR", current_dir+"/tests/data_processing/testdata")
     monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
-    monkeypatch.setenv("PYSPARK_PYTHON", current_dir+"/env/bin/python") # python in venv
+#    monkeypatch.setenv("PYSPARK_PYTHON", current_dir+"/env/bin/python") # python in venv, need to update if running locally!
     monkeypatch.setenv("SPARK_MASTER_URL", "local[*]")
     monkeypatch.setenv("IO_SERVICE_HOST", "localhost")
     monkeypatch.setenv("IO_SERVICE_PORT", "5090")
