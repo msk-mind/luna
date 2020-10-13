@@ -2,11 +2,8 @@ import os, shutil
 import pytest
 from pytest_mock import mocker
 from click.testing import CliRunner
-from pyspark import SQLContext
-from neo4j import GraphDatabase, Record
-from data_processing.preprocess_feature import cli, generate_feature_table
+from data_processing.preprocess_feature import cli, generate_feature_table, lookup_dmp_patient_id
 from data_processing.common.sparksession import SparkConfig
-from data_processing.common.Neo4jConnection import Neo4jConnection
 
 BASE_DIR = "./tests/data_processing/testdata/"
 DESTINATION_DIR = "./tests/data_processing/testdata/outputdir"
@@ -14,8 +11,6 @@ TARGET_SPACING = (1.0, 1.0, 3.0)
 
 # Test CLI parameters
 runner = CliRunner()
-
-#TODO increase test coverage
 
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
@@ -38,19 +33,8 @@ def spark(monkeypatch):
         shutil.rmtree(DESTINATION_DIR)
 
 def test_local_feature_table_generation(mocker, spark):
-    # mock graph connection
-    sqlc = SQLContext(spark)
-    mocker.patch('data_processing.common.Neo4jConnection.Neo4jConnection')
-    mocker.patch.object(Neo4jConnection, 'query')
-    record1 = {'source': {'value': 'P-0019027'}, 'sink': {'value': '1.1.1'}, 'path': [{'value': 'P-123'}, 'ID_LINK', {'value': 'RIA_11-111_111'}, 'ID_LINK', {'value': '1.1.1'}]}
-    r1 = Record(record1)
-    Neo4jConnection.query.return_value = [r1]
-
-    mocker.patch.object(Neo4jConnection, 'create_id_lookup_table_where')
-    Neo4jConnection.create_id_lookup_table_where.side_effect = [sqlc.createDataFrame([('P-0019027', '1.1.1', 'some_path1')], ['dmp_patient_id', 'SeriesInstanceUID', 'pathspec']),
-    sqlc.createDataFrame([('P-0016190', '1.1.1', 'some_path1')], ['dmp_patient_id', 'SeriesInstanceUID', 'pathspec']),
-    sqlc.createDataFrame([('P-0009001', '1.1.1', 'some_path1')], ['dmp_patient_id', 'SeriesInstanceUID', 'pathspec']),
-    sqlc.createDataFrame([('P-0009480', '1.1.1', 'some_path1')], ['dmp_patient_id', 'SeriesInstanceUID', 'pathspec'])]
+    # mock graph connection helper method
+    mocker.patch('data_processing.preprocess_feature.lookup_dmp_patient_id', side_effect=['P-0019027'])
 
     # Test no query, default naming
     # Build Feature Table
@@ -61,7 +45,7 @@ def test_local_feature_table_generation(mocker, spark):
     
     # Read Delta Table and Verify 
     feature_df = spark.read.format("delta").load(feature_table_path)
-    assert feature_df.count() == 8
+    assert feature_df.count() == 1
     print ("test_local_feature_table_generation passed.")
 
 
