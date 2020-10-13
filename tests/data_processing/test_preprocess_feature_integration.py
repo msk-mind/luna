@@ -47,8 +47,10 @@ def test_local_feature_table_generation(mocker, spark):
     Neo4jConnection.query.return_value = [r1]
 
     mocker.patch.object(Neo4jConnection, 'create_id_lookup_table_where')
-    Neo4jConnection.create_id_lookup_table_where.return_value = []
-    #sqlc.createDataFrame([('P-0019027', '1.1.1', 'some_path1'), ('P-123', '1.2.2', 'some_path2')], ['dmp_patient_id', 'SeriesInstanceUID', 'pathspec'])
+    Neo4jConnection.create_id_lookup_table_where.side_effect = [sqlc.createDataFrame([('P-0019027', '1.1.1', 'some_path1')], ['dmp_patient_id', 'SeriesInstanceUID', 'pathspec']),
+    sqlc.createDataFrame([('P-0016190', '1.1.1', 'some_path1')], ['dmp_patient_id', 'SeriesInstanceUID', 'pathspec']),
+    sqlc.createDataFrame([('P-0009001', '1.1.1', 'some_path1')], ['dmp_patient_id', 'SeriesInstanceUID', 'pathspec']),
+    sqlc.createDataFrame([('P-0009480', '1.1.1', 'some_path1')], ['dmp_patient_id', 'SeriesInstanceUID', 'pathspec'])]
 
     # Test no query, default naming
     # Build Feature Table
