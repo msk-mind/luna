@@ -1,0 +1,4 @@
+spark_application_config:
+  - spark.executor.cores: 111
+  - spark.executor.memory: 36g
+
