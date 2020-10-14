@@ -27,13 +27,15 @@ def spark(monkeypatch):
     # start delta_io_service
     os.system("python3 -m data_processing.services.delta_io_service --hdfs file:/// --host localhost &")
 
-    spark = SparkConfig().spark_session('test-process-scan', 'local[2]')
+    spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml', 'test-process-scan')
     yield spark
 
     print('------teardown------')
     work_dir = current_dir+"/tests/data_processing/testdata/work"
     if os.path.exists(work_dir):
         shutil.rmtree(work_dir)
+
+    spark.stop()
 
 
 def test_cli(mocker, spark):
@@ -52,7 +54,8 @@ def test_cli(mocker, spark):
     result = runner.invoke(cli, ['-q', "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])",
         '-d', 'file:///',
         '-c', generate_mhd_script_path,
-        '-t', 'scan.unittest'])
+        '-t', 'scan.unittest',
+        '-f', 'tests/data_processing/common/test_config.yaml'])
 
     assert result.exit_code == 0
     # radiology.dcm in testdata has only 1 row
