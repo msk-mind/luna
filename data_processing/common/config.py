@@ -6,76 +6,91 @@ Created on October 17, 2019
 
 import yaml
 import sys
-
+from jsonpath_ng import parse
 from data_processing.common.custom_logger import init_logger
 
 logger = init_logger()
 
 class Config():
+    '''
+    This class loads the configuration from a config yaml file only once on first invocation of this class with
+    the specified config file. The class then maintains the configuration in memory in a singleton instance. All new
+    instances of this class that are created for the same config file specified as the argument, will use the same
+    singleton instance.
 
-    def __init__(self, config_file="config.yaml"):
-        self._config_file = config_file
+    If a new instance of this class is created with a new config file specified as the argument, the singleton instance
+    is recreated and the class loads the config from the new config file.
+    '''
+
+    __CONFIG_FILE = 'config.yaml'  # config file 
+    __INSTANCE = None              # singleton instance
 
 
-    def _get_config(self):
+    def __new__(cls, config_file):
+        if Config.__INSTANCE is None or Config.__CONFIG_FILE != config_file:
+            Config.__INSTANCE = object.__new__(cls)
+            Config.__CONFIG_FILE = config_file
+            Config.__INSTANCE.__config = Config._load_config(cls)
+        return Config.__INSTANCE
+
+
+    def __init__(self, config_file):
+        ''':param config_file the config file to load. If none is provided, the class defaults to 'config.yaml' in
+        the base directory'''
+        pass
+
+
+    def _load_config(cls):
         '''
 
         :param config_file: Default config file is config.yaml
         :return: config generator object
         '''
         # read config file
+        config_file = Config.__CONFIG_FILE
+        logger.info("loading config file "+config_file)
+
+
         try:
-            stream = open(self._config_file, 'r')
+            stream = open(config_file, 'r')
         except IOError as err:
-            logger.error("unable to find a config file with name "+self._config_file+
-                  ". Please use config.yaml.template to make a "+self._config_file+". "+err.message)
+            logger.error("unable to find a config file with name "+config_file+
+                  ". Please use config.yaml.template to make a "+config_file+". "+err.message)
             sys.exit(1)
+        
+        configs = {}
+        for items in yaml.load_all(stream, Loader=yaml.FullLoader):
+            configs.update(items)
 
-        config = yaml.load_all(stream, Loader=yaml.FullLoader)
+        return configs
 
-        return config
 
-    def get_value(self, key):
+    def get_value(self, jsonpath):
         '''
+        Gets the value from the config file for the specified jsonpath.
 
-        :param key: see config.yaml file for keys. Keys are namespaced with '/' operator
-                    for example - spark_application_config/spark.executor.cores
-                    A hierarchical depth of 2 is assumed.
+        :param jsonpath: see config.yaml to generate a jsonpath. See https://pypi.org/project/jsonpath-ng/
+                         jsonpath expressions may be tested here - https://jsonpath.com/
         :return: string value from config file
         '''
-        keyns = key.split('/')
 
-        if len(keyns) != 2:
-            logger.error("config key must be namespaced!")
-            sys.exit(1)
+        jsonpath_expression = parse(jsonpath)
 
-        for doc in self._get_config():
-            for kk, vv in doc.items():
-                if kk == keyns[0]:
-                    ns = vv
+        match = jsonpath_expression.find(Config.__INSTANCE.__config)
 
-        if ns is None:
-            logger.error("key namespace "+keyns[0]+" not found")
-            sys.exit(1)
+        if len(match) == 0:
+            logger.error('unable to find a config value for jsonpath: '+jsonpath)
+            return None
 
-        for kvps in ns:
-            if keyns[1] == next(iter(kvps.keys())):
-                value = next(iter(kvps.values()))
-                break
+        return match[0].value
 
 
-        if value == '':
-            logger.error("value for key "+key+" not found in "+self._config_file)
-            sys.exit(1)
-
-        logger.info("got config "+str(key)+"="+str(value))
-
-        return value
-
-
-
-# an instance that reads from the defaul config.yaml file
-default_config = Config()
 
 if __name__ == '__main__':
-    print(default_config.get_value('spark_application_config/spark.executor.cores'))
+    c1 = Config('config.yaml')
+    c2 = Config('config.yaml')
+    c3 = Config('config.yaml')
+
+    print(str(c1) + ' ' + str(c1.get_value('$.spark_application_config[:1]["spark.executor.cores"]')))
+    print(str(c2) + ' ' + str(c2.get_value('$.spark_application_config[:1]["spark.executor.cores"]')))
+    print(str(c3) + ' ' + str(c3.get_value('$.spark_application_config[:1]["doesnt_exist"]')))

@@ -7,15 +7,16 @@ class SparkConfig:
 	def spark_session(self, config_file, app_name):
 
 
-		config = Config(config_file='config.yaml')
+		config = Config(config_file=config_file)
 
-		spark_uri = config.get_value('spark_cluster_config/spark.uri')
-		spark_driver_host = config.get_value('spark_cluster_config/spark.driver.host')
-		spark_executor_cores = config.get_value('spark_application_config/spark.executor.cores')
-		spark_cores_max = config.get_value('spark_application_config/spark.cores.max')
-		spark_executor_memory = config.get_value('spark_application_config/spark.executor.memory')
-		spark_executor_pyspark_memory = config.get_value('spark_application_config/spark.executor.pyspark.memory')
-		spark_sql_shuffle_partitions = config.get_value('spark_application_config/spark.sql.shuffle.partitions')
+		spark_uri = config.get_value('$.spark_cluster_config[:1]["spark.uri"]')
+		spark_driver_host = config.get_value('$.spark_cluster_config[:2]["spark.driver.host"]')
+		spark_executor_cores = config.get_value('$.spark_application_config[:1]["spark.executor.cores"]')
+		spark_cores_max = config.get_value('$.spark_application_config[:2]["spark.cores.max"]')
+		spark_executor_memory = config.get_value('$.spark_application_config[:3]["spark.executor.memory"]')
+		spark_executor_pyspark_memory = \
+			config.get_value('$.spark_application_config[:4]["spark.executor.pyspark.memory"]')
+		spark_sql_shuffle_partitions = config.get_value('$.spark_application_config[:5]["spark.sql.shuffle.partitions"]')
 
 		return SparkSession.builder \
 			.appName(app_name) \
