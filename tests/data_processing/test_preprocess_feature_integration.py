@@ -1,8 +1,9 @@
 import os, shutil
 import pytest
-from data_processing.preprocess_feature import cli, generate_feature_table
-from data_processing.common.sparksession import SparkConfig
+from pytest_mock import mocker
 from click.testing import CliRunner
+from data_processing.preprocess_feature import cli, generate_feature_table, lookup_dmp_patient_id
+from data_processing.common.sparksession import SparkConfig
 
 BASE_DIR = "./tests/data_processing/testdata/"
 DESTINATION_DIR = "./tests/data_processing/testdata/outputdir"
@@ -11,12 +12,14 @@ TARGET_SPACING = (1.0, 1.0, 3.0)
 # Test CLI parameters
 runner = CliRunner()
 
-#TODO increase test coverage
-
 @pytest.fixture(autouse=True)
-def spark():
+def spark(monkeypatch):
     print('------setup------')
+    
+    monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
+
     spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml', 'test-preprocessing-feature')
+
     yield spark
 
     print('------teardown------')
@@ -31,8 +34,9 @@ def spark():
     if os.path.exists(DESTINATION_DIR):
         shutil.rmtree(DESTINATION_DIR)
 
-def test_local_feature_table_generation(spark):
-    
+def test_local_feature_table_generation(mocker, spark):
+    # mock graph connection helper method
+    mocker.patch('data_processing.preprocess_feature.lookup_dmp_patient_id', side_effect=['P-0019027'])
 
     # Test no query, default naming
     # Build Feature Table
@@ -43,7 +47,7 @@ def test_local_feature_table_generation(spark):
     
     # Read Delta Table and Verify 
     feature_df = spark.read.format("delta").load(feature_table_path)
-    assert feature_df.count() == 8
+    assert feature_df.count() == 1
     print ("test_local_feature_table_generation passed.")
 
 

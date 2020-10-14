@@ -42,14 +42,6 @@ from pyspark.sql.types import StringType,StructType,StructField
 logger = init_logger()
 logger.info("Starting process_scan_job.py")
 
-hdfs_db_root     = os.environ["MIND_ROOT_DIR"]
-spark_workspace  = os.environ["MIND_WORK_DIR"]
-gpfs_mount       = os.environ["MIND_GPFS_DIR"] 
-graph_uri	 = os.environ["GRAPH_URI"]
-spark_master_uri = os.environ["SPARK_MASTER_URL"]
-bin_python	 = os.environ["PYSPARK_PYTHON"]
-io_service_host = os.environ["IO_SERVICE_HOST"]
-io_service_port = os.environ["IO_SERVICE_PORT"]
 max_retries = 10
 
 # pydoop.hdfs.cp("file:///Users/aukermaa/DB/test.txt", "/Users/aukermaa/")
@@ -73,17 +65,31 @@ def cli(query, hdfs_uri,  custom_preprocessing_script, tag):
 		--tag aukerman.test \
 
     """
+    # Get environment variables
+    spark_master_uri = os.environ["SPARK_MASTER_URL"]
+
     # Setup Spark context
     print (query)
     start_time = time.time()
+
     spark = SparkConfig().spark_session("config.yaml", "dicom-to-scan")
     generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, tag)
+
     logger.info("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 
 def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, tag):
 
-    concept_id_TYPE = "SeriesInstanceUID"
+    # Get environment variables
+    hdfs_db_root     = os.environ["MIND_ROOT_DIR"]
+    spark_workspace  = os.environ["MIND_WORK_DIR"]
+    gpfs_mount       = os.environ["MIND_GPFS_DIR"] 
+    graph_uri    = os.environ["GRAPH_URI"]
+    bin_python   = os.environ["PYSPARK_PYTHON"]
+    io_service_host = os.environ["IO_SERVICE_HOST"]
+    io_service_port = int(os.environ["IO_SERVICE_PORT"])
+
+    concept_id_type = "SeriesInstanceUID"
 
     # Open a connection to the ID graph database
     logger.info (f'''Conncting to uri={graph_uri}, user="neo4j", pwd="password" ''')
@@ -94,7 +100,7 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
     logger.info ("-------------------------------------- SETUP COMPLETE -------------------------------------------")
     # Begin query/commute process
 
-    df_driver_ids = conn.commute_source_id_to_spark_query(spark, sqlc, WHERE_CLAUSE=query, SINK_TYPE=concept_id_TYPE)
+    df_driver_ids = conn.commute_source_id_to_spark_query(spark, sqlc, WHERE_CLAUSE=query, SINK_TYPE=concept_id_type)
     logger.info (" >>> Graph Query Complete")
 
     # Reading dicom and opdata
@@ -171,12 +177,13 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
             return scan_record_uuid
 
     # Make our UDF
+    spark.sparkContext.addPyFile(custom_preprocessing_script)
     udf_generate_mhd = F.udf(python_def_generate_mhd, StringType())
 
     # Get ready to run UDF jobs
-    df_queue= df_dcmdata.join(df_optdata , ["dicom_record_uuid"]).join(df_driver_ids, [concept_id_TYPE]) \
-        .select(concept_id_TYPE,"absolute_hdfs_path","filename") \
-        .groupBy(concept_id_TYPE) \
+    df_queue= df_dcmdata.join(df_optdata , ["dicom_record_uuid"]).join(df_driver_ids, [concept_id_type]) \
+        .select(concept_id_type,"absolute_hdfs_path","filename") \
+        .groupBy(concept_id_type) \
         .agg(F.sort_array( F.collect_list("absolute_hdfs_path")).alias("absolute_hdfs_paths"), \
              F.sort_array( F.collect_list("filename")).alias("filenames") )
 
@@ -185,7 +192,7 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
     job_start_time = time.time()
     # Run jobs
     logger.info (" >>> Calling jobs on selected patient:")
-    df_ct = df_queue.withColumn('payload', udf_generate_mhd(concept_id_TYPE, 'absolute_hdfs_paths', 'filenames'))
+    df_ct = df_queue.withColumn('payload', udf_generate_mhd(concept_id_type, 'absolute_hdfs_paths', 'filenames'))
     df_ct.select("SeriesInstanceUID", "payload").show(200, truncate=False)
     logger.info (" >>> Jobs done")
     logger.info("--- Execute in %s seconds ---" % (time.time() - job_start_time))
