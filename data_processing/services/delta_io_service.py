@@ -37,7 +37,7 @@ spark_master_uri = os.environ["SPARK_MASTER_URL"]
 conn = Neo4jConnection(uri=graph_uri, user="neo4j", pwd="password")
 
 # Spark setup, persistent spark context for all threads/write/ETL jobs
-spark = SparkConfig().spark_session("delta-io-service", spark_master_uri)
+spark = SparkConfig().spark_session("config.yaml", "delta-io-service")
 sqlc = SQLContext(spark)
 
 # Setup logging

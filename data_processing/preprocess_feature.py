@@ -228,7 +228,7 @@ def cli(spark_master_uri,
     start_time = time.time()
 
 
-    spark = SparkConfig().spark_session("preprocess_feature", spark_master_uri)
+    spark = SparkConfig().spark_session("config.yaml", "preprocess_feature")
     generate_feature_table(base_directory,
                            destination_directory,
                            target_spacing,

@@ -15,9 +15,11 @@ runner = CliRunner()
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
     print('------setup------')
+    
     monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
 
-    spark = SparkConfig().spark_session('test-preprocessing-feature', 'local[2]')
+    spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml', 'test-preprocessing-feature')
+
     yield spark
 
     print('------teardown------')

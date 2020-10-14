@@ -51,7 +51,8 @@ max_retries = 10
 @click.option('-d', '--hdfs_uri', help='hdfs URI uri e.g. hdfs://localhost:8020', required=True)
 @click.option('-c', '--custom_preprocessing_script', default = None, help="Path to python file to execute in the working directory")
 @click.option('-t', '--tag', default = 'default', help="Provencence tag")
-def cli(query, hdfs_uri,  custom_preprocessing_script, tag):
+@click.option('-f', '--config_file', default = 'config.yaml', help="config file")
+def cli(query, hdfs_uri,  custom_preprocessing_script, tag, config_file):
     """
     This module groups dicom images via SeriesInstanceUID, calls a script to generate volumetric images, and interfaces outputs to an IO service.
     
@@ -71,8 +72,10 @@ def cli(query, hdfs_uri,  custom_preprocessing_script, tag):
     # Setup Spark context
     print (query)
     start_time = time.time()
-    spark = SparkConfig().spark_session("dicom-to-scan", spark_master_uri)
-    generate_scan_table(spark, query, hdfs_uri, custom_preprocessing_script, tag)
+
+    spark = SparkConfig().spark_session(config_file, "dicom-to-scan")
+    generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, tag)
+
     logger.info("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 

@@ -12,7 +12,7 @@ current_dir = os.getcwd()
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('test-dicom-to-graph', 'local[2]')
+    spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml', 'test-dicom-to-graph')
     yield spark
 
     print('------teardown------')

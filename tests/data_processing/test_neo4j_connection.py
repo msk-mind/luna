@@ -13,7 +13,7 @@ Mock tests for Neo4jConnection in common
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('test-neo4j-connection', 'local[2]')
+    spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml', 'test-neo4j-connection')
     yield spark
 
     print('------teardown------')
