@@ -79,12 +79,12 @@ def update_graph_with_scans(spark, graph_uri, hdfs_uri):
     tuple_to_add = df_dcmdata.select("PatientName", "SeriesInstanceUID")\
 	.groupBy("PatientName", "SeriesInstanceUID")\
 	.count()\
-	.withColumnRenamed("PatientName", "xnat_accession_number")\
+	.withColumnRenamed("PatientName", "xnat_patient_id")\
 	.toPandas()
 
-    id_1 = "xnat_accession_number"
+    id_1 = "xnat_patient_id"
     id_2 = "SeriesInstanceUID"
-    link = "ID_LINK"
+    link = "HAS_SCAN"
 
     for index, row in tuple_to_add.iterrows():
         query ='''MERGE (id1:{0} {{value: "{1}"}}) MERGE (id2:{2} {{value: "{3}"}}) MERGE (id1)-[r:{4}]->(id2)'''.format(id_1, row[id_1], id_2, row[id_2], link)
