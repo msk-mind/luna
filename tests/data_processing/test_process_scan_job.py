@@ -4,6 +4,7 @@ import os, shutil, subprocess
 from pyspark import SQLContext
 from pyspark.sql.types import StringType,StructType,StructField
 from click.testing import CliRunner
+import os
 
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
@@ -19,7 +20,9 @@ def spark(monkeypatch):
     monkeypatch.setenv("MIND_WORK_DIR", "/work/")
     monkeypatch.setenv("MIND_GPFS_DIR", current_dir+"/tests/data_processing/testdata")
     monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
-#    monkeypatch.setenv("PYSPARK_PYTHON", current_dir+"/env/bin/python") # python in venv, need to update if running locally!
+    stream = os.popen('which python')
+    pypath =stream.read().rstrip()
+    monkeypatch.setenv("PYSPARK_PYTHON", pypath) # python in venv, need to update if running locally!
     monkeypatch.setenv("SPARK_MASTER_URL", "local[*]")
     monkeypatch.setenv("IO_SERVICE_HOST", "localhost")
     monkeypatch.setenv("IO_SERVICE_PORT", "5090")

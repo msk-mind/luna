@@ -88,3 +88,8 @@ def test_feature_table_cli_missing_params():
 
     print("Test CLI missing arguments tests passed.")
 
+
+def test_feature_table_cli_with_config():
+    result = runner.invoke(cli, "--spark_master_uri local[*] --base_directory {} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2 --custom_preprocessing_script tests/test_external_process_patient_script.py -f tests/data_processing/common/test_config.yaml".format(BASE_DIR))
+    assert result.exit_code == 0
+    print("CLI test passed.")

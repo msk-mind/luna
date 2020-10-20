@@ -43,7 +43,8 @@ def generate_proxy_table(source_file, destination_dir, spark):
 @click.option('-m', '--spark_master_uri',
               help='spark master uri e.g. spark://master-ip:7077 or local[*]',
               required=True)
-def cli(spark_master_uri, source_file, destination_dir):
+@click.option('-f', '--config_file', default = 'config.yaml', help="config file")
+def cli(spark_master_uri, source_file, destination_dir, config_file):
     """
     This module generates a delta table for clinical data stored in a csv or tsv file with tab delimiters.
 
@@ -56,7 +57,7 @@ def cli(spark_master_uri, source_file, destination_dir):
     # Setup Spark context
     import time
     start_time = time.time()
-    spark = SparkConfig().spark_session("config.yaml", "clinical-proxy-preprocessing")
+    spark = SparkConfig().spark_session(config_file, "clinical-proxy-preprocessing")
     generate_proxy_table(source_file, destination_dir, spark)
     print("--- Finished in %s seconds ---" % (time.time() - start_time))
 

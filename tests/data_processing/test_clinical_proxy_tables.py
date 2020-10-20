@@ -44,7 +44,11 @@ def test_generate_proxy_table_error(spark):
 
 def test_cli(spark):
     runner = CliRunner()
-    result = runner.invoke(cli, ['-m', 'local[2]', '-s', source_file, '-d', destination_dir])
+    result = runner.invoke(cli, [
+        '-m', 'local[2]',
+        '-s', source_file,
+        '-d', destination_dir,
+        '-f', 'tests/data_processing/common/test_config.yaml'])
     assert result.exit_code == 0
 
     df = spark.read.format('delta').load(destination_dir)

@@ -29,7 +29,10 @@ def test_cli(mocker, spark, monkeypatch):
     Neo4jConnection.query.return_value = []
 
     runner = CliRunner()
-    result = runner.invoke(cli, ['-s', 'local[2]', '-g', 'bolt://localhost:7883', '-h', 'file:///'])
+    result = runner.invoke(cli, ['-s', 'local[2]',
+                                 '-g', 'bolt://localhost:7883',
+                                 '-h', 'file:///',
+                                 '-f', 'tests/data_processing/common/test_config.yaml'])
 
     assert result.exit_code == 0
     # radiology.dcm in testdata has only 1 row

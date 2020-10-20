@@ -204,13 +204,15 @@ def lookup_dmp_patient_id(conn, spark_context, sql_context, SeriesInstanceUID):
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
 @click.option('-n', '--feature_table_output_name', default="feature-table", help="name of new feature table that is created.")
 @click.option('-c', '--custom_preprocessing_script', default = None, help="Path to python file containing custom 'process_patient' method. By default, uses process_patient_default() for preprocessing")
+@click.option('-f', '--config_file', default = 'config.yaml', help="config file")
 def cli(spark_master_uri,
         base_directory,
         destination_directory,
         target_spacing,
         query,
         feature_table_output_name,
-        custom_preprocessing_script):
+        custom_preprocessing_script,
+        config_file):
     """
     This module pre-processes the CE-CT acquisitions and associated segmentations and generates
     a DataFrame tracking the file paths of the pre-processed items, stored as NumPy ndarrays.
@@ -228,7 +230,7 @@ def cli(spark_master_uri,
     start_time = time.time()
 
 
-    spark = SparkConfig().spark_session("config.yaml", "preprocess_feature")
+    spark = SparkConfig().spark_session(config_file, "preprocess_feature")
     generate_feature_table(base_directory,
                            destination_directory,
                            target_spacing,

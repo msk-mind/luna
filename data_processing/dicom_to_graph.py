@@ -42,7 +42,8 @@ logger.info("Starting process_scan_job.py")
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
 @click.option('-g', '--graph_uri', help='spark master uri e.g. bolt://localhost:7883', required=True)
 @click.option('-h', '--hdfs_uri', help='hdfs URI uri e.g. hdfs://localhost:8020', required=True)
-def cli(spark_master_uri, hdfs_uri, graph_uri) :
+@click.option('-f', '--config_file', default = 'config.yaml', help="config file")
+def cli(spark_master_uri, hdfs_uri, graph_uri, config_file) :
     """
     This module groups dicom images via SeriesInstanceUID, calls a script to generate volumetric images, and interfaces outputs to an IO service.
     
@@ -55,7 +56,7 @@ def cli(spark_master_uri, hdfs_uri, graph_uri) :
     """
     # Setup Spark context
     start_time = time.time()
-    spark = SparkConfig().spark_session("config.yaml", "dicom-to-graph")
+    spark = SparkConfig().spark_session(config_file, "dicom-to-graph")
     update_graph_with_scans(spark, graph_uri, hdfs_uri) 
     logger.info("--- Finished in %s seconds ---" % (time.time() - start_time))
 
