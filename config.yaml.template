@@ -1,4 +1,6 @@
 # copy-paste this template into a config.yaml before using
+# as a best practice, config.yaml must not be committed to github
+# as it may contain sensitive deployment information.
 
 
 spark_cluster_config:
