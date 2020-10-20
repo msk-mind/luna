@@ -5,7 +5,7 @@ a DataFrame tracking the file paths of the pre-processed items, stored as NumPy 
 This module is to be run from the top-level data-processing directory using the -m flag as follows:
 Usage: 
 
-    $ python -m data_processing.preprocess_feature --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --destination_directory {directory/to/where/feature/table/to/be/outputted} --target_spacing {x_spacing} {y_spacing} {z_spacing}  --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created} --custom_preprocessing_script {path/to/preprocessing/script}
+    $ python3 -m data_processing.preprocess_feature --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --destination_directory {directory/to/where/feature/table/to/be/outputted} --target_spacing {x_spacing} {y_spacing} {z_spacing}  --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created} --custom_preprocessing_script {path/to/preprocessing/script}
     
 Parameters: 
     REQUIRED PARAMETERS:
@@ -190,10 +190,10 @@ def resample_volume(volume, order, target_shape):
                     preserve_range=True, anti_aliasing=anti_alias)
     return volume
 
-def lookup_dmp_patient_id(conn, spark_context, sql_context, SeriesInstanceUID):
-    dmp_patient_id = conn.create_id_lookup_table(spark_context, sql_context, "SeriesInstanceUID", "dmp_patient_id", SeriesInstanceUID).collect()
-    if dmp_patient_id and len (dmp_patient_id) >= 1:
-        return dmp_patient_id[0][1]
+def get_dmp_from_scan(conn, query_id):
+    result = [ x.data() for x in conn.query(f"MATCH (patient:dmp_patient_id)-[:PX_TO_RAD]-(rad)-[:HAS_SCAN]-(scan) WHERE scan.value='{query_id}' RETURN patient, rad, scan") ]
+    if len(result) >= 1:
+       return result[0]['patient']['value']
     return ""
 
 @click.command()
@@ -239,9 +239,6 @@ def cli(spark_master_uri,
                            feature_table_output_name,
                            custom_preprocessing_script)
     print("--- Finished in %s seconds ---" % (time.time() - start_time))
-
-
-
 
 def generate_feature_table(base_directory, destination_directory, target_spacing, spark, query, feature_table_output_name, custom_preprocessing_script):
     annotation_table = os.path.join(base_directory, "data/radiology/tables/radiology.annotations")
@@ -289,7 +286,7 @@ def generate_feature_table(base_directory, destination_directory, target_spacing
             return
         # If query doesn't return anything, do not proceed.
         if df.count() == 0:
-            err_msg = "query \"{}\" has no match. Please revisit your query.".format(query)
+            err_msg = "query \"{}\" has no match. Please revisit your query.".format(sql_query)
             logger.error(err_msg)
             return
 
@@ -318,33 +315,33 @@ def generate_feature_table(base_directory, destination_directory, target_spacing
 
     # Join with clinical proxy tables
     # setup contexts for graph DB
-    GRAPH_URI    = os.environ["GRAPH_URI"]
+    GRAPH_URI   = os.environ["GRAPH_URI"]
     conn = Neo4jConnection(uri=GRAPH_URI, user="neo4j", pwd="password")
-    sql_context = SQLContext(spark)
 
     # Add dmp_patient_id column
     uid_join_table = df.select("SeriesInstanceUID")
     uid_join_table = uid_join_table.toPandas()
-    uid_join_table["dmp_patient_id"] = uid_join_table.apply(lambda x: lookup_dmp_patient_id(conn, spark.sparkContext, sql_context, x.SeriesInstanceUID), axis=1) 
+    uid_join_table["dmp_patient_id"] = uid_join_table.apply(lambda x: get_dmp_from_scan(conn, x.SeriesInstanceUID), axis=1)
     uid_join_table = spark.createDataFrame(uid_join_table)
+    uid_join_table.select("SeriesInstanceUID", "dmp_patient_id").show(20, False)
     df = df.join(uid_join_table, ['SeriesInstanceUID'])
     
     # Load Clinical Data, rename table-specific uuid columns, and join tables by dmp_patient_id
-    diagnosis_table = os.path.join(base_directory, "data/clinical/tables/clinical.diagnosis")
+    diagnosis_table = os.path.join(GPFS_MOUNT_DIR, "data/clinical/tables/clinical.diagnosis")
     diagnosis_df = spark.read.format("delta").load(diagnosis_table)
     diagnosis_df = diagnosis_df.withColumnRenamed("uuid", "diagnosis_uuid")
     df = df.join(diagnosis_df, ['dmp_patient_id'])
 
-    medications_table = os.path.join(base_directory, "data/clinical/tables/clinical.medications")
+
+    medications_table = os.path.join(GPFS_MOUNT_DIR, "data/clinical/tables/clinical.medications")
     medications_df = spark.read.format("delta").load(medications_table)
     medications_df = medications_df.withColumnRenamed("uuid", "medications_uuid")
     df = df.join(medications_df, ['msk_mind_patient_id', 'dmp_patient_id'])
 
-    patients_table = os.path.join(base_directory, "data/clinical/tables/clinical.patients")
+    patients_table = os.path.join(GPFS_MOUNT_DIR, "data/clinical/tables/clinical.patients")
     patients_df = spark.read.format("delta").load(patients_table)
     patients_df = patients_df.withColumnRenamed("uuid", "patients_uuid")
     df = df.join(patients_df, ['msk_mind_patient_id', 'dmp_patient_id'])
-    df.show()
 
     # write table
     df.write.format("delta").mode("overwrite").save(feature_table)
@@ -355,7 +352,7 @@ def generate_feature_table(base_directory, destination_directory, target_spacing
     feature_df.show()
 
     logger.info("-----Columns Added:------") 
-    feature_df.select("feature_record_uuid", "preprocessed_annotation_path","preprocessed_scan_path", "preprocessed_target_spacing_y","preprocessed_target_spacing_x","preprocessed_target_spacing_z").show(20, False)
+    feature_df.select("msk_mind_patient_id", "dmp_patient_id","feature_record_uuid", "preprocessed_annotation_path","preprocessed_scan_path", "preprocessed_target_spacing_y","preprocessed_target_spacing_x","preprocessed_target_spacing_z").show(20, False)
 
     logger.info("Feature Table written to ")
     logger.info(feature_table)
