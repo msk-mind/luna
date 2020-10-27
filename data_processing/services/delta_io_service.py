@@ -174,8 +174,15 @@ def server_program():
         logger.info ("Connection from: " + str(address))
         # receive data stream. it won't accept data packet greater than 1024 bytes
         data = conn.recv(1024).decode()
+
         if not data:
-            break
+            continue 
+
+        if data=="STOP": break
+        if data=="PING": 
+            logger.info("Hello from " + str(address)) 
+            continue
+
         action, work_dir, concept_id, record_id, tag_id = data.split(",")
         logger.info("Message from connected user: " + data)
 
