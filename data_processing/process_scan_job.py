@@ -143,7 +143,8 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
 
             # Execute some modularized python script
             # Expects inputs at WORK_DIR, puts outputs into WORK_DIR/outputs
-            proc = subprocess.Popen([bin_python, custom_preprocessing_script, WORK_DIR], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print ([bin_python, custom_preprocessing_script, WORK_DIR])
+            proc = subprocess.Popen([bin_python, custom_preprocessing_script, WORK_DIR])
             out, err = proc.communicate()
             print (f"{job_uuid} - Output from script: {out}")
             print (f"{job_uuid} - Errors from script: {err}")
@@ -157,6 +158,7 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
             print (f"{job_uuid} - Connecting to IO service with {message}")
 
             # Were all done here, the write service takes care of the rest!!!
+
             retries = 0
             connected = False
             while not connected and retries < max_retries:
@@ -167,8 +169,8 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
                     client_socket.send(message.encode())  # send message
                     client_socket.close()  # close the connection
                     connected = True
-                except:
-                    logger.warning(f"{job_uuid} - Could not connect to IO service, trying again in 5 seconds!")
+                except Exception as ex:
+                    logger.warning(f"{job_uuid} - Could not send request to IO service, {ex}, trying again in 5 seconds!")
                     time.sleep(5)
                     retries += 1
 
