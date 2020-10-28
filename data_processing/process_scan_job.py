@@ -158,23 +158,19 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
             print (f"{job_uuid} - Connecting to IO service with {message}")
 
             # Were all done here, the write service takes care of the rest!!!
-            client_socket = None
-            try:
-                client_socket = socket.socket()  # instantiate
-                client_socket.setblocking(1)
-                client_socket.connect((io_service_host, int(io_service_port)))  # connect to the server
-            except:
-                logger.warning(f"{job_uuid} - Could not connect to IO service!")
 
             retries = 0
             connected = False
-            while not connected and retries < max_retries and not client_socket is None:
+            while not connected and retries < max_retries:
                 try:
+                    client_socket = socket.socket()  # instantiate
+                    client_socket.setblocking(1)
+                    client_socket.connect((io_service_host, int(io_service_port)))  # connect to the server
                     client_socket.send(message.encode())  # send message
                     client_socket.close()  # close the connection
                     connected = True
-                except:
-                    logger.warning(f"{job_uuid} - Could not send request to IO service, trying again in 5 seconds!")
+                except Exception as ex:
+                    logger.warning(f"{job_uuid} - Could not send request to IO service, {ex}, trying again in 5 seconds!")
                     time.sleep(5)
                     retries += 1
 
