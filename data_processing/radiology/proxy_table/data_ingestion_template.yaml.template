@@ -1,0 +1,3 @@
+# copy-paste this template into a data_ingestion_template.yaml before using
+# as a best practice, config.yaml must not be committed to github
+# as it may contain sensitive information about the data.

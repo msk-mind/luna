@@ -3,4 +3,4 @@ __pycache__
 .coverage*
 *env/
 htmlcov/*
-config.yaml
+*.yaml
