@@ -1,0 +1,52 @@
+# copy-paste this template into a data_ingestion_template.yaml before using
+# as a best practice, config.yaml must not be committed to github
+# as it may contain sensitive information about the data.
+
+
+# the name of requestor (required)
+- requestor
+
+# the department to which the requestor belongs (required)
+- requestor_department
+
+# email address of requestor (required)
+- requestor_email
+
+# project name decided by data coordination. example "OV_16-158" (required)
+- project
+
+# source name of input data file. example "xnat" (required)
+- source
+
+# data modality. example "radiology" (required)
+- modality	data modality
+
+# data type within the modality. (required)
+# examples for clinical - "diagnosis", "medication", or "patient"
+# examples for radiology - "CT","MR","PET"
+- data_type
+
+# description of the template defined by the requestor (optional)
+- comments
+
+# the data on which the request was made. example "20201029" (required)
+date
+
+# name to be given to the dataset. example OV_16-158_CT_20201028 (required)
+dataset name
+
+# Type of ETL. examples "clinical_proxy", "radiology_proxy", "radiology_refined" (required)
+etl_type	ETL type;  refer to the ETL table above	x
+
+# input source file. examples "csv", "dcm" (required)
+file_type
+
+# ip or hostname of machine where source data file(s) reside, if applicable (optional)
+host
+
+# file path to the source data file(s). if host is specified, the source data location is determined
+# as host:mount_path (required)
+mount_path
+
+# total number of input data files to process (required)
+files_count
