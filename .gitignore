@@ -3,4 +3,5 @@ __pycache__
 .coverage*
 *env/
 htmlcov/*
-*.yaml
+config.yaml
+data_ingestion_template.yaml
