@@ -1,0 +1,31 @@
+# based on yamale syntax - see https://github.com/23andMe/Yamale
+
+requestor: any(str(required=True))
+
+requestor_department: any(str(required=True))
+
+requestor_email: any(str(required=True))
+
+project: any(str(required=True))
+
+source: any(str(required=True))
+
+modality: enum('clinical','radiology','pathology','genomics')
+
+data_type: enum('diagnosis', 'medication', 'treatment', 'CT', 'MRI', 'PET')
+
+comments: any(str(required=False))
+
+date: timestamp(min='2020-01-01 01:00:00')
+
+dataset_name: any(str(required=True))
+
+etl_type: enum('proxy', 'refined', 'feature')
+
+file_type: enum('csv', 'dcm')
+
+host: any(str(required=False))
+
+mount_path: any(str(required=True))
+
+files_count: int(required=True, min=1)

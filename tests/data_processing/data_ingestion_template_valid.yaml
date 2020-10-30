@@ -1,17 +1,16 @@
 # copy-paste this template into a data_ingestion_template.yaml before using
 # as a best practice, config.yaml must not be committed to github
 # as it may contain sensitive information about the data.
-#
-# See data_ingestion_template_schema.yaml for valid values
+
 
 # the name of requestor
-requestor: jane
+requestor: joe
 
 # the department to which the requestor belongs
 requestor_department: gynocology
 
 # email address of requestor
-requestor_email: jane@mskcc.org
+requestor_email: joe@mskcc.org
 
 # project name decided by data coordination
 project: OV_16-158
@@ -29,15 +28,15 @@ data_type: CT
 comments:
 
 # the data on which the request was made
-date: 20201029
+date: 2020-10-29 01:00:00
 
 # name to be given to the dataset
 dataset_name: OV_16-158_CT_20201028
 
 # Type of ETL
-etl_type: radiology_proxy
+etl_type: proxy
 
-# input source file
+# input source file. examples "csv", "dcm"
 file_type: dcm
 
 # ip or hostname of machine where source data file(s) reside, if applicable
