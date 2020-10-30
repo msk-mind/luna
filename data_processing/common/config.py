@@ -94,3 +94,7 @@ if __name__ == '__main__':
     print(str(c1) + ' ' + str(c1.get_value('$.spark_application_config[:1]["spark.executor.cores"]')))
     print(str(c2) + ' ' + str(c2.get_value('$.spark_application_config[:1]["spark.executor.cores"]')))
     print(str(c3) + ' ' + str(c3.get_value('$.spark_application_config[:1]["doesnt_exist"]')))
+
+    c4 = Config("data_ingestion_template.yaml")
+
+    print(str(c4) + ' ' + str(c4.get_value('$.requestor')))

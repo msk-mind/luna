@@ -4,49 +4,49 @@
 
 
 # the name of requestor (required)
-- requestor
+requestor: jane
 
 # the department to which the requestor belongs (required)
-- requestor_department
+requestor_department: gynocology
 
 # email address of requestor (required)
-- requestor_email
+requestor_email: jane@mskcc.org
 
 # project name decided by data coordination. example "OV_16-158" (required)
-- project
+project: OV_16-158
 
 # source name of input data file. example "xnat" (required)
-- source
+source: xnat
 
 # data modality. example "radiology" (required)
-- modality	data modality
+modality: radiology
 
 # data type within the modality. (required)
 # examples for clinical - "diagnosis", "medication", or "patient"
 # examples for radiology - "CT","MR","PET"
-- data_type
+data_type: CT
 
 # description of the template defined by the requestor (optional)
-- comments
+comments:
 
 # the data on which the request was made. example "20201029" (required)
-date
+date: 20201029
 
 # name to be given to the dataset. example OV_16-158_CT_20201028 (required)
-dataset name
+dataset_name: OV_16-158_CT_20201028
 
 # Type of ETL. examples "clinical_proxy", "radiology_proxy", "radiology_refined" (required)
-etl_type	ETL type;  refer to the ETL table above	x
+etl_type: radiology_proxy
 
 # input source file. examples "csv", "dcm" (required)
-file_type
+file_type: dcm
 
 # ip or hostname of machine where source data file(s) reside, if applicable (optional)
-host
+host:
 
 # file path to the source data file(s). if host is specified, the source data location is determined
 # as host:mount_path (required)
-mount_path
+mount_path: /data
 
 # total number of input data files to process (required)
-files_count
+files_count: 1000000
