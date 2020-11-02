@@ -53,7 +53,7 @@ files_count: 1000000
 # limit socket I/O bandwidth. Set this limit based on available bandwidth between the source
 # and destination servers. The bandwidth can be measured as follows:
 # on source machine, start an iperf3 server
-# $ iperf -s
+# $ iperf3 -s
 # -----------------------------------------------------------
 # Server listening on 5201
 # -----------------------------------------------------------

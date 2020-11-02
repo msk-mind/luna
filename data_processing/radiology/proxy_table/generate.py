@@ -5,6 +5,7 @@ Created on October 29, 2020
 '''
 import click
 
+from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 
 
@@ -24,13 +25,17 @@ def cli(template,
         --template {PATH_TO_TEMPLATE_FILE} \
         --config_file {PATH_TO_CONFIG_FILE}
     """
+    logger = init_logger()
+    logger.info('data_ingestions_template: ' + template)
+    logger.info('config_file: ' + config_file)
+
     # Setup Spark context
     import time
     start_time = time.time()
 
 
-    #spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
-    print(template+' '+config_file)
+    spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
+
     print("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 
