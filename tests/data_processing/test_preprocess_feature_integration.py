@@ -2,7 +2,7 @@ import os, shutil
 import pytest
 from pytest_mock import mocker
 from click.testing import CliRunner
-from data_processing.preprocess_feature import cli, generate_feature_table, lookup_dmp_patient_id
+from data_processing.preprocess_feature import cli, generate_feature_table, get_dmp_from_scan
 from data_processing.common.sparksession import SparkConfig
 
 BASE_DIR = "./tests/data_processing/testdata/"
@@ -15,7 +15,7 @@ runner = CliRunner()
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
     print('------setup------')
-    
+
     monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
 
     spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml', 'test-preprocessing-feature')
@@ -36,7 +36,7 @@ def spark(monkeypatch):
 
 def test_local_feature_table_generation(mocker, spark):
     # mock graph connection helper method
-    mocker.patch('data_processing.preprocess_feature.lookup_dmp_patient_id', side_effect=['P-0019027'])
+    mocker.patch('data_processing.preprocess_feature.get_dmp_from_scan', side_effect=['P-0019027'])
 
     # Test no query, default naming
     # Build Feature Table
@@ -44,8 +44,8 @@ def test_local_feature_table_generation(mocker, spark):
 
     # read and verify correct feature table generated
     feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table-test-name")
-    
-    # Read Delta Table and Verify 
+
+    # Read Delta Table and Verify
     feature_df = spark.read.format("delta").load(feature_table_path)
     assert feature_df.count() == 1
     print ("test_local_feature_table_generation passed.")
@@ -59,7 +59,7 @@ def test_local_feature_table_generation_malformed_query(spark):
 
     # read and verify correct feature table generated
     feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table")
-    
+
     assert not os.path.exists(feature_table_path)
     print ("test_local_feature_table_generation_malformed_query passed.")
 
