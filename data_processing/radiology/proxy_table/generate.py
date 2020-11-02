@@ -5,9 +5,16 @@ Created on October 29, 2020
 '''
 import click
 
+from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
+from pydicom import dcmread
+from io import BytesIO
 
+def parse_dicom_from_delta_record(record):
+    dataset = dcmread(BytesIO(record.content))
+    if len(dataset.keys()) > 10:
+        accum.add(1)
 
 @click.command()
 @click.option('-t', '--template', default=None,
@@ -35,6 +42,34 @@ def cli(template,
 
 
     spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
+
+    accum = spark.sparkContext.accumulator(0)
+
+    # use spark to read data from file system and write to parquet format
+    logger.info("generating binary proxy table... ")
+    dest_dir = "dicom"
+    with CodeTimer(logger, 'delta table create'):
+        spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
+
+        df = spark.read.format("binaryFile"). \
+            option("pathGlobFilter", "*.dcm"). \
+            option("recursiveFileLookup", "true"). \
+            load("mskmind_XNAT")
+
+        df.coalesce(128).write.format(format) \
+            .mode("overwrite") \
+            .save(dest_dir)
+
+    # use spark to read data from delta table into memory
+    with CodeTimer('delta table load', logger):
+        df = spark.read.format(format).load(dest_dir)
+
+    # parse all dicom files
+    with CodeTimer('read and parse dicom', logger):
+        df.foreach(parse_dicom_from_delta_record)
+
+    logger.info("number of dcms processed: " + str(accum.value))
+
 
     print("--- Finished in %s seconds ---" % (time.time() - start_time))
 
