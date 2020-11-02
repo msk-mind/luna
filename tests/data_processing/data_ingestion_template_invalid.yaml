@@ -48,3 +48,5 @@ mount_path: /data
 
 # total number of input data files to process
 files_count: 1000000
+
+bwlimit: 5T

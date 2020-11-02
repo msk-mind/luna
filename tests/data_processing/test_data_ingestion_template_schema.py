@@ -36,3 +36,4 @@ class TestInvalidYaml(YamaleTestCase):
         assert "data_type: 'CAT' not in ('diagnosis', 'medication', 'treatment', 'CT', 'MRI', 'PET')" in \
                str(error_info.value)
         assert "date: '2020-10-29' is not a timestamp" in str(error_info.value)
+        assert "bwlimit: '5T' is not a regex match." in str(error_info.value)

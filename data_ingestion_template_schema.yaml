@@ -29,3 +29,7 @@ host: any(str(required=False))
 mount_path: any(str(required=True))
 
 files_count: int(required=True, min=1)
+
+# The  suffixes  are  as  follows:  "K" (or "KiB") is a kibibyte (1024), "M" (or "MiB") is a mebibyte
+#  (1024*1024), and "G" (or "GiB") is a gibibyte (1024*1024*1024)
+bwlimit: any(regex(r'^(\d+)(K|M|G)$'))

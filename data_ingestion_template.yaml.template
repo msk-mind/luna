@@ -49,3 +49,23 @@ mount_path: /data
 
 # total number of input data files to process
 files_count: 1000000
+
+# limit socket I/O bandwidth. Set this limit based on available bandwidth between the source
+# and destination servers. The bandwidth can be measured as follows:
+# on source machine, start an iperf3 server
+# $ iperf -s
+# -----------------------------------------------------------
+# Server listening on 5201
+# -----------------------------------------------------------
+# on the destination machine, start an iperf3 client
+# iperf3 -c <source_machine> -p <listening_port>
+# Connecting to host <source_machine>, port 5201
+# - - - - - - - - - - - - - - - - - - - - - - - - -
+# [ ID] Interval           Transfer     Bandwidth       Retr
+# [  4]   0.00-10.00  sec  10.7 GBytes  9.20 Gbits/sec    0             sender
+# [  4]   0.00-10.00  sec  10.7 GBytes  9.19 Gbits/sec                  receiver
+# iperf Done.
+#
+# be nice and don't use all available bandwidth. Use up to 50% available bandwidth. The amount specified
+# here is the total bandwidth that will be used by all processes that are spawned for the data transfer.
+bwlimit: 5G
