@@ -13,8 +13,8 @@ from io import BytesIO
 
 def parse_dicom_from_delta_record(record):
     dataset = dcmread(BytesIO(record.content))
-    if len(dataset.keys()) > 10:
-        accum.add(1)
+    print (dataset)
+    exit()
 
 @click.command()
 @click.option('-t', '--template', default=None,
@@ -54,7 +54,7 @@ def cli(template,
         df = spark.read.format("binaryFile"). \
             option("pathGlobFilter", "*.dcm"). \
             option("recursiveFileLookup", "true"). \
-            load("mskmind_XNAT")
+            load("/gpfs/mskmindhdp_emc/data/radiology/BC_16-512_MR_20201028_UWpYXajT5F")
 
         df.coalesce(128).write.format(format) \
             .mode("overwrite") \
@@ -66,7 +66,9 @@ def cli(template,
 
     # parse all dicom files
     with CodeTimer(logger, 'read and parse dicom'):
-        df.foreach(parse_dicom_from_delta_record)
+        header = df.foreach(parse_dicom_from_delta_record)
+    
+    df.write.format(format).mode("overwrite").save("dicom_header")
 
     logger.info("number of dcms processed: " + str(accum.value))
 
