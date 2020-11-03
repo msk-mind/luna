@@ -16,4 +16,4 @@ class CodeTimer:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.took = (timeit.default_timer() - self.start)
-        self.logger('Code block' + self.name + ' took: ' + str(self.took) + 's')
+        self.logger.info('Code block' + self.name + ' took: ' + str(self.took) + 's')
