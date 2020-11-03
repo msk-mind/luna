@@ -43,8 +43,11 @@ file_type: dcm
 host:
 
 # file path to the source data file(s). if host is specified, the source data location is determined
-# as host:mount_path
-mount_path: /data
+# as host:source_path
+source_path: /data
+
+# file path to location where the data should be transferred on the destination machine.
+destination_path: /data
 
 # total number of input data files to process
 files_count: 1000000

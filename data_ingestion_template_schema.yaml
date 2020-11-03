@@ -26,7 +26,9 @@ file_type: enum('csv', 'dcm')
 
 host: any(str(required=False))
 
-mount_path: any(str(required=True))
+source_path: any(str(required=True))
+
+destination_path: any(str(required=True))
 
 files_count: int(required=True, min=1)
 
