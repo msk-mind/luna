@@ -39,7 +39,7 @@ def cli(template,
     # Setup Spark context
     import time
     start_time = time.time()
-
+    format = 'delta'
 
     spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
 
@@ -61,11 +61,11 @@ def cli(template,
             .save(dest_dir)
 
     # use spark to read data from delta table into memory
-    with CodeTimer('delta table load', logger):
+    with CodeTimer(logger, 'delta table load'):
         df = spark.read.format(format).load(dest_dir)
 
     # parse all dicom files
-    with CodeTimer('read and parse dicom', logger):
+    with CodeTimer(logger, 'read and parse dicom'):
         df.foreach(parse_dicom_from_delta_record)
 
     logger.info("number of dcms processed: " + str(accum.value))
