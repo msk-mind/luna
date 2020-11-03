@@ -50,6 +50,9 @@ source_path: /data
 # file path to location where the data should be transferred on the destination machine.
 destination_path: /data
 
+# a comma separated list of files types to exclude. for example, exclude: raw,mha. leave empty to include all files.
+exclude:
+
 # a file containing names of files and sub-directories that exist under the source_path of the remote system and that
 # need to be transferred. One name should be placed on each line. An easy way to generate such a file is by changing
 # directory to the source_path on the remote file system and executing 'ls -1 . > chunks.txt' and then moving chunks.txt
@@ -58,6 +61,10 @@ chunk_file: chunks.txt
 
 # file path to location where the data should be transferred on the destination machine.
 destination_path: /data
+
+
+# a comma separated list of files types/extensions to exclude. leave empty to include all files.
+exclude: raw,mha,mhd
 
 
 # total number of input data files to process

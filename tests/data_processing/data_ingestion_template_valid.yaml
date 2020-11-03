@@ -49,6 +49,9 @@ source_path: /data
 # file path to location where the data should be transferred on the destination machine.
 destination_path: /data
 
+# a comma separated list of files types/extensions to exclude. leave empty to include all files.
+exclude: mha,mhd,raw
+
 # total number of input data files to process
 files_count: 1000000
 
