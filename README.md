@@ -20,12 +20,14 @@ make grpt template-file=your_data_ingestion_template_file_name
    
 TODO: Development steps for radiology proxy table development   
 
-1. verify data ingestion template against schema (python code, no dependencies)
+1. arfath - verify data ingestion template against schema (python code, no dependencies)
 
-2. load data_ingestion_template into env_vars (python code)
+2. druv - load data_ingestion_template into env_vars (python code)
 
-3. write transfer bash script with idempotency (depends on 1)
+3. arfath - write transfer bash script with idempotency (depends on 1)
 
-4. write proxy table generation code (no dependencies, assumes raw files are local)
+4. doori, andy - write proxy table generation code with idempotency (no dependencies, assumes raw files are local)
 
-5. write unit tests for data transfer and proxy table generation   
+5. arfath - write unit tests for data transfer
+
+6. doori, andy - write unit tests for proxy table generation   
