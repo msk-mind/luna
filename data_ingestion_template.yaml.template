@@ -53,6 +53,9 @@ mount_path: /data
 # total number of input data files to process
 files_count: 1000000
 
+# TODO data size (in bytes). Document find command here to get data size from source system"
+
+
 # limit socket I/O bandwidth. Set this limit based on available bandwidth between the source
 # and destination servers. The bandwidth can be measured as follows:
 # on source machine, start an iperf3 server
