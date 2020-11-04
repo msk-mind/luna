@@ -11,6 +11,7 @@ from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from pydicom import dcmread
 import pydicom
+import time
 from io import BytesIO
 import os, shutil
 import json
@@ -19,7 +20,6 @@ import subprocess
 from filehash import FileHash
 from distutils.util import strtobool
 
-ENVIRONMENTAL_VARS = ['host', 'source_path', 'destination_path',  'files_count']
 
 
 class ByteOpenContext(object):
@@ -77,7 +77,6 @@ def parse_dicom_from_delta_record(record):
     kv['dicom_record_uuid'] = dicom_record_uuid 
 
     with open("jsons/"+filename, 'w') as f:
-        print("write " + "jsons/"+filename)
         json.dump(kv, f)
 
 
@@ -101,49 +100,69 @@ def cli(template_file, config_file, skip_transfer):
         --skip_transfer 
         
     """
+    format_type = 'delta'
+    dest_dir = "dicom"
+
     logger = init_logger()
     logger.info('data_ingestions_template: ' + template_file)
     logger.info('config_file: ' + config_file)
     logger.info('skip transfer: ' + skip_transfer)
-    # Setup Spark context
-    import time
-    start_time = time.time()
-    format = 'delta'
-    spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
-
-    # read template_file yaml and set environmental variables for subprocesses
-    with open(template_file, 'r') as template_file_stream:
-        template_dict = yaml.safe_load(template_file_stream)
     
-    print(template_dict)
+    start_time = time.time()
+    
+    # setup env variables
+    setup_environment_from_yaml(template_file)
 
-    # identify fields to set as env variables
-    for var in ENVIRONMENTAL_VARS:
-        os.environ[var] = str(template_dict[var])
+    # write template file to manifest_yaml under dest_dir
+    shutil.copy(template_file, dest_dir)
 
     # subprocess call will preserve environmental variables set by the parent thread.
     if not bool(strtobool(skip_transfer)):
-        # subprocess - transfer files if needed
-        transfer_cmd = "time ./data_processing/radiology/proxy_table/transfer_files.sh $({0})".format(template_file)
-        subprocess.call(transfer_cmd, shell=True)
-        print("--- Finished transfering files in %s seconds ---" % (time.time() - start_time))
-
-        # reset timer if transferred files to get accurate proxy building time
-        start_time = time.time()
+        transfer_files(logger)
 
     # subprocess - create proxy table
     if not os.path.exists("jsons"):
         os.makedirs("jsons")
 
-    create_proxy_table(spark, logger, "dicom", format)
+    create_proxy_table(config_file, logger, dest_dir, format_type)
     print("--- Finished building proxy table in %s seconds ---" % (time.time() - start_time))
 
-def create_proxy_table(spark, logger, dest_dir, format):
+def setup_environment_from_yaml(template_file):
+     # read template_file yaml and set environmental variables for subprocesses
+    with open(template_file, 'r') as template_file_stream:
+        template_dict = yaml.safe_load(template_file_stream)
+    
+    print(template_dict)
 
-    # use spark to read data from file system and write to parquet format
+    # add all fields from template as env variables
+    for var in template_dict:
+        os.environ[var] = str(template_dict[var])
+
+def transfer_files(logger):
+    start_time = time.time()
+    transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
+    
+    try:
+        exit_code = subprocess.call(transfer_cmd)
+        print("--- Finished transfering files in %s seconds ---" % (time.time() - start_time))
+    except Exception as err:
+        logger.error(("Error Transfering files with rsync" + str(err)))
+        return 
+        
+    if exit_code != 0:
+        logger.error(("Error Transfering files - Non-zero exit code: " + str(exit_code)))
+    
+    return 
+
+
+
+def create_proxy_table(config_file, logger, dest_dir, format_type):
+
+    spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
+
+    # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
 
-    # dest_dir = "dicom"
     with CodeTimer(logger, 'delta table create'):
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
 
@@ -152,7 +171,7 @@ def create_proxy_table(spark, logger, dest_dir, format):
             option("recursiveFileLookup", "true"). \
             load(os.environ["destination_path"])
 
-        df.coalesce(128).write.format(format) \
+        df.coalesce(128).write.format(format_type) \
             .mode("overwrite") \
             .save(dest_dir)
     
@@ -162,7 +181,7 @@ def create_proxy_table(spark, logger, dest_dir, format):
 
     # save parsed json headers to tables
     header = spark.read.json("jsons")
-    header.write.format(format) \
+    header.write.format(format_type) \
         .mode("overwrite") \
         .option("mergeSchema", "true") \
         .save("dicom_header")
