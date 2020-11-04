@@ -14,6 +14,7 @@ import os, shutil
 import json
 import yaml, os
 import subprocess
+from distutils.util import strtobool
 
 ENVIRONMENTAL_VARS = ['host', 'source_path', 'destination_path',  'files_count']
 
@@ -50,7 +51,7 @@ def cli(template_file, config_file, skip_transfer):
     logger = init_logger()
     logger.info('data_ingestions_template: ' + template_file)
     logger.info('config_file: ' + config_file)
-    logger.info('skip transfer: ' + str(skip_transfer))
+    logger.info('skip transfer: ' + skip_transfer)
     # Setup Spark context
     import time
     start_time = time.time()
@@ -68,7 +69,7 @@ def cli(template_file, config_file, skip_transfer):
         os.environ[var] = str(template_dict[var])
 
     # subprocess call will preserve environmental variables set by the parent thread.
-    if not bool(skip_transfer):
+    if not bool(strtobool(skip_transfer)):
         # subprocess - transfer files if needed
         transfer_cmd = "time ./data_processing/radiology/proxy_table/transfer_files.sh $({0})".format(template_file)
         subprocess.call(transfer_cmd, shell=True)
@@ -85,7 +86,6 @@ def cli(template_file, config_file, skip_transfer):
     print("--- Finished building proxy table in %s seconds ---" % (time.time() - start_time))
 
 def create_proxy_table(spark, logger, dest_dir, format):
-    accum = spark.sparkContext.accumulator(0)
 
     # use spark to read data from file system and write to parquet format
     logger.info("generating binary proxy table... ")
