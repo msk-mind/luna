@@ -10,11 +10,18 @@ from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from pydicom import dcmread
 from io import BytesIO
+import os, shutil
+import json
 
 def parse_dicom_from_delta_record(record):
     dataset = dcmread(BytesIO(record.content))
-    if len(dataset.keys()) > 10:
-        accum.add(1)
+    kv = {}
+    for elem in dataset.iterall():
+        kv[elem.keyword] = elem.repval
+    
+    dirs, filename = os.path.split(record.path)
+    with open("jsons/"+filename, 'w') as f:
+        json.dump(kv, f)
 
 @click.command()
 @click.option('-t', '--template', default=None,
@@ -43,8 +50,6 @@ def cli(template,
 
     spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
 
-    accum = spark.sparkContext.accumulator(0)
-
     # use spark to read data from file system and write to parquet format
     logger.info("generating binary proxy table... ")
     dest_dir = "dicom"
@@ -54,7 +59,7 @@ def cli(template,
         df = spark.read.format("binaryFile"). \
             option("pathGlobFilter", "*.dcm"). \
             option("recursiveFileLookup", "true"). \
-            load("mskmind_XNAT")
+            load("/Users/rosed2/Downloads/mskmind_test")
 
         df.coalesce(128).write.format(format) \
             .mode("overwrite") \
@@ -65,13 +70,29 @@ def cli(template,
         df = spark.read.format(format).load(dest_dir)
 
     # parse all dicom files
+    if not os.path.exists("jsons"):
+        os.makedirs("jsons")
+
     with CodeTimer(logger, 'read and parse dicom'):
         df.foreach(parse_dicom_from_delta_record)
 
-    logger.info("number of dcms processed: " + str(accum.value))
+    # save parsed json headers to tables
+    header = spark.read.json("jsons")
+    header.write.format(format) \
+	.mode("overwrite") \
+	.option("mergeSchema", "true") \
+	.save("dicom_header")
 
+    if os.path.exists("jsons"):
+        shutil.rmtree("jsons")
 
     print("--- Finished in %s seconds ---" % (time.time() - start_time))
+
+    print("Total dicom headers: ", str(df.count()))
+    df = spark.read.format("delta").load("dicom_header")
+    df.printSchema()
+    df.show(2, False)
+
 
 
 if __name__ == "__main__":
