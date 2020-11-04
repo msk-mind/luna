@@ -9,21 +9,41 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from pydicom import dcmread
+import pydicom
 from io import BytesIO
 import os, shutil
 import json
 import yaml, os
 import subprocess
+from filehash import FileHash
 
 ENVIRONMENTAL_VARS = ['host', 'source_path', 'destination_path',  'files_count']
 
 def parse_dicom_from_delta_record(record):
+    spark_url_path  = record.path 
+    dirs, filename  = os.path.split(spark_url_path)
+    file_path       = spark_url_path.split(':')[-1]
+
     dataset = dcmread(BytesIO(record.content))
+
     kv = {}
+    types = set()
+
     for elem in dataset.iterall():
-        kv[elem.keyword] = elem.repval
-    
-    dirs, filename = os.path.split(record.path)
+        types.add(type(elem.value))
+        if type(elem.value) in [int, float, str]: 
+            kv[elem.keyword] = str(elem.value)
+        if type(elem.value) in [pydicom.valuerep.DSfloat, pydicom.valuerep.DSdecimal, pydicom.valuerep.IS, pydicom.valuerep.PersonName, pydicom.uid.UID]: 
+            kv[elem.keyword] = str(elem.value)
+        if type(elem.value) in [list, pydicom.multival.MultiValue]:
+            kv[elem.keyword] = "//".join([str(x) for x in elem.value])
+        # not sure how to handle a sequence!
+        # if type(elem.value) in [pydicom.sequence.Sequence]: print ( elem.keyword, type(elem.value), elem.value)
+
+    dcm_hash = FileHash('sha256').hash_file(file_path)
+    dicom_record_uuid = f'DICOM-{dcm_hash}'
+    kv['dicom_record_uuid'] = dicom_record_uuid 
+
     with open("jsons/"+filename, 'w') as f:
         print("write " + "jsons/"+filename)
         json.dump(kv, f)
