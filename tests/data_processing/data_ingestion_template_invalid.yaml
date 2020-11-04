@@ -52,7 +52,12 @@ destination_path: /data
 # a comma separated list of files types/extensions to exclude. for example, leave empty to include all files.
 exclude: mah,mhd,raw
 
-# total number of input data files to process
+# total number of input data files to process. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
 files_count: 1000000
+
+# total number of bytes to be transfered. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
+data_size: 291337979
 
 bwlimit: 5T

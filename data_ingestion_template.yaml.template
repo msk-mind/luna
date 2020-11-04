@@ -67,10 +67,13 @@ destination_path: /data
 exclude: raw,mha,mhd
 
 
-# total number of input data files to process
+# total number of input data files to process. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
 files_count: 1000000
 
-# TODO data size (in bytes). Document find command here to get data size from source system"
+# total number of bytes to be transfered. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
+data_size: 291337979
 
 
 # limit socket I/O bandwidth. Set this limit based on available bandwidth between the source

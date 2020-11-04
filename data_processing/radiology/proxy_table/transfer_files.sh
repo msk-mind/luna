@@ -11,7 +11,14 @@ exit_code=0
 bw=$BWLIMIT
 num_procs=${bw%?}
 
-# transfer files
+# TODO: looks like the -h option can be removed, it is for help
+# transfer whole files without delta-xfer algorithm from specified source location to destination location.
+# spawn one process per unit of network bandwidth.
+# delete any files in the destination location that are not in the source location
+# output stats at the end
+# output a log file
+# exclude transfer of any files with the excluded file extensions
+# limit each process's network utilization to the specified bwlimit
 time cat $CHUNK_FILE | xargs -I {} -P $num_procs -n 1 \
 rsync -ahW --delete --stats --log-file=$LOG_FILE \
 --exclude '*.'{$EXCLUDES} \
@@ -28,7 +35,7 @@ let exit_code=$?+$exit_code
 echo "exit code after write manifest file = $exit_code" >> $LOG_FILE
 
 # verify transfer
-    # verify and log exit codes for all processes above
     # verify and log transfer data size (bytes)
     # verify and log and log file counts
     # verify and log verification exit codes
+    # verify and log exit codes for all processes above
