@@ -97,7 +97,7 @@ def create_proxy_table(spark, logger, dest_dir, format):
         df = spark.read.format("binaryFile"). \
             option("pathGlobFilter", "*.dcm"). \
             option("recursiveFileLookup", "true"). \
-            load("/Users/rosed2/Downloads/mskmind_test")
+            load(os.environ["destination_path"])
 
         df.coalesce(128).write.format(format) \
             .mode("overwrite") \
@@ -117,7 +117,8 @@ def create_proxy_table(spark, logger, dest_dir, format):
     if os.path.exists("jsons"):
         shutil.rmtree("jsons")
 
-    print("Total dicom headers: ", str(df.count()))
+    processed_count = df.count()
+    print("Processed {} dicom headers out of total {} dicom files".format(processed_count, os.environ["files_count"]))
     df = spark.read.format("delta").load("dicom_header")
     df.printSchema()
     df.show(2, False)
