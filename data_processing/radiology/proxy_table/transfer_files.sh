@@ -5,7 +5,30 @@ echo ">>>> writing data transfer logs to $LOG_FILE..."
 echo "Running data_processing/radiology/proxy_table/transfer_files.sh with $1" >> $LOG_FILE;
 exit_code=0
 
-# TODO: validate data ingestion template
+# validate env vars
+[ "${BWLIMIT}" ]
+let exit_code = $? + $exit_code
+[ "${CHUNK_FILE}" ]
+let exit_code = $? + $exit_code
+[ "${EXCLUDES}" ]
+let exit_code = $? + $exit_code
+[ "${HOST}" ]
+let exit_code = $? + $exit_code
+[ "${SOURCE_PATH}" ]
+let exit_code = $? + $exit_code
+[ "${DESTINATION_PATH}" ]
+let exit_code = $? + $exit_code
+[ "${FILE_COUNT}" ]
+let exit_code = $? + $exit_code
+[ "${DATA_SIZE}" ]
+let exit_code = $? + $exit_code
+
+if exit_code
+then
+        { echo "validated environment variables" }
+else
+        { echo "file transfer failed. missing required environment variables." ; exit 1 ; }
+fi
 
 # set num_procs equal to magnitude of bandwidth.
 # i.e. num_proc = bwlimit with last character stripped
@@ -42,7 +65,7 @@ echo "exit code after file_count verification = $exit_code" >> $LOG_FILE
 
 # verify and log transfer data size (bytes)
 data_size = $(find $DESTINATION_PATH -type f -name "*" | xargs du -ac)
-[ $FILE_COUNT == $file_count ];
+[ $DATA_SIZE == $data_size ];
 
 let exit_code = $?+$exit_code
 echo "exit code after data_size verification = $exit_code" >> $LOG_FILE

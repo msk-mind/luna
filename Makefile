@@ -51,6 +51,7 @@ coverage:
 	open htmlcov/index.html
 
 grpt:
+    # TODO: validate data ingestion template
 	python load_envvars.py
 	time ./data_processing/radiology/proxy_table/transfer_files.sh $(template-file)
 	time python -m data_processing.radiology.proxy_table.generate -t data_ingestion_template.yaml -f config.yaml
