@@ -3,8 +3,7 @@ echo ">>>> writing data transfer logs to $LOG_FILE..."
 echo "Running data_processing/radiology/proxy_table/transfer_files.sh with $1" >> $LOG_FILE;
 exit_code=0
 
-# verify data ingestion template
-
+# TODO: verify data ingestion template
 
 # set num_procs equal to magnitude of bandwidth.
 # i.e. num_proc = bwlimit with last character stripped out
@@ -28,14 +27,30 @@ $HOST:$SOURCE_PATH/{} $DESTINATION_PATH/
 let exit_code=$?+$exit_code
 echo "exit code after rsync = $exit_code" >> $LOG_FILE
 
+# verify and log and log file counts
+file_count=$(find mskmind_XNAT -type  f  -name "*" | wc -l)
+[ $FILE_COUNT == $file_count ];
+
+let exit_code=$?+$exit_code
+echo "exit code after file_count verification = $exit_code" >> $LOG_FILE
+
+# verify and log transfer data size (bytes)
+data_size=$(find $DESTINATION_PATH -type f -name "*" | xargs du -ac)
+[ $FILE_COUNT == $file_count ];
+
+let exit_code=$?+$exit_code
+echo "exit code after data_size verification = $exit_code" >> $LOG_FILE
+
 # write manifest file
 cp $1 $DESTINATION_PATH/manifest.yaml
 
 let exit_code=$?+$exit_code
 echo "exit code after write manifest file = $exit_code" >> $LOG_FILE
 
-# verify transfer
-    # verify and log transfer data size (bytes)
-    # verify and log and log file counts
-    # verify and log verification exit codes
-    # verify and log exit codes for all processes above
+# the end
+if exit_code
+then
+        { echo "file transfer completed successfully!" ; exit 0 ; }
+else
+        { echo "file transfer failed. See $LOG_FILE" ; exit 1 ; }
+fi
