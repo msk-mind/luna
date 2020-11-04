@@ -34,7 +34,7 @@ def parse_dicom_from_delta_record(record):
                    "See data_processing/radiology/proxy_table/data_ingestion_template.yaml.template")
 @click.option('-f', '--config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-s', '--skip_transfer', is_flag=True,
+@click.option('-s', '--skip_transfer',
               help='do not transfer files from xnat mount, use existing files located at (by default): /dicom')
 def cli(template_file, config_file, skip_transfer):
     """
@@ -50,7 +50,7 @@ def cli(template_file, config_file, skip_transfer):
     logger = init_logger()
     logger.info('data_ingestions_template: ' + template_file)
     logger.info('config_file: ' + config_file)
-
+    logger.info('skip transfer: ' + str(skip_transfer))
     # Setup Spark context
     import time
     start_time = time.time()
@@ -68,7 +68,7 @@ def cli(template_file, config_file, skip_transfer):
         os.environ[var] = str(template_dict[var])
 
     # subprocess call will preserve environmental variables set by the parent thread.
-    if not skip_transfer:
+    if not bool(skip_transfer):
         # subprocess - transfer files if needed
         transfer_cmd = "time ./data_processing/radiology/proxy_table/transfer_files.sh $({0})".format(template_file)
         subprocess.call(transfer_cmd, shell=True)
