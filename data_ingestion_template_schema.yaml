@@ -32,7 +32,7 @@ destination_path: any(str(required=True))
 
 exclude:  any(str(required=True))
 
-files_count: int(required=True, min=1)
+file_count: int(required=True, min=1)
 
 data_size: int(required=True, min=0)
 
