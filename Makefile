@@ -9,7 +9,7 @@ help:
 	@echo "test-all - run tests on every Python version with tox"
 	@echo "coverage - check code coverage quickly with the default Python"
 	@echo "grpt - generate radiology proxy table."
-	@echo "Usage: make grpt template-file=<data_ingestion_template_file_name> config-file=<config_file> use_files_from_path=<path_to_dicom_images>"
+	@echo "Usage: make grpt template-file=<data_ingestion_template_file_name> config-file=<config_file> skip-transfer=<true/false>"
 
 clean: clean-build clean-pyc
 
