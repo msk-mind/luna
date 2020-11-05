@@ -26,9 +26,15 @@ file_type: enum('csv', 'dcm')
 
 host: any(str(required=False))
 
-mount_path: any(str(required=True))
+source_path: any(str(required=True))
 
-files_count: int(required=True, min=1)
+destination_path: any(str(required=True))
+
+exclude:  any(str(required=False))
+
+file_count: int(required=True, min=1)
+
+data_size: int(required=True, min=0)
 
 # The  suffixes  are  as  follows:  "K" (or "KiB") is a kibibyte (1024), "M" (or "MiB") is a mebibyte
 #  (1024*1024), and "G" (or "GiB") is a gibibyte (1024*1024*1024)

@@ -44,16 +44,36 @@ file_type: dcm
 host:
 
 # file path to the source data file(s). if host is specified, the source data location is determined
-# as host:mount_path, else the source data location is determined simply as mount_path.
-mount_path: /data
+# as host:source_path, else the source data location is determined simply as source_path.
+source_path: /data
 
-# TODO file path to the destination directory on the local file system
+# file path to location where the data should be transferred on the destination machine.
+destination_path: /data
+
+# a comma separated list of files types to exclude. for example, exclude: raw,mha. leave empty to include all files.
+exclude:
+
+# a file containing names of files and sub-directories that exist under the source_path of the remote system and that
+# need to be transferred. One name should be placed on each line. An easy way to generate such a file is by changing
+# directory to the source_path on the remote file system and executing 'ls -1 . > chunks.txt' and then moving chunks.txt
+# to the destination file system.
+chunk_file: chunks.txt
+
+# file path to location where the data should be transferred on the destination machine.
+destination_path: /data
 
 
-# total number of input data files to process
-files_count: 1000000
+# a comma separated list of files types/extensions to exclude. leave empty to include all files.
+exclude: raw,mha,mhd
 
-# TODO data size (in bytes). Document find command here to get data size from source system"
+
+# total number of input data files to process. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
+file_count: 1000000
+
+# total number of bytes to be transfered. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
+data_size: 291337979
 
 
 # limit socket I/O bandwidth. Set this limit based on available bandwidth between the source

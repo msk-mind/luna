@@ -43,10 +43,21 @@ file_type: dcm
 host:
 
 # file path to the source data file(s). if host is specified, the source data location is determined
-# as host:mount_path
-mount_path: /data
+# as host:source_path
+source_path: /data
 
-# total number of input data files to process
-files_count: 1000000
+# file path to location where the data should be transferred on the destination machine.
+destination_path: /data
+
+# a comma separated list of files types/extensions to exclude. leave empty to include all files.
+exclude: mha,mhd,raw
+
+# total number of input data files to process. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
+file_count: 1000000
+
+# total number of bytes to be transfered. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
+data_size: 291337979
 
 bwlimit: 5G
