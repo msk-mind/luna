@@ -11,6 +11,8 @@ from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType
+from data_processing.common.EnsureByteContext import EnsureByteContext 
+
 import pydicom
 import time
 from io import BytesIO
@@ -23,39 +25,14 @@ from distutils.util import strtobool
 
 logger = init_logger()
 
-class ByteOpenContext(object):
-    def __init__(self):
-        print ("Enabling byte IO reads")
-    def __enter__(self):
-        # Code to start a new transaction
-        import builtins
-        import io
-        if not hasattr(builtins, "default_open"): 
-            print ("Reconfigurating [builtins] to have default_open() attribute")
-            builtins.default_open = builtins.open
-        def io_open(*args, **kwargs):
-            print ("__io_open__(): ", args, kwargs)
-            if type(args[0])==io.BytesIO: return io.BufferedReader(args[0])
-            else: return builtins.default_open(*args, **kwargs)
-        builtins.io_open = io_open
-        print ("Reconfigurating [builtins] to use io_open() attribute")
-        builtins.open = builtins.io_open
-        return self
-    def __exit__(self, type, value, traceback):
-        import builtins
-        print ("Reconfigurating [builtins] to use default_open() attribute")
-        builtins.open = builtins.default_open
-
 
 def generate_uuid(path, content):
 
     file_path = path.split(':')[-1]
+    content = BytesIO(content)
 
-    with ByteOpenContext():
-        dcm_hash = FileHash('sha256').hash_file(BytesIO(content))
-    dcm_hash_file = FileHash('sha256').hash_file(file_path)
-
-    assert dcm_hash == dcm_hash_file
+    with EnsureByteContext():
+        dcm_hash = FileHash('sha256').hash_file(content)
 
     dicom_record_uuid = f'DICOM-{dcm_hash}'
     return dicom_record_uuid
