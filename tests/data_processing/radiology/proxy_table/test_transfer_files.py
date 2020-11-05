@@ -44,7 +44,7 @@ def env():
     yield env
 
     print('------teardown------')
-    #shutil.rmtree(os.environ.get('DESTINATION_PATH'))
+    shutil.rmtree(os.environ.get('DESTINATION_PATH'))
 
 
 '''
@@ -69,7 +69,7 @@ def test_transfer_files(env):
     assert os.path.exists(os.getenv('DESTINATION_PATH')+'/test1.mha')
     assert os.path.exists(os.getenv('DESTINATION_PATH')+'/test1.mhd')
     assert os.path.exists(os.getenv('DESTINATION_PATH')+'/test1.raw')
-'''
+
 
 
 def test_transfer_files(env):
@@ -94,3 +94,4 @@ def test_transfer_files(env):
     assert os.path.exists(os.getenv('DESTINATION_PATH')+'/source/test1.mha')
     assert not os.path.exists(os.getenv('DESTINATION_PATH')+'/source/test1.mhd')
     assert not os.path.exists(os.getenv('DESTINATION_PATH')+'/source/test1.raw')
+'''

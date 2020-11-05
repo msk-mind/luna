@@ -59,7 +59,7 @@ num_procs=${bw%?}
 # limit each process's network utilization to the specified bwlimit
 time cat $CHUNK_FILE | xargs -I {} -P $num_procs -n 1 \
 rsync -ahW --delete --stats --log-file=$LOG_FILE \
---exclude '*.'{$EXCLUDES} \
+--exclude='*.'{$EXCLUDES} \
 --bwlimit=$BWLIMIT  \
 $HOST:$SOURCE_PATH/{} $DESTINATION_PATH
 
