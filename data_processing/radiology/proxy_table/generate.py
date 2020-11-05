@@ -9,7 +9,8 @@ import click
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
-from pydicom import dcmread
+from pyspark.sql.functions import udf, lit
+from pyspark.sql.types import StringType
 import pydicom
 import time
 from io import BytesIO
@@ -20,7 +21,7 @@ import subprocess
 from filehash import FileHash
 from distutils.util import strtobool
 
-
+logger = init_logger()
 
 class ByteOpenContext(object):
     def __init__(self):
@@ -45,13 +46,26 @@ class ByteOpenContext(object):
         print ("Reconfigurating [builtins] to use default_open() attribute")
         builtins.open = builtins.default_open
 
+
+def generate_uuid(path, content):
+
+    file_path = path.split(':')[-1]
+
+    with ByteOpenContext():
+        dcm_hash = FileHash('sha256').hash_file(BytesIO(content))
+    dcm_hash_file = FileHash('sha256').hash_file(file_path)
+
+    assert dcm_hash == dcm_hash_file
+
+    dicom_record_uuid = f'DICOM-{dcm_hash}'
+    return dicom_record_uuid
+
+
 def parse_dicom_from_delta_record(record):
     
-    spark_url_path  = record.path 
-    dirs, filename  = os.path.split(spark_url_path)
-    file_path       = spark_url_path.split(':')[-1]
+    dirs, filename  = os.path.split(record.path)
 
-    dataset = dcmread(BytesIO(record.content))
+    dataset = pydicom.dcmread(BytesIO(record.content))
 
     kv = {}
     types = set()
@@ -67,14 +81,7 @@ def parse_dicom_from_delta_record(record):
         # not sure how to handle a sequence!
         # if type(elem.value) in [pydicom.sequence.Sequence]: print ( elem.keyword, type(elem.value), elem.value)
 
-    with ByteOpenContext():
-        dcm_hash = FileHash('sha256').hash_file(BytesIO(record.content))
-    dcm_hash_file = FileHash('sha256').hash_file(file_path)
-
-    assert dcm_hash == dcm_hash_file
-
-    dicom_record_uuid = f'DICOM-{dcm_hash}'
-    kv['dicom_record_uuid'] = dicom_record_uuid 
+    kv['dicom_record_uuid'] = record.dicom_record_uuid 
 
     with open("jsons/"+filename, 'w') as f:
         json.dump(kv, f)
@@ -97,12 +104,9 @@ def cli(template_file, config_file, skip_transfer):
         python -m data_processing.radiology.proxy_table.generate \
         --template_file {PATH_TO_TEMPLATE_FILE} \
         --config_file {PATH_TO_CONFIG_FILE}
-        --skip_transfer 
+        --skip_transfer true
         
     """
-    format_type = 'delta'
-    dest_dir = "dicom"
-
     logger = init_logger()
     logger.info('data_ingestions_template: ' + template_file)
     logger.info('config_file: ' + config_file)
@@ -114,17 +118,19 @@ def cli(template_file, config_file, skip_transfer):
     setup_environment_from_yaml(template_file)
 
     # write template file to manifest_yaml under dest_dir
-    shutil.copy(template_file, dest_dir)
+    if not os.path.exists(os.environ["dataset_name"]):
+        os.makedirs(os.environ["dataset_name"])        
+    shutil.copy(template_file, os.environ["dataset_name"])
 
     # subprocess call will preserve environmental variables set by the parent thread.
     if not bool(strtobool(skip_transfer)):
-        transfer_files(logger)
+        transfer_files()
 
     # subprocess - create proxy table
     if not os.path.exists("jsons"):
         os.makedirs("jsons")
 
-    create_proxy_table(config_file, logger, dest_dir, format_type)
+    create_proxy_table(config_file)
     print("--- Finished building proxy table in %s seconds ---" % (time.time() - start_time))
 
 def setup_environment_from_yaml(template_file):
@@ -138,7 +144,7 @@ def setup_environment_from_yaml(template_file):
     for var in template_dict:
         os.environ[var] = str(template_dict[var])
 
-def transfer_files(logger):
+def transfer_files():
     start_time = time.time()
     transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
     
@@ -155,13 +161,15 @@ def transfer_files(logger):
     return 
 
 
-
-def create_proxy_table(config_file, logger, dest_dir, format_type):
+def create_proxy_table(config_file):
 
     spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
 
     # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
+
+    dicom_path = os.path.join(os.environ["dataset_name"], "table", "dicom") 
+    dicom_header_path = os.path.join(os.environ["dataset_name"], "table", "dicom_header")
 
     with CodeTimer(logger, 'delta table create'):
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
@@ -171,9 +179,12 @@ def create_proxy_table(config_file, logger, dest_dir, format_type):
             option("recursiveFileLookup", "true"). \
             load(os.environ["destination_path"])
 
-        df.coalesce(128).write.format(format_type) \
+        generate_uuid_udf = udf(generate_uuid, StringType())
+        df = df.withColumn("dicom_record_uuid", lit(generate_uuid_udf(df.path, df.content)))
+
+        df.coalesce(128).write.format(os.environ["format_type"]) \
             .mode("overwrite") \
-            .save(dest_dir)
+            .save(dicom_path)
     
     # parse all dicom files
     with CodeTimer(logger, 'read and parse dicom'):
@@ -181,17 +192,18 @@ def create_proxy_table(config_file, logger, dest_dir, format_type):
 
     # save parsed json headers to tables
     header = spark.read.json("jsons")
-    header.write.format(format_type) \
+    header.write.format(os.environ["format_type"]) \
         .mode("overwrite") \
         .option("mergeSchema", "true") \
-        .save("dicom_header")
+        .save(dicom_header_path)
 
     if os.path.exists("jsons"):
         shutil.rmtree("jsons")
 
     processed_count = df.count()
-    print("Processed {} dicom headers out of total {} dicom files".format(processed_count, os.environ["files_count"]))
-    df = spark.read.format("delta").load("dicom_header")
+    logger.info("Processed {} dicom headers out of total {} dicom files".format(processed_count, os.environ["file_count"]))
+    assert processed_count == int(os.environ["file_count"])
+    df = spark.read.format(os.environ["format_type"]).load(dicom_header_path)
     df.printSchema()
     df.show(2, False)
 
