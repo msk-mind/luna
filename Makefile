@@ -9,7 +9,7 @@ help:
 	@echo "test-all - run tests on every Python version with tox"
 	@echo "coverage - check code coverage quickly with the default Python"
 	@echo "grpt - generate radiology proxy table."
-	@echo "         Usage: make grpt template-file=<data_ingestion_template_file_name> config-file=  --skip-transfer"
+	@echo "Usage: make grpt template-file=<data_ingestion_template_file_name> config-file=<config_file> skip-transfer=<true/false>"
 
 clean: clean-build clean-pyc
 
@@ -51,7 +51,4 @@ coverage:
 	open htmlcov/index.html
 
 grpt:
-    # TODO: validate data ingestion template
-	python load_envvars.py
-	time ./data_processing/radiology/proxy_table/transfer_files.sh $(template-file)
-	time python -m data_processing.radiology.proxy_table.generate -t data_ingestion_template.yaml -f config.yaml
+	time python3 -m data_processing.radiology.proxy_table.generate -t $(template-file) -f $(config-file) -s $(skip-transfer)
