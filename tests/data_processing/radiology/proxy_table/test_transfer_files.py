@@ -16,11 +16,13 @@ To execute these unit tests, follow these steps to allow localhost rsync and the
  
 1. Copy your public key (typically at ~/.ssh/is_rsa.pub) to your authorized_keys file (~/.ssh/authorized_keys)
 
-2. If your private key has a passphrase associated with it, override it using the ssh-agent, but first check if the  agent if running on your machine  with
+2. If your private key has a passphrase associated with it, override it using the ssh-agent, but first check if
+   the agent if running on your machine  with
 
 $ eval `ssh-agent`
 
 If it is running, then add the ssh key to the agent with ssh-add and enter your passphrase when prompted for it.
+
 $ ssh-add
 
 Now the terminal will not require a passhprase for any subsequent executions
@@ -71,7 +73,7 @@ def test_transfer_files(env):
     assert os.path.exists(os.getenv('DESTINATION_PATH')+'/test1.raw')
 
 
-
+# todo:  figure out wildcard for excluded file filter so filter applies to all levels of nesting
 def test_transfer_files(env):
     os.environ['CHUNK_FILE'] = 'tests/data_processing/radiology/proxy_table/test_data/chunk_file2.txt'
     os.environ['SOURCE_PATH'] = os.getcwd() + \
