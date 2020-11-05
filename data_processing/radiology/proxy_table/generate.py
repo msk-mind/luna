@@ -9,6 +9,7 @@ import click
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
+from data_processing.common.EnsureByteContext import EnsureByteContext 
 from pydicom import dcmread
 import pydicom
 import time
@@ -19,31 +20,6 @@ import yaml, os
 import subprocess
 from filehash import FileHash
 from distutils.util import strtobool
-
-
-
-class ByteOpenContext(object):
-    def __init__(self):
-        print ("Enabling byte IO reads")
-    def __enter__(self):
-        # Code to start a new transaction
-        import builtins
-        import io
-        if not hasattr(builtins, "default_open"): 
-            print ("Reconfigurating [builtins] to have default_open() attribute")
-            builtins.default_open = builtins.open
-        def io_open(*args, **kwargs):
-            print ("__io_open__(): ", args, kwargs)
-            if type(args[0])==io.BytesIO: return io.BufferedReader(args[0])
-            else: return builtins.default_open(*args, **kwargs)
-        builtins.io_open = io_open
-        print ("Reconfigurating [builtins] to use io_open() attribute")
-        builtins.open = builtins.io_open
-        return self
-    def __exit__(self, type, value, traceback):
-        import builtins
-        print ("Reconfigurating [builtins] to use default_open() attribute")
-        builtins.open = builtins.default_open
 
 def parse_dicom_from_delta_record(record):
     
@@ -67,7 +43,7 @@ def parse_dicom_from_delta_record(record):
         # not sure how to handle a sequence!
         # if type(elem.value) in [pydicom.sequence.Sequence]: print ( elem.keyword, type(elem.value), elem.value)
 
-    with ByteOpenContext():
+    with EnsureByteContext():
         dcm_hash = FileHash('sha256').hash_file(BytesIO(record.content))
     dcm_hash_file = FileHash('sha256').hash_file(file_path)
 
