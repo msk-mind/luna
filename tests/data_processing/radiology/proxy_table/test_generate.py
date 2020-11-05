@@ -9,8 +9,8 @@ from data_processing.common.sparksession import SparkConfig
 
 
 # TABLE_PATH in tests/data_processing/data_ingestion_template_valid.yaml
-dicom_table_path = "tests/data_processing/radiology/proxy_table/OV_16-158_CT_20201028/table/"
-test_ingestion_template = "tests/data_processing/radiology/proxy_table/OV_16-158_CT_20201028/data_ingestion_template_valid.yaml"
+dicom_table_path = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/table/"
+test_ingestion_template = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/data_ingestion_template_valid.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():
