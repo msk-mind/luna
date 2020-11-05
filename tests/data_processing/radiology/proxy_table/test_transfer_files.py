@@ -44,7 +44,7 @@ def env():
     yield env
 
     print('------teardown------')
-    shutil.rmtree(os.environ.get('DESTINATION_PATH'))
+    #shutil.rmtree(os.environ.get('DESTINATION_PATH'))
 
 
 '''
@@ -70,3 +70,27 @@ def test_transfer_files(env):
     assert os.path.exists(os.getenv('DESTINATION_PATH')+'/test1.mhd')
     assert os.path.exists(os.getenv('DESTINATION_PATH')+'/test1.raw')
 '''
+
+
+def test_transfer_files(env):
+    os.environ['CHUNK_FILE'] = 'tests/data_processing/radiology/proxy_table/test_data/chunk_file2.txt'
+    os.environ['SOURCE_PATH'] = os.getcwd() + \
+                                '/tests/data_processing/radiology/proxy_table/test_data'
+    os.environ['EXCLUDES'] = 'raw,mhd'
+    os.environ['FILE_COUNT'] = '2'
+    os.environ['DATA_SIZE'] = '16'
+
+    transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
+
+    try:
+        exit_code = subprocess.call(transfer_cmd)
+    except Exception as err:
+        pytest.fail(msg="Error Transfering files with rsync" + str(err))
+
+
+    assert(exit_code == 0)
+    assert os.path.exists(os.getenv('DESTINATION_PATH'))
+    assert os.path.exists(os.getenv('DESTINATION_PATH')+'/source/test1.dcm')
+    assert os.path.exists(os.getenv('DESTINATION_PATH')+'/source/test1.mha')
+    assert not os.path.exists(os.getenv('DESTINATION_PATH')+'/source/test1.mhd')
+    assert not os.path.exists(os.getenv('DESTINATION_PATH')+'/source/test1.raw')
