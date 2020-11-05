@@ -4,60 +4,65 @@
 
 
 # the name of requestor
-requestor: joe
+REQUESTOR: joe
 
 # the department to which the requestor belongs
-requestor_department: gynocology
+REQUESTOR_DEPARTMENT: gynocology
 
 # email address of requestor
-requestor_email: joe@mskcc.org
+REQUESTOR_EMAIL: joe@mskcc.org
 
 # project name decided by data coordination
-project: OV_16-158
+PROJECT: OV_16-158
 
 # source name of input data file
-source: xnat
+SOURCE: xnat
 
 # data modality
-modality: radiology
+MODALITY: radiology
 
 # data type within the modality
-data_type: CT
+DATA_TYPE: CT
 
 # description of the template defined by the requestor
-comments:
+COMMENTS:
 
 # the data on which the request was made
-date: 2020-10-29 01:00:00
+DATE: 2020-10-29 01:00:00
 
 # name to be given to the dataset
-dataset_name: OV_16-158_CT_20201028
+DATASET_NAME: OV_16-158_CT_20201028
 
 # Type of ETL
-etl_type: proxy
+ETL_TYPE: proxy
 
 # input source file. examples "csv", "dcm"
-file_type: dcm
+FILE_TYPE: dcm
+
+FORMAT_TYPE: delta
 
 # ip or hostname of machine where source data file(s) reside, if applicable
-host:
+HOST:
 
 # file path to the source data file(s). if host is specified, the source data location is determined
 # as host:source_path
-source_path: /data
+SOURCE_PATH: /test
 
-# file path to location where the data should be transferred on the destination machine.
-destination_path: /data
-
+# root path for tables and file transfer
+LANDING_PATH: tests/data_processing/radiology/proxy_table/OV_16-158_CT_20201028
+# location where the data should be transferred on the destination machine.
+RAW_DATA_PATH: tests/data_processing/radiology/proxy_table/OV_16-158_CT_20201028/raw_data
+# location for where tables are created 
+TABLE_PATH: tests/data_processing/radiology/proxy_table/OV_16-158_CT_20201028/table
 # a comma separated list of files types/extensions to exclude. leave empty to include all files.
-exclude: mha,mhd,raw
+EXCLUDE: mha,mhd,raw
 
 # total number of input data files to process. this can be obtained by running the following command on the source directory
 # 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
-file_count: 1000000
+FILE_COUNT: 1
 
 # total number of bytes to be transfered. this can be obtained by running the following command on the source directory
 # 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
-data_size: 291337979
+DATA_SIZE: 291337979
 
-bwlimit: 5G
+BWLIMIT: 5G
