@@ -58,8 +58,7 @@ def parse_dicom_from_delta_record(record):
         # not sure how to handle a sequence!
         # if type(elem.value) in [pydicom.sequence.Sequence]: print ( elem.keyword, type(elem.value), elem.value)
 
-    kv['dicom_record_uuid'] = record.dicom_record_uuid 
-
+    kv['dicom_record_uuid'] = record.dicom_record_uuid      
     with open("jsons/"+filename, 'w') as f:
         json.dump(kv, f)
 
@@ -95,9 +94,9 @@ def cli(template_file, config_file, skip_transfer):
     setup_environment_from_yaml(template_file)
 
     # write template file to manifest_yaml under dest_dir
-    if not os.path.exists(os.environ["dataset_name"]):
-        os.makedirs(os.environ["dataset_name"])        
-    shutil.copy(template_file, os.environ["dataset_name"])
+    if not os.path.exists(os.environ["DATASET_NAME"]):
+        os.makedirs(os.environ["DATASET_NAME"])        
+    shutil.copy(template_file, os.environ["DATASET_NAME"])
 
     # subprocess call will preserve environmental variables set by the parent thread.
     if not bool(strtobool(skip_transfer)):
@@ -119,7 +118,7 @@ def setup_environment_from_yaml(template_file):
 
     # add all fields from template as env variables
     for var in template_dict:
-        os.environ[var] = str(template_dict[var])
+        os.environ[var] = str(template_dict[var]).strip()
 
 def transfer_files():
     start_time = time.time()
@@ -145,8 +144,8 @@ def create_proxy_table(config_file):
     # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
 
-    dicom_path = os.path.join(os.environ["dataset_name"], "table", "dicom") 
-    dicom_header_path = os.path.join(os.environ["dataset_name"], "table", "dicom_header")
+    dicom_path = os.path.join(os.environ["TABLE_PATH"], "dicom") 
+    dicom_header_path = os.path.join(os.environ["TABLE_PATH"], "dicom_header")
 
     with CodeTimer(logger, 'delta table create'):
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
@@ -154,12 +153,12 @@ def create_proxy_table(config_file):
         df = spark.read.format("binaryFile"). \
             option("pathGlobFilter", "*.dcm"). \
             option("recursiveFileLookup", "true"). \
-            load(os.environ["destination_path"])
+            load(os.environ["RAW_DATA_PATH"])
 
         generate_uuid_udf = udf(generate_uuid, StringType())
         df = df.withColumn("dicom_record_uuid", lit(generate_uuid_udf(df.path, df.content)))
 
-        df.coalesce(128).write.format(os.environ["format_type"]) \
+        df.coalesce(128).write.format(os.environ["FORMAT_TYPE"]) \
             .mode("overwrite") \
             .save(dicom_path)
     
@@ -169,7 +168,7 @@ def create_proxy_table(config_file):
 
     # save parsed json headers to tables
     header = spark.read.json("jsons")
-    header.write.format(os.environ["format_type"]) \
+    header.write.format(os.environ["FORMAT_TYPE"]) \
         .mode("overwrite") \
         .option("mergeSchema", "true") \
         .save(dicom_header_path)
@@ -178,9 +177,9 @@ def create_proxy_table(config_file):
         shutil.rmtree("jsons")
 
     processed_count = df.count()
-    logger.info("Processed {} dicom headers out of total {} dicom files".format(processed_count, os.environ["file_count"]))
-    assert processed_count == int(os.environ["file_count"])
-    df = spark.read.format(os.environ["format_type"]).load(dicom_header_path)
+    logger.info("Processed {} dicom headers out of total {} dicom files".format(processed_count, os.environ["FILE_COUNT"]))
+    assert processed_count == int(os.environ["FILE_COUNT"])
+    df = spark.read.format(os.environ["FORMAT_TYPE"]).load(dicom_header_path)
     df.printSchema()
     df.show(2, False)
 
