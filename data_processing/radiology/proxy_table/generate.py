@@ -26,8 +26,9 @@ def parse_dicom_from_delta_record(record):
     spark_url_path  = record.path 
     dirs, filename  = os.path.split(spark_url_path)
     file_path       = spark_url_path.split(':')[-1]
+    content	    = BytesIO(record.content)
 
-    dataset = dcmread(BytesIO(record.content))
+    dataset = dcmread(content)
 
     kv = {}
     types = set()
@@ -44,10 +45,7 @@ def parse_dicom_from_delta_record(record):
         # if type(elem.value) in [pydicom.sequence.Sequence]: print ( elem.keyword, type(elem.value), elem.value)
 
     with EnsureByteContext():
-        dcm_hash = FileHash('sha256').hash_file(BytesIO(record.content))
-    dcm_hash_file = FileHash('sha256').hash_file(file_path)
-
-    assert dcm_hash == dcm_hash_file
+        dcm_hash = FileHash('sha256').hash_file(content)
 
     dicom_record_uuid = f'DICOM-{dcm_hash}'
     kv['dicom_record_uuid'] = dicom_record_uuid 
