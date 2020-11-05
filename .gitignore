@@ -4,3 +4,4 @@ __pycache__
 *env/
 htmlcov/*
 config.yaml
+data_ingestion_template.yaml

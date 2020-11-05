@@ -197,14 +197,25 @@ def get_dmp_from_scan(conn, query_id):
     return ""
 
 @click.command()
-@click.option('-q', '--query', default = None, help = "where clause of SQL query to filter feature table, 'WHERE' does not need to be included, but make sure to wrap with quotes to be interpretted correctly")
-@click.option('-b', '--base_directory', type=click.Path(exists=True), default="/gpfs/mskmindhdp_emc/", help="location to find scan/annotation tables")
-@click.option('-d', '--destination_directory', type=click.Path(exists=False), default="", help="location where feature table should be written. If not specified, destination_directory defaults to base directory")
-@click.option('-t', '--target_spacing', nargs=3, type=float, required=True, help="target spacing for x,y and z dimensions")
-@click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
-@click.option('-n', '--feature_table_output_name', default="feature-table", help="name of new feature table that is created.")
-@click.option('-c', '--custom_preprocessing_script', default = None, help="Path to python file containing custom 'process_patient' method. By default, uses process_patient_default() for preprocessing")
-@click.option('-f', '--config_file', default = 'config.yaml', help="config file")
+@click.option('-q', '--query', default = None,
+              help = "where clause of SQL query to filter feature table, 'WHERE' does not need to be included, "
+                     "but make sure to wrap with quotes to be interpretted correctly")
+@click.option('-b', '--base_directory', type=click.Path(exists=True), default="/gpfs/mskmindhdp_emc/",
+              help="location to find scan/annotation tables")
+@click.option('-d', '--destination_directory', type=click.Path(exists=False), default="",
+              help="location where feature table should be written. If not specified, destination_directory "
+                   "defaults to base directory")
+@click.option('-t', '--target_spacing', nargs=3, type=float, required=True,
+              help="target spacing for x,y and z dimensions")
+@click.option('-s', '--spark_master_uri', required=True,
+              help='spark master uri e.g. spark://master-ip:7077 or local[*]')
+@click.option('-n', '--feature_table_output_name', default="feature-table",
+              help="name of new feature table that is created.")
+@click.option('-c', '--custom_preprocessing_script', default = None,
+              help="Path to python file containing custom 'process_patient' method. By default,"
+                   " uses process_patient_default() for preprocessing")
+@click.option('-f', '--config_file', default = 'config.yaml',
+              help="path to config file containing application configuration. See config.yaml.template")
 def cli(spark_master_uri,
         base_directory,
         destination_directory,

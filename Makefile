@@ -8,6 +8,8 @@ help:
 	@echo "test - run tests quickly with the default Python"
 	@echo "test-all - run tests on every Python version with tox"
 	@echo "coverage - check code coverage quickly with the default Python"
+	@echo "grpt - generate radiology proxy table."
+	@echo "Usage: make grpt template-file=<data_ingestion_template_file_name> config-file=<config_file> skip-transfer=<true/false>"
 
 clean: clean-build clean-pyc
 
@@ -48,3 +50,5 @@ coverage:
 	coverage html
 	open htmlcov/index.html
 
+grpt:
+	time python3 -m data_processing.radiology.proxy_table.generate -t $(template-file) -f $(config-file) -s $(skip-transfer)

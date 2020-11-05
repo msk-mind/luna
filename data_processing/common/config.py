@@ -5,6 +5,7 @@ Created on October 17, 2019
 '''
 
 import yaml
+import yamale
 import sys
 from jsonpath_ng import parse
 from data_processing.common.custom_logger import init_logger
@@ -26,19 +27,31 @@ class Config():
     __INSTANCE = None              # singleton instance
 
 
-    def __new__(cls, config_file):
+    def __new__(cls, config_file, schema_file=None):
         if Config.__INSTANCE is None or Config.__CONFIG_FILE != config_file:
-            Config.__INSTANCE = object.__new__(cls)
             Config.__CONFIG_FILE = config_file
+
+            if schema_file is not None:
+                Config.__SCHEMA_FILE = schema_file
+                Config._validate_config(cls)
+
+            Config.__INSTANCE = object.__new__(cls)
             Config.__INSTANCE.__config = Config._load_config(cls)
         return Config.__INSTANCE
 
 
-    def __init__(self, config_file):
+    def __init__(self, config_file, schema_file=None):
         ''':param config_file the config file to load. If none is provided, the class defaults to 'config.yaml' in
         the base directory'''
         pass
 
+    def _validate_config(cls):
+        config_file = Config.__CONFIG_FILE
+        schema_file = Config.__SCHEMA_FILE
+        logger.info("validating config " + config_file + " against schema " + schema_file)
+        schema = yamale.make_schema(schema_file)
+        data = yamale.make_data(config_file)
+        yamale.validate(schema, data)
 
     def _load_config(cls):
         '''
@@ -94,3 +107,7 @@ if __name__ == '__main__':
     print(str(c1) + ' ' + str(c1.get_value('$.spark_application_config[:1]["spark.executor.cores"]')))
     print(str(c2) + ' ' + str(c2.get_value('$.spark_application_config[:1]["spark.executor.cores"]')))
     print(str(c3) + ' ' + str(c3.get_value('$.spark_application_config[:1]["doesnt_exist"]')))
+
+    c4 = Config(config_file="data_ingestion_template.yaml", schema_file="data_ingestion_template_schema.yaml")
+
+    print(str(c4) + ' ' + str(c4.get_value('$.requestor')))
