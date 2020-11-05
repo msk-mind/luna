@@ -36,10 +36,7 @@ $ ssh-agent bash
 def env():
     print('------setup------')
     os.environ['BWLIMIT'] = '1G'
-    os.environ['CHUNK_FILE'] = 'tests/data_processing/radiology/proxy_table/test_data/chunk_file.txt'
     os.environ['HOST'] = '127.0.0.1'
-    os.environ['SOURCE_PATH'] = os.getcwd()+\
-                                '/tests/data_processing/radiology/proxy_table/test_data/source'
     os.environ['DESTINATION_PATH'] = os.getcwd()+\
                                      '/tests/data_processing/radiology/proxy_table/test_data/destination'
 
@@ -52,7 +49,9 @@ def env():
 
 '''
 def test_transfer_files(env):
-    os.environ['EXCLUDES'] = ''
+    os.environ['CHUNK_FILE'] = 'tests/data_processing/radiology/proxy_table/test_data/chunk_file1.txt'
+    os.environ['SOURCE_PATH'] = os.getcwd() + \
+                                '/tests/data_processing/radiology/proxy_table/test_data/source'
     os.environ['FILE_COUNT'] = '4'
     os.environ['DATA_SIZE'] = '32'
 
