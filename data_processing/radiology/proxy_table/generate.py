@@ -23,8 +23,8 @@ import subprocess
 from filehash import FileHash
 from distutils.util import strtobool
 
-logger = init_logger()
-
+logger = init_logger("radiology-proxy.log")
+TMPJSON_PATH = "jsons"
 
 def generate_uuid(path, content):
 
@@ -59,7 +59,7 @@ def parse_dicom_from_delta_record(record):
         # if type(elem.value) in [pydicom.sequence.Sequence]: print ( elem.keyword, type(elem.value), elem.value)
 
     kv['dicom_record_uuid'] = record.dicom_record_uuid      
-    with open("jsons/"+filename, 'w') as f:
+    with open(os.path.join(TMPJSON_PATH, filename), 'w') as f:
         json.dump(kv, f)
 
 
@@ -93,32 +93,39 @@ def cli(template_file, config_file, skip_transfer):
     # setup env variables
     setup_environment_from_yaml(template_file)
 
-    # write template file to manifest_yaml under dest_dir
-    if not os.path.exists(os.environ["DATASET_NAME"]):
-        os.makedirs(os.environ["DATASET_NAME"])        
-    shutil.copy(template_file, os.environ["DATASET_NAME"])
+    # setup dirs
+    setup_landing_dirs()
+
+    # write template file to manifest_yaml under LANDING_PATH
+    shutil.copy(template_file, os.environ["LANDING_PATH"])
 
     # subprocess call will preserve environmental variables set by the parent thread.
     if not bool(strtobool(skip_transfer)):
         transfer_files()
 
     # subprocess - create proxy table
-    if not os.path.exists("jsons"):
-        os.makedirs("jsons")
-
     create_proxy_table(config_file)
-    print("--- Finished building proxy table in %s seconds ---" % (time.time() - start_time))
+    logger.info("--- Finished building proxy table in %s seconds ---" % (time.time() - start_time))
 
 def setup_environment_from_yaml(template_file):
      # read template_file yaml and set environmental variables for subprocesses
     with open(template_file, 'r') as template_file_stream:
         template_dict = yaml.safe_load(template_file_stream)
     
-    print(template_dict)
+    logger.info(template_dict)
 
     # add all fields from template as env variables
     for var in template_dict:
         os.environ[var] = str(template_dict[var]).strip()
+
+def setup_landing_dirs():
+    paths = ["RAW_DATA_PATH", "TABLE_PATH"]
+    for path in paths:
+        if not os.path.exists(os.environ[path]):
+            os.makedirs(os.environ[path])   
+
+    if not os.path.exists(TMPJSON_PATH):
+        os.makedirs(TMPJSON_PATH)     
 
 def transfer_files():
     start_time = time.time()
@@ -126,7 +133,7 @@ def transfer_files():
     
     try:
         exit_code = subprocess.call(transfer_cmd)
-        print("--- Finished transfering files in %s seconds ---" % (time.time() - start_time))
+        logger.info("--- Finished transfering files in %s seconds ---" % (time.time() - start_time))
     except Exception as err:
         logger.error(("Error Transfering files with rsync" + str(err)))
         return 
@@ -167,14 +174,15 @@ def create_proxy_table(config_file):
         df.foreach(parse_dicom_from_delta_record)
 
     # save parsed json headers to tables
-    header = spark.read.json("jsons")
+    header = spark.read.json(TMPJSON_PATH)
     header.write.format(os.environ["FORMAT_TYPE"]) \
         .mode("overwrite") \
         .option("mergeSchema", "true") \
         .save(dicom_header_path)
 
-    if os.path.exists("jsons"):
-        shutil.rmtree("jsons")
+    # clean up temporary jsons
+    if os.path.exists(TMPJSON_PATH):
+        shutil.rmtree(TMPJSON_PATH)
 
     processed_count = df.count()
     logger.info("Processed {} dicom headers out of total {} dicom files".format(processed_count, os.environ["FILE_COUNT"]))
