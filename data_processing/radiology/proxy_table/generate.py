@@ -71,7 +71,7 @@ def parse_dicom_from_delta_record(record):
 @click.option('-f', '--config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to config file containing application configuration. See config.yaml.template")
 @click.option('-s', '--skip_transfer',
-              help='do not transfer files from xnat mount, use existing files located at (by default): /dicom')
+              help='do not transfer files from xnat mount, use existing files located at (by default): /raw_data')
 def cli(template_file, config_file, skip_transfer):
     """
     This module generates a set of proxy tables for radiology data based on information specified in the tempalte file.
@@ -83,7 +83,6 @@ def cli(template_file, config_file, skip_transfer):
         --skip_transfer true
         
     """
-    logger = init_logger()
     logger.info('data_ingestions_template: ' + template_file)
     logger.info('config_file: ' + config_file)
     logger.info('skip transfer: ' + skip_transfer)
@@ -97,7 +96,7 @@ def cli(template_file, config_file, skip_transfer):
     setup_landing_dirs()
 
     # write template file to manifest_yaml under LANDING_PATH
-    shutil.copy(template_file, os.environ["LANDING_PATH"])
+    shutil.copy(template_file, os.path.join(os.environ["LANDING_PATH"], "manifest.yaml"))
 
     # subprocess call will preserve environmental variables set by the parent thread.
     if not bool(strtobool(skip_transfer)):
@@ -186,9 +185,10 @@ def create_proxy_table(config_file):
 
     processed_count = df.count()
     logger.info("Processed {} dicom headers out of total {} dicom files".format(processed_count, os.environ["FILE_COUNT"]))
+
+    # validate and show created dataset
     assert processed_count == int(os.environ["FILE_COUNT"])
     df = spark.read.format(os.environ["FORMAT_TYPE"]).load(dicom_header_path)
-    df.printSchema()
     df.show(2, False)
 
 
