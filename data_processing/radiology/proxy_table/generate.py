@@ -9,9 +9,11 @@ import click
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
+from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.EnsureByteContext import EnsureByteContext 
+
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType
-from data_processing.common.EnsureByteContext import EnsureByteContext 
 
 import pydicom
 import time
@@ -29,7 +31,7 @@ def generate_uuid(path, content):
 
     file_path = path.split(':')[-1]
     content = BytesIO(content)
-
+    
     with EnsureByteContext():
         dcm_hash = FileHash('sha256').hash_file(content)
 
@@ -45,20 +47,23 @@ def parse_dicom_from_delta_record(record):
 
     kv = {}
     types = set()
+    skipped_keys = []
 
     for elem in dataset.iterall():
         types.add(type(elem.value))
         if type(elem.value) in [int, float, str]: 
             kv[elem.keyword] = str(elem.value)
-        if type(elem.value) in [pydicom.valuerep.DSfloat, pydicom.valuerep.DSdecimal, pydicom.valuerep.IS, pydicom.valuerep.PersonName, pydicom.uid.UID]: 
+        elif type(elem.value) in [pydicom.valuerep.DSfloat, pydicom.valuerep.DSdecimal, pydicom.valuerep.IS, pydicom.valuerep.PersonName, pydicom.uid.UID]: 
             kv[elem.keyword] = str(elem.value)
-        if type(elem.value) in [list, pydicom.multival.MultiValue]:
+        elif type(elem.value) in [list, pydicom.multival.MultiValue]:
             kv[elem.keyword] = "//".join([str(x) for x in elem.value])
+        else:
+            skipped_keys.append(elem.keyword)
         # not sure how to handle a sequence!
         # if type(elem.value) in [pydicom.sequence.Sequence]: print ( elem.keyword, type(elem.value), elem.value)
 
     kv['dicom_record_uuid'] = record.dicom_record_uuid      
-    with open(os.path.join(TMPJSON_PATH, filename), 'w') as f:
+    with open(os.path.join(os.environ["TMPJSON_PATH"], filename), 'w') as f:
         json.dump(kv, f)
 
 
@@ -103,6 +108,11 @@ def cli(template_file, config_file, skip_transfer):
 
     # subprocess - create proxy table
     create_proxy_table(config_file)
+
+    # update graph
+    update_graph(config_file)
+
+    # subprocess - sync to graph
     logger.info("--- Finished building proxy table in %s seconds ---" % (time.time() - start_time))
 
 def setup_environment_from_yaml(template_file):
@@ -169,7 +179,8 @@ def create_proxy_table(config_file):
         df.foreach(parse_dicom_from_delta_record)
 
     # save parsed json headers to tables
-    header = spark.read.json(TMPJSON_PATH)
+    print (os.environ["TMPJSON_PATH"])
+    header = spark.read.json(os.environ["TMPJSON_PATH"])
     header.write.format(os.environ["FORMAT_TYPE"]) \
         .mode("overwrite") \
         .option("mergeSchema", "true") \
@@ -185,7 +196,45 @@ def create_proxy_table(config_file):
     # validate and show created dataset
     assert processed_count == int(os.environ["FILE_COUNT"])
     df = spark.read.format(os.environ["FORMAT_TYPE"]).load(dicom_header_path)
-    df.show(2, False)
+    df.printSchema()
+
+def update_graph(config_file):
+    spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
+
+    # Open a connection to the ID graph database
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+
+    dicom_header_path = os.path.join(os.environ["TABLE_PATH"], "dicom_header")
+
+    dataset_properties = [
+        'DATASET_NAME',
+        'TABLE_PATH',
+        'REQUESTOR',
+        'REQUESTOR_DEPARTMENT',
+        'REQUESTOR_EMAIL',
+        'PROJECT',
+        'SOURCE',
+        'MODALITY',
+    ]
+
+    prop_string = ','.join(['''{0}: "{1}"'''.format(prop, os.environ[prop]) for prop in dataset_properties])
+    conn.query(f'''MERGE (n:dataset{{{prop_string}}})''')
+
+    with CodeTimer(logger, 'Setup proxy table'):
+        # Reading dicom and opdata
+        df_dcmdata = spark.read.format("delta").load(dicom_header_path)
+    
+        tuple_to_add = df_dcmdata.select("PatientName", "SeriesInstanceUID")\
+            .groupBy("PatientName", "SeriesInstanceUID")\
+            .count()\
+            .toPandas()
+    
+    with CodeTimer(logger, 'Syncronize graph'):
+    
+        for index, row in tuple_to_add.iterrows():
+            query ='''MATCH (das:dataset {{DATASET_NAME: "{0}"}}) MERGE (px:xnat_patient_id {{value: "{1}"}}) MERGE (sc:scan {{SeriesInstanceUID: "{2}"}}) MERGE (px)-[r1:HAS_SCAN]->(sc) MERGE (das)-[r2:HAS_PX]-(px)'''.format(os.environ['DATASET_NAME'], row['PatientName'], row['SeriesInstanceUID'])
+            logger.info (query)
+            conn.query(query)
 
 
 if __name__ == "__main__":
