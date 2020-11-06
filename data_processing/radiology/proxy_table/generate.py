@@ -24,7 +24,6 @@ from filehash import FileHash
 from distutils.util import strtobool
 
 logger = init_logger("radiology-proxy.log")
-TMPJSON_PATH = "jsons"
 
 def generate_uuid(path, content):
 
@@ -118,13 +117,10 @@ def setup_environment_from_yaml(template_file):
         os.environ[var] = str(template_dict[var]).strip()
 
 def setup_landing_dirs():
-    paths = ["RAW_DATA_PATH", "TABLE_PATH"]
+    paths = ["RAW_DATA_PATH", "TABLE_PATH", "TMPJSON_PATH"]
     for path in paths:
         if not os.path.exists(os.environ[path]):
             os.makedirs(os.environ[path])   
-
-    if not os.path.exists(TMPJSON_PATH):
-        os.makedirs(TMPJSON_PATH)     
 
 def transfer_files():
     start_time = time.time()
@@ -180,8 +176,8 @@ def create_proxy_table(config_file):
         .save(dicom_header_path)
 
     # clean up temporary jsons
-    if os.path.exists(TMPJSON_PATH):
-        shutil.rmtree(TMPJSON_PATH)
+    if os.path.exists(os.environ["TMPJSON_PATH"]):
+        shutil.rmtree(os.environ["TMPJSON_PATH"])
 
     processed_count = df.count()
     logger.info("Processed {} dicom headers out of total {} dicom files".format(processed_count, os.environ["FILE_COUNT"]))
