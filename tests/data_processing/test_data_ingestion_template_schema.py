@@ -27,13 +27,13 @@ class TestInvalidYaml(YamaleTestCase):
         with pytest.raises(YamaleError) as error_info:
             self.assertFalse(self.validate())
 
-        assert "requestor: 'None' is not a str" in str(error_info.value)
-        assert "requestor_department: 'None' is not a str" in str(error_info.value)
-        assert "requestor_email: 'None' is not a str" in str(error_info.value)
-        assert "project: 'None' is not a str" in str(error_info.value)
-        assert "source: 'None' is not a str" in str(error_info.value)
-        assert "modality: 'None' not in ('clinical', 'radiology', 'pathology', 'genomics')" in str(error_info.value)
-        assert "data_type: 'CAT' not in ('diagnosis', 'medication', 'treatment', 'CT', 'MRI', 'PET')" in \
+        assert "REQUESTOR: 'None' is not a str" in str(error_info.value)
+        assert "REQUESTOR_DEPARTMENT: 'None' is not a str" in str(error_info.value)
+        assert "REQUESTOR_EMAIL: 'None' is not a str" in str(error_info.value)
+        assert "PROJECT: 'None' is not a str" in str(error_info.value)
+        assert "SOURCE: 'None' is not a str" in str(error_info.value)
+        assert "MODALITY: 'None' not in ('clinical', 'radiology', 'pathology', 'genomics')" in str(error_info.value)
+        assert "DATA_TYPE: 'CAT' not in ('diagnosis', 'medication', 'treatment', 'CT', 'MRI', 'PET')" in \
                str(error_info.value)
-        assert "date: '2020-10-29' is not a timestamp" in str(error_info.value)
-        assert "bwlimit: '5T' is not a regex match." in str(error_info.value)
+        assert "DATE: '2020-10-29' is not a timestamp" in str(error_info.value)
+        assert "BWLIMIT: '5T' is not a regex match." in str(error_info.value)

@@ -37,17 +37,17 @@ def env():
     print('------setup------')
     os.environ['BWLIMIT'] = '1G'
     os.environ['HOST'] = '127.0.0.1'
-    os.environ['DESTINATION_PATH'] = os.getcwd()+\
+    os.environ['RAW_DATA_PATH'] = os.getcwd()+\
                                      '/tests/data_processing/radiology/proxy_table/test_data/destination'
 
 
     yield env
 
     print('------teardown------')
-    shutil.rmtree(os.environ.get('DESTINATION_PATH'))
+    shutil.rmtree(os.environ.get('RAW_DATA_PATH'))
 
 
-'''
+
 def test_transfer_files(env):
     os.environ['CHUNK_FILE'] = 'tests/data_processing/radiology/proxy_table/test_data/chunk_file1.txt'
     os.environ['SOURCE_PATH'] = os.getcwd() + \
@@ -64,15 +64,17 @@ def test_transfer_files(env):
 
 
     assert(exit_code == 0)
-    assert os.path.exists(os.getenv('DESTINATION_PATH'))
-    assert os.path.exists(os.getenv('DESTINATION_PATH')+'/test1.dcm')
-    assert os.path.exists(os.getenv('DESTINATION_PATH')+'/test1.mha')
-    assert os.path.exists(os.getenv('DESTINATION_PATH')+'/test1.mhd')
-    assert os.path.exists(os.getenv('DESTINATION_PATH')+'/test1.raw')
+    assert os.path.exists(os.getenv('RAW_DATA_PATH'))
+    assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.dcm')
+    assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.mha')
+    assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.mhd')
+    assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.raw')
 
 
 
-def test_transfer_files(env):
+'''
+# @todo: this test fails on excludes. A better pattern is needed in the rsync exclude argument
+def test_transfer_files_with_excludes(env):
     os.environ['CHUNK_FILE'] = 'tests/data_processing/radiology/proxy_table/test_data/chunk_file2.txt'
     os.environ['SOURCE_PATH'] = os.getcwd() + \
                                 '/tests/data_processing/radiology/proxy_table/test_data'
@@ -89,9 +91,9 @@ def test_transfer_files(env):
 
 
     assert(exit_code == 0)
-    assert os.path.exists(os.getenv('DESTINATION_PATH'))
-    assert os.path.exists(os.getenv('DESTINATION_PATH')+'/source/test1.dcm')
-    assert os.path.exists(os.getenv('DESTINATION_PATH')+'/source/test1.mha')
-    assert not os.path.exists(os.getenv('DESTINATION_PATH')+'/source/test1.mhd')
-    assert not os.path.exists(os.getenv('DESTINATION_PATH')+'/source/test1.raw')
+    assert os.path.exists(os.getenv('RAW_DATA_PATH'))
+    assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/source/test1.dcm')
+    assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/source/test1.mha')
+    assert not os.path.exists(os.getenv('RAW_DATA_PATH')+'/source/test1.mhd')
+    assert not os.path.exists(os.getenv('RAW_DATA_PATH')+'/source/test1.raw')
 '''

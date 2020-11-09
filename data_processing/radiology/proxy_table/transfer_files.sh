@@ -72,13 +72,15 @@ file_count=$(find $RAW_DATA_PATH -type f -name "*" | wc -l)
 [ $FILE_COUNT -eq $file_count ];
 
 let exit_code=$?+$exit_code
+echo "actual file count = $file_count" >> $LOG_FILE
 echo "\nexit code after file_count verification = $exit_code" >> $LOG_FILE
 
 # verify and log transfer data size (bytes)
 data_size=$(find $RAW_DATA_PATH -type d | xargs du -s | cut -f1)
 [ $DATA_SIZE -eq $data_size ];
 
-let exit_code = $? + $exit_code
+let exit_code=$?+$exit_code
+echo "actual data size = $data_size" >> $LOG_FILE
 echo "\nexit code after data_size verification = $exit_code" >> $LOG_FILE
 
 ########################### teardown ###########################

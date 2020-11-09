@@ -24,11 +24,19 @@ ETL_TYPE: enum('proxy', 'refined', 'feature')
 
 FILE_TYPE: enum('csv', 'dcm')
 
+FORMAT_TYPE: enum('parquet', 'delta')
+
 HOST: any(str(required=False))
 
 SOURCE_PATH: any(str(required=True))
 
-DESTINATION_PATH: any(str(required=True))
+LANDING_PATH: any(str(required=True))
+
+RAW_DATA_PATH: any(str(required=True))
+
+TABLE_PATH: any(str(required=True))
+
+TMPJSON_PATH: any(str(required=True))
 
 EXCLUDE:  any(str(required=False))
 
