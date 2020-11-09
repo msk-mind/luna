@@ -4,60 +4,60 @@
 
 
 # the name of requestor
-requestor:
+REQUESTOR:
 
 # the department to which the requestor belongs
-requestor_department:
+REQUESTOR_DEPARTMENT:
 
 # email address of requestor
-requestor_email:
+REQUESTOR_EMAIL:
 
 # project name decided by data coordination
-project:
+PROJECT:
 
 # source name of input data file
-source:
+SOURCE:
 
 # data modality
-modality:
+MODALITY:
 
 # data type within the modality
-data_type: CAT
+DATA_TYPE: CAT
 
 # description of the template defined by the requestor
-comments:
+COMMENTS:
 
 # the data on which the request was made
-date: 2020-10-29
+DATE: 2020-10-29
 
 # name to be given to the dataset
-dataset_name: OV_16-158_CT_20201028
+DATASET_NAME: OV_16-158_CT_20201028
 
 # Type of ETL
-etl_type: proxy
+ETL_TYPE: proxy
 
 # input source file. examples "csv", "dcm"
-file_type: dcm
+FILE_TYPE: dcm
 
 # ip or hostname of machine where source data file(s) reside, if applicable
-host:
+HOST:
 
 # file path to the source data file(s). if host is specified, the source data location is determined
 # as host:source_path
-source_path: /data
+SOURCE_PATH: /data
 
 # file path to location where the data should be transferred on the destination machine.
-destination_path: /data
+DESTINATION_PATH: /data
 
 # a comma separated list of files types/extensions to exclude. for example, leave empty to include all files.
-exclude: mah,mhd,raw
+EXCLUDE: mah,mhd,raw
 
 # total number of input data files to process. this can be obtained by running the following command on the source directory
 # 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
-file_count: 1000000
+FILE_COUNT: 1000000
 
 # total number of bytes to be transfered. this can be obtained by running the following command on the source directory
 # 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
-data_size: 291337979
+DATA_SIZE: 291337979
 
-bwlimit: 5T
+BWLIMIT: 5T

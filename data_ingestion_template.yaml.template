@@ -5,77 +5,73 @@
 # See data_ingestion_template_schema.yaml for valid values
 
 # the name of requestor
-requestor: jane
+REQUESTOR: jane
 
 # the department to which the requestor belongs
-requestor_department: gynocology
+REQUESTOR_DEPARTMENT: gynocology
 
 # email address of requestor
-requestor_email: jane@mskcc.org
+REQUESTOR_EMAIL: jane@mskcc.org
 
 # project name decided by data coordination
-project: OV_16-158
+PROJECT: OV_16-158
 
 # source name of input data file
-source: xnat
+SOURCE: xnat
 
 # data modality
-modality: radiology
+MODALITY: radiology
 
 # data type within the modality
-data_type: CT
+DATA_TYPE: CT
 
 # description of the template defined by the requestor
-comments:
+COMMENTS:
 
 # the data on which the request was made
-date: 20201029
+DATE: 20201029
 
 # name to be given to the dataset
-dataset_name: OV_16-158_CT_20201028
+DATASET_NAME: OV_16-158_CT_20201028
 
 # Type of ETL
-etl_type: radiology_proxy
+ETL_TYPE: radiology_proxy
 
 # input source file
-file_type: dcm
+FILE_TYPE: dcm
 
 # ip or hostname of machine where source data file(s) reside, if applicable
-host:
+HOST:
 
 # file path to the source data file(s). if host is specified, the source data location is determined
 # as host:source_path, else the source data location is determined simply as source_path.
-source_path: /data
+SOURCE_PATH: /data
 
 # file path to location where the data should be transferred on the destination machine.
-destination_path: /data
+DESTINATION_PATH: /data
 
 # a comma separated list of files types to exclude. for example, exclude: raw,mha. leave empty to include all files.
-exclude:
+EXCLUDE:
 
 # a file containing names of files and sub-directories that exist under the source_path of the remote system and that
 # need to be transferred. One name should be placed on each line. An easy way to generate such a file is by changing
 # directory to the source_path on the remote file system and executing 'ls -1 . > chunks.txt' and then moving chunks.txt
 # to the destination file system.
-chunk_file: chunks.txt
+CHUNK_FILE: chunks.txt
 
 # file path to location where the data should be transferred on the destination machine.
-destination_path: /data
-
-
-# a comma separated list of files types/extensions to exclude. leave empty to include all files.
-exclude: raw,mha,mhd
+DESTINATION_PATH: /data
 
 
 # total number of input data files to process. this can be obtained by running the following command on the source directory
 # 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
 # NOTE: if you get "permission_denied" on some dirs, make sure those dirs have +x permission for "others" as this is required
 # for 'find' and 'ls' operations
-file_count: 1000000
+FILE_COUNT: 1000000
 
-# total number of bytes to be transfered. this can be obtained by running the following command on the source directory
+# total number of bytes to be transferred. this can be obtained by running the following command on the source directory
 # 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
-data_size: 291337979
+DATA_SIZE: 291337979
 
 
 # limit socket I/O bandwidth. Set this limit based on available bandwidth between the source
@@ -96,4 +92,4 @@ data_size: 291337979
 #
 # be nice and don't use all available bandwidth. Use up to 50% available bandwidth. The amount specified
 # here is the total bandwidth that will be used by all processes that are spawned for the data transfer.
-bwlimit: 5G
+BWLIMIT: 5G
