@@ -51,4 +51,4 @@ coverage:
 	open htmlcov/index.html
 
 grpt:
-	time python3 -m data_processing.radiology.proxy_table.generate -t $(template-file) -f $(config-file) -s $(skip-transfer) -p $(process-string)
+	time python3 -m data_processing.radiology.proxy_table.generate -t $(template-file) -f $(config-file) -p $(process-string)

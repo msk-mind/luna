@@ -74,11 +74,9 @@ def parse_dicom_from_delta_record(record):
                    "See data_processing/radiology/proxy_table/data_ingestion_template.yaml.template")
 @click.option('-f', '--config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-s', '--skip_transfer',
-              help='do not transfer files from xnat mount, use existing files located at (by default): /raw_data')
-@click.option('-p', '--process_string',
-              help='comma separated list of processes to run or replay: e.g. transfer,delta,graph')
-def cli(template_file, config_file, skip_transfer, process_string):
+@click.option('-p', '--process_string', default='all',
+              help='comma separated list of processes to run or replay: e.g. transfer,delta,graph, or all')
+def cli(template_file, config_file, process_string):
     """
     This module generates a set of proxy tables for radiology data based on information specified in the tempalte file.
 
@@ -86,13 +84,12 @@ def cli(template_file, config_file, skip_transfer, process_string):
         python -m data_processing.radiology.proxy_table.generate \
         --template_file {PATH_TO_TEMPLATE_FILE} \
         --config_file {PATH_TO_CONFIG_FILE}
-        --skip_transfer true
+        --process_string transfer,delta 
         
     """
     processes = process_string.lower().strip().split(",")
     logger.info('data_ingestions_template: ' + template_file)
     logger.info('config_file: ' + config_file)
-    logger.info('skip transfer: ' + skip_transfer)
     logger.info('processes: ' + str(processes))
    
     start_time = time.time()
@@ -107,15 +104,15 @@ def cli(template_file, config_file, skip_transfer, process_string):
     shutil.copy(template_file, os.path.join(os.environ["LANDING_PATH"], "manifest.yaml"))
 
     # subprocess call will preserve environmental variables set by the parent thread.
-    if 'transfer' in processes:
+    if 'transfer' in processes or 'all' in processes:
         transfer_files()
 
     # subprocess - create proxy table
-    if 'delta' in processes:
+    if 'delta' in processes or 'all' in processes:
         create_proxy_table(config_file)
 
     # update graph
-    if 'graph' in processes:
+    if 'graph' in processes or 'all' in processes:
         update_graph(config_file)
 
     # subprocess - sync to graph
