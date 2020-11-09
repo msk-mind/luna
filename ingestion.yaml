@@ -58,16 +58,19 @@ SOURCE_PATH: /mskmind_XNAT/330680
 
 # root path for tables and file transfer
 # LANDING_PATH: /gpfs/mskmindhdp_emc/user/pateld6/data-processing/${DATASET_NAME}
-LANDING_PATH: /gpfs/mskmindhdp_emc/user/pateld6/data-processing/OV_16-158_CT_20201028
+LANDING_PATH: /gpfs/mskmindhdp_emc/user/aukermaa/radiology/OV_16-158_CT_20201028
 
 # location where the data should be transferred on the destination machine.
 # RAW_DATA_PATH: ${LANDING_PATH}/raw_data
-RAW_DATA_PATH: /gpfs/mskmindhdp_emc/user/pateld6/data-processing/OV_16-158_CT_20201028/raw_data
+RAW_DATA_PATH: /gpfs/mskmindhdp_emc/user/aukermaa/radiology/OV_16-158_CT_20201028/raw_data
 
 # location for where tables are created 
 # TABLE_PATH: ${LANDING_PATH}/table
-TABLE_PATH: /gpfs/mskmindhdp_emc/user/pateld6/data-processing/OV_16-158_CT_20201028/table
+TABLE_PATH: /gpfs/mskmindhdp_emc/user/aukermaa/radiology/OV_16-158_CT_20201028/table
 
+# location where the data should be transferred on the destination machine.
+# RAW_DATA_PATH: ${LANDING_PATH}/raw_data
+TMPJSON_PATH: /gpfs/mskmindhdp_emc/user/aukermaa/radiology/OV_16-158_CT_20201028/raw_json
 
 
 # a file containing names of files and sub-directories that exist under the source_path of the remote system and that
@@ -77,7 +80,7 @@ TABLE_PATH: /gpfs/mskmindhdp_emc/user/pateld6/data-processing/OV_16-158_CT_20201
 CHUNK_FILE: chunk_files.txt
 
 # total number of input data files to process
-FILE_COUNT: 1000000
+FILE_COUNT: 556 
 
 # TODO data size (in bytes). Document find command here to get data size from source system"
 
