@@ -10,7 +10,7 @@ from data_processing.common.sparksession import SparkConfig
 
 # TABLE_PATH in tests/data_processing/data_ingestion_template_valid.yaml
 dicom_table_path = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/table/"
-test_ingestion_template = "tests/data_processing/data_ingestion_template_valid.yaml"
+test_ingestion_template = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/manifest.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -31,7 +31,7 @@ def test_cli(spark):
     result = runner.invoke(cli, 
         ['-t', 'tests/data_processing/data_ingestion_template_valid.yaml', 
         '-f', 'tests/data_processing/common/test_config.yaml', 
-        '-s', 'true'])
+        '-p', 'delta'])
 
     print(result.exc_info)
     assert result.exit_code == 0
