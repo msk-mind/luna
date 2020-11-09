@@ -209,9 +209,8 @@ def update_graph(config_file):
 
     dicom_header_path = os.path.join(os.environ["TABLE_PATH"], "dicom_header")
 
-    dataset_properties = [
-        'DATASET_NAME',
-        'TABLE_PATH',
+    # Which properties to include in dataset node
+    dataset_ext_properties = [
         'REQUESTOR',
         'REQUESTOR_DEPARTMENT',
         'REQUESTOR_EMAIL',
@@ -219,11 +218,15 @@ def update_graph(config_file):
         'SOURCE',
         'MODALITY',
     ]
-
-    prop_string = ','.join(['''{0}: "{1}"'''.format(prop, os.environ[prop]) for prop in dataset_properties])
+     
+    dataset_props = list ( set(dataset_ext_properties).intersection(set(os.environ.keys())))  
+    dataset_props.insert(0, 'TABLE_PATH')
+    dataset_props.insert(0, 'DATASET_NAME')
+    
+    prop_string = ','.join(['''{0}: "{1}"'''.format(prop, os.environ[prop]) for prop in dataset_props])
     conn.query(f'''MERGE (n:dataset{{{prop_string}}})''')
 
-    with CodeTimer(logger, 'Setup proxy table'):
+    with CodeTimer(logger, 'setup proxy table'):
         # Reading dicom and opdata
         df_dcmdata = spark.read.format("delta").load(dicom_header_path)
     
@@ -232,7 +235,7 @@ def update_graph(config_file):
             .count()\
             .toPandas()
     
-    with CodeTimer(logger, 'Syncronize graph'):
+    with CodeTimer(logger, 'syncronize graph'):
     
         for index, row in tuple_to_add.iterrows():
             query ='''MATCH (das:dataset {{DATASET_NAME: "{0}"}}) MERGE (px:xnat_patient_id {{value: "{1}"}}) MERGE (sc:scan {{SeriesInstanceUID: "{2}"}}) MERGE (px)-[r1:HAS_SCAN]->(sc) MERGE (das)-[r2:HAS_PX]-(px)'''.format(os.environ['DATASET_NAME'], row['PatientName'], row['SeriesInstanceUID'])
