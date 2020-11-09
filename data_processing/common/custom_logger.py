@@ -5,7 +5,7 @@ import os
 
 def init_logger(filename='data-processing.log'):
     # Logging configuration
-    log_location = os.path.join(tempfile.gettempdir(), 'log')
+    log_location = os.getcwd()
     if not os.path.exists(log_location):
         os.makedirs(log_location)
     log_file = os.path.join(log_location, filename)
