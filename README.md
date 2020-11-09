@@ -12,7 +12,9 @@ Scripts for data processing
 TODO: add instructions for using screen to run the script 
 
 ```bash
-make grpt template-file=<data_ingestion_template_file_name> config-file=<config_file> skip-transfer=<true/false>
+make grpt template-file=<data_ingestion_template_file_name> \
+config-file=<config_file> \
+process-string=<any combination of 'transfer,delta,graph'>
 ```   
 
 4. Verify logs.
