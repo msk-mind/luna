@@ -10,7 +10,6 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
-from data_processing.common.EnsureByteContext import EnsureByteContext 
 
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType
@@ -18,7 +17,7 @@ from pyspark.sql.types import StringType
 import pydicom
 import time
 from io import BytesIO
-import os, shutil
+import os, shutil, sys, importlib
 import json
 import yaml, os
 import subprocess
@@ -31,15 +30,16 @@ def generate_uuid(path, content):
 
     file_path = path.split(':')[-1]
     content = BytesIO(content)
-    
-    with EnsureByteContext():
+
+    import EnsureByteContext 
+    with EnsureByteContext.EnsureByteContext():
         dcm_hash = FileHash('sha256').hash_file(content)
 
     dicom_record_uuid = f'DICOM-{dcm_hash}'
     return dicom_record_uuid
 
 
-def parse_dicom_from_delta_record(record):
+def parse_dicom_from_delta_record(record, json_path):
     
     dirs, filename  = os.path.split(record.path)
 
@@ -63,7 +63,7 @@ def parse_dicom_from_delta_record(record):
         # if type(elem.value) in [pydicom.sequence.Sequence]: print ( elem.keyword, type(elem.value), elem.value)
 
     kv['dicom_record_uuid'] = record.dicom_record_uuid      
-    with open(os.path.join(os.environ["TMPJSON_PATH"], filename), 'w') as f:
+    with open(os.path.join(json_path, filename), 'w') as f:
         json.dump(kv, f)
 
 
@@ -155,7 +155,12 @@ def transfer_files():
 def create_proxy_table(config_file):
 
     spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
+    json_path = os.environ["TMPJSON_PATH"]
 
+    # setup for using external py in udf
+    sys.path.append("data_processing/common")
+    importlib.import_module("data_processing.common.EnsureByteContext")
+    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
     # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
 
@@ -173,25 +178,25 @@ def create_proxy_table(config_file):
         generate_uuid_udf = udf(generate_uuid, StringType())
         df = df.withColumn("dicom_record_uuid", lit(generate_uuid_udf(df.path, df.content)))
 
-        df.coalesce(128).write.format(os.environ["FORMAT_TYPE"]) \
+        df.coalesce(512).write.format(os.environ["FORMAT_TYPE"]) \
             .mode("overwrite") \
             .save(dicom_path)
     
     # parse all dicom files
     with CodeTimer(logger, 'read and parse dicom'):
-        df.foreach(parse_dicom_from_delta_record)
+        df.foreach(lambda x: parse_dicom_from_delta_record(x, json_path))
 
     # save parsed json headers to tables
-    print (os.environ["TMPJSON_PATH"])
-    header = spark.read.json(os.environ["TMPJSON_PATH"])
-    header.write.format(os.environ["FORMAT_TYPE"]) \
-        .mode("overwrite") \
-        .option("mergeSchema", "true") \
-        .save(dicom_header_path)
+    with CodeTimer(logger, 'read jsons and save dicom headers'):
+        header = spark.read.json(json_path)
+        header.coalesce(256).write.format(os.environ["FORMAT_TYPE"]) \
+            .mode("overwrite") \
+            .option("mergeSchema", "true") \
+            .save(dicom_header_path)
 
     # clean up temporary jsons
-    if os.path.exists(os.environ["TMPJSON_PATH"]):
-        shutil.rmtree(os.environ["TMPJSON_PATH"])
+    if os.path.exists(json_path):
+        shutil.rmtree(json_path)
 
     processed_count = df.count()
     logger.info("Processed {} dicom headers out of total {} dicom files".format(processed_count, os.environ["FILE_COUNT"]))
