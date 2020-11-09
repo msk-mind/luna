@@ -12,7 +12,7 @@ echo "HOST = $HOST" >> $LOG_FILE;
 echo "SOURCE_PATH = $SOURCE_PATH" >> $LOG_FILE;
 echo "RAW_DATA_PATH = $RAW_DATA_PATH" >> $LOG_FILE;
 echo "FILE_COUNT = $FILE_COUNT" >> $LOG_FILE;
-echo "DATA_SIZE = $DATA_SIZE" >> $LOG_FILE;
+echo "\nDATA_SIZE = $DATA_SIZE" >> $LOG_FILE;
 
 # todo: make keys in ingestion template all caps
 
@@ -49,7 +49,6 @@ num_procs=${bw%?}
 
 ########################### transfer files ###########################
 
-# TODO: looks like the -h option can be removed, it is for help
 # transfer whole files without delta-xfer algorithm from specified source location to destination location.
 # spawn one process per unit of network bandwidth
 # delete any files in the destination location that are not in the source location
@@ -64,7 +63,7 @@ rsync -ahW --delete --stats --log-file=$LOG_FILE \
 $HOST:$SOURCE_PATH/{} $RAW_DATA_PATH
 
 let exit_code=$?+$exit_code
-echo "exit code after rsync = $exit_code" >> $LOG_FILE
+echo "\nexit code after rsync = $exit_code" >> $LOG_FILE
 
 ########################### verify post-conditions ###########################
 
@@ -73,14 +72,14 @@ file_count=$(find $RAW_DATA_PATH -type f -name "*" | wc -l)
 [ $FILE_COUNT -eq $file_count ];
 
 let exit_code=$?+$exit_code
-echo "exit code after file_count verification = $exit_code" >> $LOG_FILE
+echo "\nexit code after file_count verification = $exit_code" >> $LOG_FILE
 
 # verify and log transfer data size (bytes)
 data_size=$(find $RAW_DATA_PATH -type d | xargs du -s | cut -f1)
 [ $DATA_SIZE -eq $data_size ];
 
 let exit_code = $? + $exit_code
-echo "exit code after data_size verification = $exit_code" >> $LOG_FILE
+echo "\nexit code after data_size verification = $exit_code" >> $LOG_FILE
 
 ########################### teardown ###########################
 
