@@ -9,7 +9,7 @@ Scripts for data processing
 
 3. Execute grpt command. 
 
-TODO: add instructions for using screen to run the script 
+NOTE: To kill the job, kill process group, not pid to kill the process & subprocesses
 
 ```bash
 make grpt template-file=<data_ingestion_template_file_name> \
