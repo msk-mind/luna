@@ -76,7 +76,9 @@ def parse_dicom_from_delta_record(record):
               help="path to config file containing application configuration. See config.yaml.template")
 @click.option('-s', '--skip_transfer',
               help='do not transfer files from xnat mount, use existing files located at (by default): /raw_data')
-def cli(template_file, config_file, skip_transfer):
+@click.option('-p', '--process_string',
+              help='comma separated list of processes to run or replay: e.g. transfer,delta,graph')
+def cli(template_file, config_file, skip_transfer, process_string):
     """
     This module generates a set of proxy tables for radiology data based on information specified in the tempalte file.
 
@@ -87,10 +89,12 @@ def cli(template_file, config_file, skip_transfer):
         --skip_transfer true
         
     """
+    processes = process_string.lower().strip().split(",")
     logger.info('data_ingestions_template: ' + template_file)
     logger.info('config_file: ' + config_file)
     logger.info('skip transfer: ' + skip_transfer)
-    
+    logger.info('processes: ' + str(processes))
+   
     start_time = time.time()
     
     # setup env variables
@@ -103,14 +107,16 @@ def cli(template_file, config_file, skip_transfer):
     shutil.copy(template_file, os.path.join(os.environ["LANDING_PATH"], "manifest.yaml"))
 
     # subprocess call will preserve environmental variables set by the parent thread.
-    if not bool(strtobool(skip_transfer)):
+    if 'transfer' in processes:
         transfer_files()
 
     # subprocess - create proxy table
-    create_proxy_table(config_file)
+    if 'delta' in processes:
+        create_proxy_table(config_file)
 
     # update graph
-    update_graph(config_file)
+    if 'graph' in processes:
+        update_graph(config_file)
 
     # subprocess - sync to graph
     logger.info("--- Finished building proxy table in %s seconds ---" % (time.time() - start_time))
