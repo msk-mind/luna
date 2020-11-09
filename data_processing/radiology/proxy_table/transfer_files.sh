@@ -3,16 +3,16 @@ set -x
 LOG_FILE=transfer_files.log
 exit_code=0
 
-echo ">>>> writing data transfer logs to $LOG_FILE..."
-echo "Running data_processing/radiology/proxy_table/transfer_files.sh with - " >> $LOG_FILE;
-echo "BWLIMIT = $BWLIMIT" >> $LOG_FILE;
-echo "CHUNK_FILE = $CHUNK_FILE" >> $LOG_FILE;
-echo "EXCLUDES = $EXCLUDES" >> $LOG_FILE;
-echo "HOST = $HOST" >> $LOG_FILE;
-echo "SOURCE_PATH = $SOURCE_PATH" >> $LOG_FILE;
-echo "RAW_DATA_PATH = $RAW_DATA_PATH" >> $LOG_FILE;
-echo "FILE_COUNT = $FILE_COUNT" >> $LOG_FILE;
-echo "\nDATA_SIZE = $DATA_SIZE" >> $LOG_FILE;
+echo "INFO: >>>> writing data transfer logs to $LOG_FILE..."
+echo "INFO: Running data_processing/radiology/proxy_table/transfer_files.sh with - " >> $LOG_FILE;
+echo "INFO: BWLIMIT = $BWLIMIT" >> $LOG_FILE;
+echo "INFO: CHUNK_FILE = $CHUNK_FILE" >> $LOG_FILE;
+echo "INFO: EXCLUDES = $EXCLUDES" >> $LOG_FILE;
+echo "INFO: HOST = $HOST" >> $LOG_FILE;
+echo "INFO: SOURCE_PATH = $SOURCE_PATH" >> $LOG_FILE;
+echo "INFO: RAW_DATA_PATH = $RAW_DATA_PATH" >> $LOG_FILE;
+echo "INFO: FILE_COUNT = $FILE_COUNT" >> $LOG_FILE;
+echo "INFO: DATA_SIZE = $DATA_SIZE\n" >> $LOG_FILE;
 
 # todo: make keys in ingestion template all caps
 
@@ -34,7 +34,7 @@ let exit_code=$?+$exit_code
 
 if [ $exit_code -eq 0 ]
 then
-  { echo "\nvalidated environment variables..." >> $LOG_FILE; }
+  { echo "\nINFO: validated environment variables..." >> $LOG_FILE; }
 else
   { echo "\nERROR: file transfer failed. missing required environment variables!" >> $LOG_FILE; exit 1 ; }
 fi
@@ -63,7 +63,12 @@ rsync -ahW --delete --stats --log-file=$LOG_FILE \
 $HOST:$SOURCE_PATH/{} $RAW_DATA_PATH
 
 let exit_code=$?+$exit_code
-echo "\nexit code after rsync = $exit_code" >> $LOG_FILE
+if [ $exit_code -eq 0 ]
+then
+  { echo "\nINFO: rsync completed successfully..." >> $LOG_FILE; }
+else
+  { echo "\nERROR: file transfer failed. rsync failed!" >> $LOG_FILE; exit 1 ; }
+fi
 
 ########################### verify post-conditions ###########################
 
@@ -72,16 +77,30 @@ file_count=$(find $RAW_DATA_PATH -type f -name "*" | wc -l)
 [ $FILE_COUNT -eq $file_count ];
 
 let exit_code=$?+$exit_code
-echo "actual file count = $file_count" >> $LOG_FILE
-echo "\nexit code after file_count verification = $exit_code" >> $LOG_FILE
+
+echo "\nINFO: actual file count = $file_count" >> $LOG_FILE
+
+if [ $exit_code -eq 0 ]
+then
+  { echo "\nINFO: file counts match..." >> $LOG_FILE; }
+else
+  { echo "\nERROR: file transfer failed. file counts do not match!" >> $LOG_FILE; exit 1 ; }
+fi
 
 # verify and log transfer data size (bytes)
 data_size=$(find $RAW_DATA_PATH -type d | xargs du -s | cut -f1)
 [ $DATA_SIZE -eq $data_size ];
 
 let exit_code=$?+$exit_code
-echo "actual data size = $data_size" >> $LOG_FILE
-echo "\nexit code after data_size verification = $exit_code" >> $LOG_FILE
+
+echo "\nINFO: actual data size = $data_size" >> $LOG_FILE
+
+if [ $exit_code -eq 0 ]
+then
+  { echo "\nINFO: data sizes match..." >> $LOG_FILE; }
+else
+  { echo "\nERROR: file transfer failed. data sizes do not match!" >> $LOG_FILE; exit 1 ; }
+fi
 
 ########################### teardown ###########################
 
@@ -92,7 +111,7 @@ echo "\n" >> $LOG_FILE
 
 if [ $exit_code -eq 0 ]
 then
-        { echo "file transfer completed successfully!" ; exit 0 ; }
+        { echo "\nINFO: file transfer completed successfully!" ; exit 0 ; }
 else
-        { echo "file transfer failed! See $LOG_FILE" ; exit 1 ; }
+        { echo "\nERROR: file transfer failed! See $LOG_FILE" ; exit 1 ; }
 fi
