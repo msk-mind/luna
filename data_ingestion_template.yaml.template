@@ -72,10 +72,6 @@ EXCLUDE:
 # to the destination file system.
 CHUNK_FILE: chunks.txt
 
-# file path to location where the data should be transferred on the destination machine.
-RAW_DATA_PATH: /data
-
-
 # total number of input data files to process. this can be obtained by running the following command on the source directory
 # 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
 # NOTE: if you get "permission_denied" on some dirs, make sure those dirs have +x permission for "others" as this is required
