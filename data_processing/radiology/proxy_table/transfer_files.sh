@@ -80,7 +80,7 @@ file_count=$(find $RAW_DATA_PATH -type f -name "*" | wc -l)
 
 let exit_code=$?+$exit_code
 
-echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: actual file count = $file_count" >> $LOG_FILE
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: actual file count = $file_count expected file count = $FILE_COUNT" >> $LOG_FILE
 
 if [ $exit_code -eq 0 ]
 then
@@ -95,7 +95,7 @@ data_size=$(find $RAW_DATA_PATH -type d | xargs du -s | cut -f1)
 
 let exit_code=$?+$exit_code
 
-echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: actual data size = $data_size" >> $LOG_FILE
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: actual data size = $data_size expeted data size = $DATA_SIZE" >> $LOG_FILE
 
 if [ $exit_code -eq 0 ]
 then
