@@ -13,7 +13,7 @@ jobs:
       - run: sudo apt install default-jre
       - run: java -version
       - run: which java
-      - run: echo "export PATH=/home/circleci/.local/bin:$PATH" >> $BASH_ENV
+      - run: echo "export PATH=/home/circleci/.local/bin:$PATH" >> $BASH_ENV  # some python packages get installed  here
       - run: echo $PATH
       - run: python --version
       - run: pip install --upgrade --user pip
