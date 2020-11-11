@@ -3,16 +3,16 @@ set -x
 LOG_FILE=transfer_files.log
 exit_code=0
 
-echo "INFO: >>>> writing data transfer logs to $LOG_FILE..."
-echo "INFO: Running data_processing/radiology/proxy_table/transfer_files.sh with - " >> $LOG_FILE;
-echo "INFO: BWLIMIT = $BWLIMIT" >> $LOG_FILE;
-echo "INFO: CHUNK_FILE = $CHUNK_FILE" >> $LOG_FILE;
-echo "INFO: EXCLUDES = $EXCLUDES" >> $LOG_FILE;
-echo "INFO: HOST = $HOST" >> $LOG_FILE;
-echo "INFO: SOURCE_PATH = $SOURCE_PATH" >> $LOG_FILE;
-echo "INFO: RAW_DATA_PATH = $RAW_DATA_PATH" >> $LOG_FILE;
-echo "INFO: FILE_COUNT = $FILE_COUNT" >> $LOG_FILE;
-echo "INFO: DATA_SIZE = $DATA_SIZE\n" >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: >>>> writing data transfer logs to $LOG_FILE..."
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: Running data_processing/radiology/proxy_table/transfer_files.sh with - " >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: BWLIMIT = $BWLIMIT" >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: CHUNK_FILE = $CHUNK_FILE" >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: EXCLUDES = $EXCLUDES" >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: HOST = $HOST" >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: SOURCE_PATH = $SOURCE_PATH" >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: RAW_DATA_PATH = $RAW_DATA_PATH" >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: FILE_COUNT = $FILE_COUNT" >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: DATA_SIZE = $DATA_SIZE" >> $LOG_FILE;
 
 # todo: make keys in ingestion template all caps
 
@@ -34,9 +34,9 @@ let exit_code=$?+$exit_code
 
 if [ $exit_code -eq 0 ]
 then
-  { echo "\nINFO: validated environment variables..." >> $LOG_FILE; }
+  { echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: validated environment variables..." >> $LOG_FILE; }
 else
-  { echo "\nERROR: file transfer failed. missing required environment variables!" >> $LOG_FILE; exit 1 ; }
+  { echo "$(date '+%Y-%m-%d %H:%M:%S') ERROR: file transfer failed. missing required environment variables!" >> $LOG_FILE; exit 1 ; }
 fi
 
 # create destination dir if it does not exist
@@ -67,9 +67,9 @@ $HOST:$SOURCE_PATH/{} $RAW_DATA_PATH
 let exit_code=$?+$exit_code
 if [ $exit_code -eq 0 ]
 then
-  { echo "\nINFO: rsync completed successfully..." >> $LOG_FILE; }
+  { echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: rsync completed successfully..." >> $LOG_FILE; }
 else
-  { echo "\nERROR: file transfer failed. rsync failed!" >> $LOG_FILE; exit 1 ; }
+  { echo "$(date '+%Y-%m-%d %H:%M:%S') ERROR: file transfer failed. rsync failed!" >> $LOG_FILE; exit 1 ; }
 fi
 
 ########################### verify post-conditions ###########################
@@ -80,13 +80,13 @@ file_count=$(find $RAW_DATA_PATH -type f -name "*" | wc -l)
 
 let exit_code=$?+$exit_code
 
-echo "\nINFO: actual file count = $file_count" >> $LOG_FILE
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: actual file count = $file_count" >> $LOG_FILE
 
 if [ $exit_code -eq 0 ]
 then
-  { echo "\nINFO: file counts match..." >> $LOG_FILE; }
+  { echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: file counts match..." >> $LOG_FILE; }
 else
-  { echo "\nERROR: file transfer failed. file counts do not match!" >> $LOG_FILE; exit 1 ; }
+  { echo "$(date '+%Y-%m-%d %H:%M:%S') ERROR: file transfer failed. file counts do not match!" >> $LOG_FILE; exit 1 ; }
 fi
 
 # verify and log transfer data size (bytes)
@@ -95,25 +95,25 @@ data_size=$(find $RAW_DATA_PATH -type d | xargs du -s | cut -f1)
 
 let exit_code=$?+$exit_code
 
-echo "\nINFO: actual data size = $data_size" >> $LOG_FILE
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: actual data size = $data_size" >> $LOG_FILE
 
 if [ $exit_code -eq 0 ]
 then
-  { echo "\nINFO: data sizes match..." >> $LOG_FILE; }
+  { echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: data sizes match..." >> $LOG_FILE; }
 else
-  { echo "\nERROR: file transfer failed. data sizes do not match!" >> $LOG_FILE; exit 1 ; }
+  { echo "$(date '+%Y-%m-%d %H:%M:%S') ERROR: file transfer failed. data sizes do not match!" >> $LOG_FILE; exit 1 ; }
 fi
 
 ########################### teardown ###########################
 
 # the end
-echo "\n" >> $LOG_FILE
+echo "" >> $LOG_FILE
 echo "=============================================================" >> $LOG_FILE
-echo "\n" >> $LOG_FILE
+echo "" >> $LOG_FILE
 
 if [ $exit_code -eq 0 ]
 then
-        { echo "\nINFO: file transfer completed successfully!" ; exit 0 ; }
+        { echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: file transfer completed successfully!" ; exit 0 ; }
 else
-        { echo "\nERROR: file transfer failed! See $LOG_FILE" ; exit 1 ; }
+        { echo "$(date '+%Y-%m-%d %H:%M:%S') ERROR: file transfer failed! See $LOG_FILE" ; exit 1 ; }
 fi
