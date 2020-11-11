@@ -30,7 +30,7 @@ clean-test:      ## remove test and coverage artifacts
 	rm -fr htmlcov/
 
 dist: clean
-	pip install -r requirements.txt
+	pip install --use-feature=2020-resolver -r requirements.txt
 	pyinstaller -F --clean --hidden-import py4j.java_collections --exclude-module tkinter data_processing/preprocess_feature.py
 	python setup.py sdist
 	python setup.py bdist_wheel
@@ -41,8 +41,8 @@ lint:
 	flake8 data-processing test
 
 test: clean-test clean-pyc    ## run tests quickly with the default Python
-	pip install -r requirements.txt
-	py.test
+	pip install --use-feature=2020-resolver -r requirements.txt
+	pytest
 
 coverage:
 	pytest -s --cov=data_processing tests

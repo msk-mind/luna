@@ -1,21 +1,17 @@
 version: 2.1
 
-orbs:
-  python: circleci/python@0.2.1
 
 jobs:
-  build-and-test:
-    executor: python/default
+  build:
+    docker:
+      - image: circleci/python:3.6.8  # primary container for the build job
+
     steps:
       - checkout
-      - python/load-cache
-      - python/install-deps
-      - python/save-cache
-      - run:
-          command: make test
-          name: Test
-
-workflows:
-  main:
-    jobs:
-      - build-and-test
+      - run: cat /etc/os-release
+      - run: echo "export PATH=/home/circleci/.local/bin:$PATH" >> $BASH_ENV
+      - run: echo $PATH
+      - run: python --version
+      - run: pip install --upgrade --user pip
+      - run: pip list
+      - run: make test
