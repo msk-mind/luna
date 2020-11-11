@@ -11,7 +11,7 @@ pytest
 pytest-cov
 pytest-mock
 pytest-runner
-scikit-image
+scikit-image==0.17.2
 wheel>=0.22
 itk
 paramiko
