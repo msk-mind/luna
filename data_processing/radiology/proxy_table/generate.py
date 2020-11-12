@@ -12,7 +12,7 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 
 from pyspark.sql.functions import udf, lit
-from pyspark.sql.types import StringType
+from pyspark.sql.types import StringType, MapType
 
 import pydicom
 import time
@@ -22,9 +22,8 @@ import json
 import yaml, os
 import subprocess
 from filehash import FileHash
-from distutils.util import strtobool
 
-logger = init_logger("radiology-proxy.log")
+logger = init_logger()
 
 def generate_uuid(path, content):
 
@@ -39,11 +38,11 @@ def generate_uuid(path, content):
     return dicom_record_uuid
 
 
-def parse_dicom_from_delta_record(record, json_path):
+def parse_dicom_from_delta_record(path, content):
     
-    dirs, filename  = os.path.split(record.path)
+    dirs, filename  = os.path.split(path)
 
-    dataset = pydicom.dcmread(BytesIO(record.content))
+    dataset = pydicom.dcmread(BytesIO(content))
 
     kv = {}
     types = set()
@@ -61,11 +60,10 @@ def parse_dicom_from_delta_record(record, json_path):
             skipped_keys.append(elem.keyword)
         # not sure how to handle a sequence!
         # if type(elem.value) in [pydicom.sequence.Sequence]: print ( elem.keyword, type(elem.value), elem.value)
-
-    kv['dicom_record_uuid'] = record.dicom_record_uuid      
-    with open(os.path.join(json_path, filename), 'w') as f:
-        json.dump(kv, f)
-
+    
+    if "" in kv:
+        kv.pop("")
+    return kv
 
 
 @click.command()
@@ -97,29 +95,33 @@ def cli(template_file, config_file, process_string):
     # setup env variables
     setup_environment_from_yaml(template_file)
 
-    # setup dirs
-    setup_landing_dirs()
-
     # write template file to manifest_yaml under LANDING_PATH
+    if not os.path.exists(os.environ["LANDING_PATH"]):
+        os.makedirs(os.environ["LANDING_PATH"])
     shutil.copy(template_file, os.path.join(os.environ["LANDING_PATH"], "manifest.yaml"))
 
     # subprocess call will preserve environmental variables set by the parent thread.
     if 'transfer' in processes or 'all' in processes:
-        transfer_files()
+        exit_code = transfer_files()
+        if exit_code != 0:
+            return
 
     # subprocess - create proxy table
     if 'delta' in processes or 'all' in processes:
-        create_proxy_table(config_file)
+        exit_code = create_proxy_table(config_file)
+        if exit_code != 0:
+            logger.error("Delta table creation had errors. Exiting.")
+            return
 
     # update graph
     if 'graph' in processes or 'all' in processes:
         update_graph(config_file)
 
     # subprocess - sync to graph
-    logger.info("--- Finished building proxy table in %s seconds ---" % (time.time() - start_time))
+    logger.info("--- Finished radiology proxy etl in %s seconds ---" % (time.time() - start_time))
 
 def setup_environment_from_yaml(template_file):
-     # read template_file yaml and set environmental variables for subprocesses
+    # read template_file yaml and set environmental variables for subprocesses
     with open(template_file, 'r') as template_file_stream:
         template_dict = yaml.safe_load(template_file_stream)
     
@@ -128,12 +130,6 @@ def setup_environment_from_yaml(template_file):
     # add all fields from template as env variables
     for var in template_dict:
         os.environ[var] = str(template_dict[var]).strip()
-
-def setup_landing_dirs():
-    paths = ["RAW_DATA_PATH", "TABLE_PATH", "TMPJSON_PATH"]
-    for path in paths:
-        if not os.path.exists(os.environ[path]):
-            os.makedirs(os.environ[path])   
 
 def transfer_files():
     start_time = time.time()
@@ -144,18 +140,18 @@ def transfer_files():
         logger.info("--- Finished transfering files in %s seconds ---" % (time.time() - start_time))
     except Exception as err:
         logger.error(("Error Transfering files with rsync" + str(err)))
-        return 
+        return -1 
         
     if exit_code != 0:
         logger.error(("Error Transfering files - Non-zero exit code: " + str(exit_code)))
     
-    return 
+    return exit_code
 
 
 def create_proxy_table(config_file):
-
+    
+    exit_code = 0
     spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
-    json_path = os.environ["TMPJSON_PATH"]
 
     # setup for using external py in udf
     sys.path.append("data_processing/common")
@@ -165,9 +161,8 @@ def create_proxy_table(config_file):
     logger.info("generating binary proxy table... ")
 
     dicom_path = os.path.join(os.environ["TABLE_PATH"], "dicom") 
-    dicom_header_path = os.path.join(os.environ["TABLE_PATH"], "dicom_header")
-
-    with CodeTimer(logger, 'delta table create'):
+    
+    with CodeTimer(logger, 'load dicom files'):
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
 
         df = spark.read.format("binaryFile"). \
@@ -178,33 +173,25 @@ def create_proxy_table(config_file):
         generate_uuid_udf = udf(generate_uuid, StringType())
         df = df.withColumn("dicom_record_uuid", lit(generate_uuid_udf(df.path, df.content)))
 
-        df.coalesce(512).write.format(os.environ["FORMAT_TYPE"]) \
-            .mode("overwrite") \
-            .save(dicom_path)
+    # parse all dicoms and save
+    with CodeTimer(logger, 'parse and save dicom'):
+        parse_dicom_from_delta_record_udf = udf(parse_dicom_from_delta_record, MapType(StringType(), StringType()))
+        header = df.withColumn("metadata", lit(parse_dicom_from_delta_record_udf(df.path, df.content)))
     
-    # parse all dicom files
-    with CodeTimer(logger, 'read and parse dicom'):
-        df.foreach(lambda x: parse_dicom_from_delta_record(x, json_path))
-
-    # save parsed json headers to tables
-    with CodeTimer(logger, 'read jsons and save dicom headers'):
-        header = spark.read.json(json_path)
-        header.coalesce(256).write.format(os.environ["FORMAT_TYPE"]) \
+        header.coalesce(6144).write.format(os.environ["FORMAT_TYPE"]) \
             .mode("overwrite") \
             .option("mergeSchema", "true") \
-            .save(dicom_header_path)
+            .save(dicom_path)
 
-    # clean up temporary jsons
-    if os.path.exists(json_path):
-        shutil.rmtree(json_path)
-
-    processed_count = df.count()
-    logger.info("Processed {} dicom headers out of total {} dicom files".format(processed_count, os.environ["FILE_COUNT"]))
+    processed_count = header.count()
+    logger.info("Processed {} dicom headers out of total {} dicom files".format(processed_count, os.environ["FILE_TYPE_COUNT"]))
 
     # validate and show created dataset
-    assert processed_count == int(os.environ["FILE_COUNT"])
-    df = spark.read.format(os.environ["FORMAT_TYPE"]).load(dicom_header_path)
+    if processed_count != int(os.environ["FILE_TYPE_COUNT"]):
+        exit_code = 1
+    df = spark.read.format(os.environ["FORMAT_TYPE"]).load(dicom_path)
     df.printSchema()
+    return exit_code
 
 def update_graph(config_file):
     spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
@@ -212,7 +199,7 @@ def update_graph(config_file):
     # Open a connection to the ID graph database
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
-    dicom_header_path = os.path.join(os.environ["TABLE_PATH"], "dicom_header")
+    dicom_path = os.path.join(os.environ["TABLE_PATH"], "dicom")
 
     # Which properties to include in dataset node
     dataset_ext_properties = [
@@ -233,7 +220,7 @@ def update_graph(config_file):
 
     with CodeTimer(logger, 'setup proxy table'):
         # Reading dicom and opdata
-        df_dcmdata = spark.read.format("delta").load(dicom_header_path)
+        df_dcmdata = spark.read.format("delta").load(dicom_path)
     
         tuple_to_add = df_dcmdata.select("PatientName", "SeriesInstanceUID")\
             .groupBy("PatientName", "SeriesInstanceUID")\
