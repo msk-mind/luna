@@ -24,6 +24,14 @@ def delta():
     config = request.json
     return str(config) 
 
+"""
+Example request:
+curl \
+--header "Content-Type: application/json" \
+--request POST \
+--data '{"TABLE_PATH":"/gpfs/mskmindhdp_emc/user/aukermaa/radiology/TEST_16-158_CT_20201028/table", "DATASET_NAME":"API_TESTING"}' \
+  http://pllimsksparky1:5000/mind/api/v1/graph
+"""
 @app.route('/mind/api/v1/graph', methods=['POST'])
 def graph():
     data = request.json
