@@ -18,4 +18,5 @@ jobs:
       - run: python --version
       - run: pip install --upgrade --user pip
       - run: pip list
+      - run: python setup.py install  # needed to run the cli unit tests
       - run: make test
