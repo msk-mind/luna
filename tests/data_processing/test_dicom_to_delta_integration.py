@@ -30,7 +30,7 @@ TABLES = [BINARY_TABLE, DCM_TABLE]
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml',
+    spark = SparkConfig().spark_session('tests/test_config.yaml',
         "test-dicom-to-delta")
     yield spark
 

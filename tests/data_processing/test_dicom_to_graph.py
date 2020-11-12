@@ -12,7 +12,7 @@ current_dir = os.getcwd()
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml', 'test-dicom-to-graph')
+    spark = SparkConfig().spark_session('tests/test_config.yaml', 'test-dicom-to-graph')
     yield spark
 
     print('------teardown------')
@@ -32,7 +32,7 @@ def test_cli(mocker, spark, monkeypatch):
     result = runner.invoke(cli, ['-s', 'local[2]',
                                  '-g', 'bolt://localhost:7883',
                                  '-h', 'file:///',
-                                 '-f', 'tests/data_processing/common/test_config.yaml'])
+                                 '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
     # radiology.dcm in testdata has only 1 row

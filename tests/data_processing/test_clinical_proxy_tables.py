@@ -20,7 +20,7 @@ destination_dir = 'tests/data_processing/testdata/data/clinical/patients'
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml',
+    spark = SparkConfig().spark_session('tests/test_config.yaml',
                                         'test-clinical-proxy-preprocessing')
     yield spark
 
@@ -48,7 +48,7 @@ def test_cli(spark):
         '-m', 'local[2]',
         '-s', source_file,
         '-d', destination_dir,
-        '-f', 'tests/data_processing/common/test_config.yaml'])
+        '-f', 'tests/test_config.yaml'])
     assert result.exit_code == 0
 
     df = spark.read.format('delta').load(destination_dir)

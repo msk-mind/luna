@@ -15,7 +15,7 @@ test_ingestion_template = "tests/data_processing/radiology/proxy_table/test_data
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml',
+    spark = SparkConfig().spark_session('tests/test_config.yaml',
                                         'test-radiology-proxy')
     yield spark
 
@@ -30,7 +30,7 @@ def test_cli(spark):
     runner = CliRunner()
     result = runner.invoke(cli, 
         ['-t', 'tests/data_processing/data_ingestion_template_valid.yaml', 
-        '-f', 'tests/data_processing/common/test_config.yaml', 
+        '-f', 'tests/test_config.yaml',
         '-p', 'delta'])
 
     print(result.exc_info)
