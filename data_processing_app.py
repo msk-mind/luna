@@ -9,6 +9,7 @@ from data_processing.common.Neo4jConnection import Neo4jConnection
 
 app = Flask(__name__)
 logger = init_logger("flask-mind-server.log")
+spark = SparkConfig().spark_session(os.environ['SPARK_CONFIG'], "data_processing.mind.api")
 
 @app.route('/')
 def index():
@@ -35,9 +36,7 @@ curl \
 @app.route('/mind/api/v1/graph', methods=['POST'])
 def graph():
     data = request.json
-
-    spark = SparkConfig().spark_session(os.environ['SPARK_CONFIG'], "data_processing.radiology.proxy_table.generate")
-
+  
     # Open a connection to the ID graph database
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
