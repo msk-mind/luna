@@ -1,4 +1,9 @@
 #!/gpfs/mskmindhdp_emc/sw/env/bin/python3
+
+"""
+To start a server: ./data_processing_app.py (Recommended on sparky1)
+"""
+
 from flask import Flask, request
 import os
 
@@ -64,5 +69,6 @@ def graph():
             logger.info (query)
             conn.query(query)
     return (f"Dataset {data['DATASET_NAME']} added successfully!")
+
 if __name__ == '__main__':
     app.run(host = os.environ['HOSTNAME'], debug=True)
