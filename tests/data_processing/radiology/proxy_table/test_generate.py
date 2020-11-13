@@ -8,7 +8,6 @@ from data_processing.radiology.proxy_table.generate import *
 from data_processing.common.sparksession import SparkConfig
 
 
-# TABLE_PATH in tests/data_processing/data_ingestion_template_valid.yaml
 dicom_table_path = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/table/"
 test_ingestion_template = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/manifest.yaml"
 
@@ -36,8 +35,7 @@ def test_cli(spark):
     print(result.exc_info)
     assert result.exit_code == 0
 
-    df = spark.read.format("delta").load(dicom_table_path + "dicom_header")
+    df = spark.read.format("delta").load(dicom_table_path + "dicom")
     assert df.count() == 1
     assert "dicom_record_uuid" in df.columns
-
-
+    assert "metadata" in df.columns

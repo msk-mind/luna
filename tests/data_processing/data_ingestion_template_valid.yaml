@@ -67,6 +67,9 @@ EXCLUDE: mha,mhd,raw
 # 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
 FILE_COUNT: 1
 
+# total number of input data files with FILE_TYPE extension.
+FILE_TYPE_COUNT: 1
+
 # total number of bytes to be transfered. this can be obtained by running the following command on the source directory
 # 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
 DATA_SIZE: 291337979
