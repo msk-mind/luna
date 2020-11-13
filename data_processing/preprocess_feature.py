@@ -207,8 +207,6 @@ def get_dmp_from_scan(conn, query_id):
                    "defaults to base directory")
 @click.option('-t', '--target_spacing', nargs=3, type=float, required=True,
               help="target spacing for x,y and z dimensions")
-@click.option('-s', '--spark_master_uri', required=True,
-              help='spark master uri e.g. spark://master-ip:7077 or local[*]')
 @click.option('-n', '--feature_table_output_name', default="feature-table",
               help="name of new feature table that is created.")
 @click.option('-c', '--custom_preprocessing_script', default = None,
@@ -216,8 +214,7 @@ def get_dmp_from_scan(conn, query_id):
                    " uses process_patient_default() for preprocessing")
 @click.option('-f', '--config_file', default = 'config.yaml',
               help="path to config file containing application configuration. See config.yaml.template")
-def cli(spark_master_uri,
-        base_directory,
+def cli(base_directory,
         destination_directory,
         target_spacing,
         query,
@@ -228,7 +225,7 @@ def cli(spark_master_uri,
     This module pre-processes the CE-CT acquisitions and associated segmentations and generates
     a DataFrame tracking the file paths of the pre-processed items, stored as NumPy ndarrays.
 
-    Example: python preprocess_feature.py --spark_master_uri {spark_master_uri} --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing} --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created}
+    Example: python preprocess_feature.py --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing} --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created}
     """
     if len(destination_directory) == 0:
         destination_directory = base_directory
