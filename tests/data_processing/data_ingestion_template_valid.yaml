@@ -57,15 +57,15 @@ RAW_DATA_PATH: tests/data_processing/radiology/proxy_table/test_data/OV_16-158_C
 # location for where tables are created 
 TABLE_PATH: tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/table
 
-# location for where temporary jsons are created
-TMPJSON_PATH: tests/data_processing/adiology/proxy_table/test_data/OV_16-158_CT_20201028/jsons
-
 # a comma separated list of files types/extensions to exclude. leave empty to include all files.
 EXCLUDE: mha,mhd,raw
 
 # total number of input data files to process. this can be obtained by running the following command on the source directory
 # 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
 FILE_COUNT: 1
+
+# total number of input data files with FILE_TYPE extension.
+FILE_TYPE_COUNT: 1
 
 # total number of bytes to be transfered. this can be obtained by running the following command on the source directory
 # 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
