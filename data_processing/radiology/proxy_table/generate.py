@@ -222,7 +222,7 @@ def update_graph(config_file):
         # Reading dicom and opdata
         df_dcmdata = spark.read.format("delta").load(dicom_path)
     
-        tuple_to_add = df_dcmdata.select("PatientName", "SeriesInstanceUID")\
+        tuple_to_add = df_dcmdata.select("metadata.PatientName", "metadata.SeriesInstanceUID")\
             .groupBy("PatientName", "SeriesInstanceUID")\
             .count()\
             .toPandas()
