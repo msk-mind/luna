@@ -36,11 +36,11 @@ RAW_DATA_PATH: any(str(required=True))
 
 TABLE_PATH: any(str(required=True))
 
-TMPJSON_PATH: any(str(required=True))
-
 EXCLUDE:  any(str(required=False))
 
 FILE_COUNT: int(required=True, min=1)
+
+FILE_TYPE_COUNT: int(required=True, min=1)
 
 DATA_SIZE: int(required=True, min=0)
 
