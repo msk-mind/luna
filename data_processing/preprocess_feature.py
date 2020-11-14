@@ -64,13 +64,12 @@ from pyspark.sql.functions import udf, lit, expr
 from pyspark.sql.types import StringType
 
 logger = init_logger()
-GPFS_MOUNT_DIR = "/gpfs/mskmindhdp_emc"
 
 def generate_absolute_path_from_hdfs(absolute_hdfs_path_col, filename_col):
     # do we need this if?
     if absolute_hdfs_path_col[0] == '/':
         absolute_hdfs_path_col = absolute_hdfs_path_col[1:]
-    return os.path.join(GPFS_MOUNT_DIR, absolute_hdfs_path_col, filename_col)
+    return os.path.join(os.getenv('BASE_DIR'), absolute_hdfs_path_col, filename_col)
 
 def process_patient_default(patient: pd.DataFrame) -> pd.DataFrame:
     """
@@ -200,7 +199,7 @@ def get_dmp_from_scan(conn, query_id):
 @click.option('-q', '--query', default = None,
               help = "where clause of SQL query to filter feature table, 'WHERE' does not need to be included, "
                      "but make sure to wrap with quotes to be interpretted correctly")
-@click.option('-b', '--base_directory', type=click.Path(exists=True), default="/gpfs/mskmindhdp_emc/",
+@click.option('-b', '--base_directory', type=click.Path(exists=True), required=True,
               help="location to find scan/annotation tables")
 @click.option('-d', '--destination_directory', type=click.Path(exists=False), default="",
               help="location where feature table should be written. If not specified, destination_directory "
@@ -227,6 +226,7 @@ def cli(base_directory,
 
     Example: python preprocess_feature.py --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing} --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created}
     """
+    print(">>>>>>>>>>>>>>>>CAME HERE>>>>>>>>>>>>>>>>>>>")
     if len(destination_directory) == 0:
         destination_directory = base_directory
 
@@ -236,6 +236,9 @@ def cli(base_directory,
     # Setup Spark context
     import time
     start_time = time.time()
+
+    # setup env vars from arguments
+    os.environ['BASE_DIR'] = base_directory
 
 
     spark = SparkConfig().spark_session(config_file, "preprocess_feature")
@@ -249,6 +252,13 @@ def cli(base_directory,
     print("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 def generate_feature_table(base_directory, destination_directory, target_spacing, spark, query, feature_table_output_name, custom_preprocessing_script):
+
+    try:
+        assert(os.getenv('BASE_DIR') != None)
+    except AssertionError as err:
+        logger.exception("env var BASE_DIR has not been set!")
+        raise err
+
     annotation_table = os.path.join(base_directory, "data/radiology/tables/radiology.annotations")
     scan_table = os.path.join(base_directory, "data/radiology/tables/radiology.scans")
     feature_table = os.path.join(destination_directory, "data/radiology/tables/radiology."+str(feature_table_output_name)+"/")
@@ -335,18 +345,18 @@ def generate_feature_table(base_directory, destination_directory, target_spacing
     df = df.join(uid_join_table, ['SeriesInstanceUID'])
     
     # Load Clinical Data, rename table-specific uuid columns, and join tables by dmp_patient_id
-    diagnosis_table = os.path.join(GPFS_MOUNT_DIR, "data/clinical/tables/clinical.diagnosis")
+    diagnosis_table = os.path.join(base_directory, "data/clinical/tables/clinical.diagnosis")
     diagnosis_df = spark.read.format("delta").load(diagnosis_table)
     diagnosis_df = diagnosis_df.withColumnRenamed("uuid", "diagnosis_uuid")
     df = df.join(diagnosis_df, ['dmp_patient_id'])
 
 
-    medications_table = os.path.join(GPFS_MOUNT_DIR, "data/clinical/tables/clinical.medications")
+    medications_table = os.path.join(base_directory, "data/clinical/tables/clinical.medications")
     medications_df = spark.read.format("delta").load(medications_table)
     medications_df = medications_df.withColumnRenamed("uuid", "medications_uuid")
     df = df.join(medications_df, ['msk_mind_patient_id', 'dmp_patient_id'])
 
-    patients_table = os.path.join(GPFS_MOUNT_DIR, "data/clinical/tables/clinical.patients")
+    patients_table = os.path.join(base_directory, "data/clinical/tables/clinical.patients")
     patients_df = spark.read.format("delta").load(patients_table)
     patients_df = patients_df.withColumnRenamed("uuid", "patients_uuid")
     df = df.join(patients_df, ['msk_mind_patient_id', 'dmp_patient_id'])

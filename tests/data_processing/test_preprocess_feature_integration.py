@@ -20,6 +20,8 @@ def spark(monkeypatch):
 
     spark = SparkConfig().spark_session('tests/test_config.yaml', 'test-preprocessing-feature')
 
+    os.environ['BASE_DIR'] = BASE_DIR
+
     yield spark
 
     print('------teardown------')
@@ -78,15 +80,15 @@ def test_feature_table_cli_with_destination_directory():
 
 
 def test_feature_table_cli_missing_params():
-    test_args = ["--base_directory {} --target_spacing 1 1 3".format(BASE_DIR),
-            "--base_directory {}".format(BASE_DIR),
-            "--base_directory {} --target_spacing 1.0 1.0 3.0".format("/path/does/not/exist")]
 
-    for arg in test_args:
-        result = runner.invoke(cli, arg)
-        assert result.exit_code == 2
+    result = runner.invoke(cli, "")
+    assert result.exit_code == 2  # from click error
 
-    print("Test CLI missing arguments tests passed.")
+    result = runner.invoke(cli, "--base_directory /does/not/exist/")
+    assert result.exit_code == 2 # from click error
+
+    result = runner.invoke(cli, "--base_directory {}".format(BASE_DIR))
+    assert result.exit_code == 2 # from click error
 
 
 def test_feature_table_cli_with_config():
