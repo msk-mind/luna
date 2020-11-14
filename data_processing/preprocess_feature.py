@@ -226,7 +226,7 @@ def cli(base_directory,
 
     Example: python preprocess_feature.py --base_directory {directory/to/tables} --target_spacing {x_spacing} {y_spacing} {z_spacing} --query "{sql where clause}" --feature_table_output_name {name-of-table-to-be-created}
     """
-    print(">>>>>>>>>>>>>>>>CAME HERE>>>>>>>>>>>>>>>>>>>")
+
     if len(destination_directory) == 0:
         destination_directory = base_directory
 
