@@ -1,3 +1,5 @@
+[![MSK-MIND](https://circleci.com/gh/MSK-MIND/data-processing.svg?style=svg)](https://circleci.com/gh/msk-mind/data-processing)
+
 # Data Processing
 Scripts for data processing
 
