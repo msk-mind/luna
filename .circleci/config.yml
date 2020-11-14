@@ -17,6 +17,7 @@ jobs:
       - run: echo $PATH
       - run: python --version
       - run: pip install --upgrade --user pip
+      - run: pip install --use-feature=2020-resolver -r requirements.txt
       - run: pip list
       - run: sudo python setup.py install  # needed to run the cli unit tests
       - run: pytest -s --cov=data_processing tests
