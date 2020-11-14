@@ -19,4 +19,8 @@ jobs:
       - run: pip install --upgrade --user pip
       - run: pip list
       - run: sudo python setup.py install  # needed to run the cli unit tests
-      - run: make test
+      - run: pytest -s --cov=data_processing tests
+      - run: coverage report -m
+      - run: coverage html
+      - store_artifacts:
+          path: htmlcov
