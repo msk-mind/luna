@@ -2,7 +2,7 @@
 # as a best practice, config.yaml must not be committed to github
 # as it may contain sensitive information about the data.
 #
-# See data_ingestion_template_schema.yaml for valid values
+# See data_ingestion_template_schema.yml for valid values
 
 # the name of requestor
 REQUESTOR: jane
