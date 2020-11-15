@@ -18,7 +18,9 @@ def spark(monkeypatch):
 
     monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
 
-    spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml', 'test-preprocessing-feature')
+    spark = SparkConfig().spark_session('tests/test_config.yaml', 'test-preprocessing-feature')
+
+    os.environ['BASE_DIR'] = BASE_DIR
 
     yield spark
 
@@ -65,31 +67,31 @@ def test_local_feature_table_generation_malformed_query(spark):
 
 
 def test_feature_table_cli():
-    result = runner.invoke(cli, "--spark_master_uri local[*] --base_directory {} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2 --custom_preprocessing_script tests/test_external_process_patient_script.py".format(BASE_DIR))
+    result = runner.invoke(cli, "--base_directory {} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2 --custom_preprocessing_script tests/test_external_process_patient_script.py --config_file tests/test_config.yaml".format(BASE_DIR))
     assert result.exit_code == 0
     print("CLI test passed.")
 
 def test_feature_table_cli_with_destination_directory():
     assert os.path.exists(DESTINATION_DIR) == False
-    result = runner.invoke(cli, "--spark_master_uri local[*] --base_directory {0} --destination_directory {1} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2 --custom_preprocessing_script tests/test_external_process_patient_script.py".format(BASE_DIR, DESTINATION_DIR))
+    result = runner.invoke(cli, "--base_directory {0} --destination_directory {1} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2 --custom_preprocessing_script tests/test_external_process_patient_script.py --config_file tests/test_config.yaml".format(BASE_DIR, DESTINATION_DIR))
     assert result.exit_code == 0
     assert os.path.exists(DESTINATION_DIR) == True
     print("CLI test passed.")
 
 
 def test_feature_table_cli_missing_params():
-    test_args = ["--base_directory {} --target_spacing 1 1 3".format(BASE_DIR),
-            "--spark_master_uri local[*] --base_directory {}".format(BASE_DIR),
-            "--spark_master_uri local[*] --base_directory {} --target_spacing 1.0 1.0 3.0".format("/path/does/not/exist")]
 
-    for arg in test_args:
-        result = runner.invoke(cli, arg)
-        assert result.exit_code == 2
+    result = runner.invoke(cli, "")
+    assert result.exit_code == 2  # from click error
 
-    print("Test CLI missing arguments tests passed.")
+    result = runner.invoke(cli, "--base_directory /does/not/exist/")
+    assert result.exit_code == 2 # from click error
+
+    result = runner.invoke(cli, "--base_directory {}".format(BASE_DIR))
+    assert result.exit_code == 2 # from click error
 
 
 def test_feature_table_cli_with_config():
-    result = runner.invoke(cli, "--spark_master_uri local[*] --base_directory {} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2 --custom_preprocessing_script tests/test_external_process_patient_script.py -f tests/data_processing/common/test_config.yaml".format(BASE_DIR))
+    result = runner.invoke(cli, "--base_directory {} --target_spacing 1 1 3 --query \"SeriesInstanceUID = \'1.2.840.113619.2.55.3.2743925538.934.1319713655.579\'\" --feature_table_output_name test-cli-2 --custom_preprocessing_script tests/test_external_process_patient_script.py -f tests/test_config.yaml".format(BASE_DIR))
     assert result.exit_code == 0
     print("CLI test passed.")

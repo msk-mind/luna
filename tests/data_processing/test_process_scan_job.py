@@ -30,7 +30,7 @@ def spark(monkeypatch):
     # start delta_io_service
     os.system("python3 -m data_processing.services.delta_io_service --hdfs file:/// --host localhost &")
 
-    spark = SparkConfig().spark_session('tests/data_processing/common/test_config.yaml', 'test-process-scan')
+    spark = SparkConfig().spark_session('tests/test_config.yaml', 'test-process-scan')
     yield spark
 
     print('------teardown------')
@@ -58,7 +58,7 @@ def test_cli(mocker, spark):
         '-d', 'file:///',
         '-c', generate_mhd_script_path,
         '-t', 'scan.unittest',
-        '-f', 'tests/data_processing/common/test_config.yaml'])
+        '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
     # radiology.dcm in testdata has only 1 row
