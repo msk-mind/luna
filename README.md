@@ -1,4 +1,4 @@
-[![MSK-MIND](https://circleci.com/gh/MSK-MIND/data-processing/tree/circleci-project-setup.svg?style=svg)](https://circleci.com/gh/msk-mind/data-processing)
+[![MSK-MIND](https://circleci.com/gh/MSK-MIND/data-processing/tree/circleci-project-setup.svg?style=svg)](https://circleci.com/gh/msk-mind/data-processing/tree/circleci-project-setup)
 
 # Data Processing
 Scripts for data processing
