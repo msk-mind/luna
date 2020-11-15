@@ -5,3 +5,5 @@ __pycache__
 htmlcov/*
 config.yaml
 data_ingestion_template.yaml
+*.log
+preprocess_feature.spec
