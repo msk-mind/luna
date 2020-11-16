@@ -107,7 +107,7 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
 
     # Reading dicom and opdata
     df_dcmdata = spark.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, const.DICOM_TABLE))
-    df_optdata = spark.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "tables/radiology.dcm_op"))
+    df_optdata = spark.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "tables/dcm_op"))
     logger.info (" >>> Loaded dicom DB")
 
     def python_def_generate_mhd(concept_id, input_paths, filenames):
