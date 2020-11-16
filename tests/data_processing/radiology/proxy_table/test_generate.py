@@ -6,9 +6,9 @@ import pytest
 from click.testing import CliRunner
 from data_processing.radiology.proxy_table.generate import *
 from data_processing.common.sparksession import SparkConfig
+import data_processing.common.constants as const
 
-
-dicom_table_path = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/table/"
+landing_path = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/"
 test_ingestion_template = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/manifest.yaml"
 
 @pytest.fixture(autouse=True)
@@ -19,8 +19,9 @@ def spark():
     yield spark
 
     print('------teardown------')
-    if os.path.exists(dicom_table_path):
-        shutil.rmtree(dicom_table_path)
+    tables_path = os.path.join(landing_path, "tables")
+    if os.path.exists(tables_path):
+        shutil.rmtree(tables_path)
     os.remove(test_ingestion_template)
 
 
@@ -35,7 +36,7 @@ def test_cli(spark):
     print(result.exc_info)
     assert result.exit_code == 0
 
-    df = spark.read.format("delta").load(dicom_table_path + "dicom")
+    df = spark.read.format("delta").load(landing_path + const.DICOM_TABLE)
     assert df.count() == 1
     assert "dicom_record_uuid" in df.columns
     assert "metadata" in df.columns

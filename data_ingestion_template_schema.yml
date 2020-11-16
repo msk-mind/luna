@@ -34,8 +34,6 @@ LANDING_PATH: any(str(required=True))
 
 RAW_DATA_PATH: any(str(required=True))
 
-TABLE_PATH: any(str(required=True))
-
 EXCLUDE:  any(str(required=False))
 
 FILE_COUNT: int(required=True, min=1)
