@@ -50,6 +50,7 @@ import click
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
+import data_processing.common.constants as const
 
 import numpy as np
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -259,10 +260,10 @@ def generate_feature_table(base_directory, destination_directory, target_spacing
         logger.exception("env var BASE_DIR has not been set!")
         raise err
 
-    annotation_table = os.path.join(base_directory, "data/radiology/tables/radiology.annotations")
-    scan_table = os.path.join(base_directory, "data/radiology/tables/radiology.scans")
-    feature_table = os.path.join(destination_directory, "data/radiology/tables/radiology."+str(feature_table_output_name)+"/")
-    feature_files = os.path.join(destination_directory, "data/radiology/features/"+str(feature_table_output_name)+"/")
+    annotation_table = os.path.join(base_directory, const.SCAN_ANNOTATION_TABLE)
+    scan_table = os.path.join(base_directory, const.SCAN_TABLE)
+    feature_table = os.path.join(destination_directory, "tables/"+str(feature_table_output_name)+"/")
+    feature_files = os.path.join(destination_directory, "features/"+str(feature_table_output_name)+"/")
     
     # Load Annotation table and rename columns before merge
     annot_df = spark.read.format("delta").load(annotation_table)
@@ -345,18 +346,18 @@ def generate_feature_table(base_directory, destination_directory, target_spacing
     df = df.join(uid_join_table, ['SeriesInstanceUID'])
     
     # Load Clinical Data, rename table-specific uuid columns, and join tables by dmp_patient_id
-    diagnosis_table = os.path.join(base_directory, "data/clinical/tables/clinical.diagnosis")
+    diagnosis_table = os.path.join(base_directory, const.DIAGNOSIS_TABLE)
     diagnosis_df = spark.read.format("delta").load(diagnosis_table)
     diagnosis_df = diagnosis_df.withColumnRenamed("uuid", "diagnosis_uuid")
     df = df.join(diagnosis_df, ['dmp_patient_id'])
 
 
-    medications_table = os.path.join(base_directory, "data/clinical/tables/clinical.medications")
+    medications_table = os.path.join(base_directory, const.MEDICATION_TABLE)
     medications_df = spark.read.format("delta").load(medications_table)
     medications_df = medications_df.withColumnRenamed("uuid", "medications_uuid")
     df = df.join(medications_df, ['msk_mind_patient_id', 'dmp_patient_id'])
 
-    patients_table = os.path.join(base_directory, "data/clinical/tables/clinical.patients")
+    patients_table = os.path.join(base_directory, const.PATIENT_TABLE)
     patients_df = spark.read.format("delta").load(patients_table)
     patients_df = patients_df.withColumnRenamed("uuid", "patients_uuid")
     df = df.join(patients_df, ['msk_mind_patient_id', 'dmp_patient_id'])
