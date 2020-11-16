@@ -15,5 +15,5 @@ PATIENT_TABLE		='tables/patient'
 # radiology
 DICOM_TABLE			='tables/dicom'
 SCAN_TABLE 			='tables/scan'
-SCAN_ANNOTATION_TABLE='tables/scan_annotation'
+SCAN_ANNOTATION_TABLE		='tables/scan_annotation'
 
