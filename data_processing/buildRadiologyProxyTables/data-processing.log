@@ -1,0 +1,154 @@
+2020-11-17 14:38:51,440 - werkzeug - INFO -  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+2020-11-17 14:39:22,504 - root - INFO - Radiology proxy enter.....
+2020-11-17 14:39:22,504 - buildRadiologyProxyTable - ERROR - Exception on /mind/api/v1/buildRadiologyProxyTable [GET]
+Traceback (most recent call last):
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 2447, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1952, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1821, in handle_user_exception
+    reraise(exc_type, exc_value, tb)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/_compat.py", line 39, in reraise
+    raise value
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1950, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1936, in dispatch_request
+    return self.view_functions[rule.endpoint](**req.view_args)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/buildRadiologyProxyTable.py", line 52, in buildRadiologyProxyTable
+    setup_environment_from_yaml(os.environ['PATH_TO_TEMPLATE_FILE'])
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/os.py", line 681, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'PATH_TO_TEMPLATE_FILE'
+2020-11-17 14:39:22,509 - werkzeug - INFO - 127.0.0.1 - - [17/Nov/2020 14:39:22] "[35m[1mGET /mind/api/v1/buildRadiologyProxyTable HTTP/1.1[0m" 500 -
+2020-11-17 14:40:17,531 - werkzeug - INFO -  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+2020-11-17 14:40:22,329 - root - INFO - Radiology proxy enter.....
+2020-11-17 14:40:22,329 - buildRadiologyProxyTable - ERROR - Exception on /mind/api/v1/buildRadiologyProxyTable [GET]
+Traceback (most recent call last):
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 2447, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1952, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1821, in handle_user_exception
+    reraise(exc_type, exc_value, tb)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/_compat.py", line 39, in reraise
+    raise value
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1950, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1936, in dispatch_request
+    return self.view_functions[rule.endpoint](**req.view_args)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/buildRadiologyProxyTable.py", line 52, in buildRadiologyProxyTable
+    setup_environment_from_yaml(os.environ['PATH_TO_TEMPLATE_FILE'])
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/os.py", line 681, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'PATH_TO_TEMPLATE_FILE'
+2020-11-17 14:40:22,334 - werkzeug - INFO - 127.0.0.1 - - [17/Nov/2020 14:40:22] "[35m[1mGET /mind/api/v1/buildRadiologyProxyTable HTTP/1.1[0m" 500 -
+2020-11-17 14:41:19,208 - werkzeug - INFO -  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+2020-11-17 14:41:26,701 - root - INFO - Radiology proxy enter.....
+2020-11-17 14:41:26,701 - buildRadiologyProxyTable - ERROR - Exception on /mind/api/v1/buildRadiologyProxyTable [GET]
+Traceback (most recent call last):
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 2447, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1952, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1821, in handle_user_exception
+    reraise(exc_type, exc_value, tb)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/_compat.py", line 39, in reraise
+    raise value
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1950, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1936, in dispatch_request
+    return self.view_functions[rule.endpoint](**req.view_args)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/buildRadiologyProxyTable.py", line 52, in buildRadiologyProxyTable
+    setup_environment_from_yaml(os.environ['PATH_TO_TEMPLATE_FILE'])
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/os.py", line 681, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'PATH_TO_TEMPLATE_FILE'
+2020-11-17 14:41:26,706 - werkzeug - INFO - 127.0.0.1 - - [17/Nov/2020 14:41:26] "[35m[1mGET /mind/api/v1/buildRadiologyProxyTable HTTP/1.1[0m" 500 -
+2020-11-17 14:42:27,110 - werkzeug - INFO -  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+2020-11-17 14:42:32,123 - root - INFO - Radiology proxy enter.....
+2020-11-17 14:42:32,123 - buildRadiologyProxyTable - ERROR - Exception on /mind/api/v1/buildRadiologyProxyTable [GET]
+Traceback (most recent call last):
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 2447, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1952, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1821, in handle_user_exception
+    reraise(exc_type, exc_value, tb)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/_compat.py", line 39, in reraise
+    raise value
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1950, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1936, in dispatch_request
+    return self.view_functions[rule.endpoint](**req.view_args)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/buildRadiologyProxyTable.py", line 52, in buildRadiologyProxyTable
+    setup_environment_from_yaml(os.environ['PATH_TO_TEMPLATE_FILE'])
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/os.py", line 681, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'PATH_TO_TEMPLATE_FILE'
+2020-11-17 14:42:32,128 - werkzeug - INFO - 127.0.0.1 - - [17/Nov/2020 14:42:32] "[35m[1mGET /mind/api/v1/buildRadiologyProxyTable HTTP/1.1[0m" 500 -
+2020-11-17 14:50:30,786 - werkzeug - INFO -  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+2020-11-17 14:52:02,982 - werkzeug - INFO -  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+2020-11-17 14:52:15,598 - werkzeug - INFO - 127.0.0.1 - - [17/Nov/2020 14:52:15] "[33mGET /mind/api/v1/buildRadiologyProxyTables HTTP/1.1[0m" 404 -
+2020-11-17 14:53:42,724 - werkzeug - INFO -  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+2020-11-17 14:53:46,968 - root - INFO - Radiology proxy enter.....
+2020-11-17 14:53:46,968 - buildRadiologyProxyTables - ERROR - Exception on /mind/api/v1/buildRadiologyProxyTables [GET]
+Traceback (most recent call last):
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 2447, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1952, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1821, in handle_user_exception
+    reraise(exc_type, exc_value, tb)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/_compat.py", line 39, in reraise
+    raise value
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1950, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1936, in dispatch_request
+    return self.view_functions[rule.endpoint](**req.view_args)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/buildRadiologyProxyTables.py", line 57, in buildRadiologyProxyTables
+    setup_environment_from_yaml(os.environ['PATH_TO_TEMPLATE_FILE'])
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/os.py", line 681, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'PATH_TO_TEMPLATE_FILE'
+2020-11-17 14:53:46,972 - werkzeug - INFO - 127.0.0.1 - - [17/Nov/2020 14:53:46] "[35m[1mGET /mind/api/v1/buildRadiologyProxyTables HTTP/1.1[0m" 500 -
+2020-11-17 15:12:42,166 - werkzeug - INFO -  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+2020-11-17 15:12:47,657 - root - INFO - Radiology proxy enter.....
+2020-11-17 15:12:47,663 - root - INFO - {'REQUESTOR': 'joe', 'REQUESTOR_DEPARTMENT': 'gynocology', 'REQUESTOR_EMAIL': 'joe@mskcc.org', 'PROJECT': 'OV_16-158', 'SOURCE': 'xnat', 'MODALITY': 'radiology', 'DATA_TYPE': 'CT', 'COMMENTS': None, 'DATE': datetime.datetime(2020, 10, 29, 1, 0), 'DATASET_NAME': 'OV_16-158_CT_20201028', 'ETL_TYPE': 'proxy', 'FILE_TYPE': 'dcm', 'FORMAT_TYPE': 'delta', 'HOST': '127.0.0.1', 'SOURCE_PATH': '/Users/elsherie/msk-mind/radiology/BC_16-512_MR_20201110_UWpYXajT5F/source', 'LANDING_PATH': '/Users/elsherie/msk-mind/radiology/BC_16-512_MR_20201110_UWpYXajT5F/tables', 'RAW_DATA_PATH': '/Users/elsherie/msk-mind/radiology/BC_16-512_MR_20201110_UWpYXajT5F/tables/raw_data/', 'TABLE_PATH': '/Users/elsherie/msk-mind/radiology/BC_16-512_MR_20201110_UWpYXajT5F/tables/', 'TMPJSON_PATH': '/Users/elsherie/msk-mind/radiology/BC_16-512_MR_20201110_UWpYXajT5F/tables/raw_data', 'EXCLUDE': 'mha,mhd,raw', 'FILE_COUNT': 1, 'DATA_SIZE': 1040, 'BWLIMIT': 5000, 'CHUNK_FILE': 1000}
+2020-11-17 15:12:47,664 - root - INFO - create_proxy_table enter.....
+2020-11-17 15:12:47,664 - root - INFO - loading config file ../../config.yaml
+2020-11-17 15:12:47,742 - buildRadiologyProxyTables - ERROR - Exception on /mind/api/v1/buildRadiologyProxyTables [GET]
+Traceback (most recent call last):
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 2447, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1952, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1821, in handle_user_exception
+    reraise(exc_type, exc_value, tb)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/_compat.py", line 39, in reraise
+    raise value
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1950, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/flask/app.py", line 1936, in dispatch_request
+    return self.view_functions[rule.endpoint](**req.view_args)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/buildRadiologyProxyTables.py", line 58, in buildRadiologyProxyTables
+    create_proxy_table(os.environ['SPARK_CONFIG'])
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/buildRadiologyProxyTables.py", line 118, in create_proxy_table
+    spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/common/sparksession.py", line 44, in spark_session
+    .config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/pyspark/sql/session.py", line 186, in getOrCreate
+    sc = SparkContext.getOrCreate(sparkConf)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/pyspark/context.py", line 376, in getOrCreate
+    SparkContext(conf=conf or SparkConf())
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/pyspark/context.py", line 133, in __init__
+    SparkContext._ensure_initialized(self, gateway=gateway, conf=conf)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/pyspark/context.py", line 325, in _ensure_initialized
+    SparkContext._gateway = gateway or launch_gateway(conf)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/buildRadiologyProxyTables/venv/lib/python3.7/site-packages/pyspark/java_gateway.py", line 95, in launch_gateway
+    proc = Popen(command, **popen_kwargs)
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/subprocess.py", line 800, in __init__
+    restore_signals, start_new_session)
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/subprocess.py", line 1551, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: '/usr/local/Cellar/apache-spark/3.0.1/bin/./bin/spark-submit': '/usr/local/Cellar/apache-spark/3.0.1/bin/./bin/spark-submit'
+2020-11-17 15:12:47,747 - werkzeug - INFO - 127.0.0.1 - - [17/Nov/2020 15:12:47] "[35m[1mGET /mind/api/v1/buildRadiologyProxyTables HTTP/1.1[0m" 500 -
