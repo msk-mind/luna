@@ -7,13 +7,14 @@ import os
 # Application Constants
 
 #### table names ####
+BASE				='tables/'
 # clinical
-DIAGNOSIS_TABLE		='tables/diagnosis'
-MEDICATION_TABLE	='tables/medication'
-PATIENT_TABLE		='tables/patient'
+DIAGNOSIS_TABLE		=BASE + 'diagnosis'
+MEDICATION_TABLE	=BASE + 'medication'
+PATIENT_TABLE		=BASE + 'patient'
 
 # radiology
-DICOM_TABLE			='tables/dicom'
-SCAN_TABLE 			='tables/scan'
-SCAN_ANNOTATION_TABLE		='tables/scan_annotation'
+DICOM_TABLE			=BASE + 'dicom'
+SCAN_TABLE 			=BASE + 'scan'
+SCAN_ANNOTATION_TABLE		=BASE + 'scan_annotation'
 
