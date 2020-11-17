@@ -34,6 +34,7 @@ from checksumdir import dirhash
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
+import data_processing.common.constants as const
 
 from pyspark import SQLContext, SparkContext
 from pyspark.sql import functions as F
@@ -105,8 +106,8 @@ def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, ta
     logger.info (" >>> Graph Query Complete")
 
     # Reading dicom and opdata
-    df_dcmdata = spark.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm"))
-    df_optdata = spark.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "radiology/tables/radiology.dcm_op"))
+    df_dcmdata = spark.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, const.DICOM_TABLE))
+    df_optdata = spark.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, "tables/dcm_op"))
     logger.info (" >>> Loaded dicom DB")
 
     def python_def_generate_mhd(concept_id, input_paths, filenames):

@@ -12,9 +12,9 @@ sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../
 from data_processing.clinical_proxy_tables import generate_proxy_table, cli
 from data_processing.common.sparksession import SparkConfig
 
-source_file = 'tests/data_processing/testdata/data/clinical/test_clinical_patients.tsv'
-source_file_err = 'tests/data_processing/testdata/data/clinical/test_clinical_patients_error.tsv'
-destination_dir = 'tests/data_processing/testdata/data/clinical/patients'
+source_file = 'tests/data_processing/testdata/data/test_clinical_patients.tsv'
+source_file_err = 'tests/data_processing/testdata/data/test_clinical_patients_error.tsv'
+destination_dir = 'tests/data_processing/testdata/data/tables/test-patients'
 
 
 @pytest.fixture(autouse=True)

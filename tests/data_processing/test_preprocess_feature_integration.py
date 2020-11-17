@@ -5,7 +5,7 @@ from click.testing import CliRunner
 from data_processing.preprocess_feature import cli, generate_feature_table, get_dmp_from_scan
 from data_processing.common.sparksession import SparkConfig
 
-BASE_DIR = "./tests/data_processing/testdata/"
+BASE_DIR = "./tests/data_processing/testdata/data/"
 DESTINATION_DIR = "./tests/data_processing/testdata/outputdir"
 TARGET_SPACING = (1.0, 1.0, 3.0)
 
@@ -25,11 +25,11 @@ def spark(monkeypatch):
     yield spark
 
     print('------teardown------')
-    feature_table = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table-test-name")
+    feature_table = os.path.join(BASE_DIR, "tables/feature-table-test-name")
     if os.path.exists(feature_table):
         shutil.rmtree(feature_table)
 
-    feature_dir = os.path.join(BASE_DIR, "data/radiology/features")
+    feature_dir = os.path.join(BASE_DIR, "features")
     if os.path.exists(feature_dir):
         shutil.rmtree(feature_dir)
 
@@ -45,7 +45,7 @@ def test_local_feature_table_generation(mocker, spark):
     generate_feature_table(BASE_DIR, BASE_DIR, TARGET_SPACING, spark, "SeriesInstanceUID = '1.2.840.113619.2.55.3.2743925538.934.1319713655.582'", "feature-table-test-name", "tests/external_process_patient_script.py")
 
     # read and verify correct feature table generated
-    feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table-test-name")
+    feature_table_path = os.path.join(BASE_DIR, "tables/feature-table-test-name")
 
     # Read Delta Table and Verify
     feature_df = spark.read.format("delta").load(feature_table_path)
@@ -60,7 +60,7 @@ def test_local_feature_table_generation_malformed_query(spark):
     generate_feature_table(BASE_DIR, BASE_DIR, TARGET_SPACING, spark, "SeriesInstanceUID = '123' || scan_record_uuid = '123'", "feature-table", "tests/test_external_process_patient_script.py")
 
     # read and verify correct feature table generated
-    feature_table_path = os.path.join(BASE_DIR, "data/radiology/tables/radiology.feature-table")
+    feature_table_path = os.path.join(BASE_DIR, "tables/feature-table")
 
     assert not os.path.exists(feature_table_path)
     print ("test_local_feature_table_generation_malformed_query passed.")

@@ -10,6 +10,7 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
+import data_processing.common.constants as const
 
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType, MapType
@@ -160,7 +161,7 @@ def create_proxy_table(config_file):
     # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
 
-    dicom_path = os.path.join(os.environ["TABLE_PATH"], "dicom") 
+    dicom_path = os.path.join(os.environ["LANDING_PATH"], const.DICOM_TABLE) 
     
     with CodeTimer(logger, 'load dicom files'):
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
@@ -199,7 +200,7 @@ def update_graph(config_file):
     # Open a connection to the ID graph database
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
-    dicom_path = os.path.join(os.environ["TABLE_PATH"], "dicom")
+    dicom_path = os.path.join(os.environ["LANDING_PATH"], const.DICOM_TABLE)
 
     # Which properties to include in dataset node
     dataset_ext_properties = [
@@ -212,7 +213,7 @@ def update_graph(config_file):
     ]
      
     dataset_props = list ( set(dataset_ext_properties).intersection(set(os.environ.keys())))  
-    dataset_props.insert(0, 'TABLE_PATH')
+    dataset_props.insert(0, 'LANDING_PATH')
     dataset_props.insert(0, 'DATASET_NAME')
     
     prop_string = ','.join(['''{0}: "{1}"'''.format(prop, os.environ[prop]) for prop in dataset_props])
