@@ -1,0 +1,47 @@
+2020-11-17 15:00:42,483 - werkzeug - INFO -  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+2020-11-17 15:00:52,445 - transferFiles - ERROR - Exception on /mind/api/v1/transferFiles [GET]
+Traceback (most recent call last):
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/app.py", line 2447, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/app.py", line 1952, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/app.py", line 1821, in handle_user_exception
+    reraise(exc_type, exc_value, tb)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/_compat.py", line 39, in reraise
+    raise value
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/app.py", line 1950, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/app.py", line 1936, in dispatch_request
+    return self.view_functions[rule.endpoint](**req.view_args)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/transferFiles.py", line 51, in transferFiles
+    setup_environment_from_yaml(os.environ['PATH_TO_TEMPLATE_FILE'])
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/os.py", line 681, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'PATH_TO_TEMPLATE_FILE'
+2020-11-17 15:00:52,449 - werkzeug - INFO - 127.0.0.1 - - [17/Nov/2020 15:00:52] "[35m[1mGET /mind/api/v1/transferFiles HTTP/1.1[0m" 500 -
+2020-11-17 15:05:21,832 - werkzeug - INFO -  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+2020-11-17 15:05:29,848 - transferFiles - ERROR - Exception on /mind/api/v1/transferFiles [GET]
+Traceback (most recent call last):
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/app.py", line 2447, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/app.py", line 1952, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/app.py", line 1821, in handle_user_exception
+    reraise(exc_type, exc_value, tb)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/_compat.py", line 39, in reraise
+    raise value
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/app.py", line 1950, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/venv/lib/python3.7/site-packages/flask/app.py", line 1936, in dispatch_request
+    return self.view_functions[rule.endpoint](**req.view_args)
+  File "/Users/elsherie/msk-mind/repos/data-processing/data_processing/transferFiles/transferFiles.py", line 51, in transferFiles
+    setup_environment_from_yaml(os.environ['PATH_TO_TEMPLATE_FILE'])
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/os.py", line 681, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'PATH_TO_TEMPLATE_FILE'
+2020-11-17 15:05:29,852 - werkzeug - INFO - 127.0.0.1 - - [17/Nov/2020 15:05:29] "[35m[1mGET /mind/api/v1/transferFiles HTTP/1.1[0m" 500 -
+2020-11-17 15:09:43,085 - werkzeug - INFO -  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+2020-11-17 15:09:48,952 - root - INFO - {'REQUESTOR': 'joe', 'REQUESTOR_DEPARTMENT': 'gynocology', 'REQUESTOR_EMAIL': 'joe@mskcc.org', 'PROJECT': 'OV_16-158', 'SOURCE': 'xnat', 'MODALITY': 'radiology', 'DATA_TYPE': 'CT', 'COMMENTS': None, 'DATE': datetime.datetime(2020, 10, 29, 1, 0), 'DATASET_NAME': 'OV_16-158_CT_20201028', 'ETL_TYPE': 'proxy', 'FILE_TYPE': 'dcm', 'FORMAT_TYPE': 'delta', 'HOST': '127.0.0.1', 'SOURCE_PATH': '/Users/elsherie/msk-mind/radiology/BC_16-512_MR_20201110_UWpYXajT5F/source', 'LANDING_PATH': '/Users/elsherie/msk-mind/radiology/BC_16-512_MR_20201110_UWpYXajT5F/tables', 'RAW_DATA_PATH': '/Users/elsherie/msk-mind/radiology/BC_16-512_MR_20201110_UWpYXajT5F/tables/raw_data/', 'TABLE_PATH': '/Users/elsherie/msk-mind/radiology/BC_16-512_MR_20201110_UWpYXajT5F/tables/', 'TMPJSON_PATH': '/Users/elsherie/msk-mind/radiology/BC_16-512_MR_20201110_UWpYXajT5F/tables/raw_data', 'EXCLUDE': 'mha,mhd,raw', 'FILE_COUNT': 1, 'DATA_SIZE': 1040, 'BWLIMIT': 5000, 'CHUNK_FILE': 1000}
+2020-11-17 15:09:48,963 - root - INFO - --- Finished transferring files in 0.017978906631469727 seconds ---
+2020-11-17 15:09:48,963 - root - ERROR - Error Transfering files - Non-zero exit code: 127
+2020-11-17 15:09:48,964 - werkzeug - INFO - 127.0.0.1 - - [17/Nov/2020 15:09:48] "[37mGET /mind/api/v1/transferFiles HTTP/1.1[0m" 200 -
