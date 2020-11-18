@@ -31,7 +31,7 @@ def generate_uuid(path, content):
     file_path = path.split(':')[-1]
     content = BytesIO(content)
 
-    import EnsureByteContext 
+    import EnsureByteContext
     with EnsureByteContext.EnsureByteContext():
         dcm_hash = FileHash('sha256').hash_file(content)
 
@@ -40,7 +40,7 @@ def generate_uuid(path, content):
 
 
 def parse_dicom_from_delta_record(path, content):
-    
+
     dirs, filename  = os.path.split(path)
 
     dataset = pydicom.dcmread(BytesIO(content))
@@ -51,9 +51,9 @@ def parse_dicom_from_delta_record(path, content):
 
     for elem in dataset.iterall():
         types.add(type(elem.value))
-        if type(elem.value) in [int, float, str]: 
+        if type(elem.value) in [int, float, str]:
             kv[elem.keyword] = str(elem.value)
-        elif type(elem.value) in [pydicom.valuerep.DSfloat, pydicom.valuerep.DSdecimal, pydicom.valuerep.IS, pydicom.valuerep.PersonName, pydicom.uid.UID]: 
+        elif type(elem.value) in [pydicom.valuerep.DSfloat, pydicom.valuerep.DSdecimal, pydicom.valuerep.IS, pydicom.valuerep.PersonName, pydicom.uid.UID]:
             kv[elem.keyword] = str(elem.value)
         elif type(elem.value) in [list, pydicom.multival.MultiValue]:
             kv[elem.keyword] = "//".join([str(x) for x in elem.value])
@@ -61,7 +61,7 @@ def parse_dicom_from_delta_record(path, content):
             skipped_keys.append(elem.keyword)
         # not sure how to handle a sequence!
         # if type(elem.value) in [pydicom.sequence.Sequence]: print ( elem.keyword, type(elem.value), elem.value)
-    
+
     if "" in kv:
         kv.pop("")
     return kv
@@ -83,16 +83,16 @@ def cli(template_file, config_file, process_string):
         python -m data_processing.radiology.proxy_table.generate \
         --template_file {PATH_TO_TEMPLATE_FILE} \
         --config_file {PATH_TO_CONFIG_FILE}
-        --process_string transfer,delta 
-        
+        --process_string transfer,delta
+
     """
     processes = process_string.lower().strip().split(",")
     logger.info('data_ingestions_template: ' + template_file)
     logger.info('config_file: ' + config_file)
     logger.info('processes: ' + str(processes))
-   
+
     start_time = time.time()
-    
+
     # setup env variables
     setup_environment_from_yaml(template_file)
 
@@ -125,7 +125,7 @@ def setup_environment_from_yaml(template_file):
     # read template_file yaml and set environmental variables for subprocesses
     with open(template_file, 'r') as template_file_stream:
         template_dict = yaml.safe_load(template_file_stream)
-    
+
     logger.info(template_dict)
 
     # add all fields from template as env variables
@@ -135,22 +135,22 @@ def setup_environment_from_yaml(template_file):
 def transfer_files():
     start_time = time.time()
     transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
-    
+
     try:
         exit_code = subprocess.call(transfer_cmd)
         logger.info("--- Finished transfering files in %s seconds ---" % (time.time() - start_time))
     except Exception as err:
         logger.error(("Error Transfering files with rsync" + str(err)))
-        return -1 
-        
+        return -1
+
     if exit_code != 0:
         logger.error(("Error Transfering files - Non-zero exit code: " + str(exit_code)))
-    
+
     return exit_code
 
 
 def create_proxy_table(config_file):
-    
+
     exit_code = 0
     spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
 
@@ -161,8 +161,8 @@ def create_proxy_table(config_file):
     # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
 
-    dicom_path = os.path.join(os.environ["LANDING_PATH"], const.DICOM_TABLE) 
-    
+    dicom_path = os.path.join(os.environ["LANDING_PATH"], const.DICOM_TABLE)
+
     with CodeTimer(logger, 'load dicom files'):
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
 
@@ -178,7 +178,7 @@ def create_proxy_table(config_file):
     with CodeTimer(logger, 'parse and save dicom'):
         parse_dicom_from_delta_record_udf = udf(parse_dicom_from_delta_record, MapType(StringType(), StringType()))
         header = df.withColumn("metadata", lit(parse_dicom_from_delta_record_udf(df.path, df.content)))
-    
+
         header.coalesce(6144).write.format(os.environ["FORMAT_TYPE"]) \
             .mode("overwrite") \
             .option("mergeSchema", "true") \
@@ -204,6 +204,8 @@ def update_graph(config_file):
 
     # Which properties to include in dataset node
     dataset_ext_properties = [
+        'LANDING_PATH',
+        'DATASET_NAME',
         'REQUESTOR',
         'REQUESTOR_DEPARTMENT',
         'REQUESTOR_EMAIL',
@@ -211,25 +213,23 @@ def update_graph(config_file):
         'SOURCE',
         'MODALITY',
     ]
-     
-    dataset_props = list ( set(dataset_ext_properties).intersection(set(os.environ.keys())))  
-    dataset_props.insert(0, 'LANDING_PATH')
-    dataset_props.insert(0, 'DATASET_NAME')
-    
+
+    dataset_props = list ( set(dataset_ext_properties).intersection(set(os.environ.keys())))
+
     prop_string = ','.join(['''{0}: "{1}"'''.format(prop, os.environ[prop]) for prop in dataset_props])
     conn.query(f'''MERGE (n:dataset{{{prop_string}}})''')
 
     with CodeTimer(logger, 'setup proxy table'):
         # Reading dicom and opdata
         df_dcmdata = spark.read.format("delta").load(dicom_path)
-    
+
         tuple_to_add = df_dcmdata.select("metadata.PatientName", "metadata.SeriesInstanceUID")\
             .groupBy("PatientName", "SeriesInstanceUID")\
             .count()\
             .toPandas()
-    
+
     with CodeTimer(logger, 'syncronize graph'):
-    
+
         for index, row in tuple_to_add.iterrows():
             query ='''MATCH (das:dataset {{DATASET_NAME: "{0}"}}) MERGE (px:xnat_patient_id {{value: "{1}"}}) MERGE (sc:scan {{SeriesInstanceUID: "{2}"}}) MERGE (px)-[r1:HAS_SCAN]->(sc) MERGE (das)-[r2:HAS_PX]-(px)'''.format(os.environ['DATASET_NAME'], row['PatientName'], row['SeriesInstanceUID'])
             logger.info (query)

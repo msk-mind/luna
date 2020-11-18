@@ -5,41 +5,27 @@ To start a server: ./data_processing_app.py (Recommended on sparky1)
 """
 
 from flask import Flask, request
-import os
-import sys
-
-sys.path.append(os.path.abspath('../'))
 
 from common.CodeTimer import CodeTimer
 from common.custom_logger import init_logger
 from common.sparksession import SparkConfig
 from common.Neo4jConnection import Neo4jConnection
-import importlib
+import data_processing.common.constants as const
 
-
+from pyspark.sql.functions import udf, lit
+from pyspark.sql.types import StringType
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType
 
 import pydicom
-import time
+import os, shutil, sys, importlib, json, yaml, subprocess, time
 from io import BytesIO
-import os, shutil, sys, importlib
-import json
-import yaml, os
-import subprocess
 from filehash import FileHash
 from distutils.util import strtobool
 
 app = Flask(__name__)
 logger = init_logger("flask-mind-server.log")
 # spark = SparkConfig().spark_session(os.environ['SPARK_CONFIG'], "data_processing.mind.api")
-
-
-@app.route('/')
-def index():
-    # setup env variables
-    return "Hello, MSK!"
-
 
 """
 Transfer Radiology files
