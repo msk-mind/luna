@@ -189,9 +189,9 @@ curl \
 --header "Content-Type: application/json" \
 --request POST \
 --data '{"TEMPLATE":"path/to/template.yaml"}' \
-  http://pllimsksparky1:5000/mind/api/v1/graph
+  http://pllimsksparky1:5000/mind/api/v1/buildRadiologyProxyTables
 """
-@app.route('/mind/api/v1/buildRadiologyProxyTables', methods=['GET', 'POST'])
+@app.route('/mind/api/v1/buildRadiologyProxyTables', methods=['POST'])
 def buildRadiologyProxyTables():
     data = request.json
     if not "TEMPLATE" in data.keys(): return "You must supply a template file."
@@ -200,7 +200,6 @@ def buildRadiologyProxyTables():
     logger.info("Radiology buildRadiologyProxyTables enter.....")
     setup_environment_from_yaml(data["TEMPLATE"])
     create_proxy_table(os.environ['SPARK_CONFIG'])
-    logger.info("Radiology proxy delta tables creation is successful")
     teardown_environment_from_yaml(data["TEMPLATE"])
     logger.info("Radiology buildRadiologyProxyTables exit.")
 
@@ -212,11 +211,14 @@ curl \
 --header "Content-Type: application/json" \
 --request POST \
 --data '{"TEMPLATE":"path/to/template.yaml"}' \
-  http://pllimsksparky1:5000/mind/api/v1/graph
+  http://pllimsksparky1:5000/mind/api/v1/buildRadiologyGraph
 """
 @app.route('/mind/api/v1/buildRadiologyGraph', methods=['POST'])
 def buildRadiologyGraph():
     data = request.json
+    if not "TEMPLATE" in data.keys(): return "You must supply a template file."
+
+    logger.setLevel('INFO')
     logger.info("Radiology buildRadiologyGraph enter.....")
     setup_environment_from_yaml(data["TEMPLATE"])
     add_scan_to_graph(os.environ['SPARK_CONFIG'])
