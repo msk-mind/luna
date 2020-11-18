@@ -28,7 +28,7 @@ def spark(monkeypatch):
     monkeypatch.setenv("IO_SERVICE_PORT", "5090")
 
     # start delta_io_service
-    os.system("python3 -m data_processing.services.delta_io_service --hdfs file:/// --host localhost &")
+    os.system("python3 -m data_processing.services.delta_io_service --hdfs file:/// --host localhost --config tests/test_config.yaml&")
 
     spark = SparkConfig().spark_session('tests/test_config.yaml', 'test-process-scan')
     yield spark
