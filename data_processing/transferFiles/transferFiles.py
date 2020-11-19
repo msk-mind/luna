@@ -1,9 +1,3 @@
-#!/gpfs/mskmindhdp_emc/sw/env/bin/python3
-
-"""
-To start a server: ./data_processing_app.py (Recommended on sparky1)
-"""
-
 from flask import Flask, request
 
 from data_processing.common.CodeTimer import CodeTimer
@@ -61,7 +55,7 @@ curl \
 --header "Content-Type: application/json" \
 --request POST \
 --data '{"TEMPLATE":"path/to/template.yaml"}' \
-  http://pllimsksparky1:5000/mind/api/v1/transferFiles
+  http://<server>:5000/mind/api/v1/transferFiles
 """
 @app.route('//mind/api/v1/transferFiles', methods=['POST'])
 def transferFiles():

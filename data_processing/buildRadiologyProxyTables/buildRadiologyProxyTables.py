@@ -1,8 +1,3 @@
-
-"""
-To start a server: python3 -m data_processing.buildRadiologyProxyTables.py (Recommended on sparky1)
-"""
-
 from flask import Flask, request, jsonify
 
 from data_processing.common.CodeTimer import CodeTimer
@@ -188,7 +183,7 @@ curl \
 --header "Content-Type: application/json" \
 --request POST \
 --data '{"TEMPLATE":"path/to/template.yaml"}' \
-  http://pllimsksparky1:5001/mind/api/v1/buildRadiologyProxyTables
+  http://<server>:5001/mind/api/v1/buildRadiologyProxyTables
 """
 @app.route('/mind/api/v1/buildRadiologyProxyTables', methods=['POST'])
 def buildRadiologyProxyTables():
@@ -210,7 +205,7 @@ curl \
 --header "Content-Type: application/json" \
 --request POST \
 --data '{"TEMPLATE":"path/to/template.yaml"}' \
-  http://pllimsksparky1:5001/mind/api/v1/buildRadiologyGraph
+  http://<server>:5001/mind/api/v1/buildRadiologyGraph
 """
 @app.route('/mind/api/v1/buildRadiologyGraph', methods=['POST'])
 def buildRadiologyGraph():
@@ -227,7 +222,7 @@ def buildRadiologyGraph():
     return "Radiology buildRadiologyGraph successful"
 
 """
-curl http://pllimsksparky1:5001/mind/api/v1/datasets
+curl http://<server>:5001/mind/api/v1/datasets
 """
 @app.route('/mind/api/v1/datasets', methods=['GET'])
 def datasets_list():
@@ -236,7 +231,7 @@ def datasets_list():
     return jsonify([rec.data()['n']['DATASET_NAME'] for rec in res])
 
 """
-curl http://pllimsksparky1:5001/mind/api/v1/datasets/MY_DATASET
+curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
 """
 @app.route('/mind/api/v1/datasets/<name>', methods=['GET'])
 def datasets_get(name):
@@ -245,7 +240,7 @@ def datasets_get(name):
     return jsonify([rec.data()['n'] for rec in res])
 
 """
-curl http://pllimsksparky1:5001/mind/api/v1/datasets/MY_DATASET
+curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
 """
 @app.route('/mind/api/v1/datasets/<name>/countDicom', methods=['GET'])
 def datasets_countDicom(name):
