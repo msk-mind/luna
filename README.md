@@ -34,23 +34,23 @@ curl \
   --header "Content-Type: application/json" \
   --request POST \
   --data '{"TEMPLATE":"/gpfs/mskmindhdp_emc/user-templates/API-TEST-0000_20201120_JnyEQdNNIw.yaml"}' 
-  http://pllimsksparky1:5000/mind/api/v1/transferFiles
+  http://<server>:5000/mind/api/v1/transferFiles
 
 curl \
   --header "Content-Type: application/json" \
   --request POST \
   --data '{"TEMPLATE":"/gpfs/mskmindhdp_emc/user-templates/API-TEST-0000_20201120_JnyEQdNNIw.yaml"}' 
-  http://pllimsksparky1:5001/mind/api/v1/buildRadiologyProxyTables
+  http://<server>:5001/mind/api/v1/buildRadiologyProxyTables
 
 curl \
   --header "Content-Type: application/json" \
   --request POST \
   --data '{"TEMPLATE":"/gpfs/mskmindhdp_emc/user-templates/API-TEST-0000_20201120_JnyEQdNNIw.yaml"}' 
-  http://pllimsksparky1:5001/mind/api/v1/buildRadiologyGraph
+  http://<server>:5001/mind/api/v1/buildRadiologyGraph
 
-curl --request GET http://pllimsksparky1:5001/mind/api/v1/datasets
+curl --request GET http://<server>:5001/mind/api/v1/datasets
 
-curl --request GET http://pllimsksparky1:5001/mind/api/v1/datasets/API-TEST-0000_20201120_JnyEQdNNIw
+curl --request GET http://<server>:5001/mind/api/v1/datasets/API-TEST-0000_20201120_JnyEQdNNIw
 
-curl --request GET http://pllimsksparky1:5001/mind/api/v1/datasets/API-TEST-0000_20201120_JnyEQdNNIw/countDicom
+curl --request GET http://<server>:5001/mind/api/v1/datasets/API-TEST-0000_20201120_JnyEQdNNIw/countDicom
 ```
