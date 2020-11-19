@@ -12,13 +12,14 @@ Usage:
 Parameters:
     ENVIRONMENTAL VARIABLES:
         MIND_ROOT_DIR: The root directory for the delta lake
-        MIND_WORK_DIR: POSIX accessable directory for spark workers to use as scratch space
-        MIND_GPFS_DIR: gpfs mount directory on the gpfs cluster
     REQUIRED PARAMETERS:
-        --hdfs_uri: HDFS namenode uri e.g. hdfs://master-ip:8020
-        --query: a cypher where clause to filter sink IDs based on source ID and relationship fields
+        --hdfs_uri: HDFS namenode uri e.g. hdfs://namenode-ip:8020
+        --uid: a SeriesInstanceUID
         --tag: Experimental tag for run
-        --custom_preprocessing_script: path to preprocessing script to be executed in working directory
+        --custom_preprocessing_script: path to preprocessing script
+        --project_name: MIND project address
+        --file_ext: image file type to generate, mhd or nrrd
+        --config_file: application configuration yaml
     OPTIONAL PARAMETERS:
         All are required.
 """
@@ -66,9 +67,11 @@ def cli(uid, hdfs_uri, custom_preprocessing_script, tag, config_file, project_na
     $ python3 -m data_processing.process_scan_job \
 		--query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
 		--hdfs_uri file:// \
-		--custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
-		--tag aukerman.test \
-
+		--custom_preprocessing_script <path-to>/data_processing/radiology/refined_table/dicom_to_scan.py \
+		--uid 1.2.3.4.5 \
+        --project_name test-project \
+        --file_ext mhd \
+        --config_file config.yaml
     """
     start_time = time.time()
 
