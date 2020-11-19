@@ -12,7 +12,7 @@ from data_processing.common.Neo4jConnection import Neo4jConnection
 import data_processing.common.constants as const
 
 from pyspark.sql.functions import udf, lit
-from pyspark.sql.types import StringType
+from pyspark.sql.types import StringType, MapType
 
 import pydicom
 import os, shutil, sys, importlib, json, yaml, subprocess, time
@@ -137,7 +137,7 @@ def create_proxy_table(config_file):
     df.printSchema()
     return exit_code
 
-def update_graph(config_file):
+def add_scan_to_graph(config_file):
     spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
 
     # Open a connection to the ID graph database
@@ -165,7 +165,7 @@ def update_graph(config_file):
     with CodeTimer(logger, 'setup proxy table'):
         # Reading dicom and opdata
         df_dcmdata = spark.read.format("delta").load(dicom_path)
-
+        df_dcmdata.printSchema()
         tuple_to_add = df_dcmdata.select("metadata.PatientName", "metadata.SeriesInstanceUID")\
             .groupBy("PatientName", "SeriesInstanceUID")\
             .count()\
