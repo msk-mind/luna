@@ -6,15 +6,21 @@ Created on November 16, 2020
 import os
 # Application Constants
 
-#### table names ####
-BASE				='tables/'
+#### Table Names ####
+TABLE_DIR			='tables/'
 # clinical
-DIAGNOSIS_TABLE		=BASE + 'diagnosis'
-MEDICATION_TABLE	=BASE + 'medication'
-PATIENT_TABLE		=BASE + 'patient'
+DIAGNOSIS_TABLE		=TABLE_DIR + 'diagnosis'
+MEDICATION_TABLE	=TABLE_DIR + 'medication'
+PATIENT_TABLE		=TABLE_DIR + 'patient'
 
 # radiology
-DICOM_TABLE			=BASE + 'dicom'
-SCAN_TABLE 			=BASE + 'scan'
-SCAN_ANNOTATION_TABLE		=BASE + 'scan_annotation'
+DICOM_TABLE			=TABLE_DIR + 'dicom'
+SCAN_TABLE 			=TABLE_DIR + 'scan'
+SCAN_ANNOTATION_TABLE		=TABLE_DIR + 'scan_annotation'
+FEATURE_TABLE		=TABLE_DIR + 'feature'
 
+#### Raw Data Directories ####
+DICOMS				='dicoms'
+SCANS				='scans'
+SCAN_ANNOTATIONS	='scan_annotations'
+FEATURES			='features'
