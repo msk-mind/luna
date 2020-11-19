@@ -5,16 +5,16 @@ import os
 import sys
 import itk
 
-if len(sys.argv) < 2:
+if len(sys.argv) < 4:
     print("Usage: " + sys.argv[0] +
-          " [DicomDirectory [outputFileExt [seriesName]]]")
-    print("If DicomDirectory is not specified, current directory is used\n")
+          " [ProjectDirectory [DicomDirectory [outputFileExt]]]")
 
-# current directory by default
-dicom_dir = sys.argv[1]
+# program args
+project_dir = sys.argv[1]
+input_dir = sys.argv[2]
+file_ext = sys.argv[3]
 
-input_dir = dicom_dir + "/inputs"
-output_dir = dicom_dir + "/outputs"
+output_dir = os.path.join(project_dir, "scans")
 
 PixelType = itk.ctype('signed short')
 Dimension = 3
@@ -38,18 +38,9 @@ print('The directory {} contains {} DICOM Series: '.format(input_dir, str(num_di
 for uid in seriesUIDs:
     print(uid)
 
-outFileExt = 'mhd'
-if len(sys.argv) > 2:
-    outFileExt = sys.argv[2]
-
-seriesFound = False
 for uid in seriesUIDs:
-    seriesIdentifier = uid
-    if len(sys.argv) > 3:
-        seriesIdentifier = sys.argv[3]
-        seriesFound = True
-    print('Reading: ' + seriesIdentifier)
-    fileNames = namesGenerator.GetFileNames(seriesIdentifier)
+    print('Reading: ' + uid)
+    fileNames = namesGenerator.GetFileNames(uid)
     if len(fileNames) < 1: continue
 
     reader = itk.ImageSeriesReader[ImageType].New()
@@ -60,12 +51,12 @@ for uid in seriesUIDs:
 
     writer = itk.ImageFileWriter[ImageType].New()
 
-    outFileName = os.path.join(output_dir, seriesIdentifier + '.' + outFileExt)
+    outFileName = os.path.join(output_dir, uid + '.' + file_ext)
     writer.SetFileName(outFileName)
     writer.UseCompressionOn()
     writer.SetInput(reader.GetOutput())
     print('Writing: ' + outFileName)
     writer.Update()
 
-    if seriesFound:
-        break
+# Output filepath without extension
+sys.stdout.write(os.path.join(output_dir, uid))
