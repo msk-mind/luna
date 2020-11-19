@@ -67,23 +67,22 @@ curl \
 def transferFiles():
     data = request.json
     if not "TEMPLATE" in data.keys(): return "You must supply a template file."
-
-    setup_environment_from_yaml(data["TEMPLATE"])
     transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
 
+    setup_environment_from_yaml(data["TEMPLATE"])
     with CodeTimer(logger, 'setup proxy table'):
         try:
             exit_code = subprocess.call(transfer_cmd)
         except Exception as err:
             logger.error(("Error Transferring files with rsync" + str(err)))
-            return
+            return "Script failed"
+    teardown_environment_from_yaml(data["TEMPLATE"])
 
 
     if exit_code != 0:
-        logger.error(("Error Transfering files - Non-zero exit code: " + str(exit_code)))
-        return "Radiology files transfer is unsuccessful"
+        logger.error(("Some errors occured with transfering files, non-zero exit code: " + str(exit_code)))
+        return "Some errors occured with transfering files, non-zero exit code: " + str(exit_code)
 
-    teardown_environment_from_yaml(data["TEMPLATE"])
 
     return "Radiology files transfer is successful"
 
