@@ -69,12 +69,11 @@ def transferFiles():
     if not "TEMPLATE" in data.keys(): return "You must supply a template file."
 
     setup_environment_from_yaml(data["TEMPLATE"])
-    transfer_cmd = ["time", "../data_processing/radiology/proxy_table/transfer_files.sh"]
+    transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
 
     with CodeTimer(logger, 'setup proxy table'):
         try:
             exit_code = subprocess.call(transfer_cmd)
-            logger.info("--- Finished transferring files in %s seconds ---" % (time.time() - start_time))
         except Exception as err:
             logger.error(("Error Transferring files with rsync" + str(err)))
             return
