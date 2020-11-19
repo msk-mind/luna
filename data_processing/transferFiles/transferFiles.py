@@ -6,10 +6,10 @@ To start a server: ./data_processing_app.py (Recommended on sparky1)
 
 from flask import Flask, request
 
-from common.CodeTimer import CodeTimer
-from common.custom_logger import init_logger
-from common.sparksession import SparkConfig
-from common.Neo4jConnection import Neo4jConnection
+from data_processing.common.CodeTimer import CodeTimer
+from data_processing.common.custom_logger import init_logger
+from data_processing.common.sparksession import SparkConfig
+from data_processing.common.Neo4jConnection import Neo4jConnection
 import data_processing.common.constants as const
 
 from pyspark.sql.functions import udf, lit
