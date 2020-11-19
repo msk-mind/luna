@@ -27,6 +27,7 @@ logger = init_logger("flask-mind-server.log")
 # ==================================================================================================
 # Service functions
 # ==================================================================================================
+
 def setup_environment_from_yaml(template_file):
     # read template_file yaml and set environmental variables for subprocesses
     with open(template_file, 'r') as template_file_stream:
@@ -49,7 +50,6 @@ def teardown_environment_from_yaml(template_file):
     # delete all fields from template as env variables
     for var in template_dict:
         del os.environ[var]
-
 
 def generate_uuid(path, content):
 
