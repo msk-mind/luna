@@ -88,4 +88,4 @@ def transferFiles():
 
 
 if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'], debug=True)
+    app.run(host=os.environ['HOSTNAME'],port=5000, debug=True)

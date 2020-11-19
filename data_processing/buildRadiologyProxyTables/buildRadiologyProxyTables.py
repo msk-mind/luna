@@ -3,7 +3,7 @@
 To start a server: python3 -m data_processing.buildRadiologyProxyTables.py (Recommended on sparky1)
 """
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.custom_logger import init_logger
@@ -27,7 +27,6 @@ logger = init_logger("flask-mind-server.log")
 # ==================================================================================================
 # Service functions
 # ==================================================================================================
-
 def setup_environment_from_yaml(template_file):
     # read template_file yaml and set environmental variables for subprocesses
     with open(template_file, 'r') as template_file_stream:
@@ -189,7 +188,7 @@ curl \
 --header "Content-Type: application/json" \
 --request POST \
 --data '{"TEMPLATE":"path/to/template.yaml"}' \
-  http://pllimsksparky1:5000/mind/api/v1/buildRadiologyProxyTables
+  http://pllimsksparky1:5001/mind/api/v1/buildRadiologyProxyTables
 """
 @app.route('/mind/api/v1/buildRadiologyProxyTables', methods=['POST'])
 def buildRadiologyProxyTables():
@@ -211,7 +210,7 @@ curl \
 --header "Content-Type: application/json" \
 --request POST \
 --data '{"TEMPLATE":"path/to/template.yaml"}' \
-  http://pllimsksparky1:5000/mind/api/v1/buildRadiologyGraph
+  http://pllimsksparky1:5001/mind/api/v1/buildRadiologyGraph
 """
 @app.route('/mind/api/v1/buildRadiologyGraph', methods=['POST'])
 def buildRadiologyGraph():
@@ -227,6 +226,38 @@ def buildRadiologyGraph():
 
     return "Radiology buildRadiologyGraph successful"
 
+"""
+curl http://pllimsksparky1:5001/mind/api/v1/datasets
+"""
+@app.route('/mind/api/v1/datasets', methods=['GET'])
+def datasets_list():
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+    res = conn.query(f'''MATCH (n:dataset) RETURN n''')
+    return jsonify([rec.data()['n']['DATASET_NAME'] for rec in res])
+
+"""
+curl http://pllimsksparky1:5001/mind/api/v1/datasets/MY_DATASET
+"""
+@app.route('/mind/api/v1/datasets/<name>', methods=['GET'])
+def datasets_get(name):
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+    res = conn.query(f'''MATCH (n:dataset) WHERE n.DATASET_NAME = '{name}' RETURN n''')
+    return jsonify([rec.data()['n'] for rec in res])
+
+"""
+curl http://pllimsksparky1:5001/mind/api/v1/datasets/MY_DATASET
+"""
+@app.route('/mind/api/v1/datasets/<name>/countDicom', methods=['GET'])
+def datasets_countDicom(name):
+    spark = SparkConfig().spark_session(os.environ['SPARK_CONFIG'], "data_processing.radiology.proxy_table.generate")
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+    res = conn.query(f'''MATCH (n:dataset) WHERE n.DATASET_NAME = '{name}' RETURN n''')
+    das = [rec.data()['n'] for rec in res]
+    if len (das) < 1: return f"Sorry, I cannot find that dataset {name}"
+    if len (das) > 1: return f"Sorry, this dataset has multiplicity > 1"
+    count = spark.read.format("delta").load(os.path.join(das[0]["LANDING_PATH"], const.DICOM_TABLE)).count()
+    das[0][f"countDicom"] = count
+    return jsonify(das)
 
 if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'], debug=True)
+    app.run(host=os.environ['HOSTNAME'],port=5001, debug=True)
