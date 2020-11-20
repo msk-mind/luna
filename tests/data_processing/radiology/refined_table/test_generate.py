@@ -36,17 +36,32 @@ def test_cli(mocker, spark):
 
     runner = CliRunner()
     generate_mhd_script_path = os.path.join(current_dir, "data_processing/radiology/refined_table/dicom_to_scan.py")
+    
+    # test mhd
+    result = runner.invoke(cli, ['-i', "1.2.840.113619.2.340.3.2743924432.468.1441191460.240",
+        '-d', 'file:///',
+        '-c', generate_mhd_script_path,
+        '-p', project_name,
+        '-e', 'mhd',
+        '-t', 'scan.unittest',
+        '-f', 'tests/test_config.yaml'])
 
-    for ext in ['mhd', 'nrrd']:
-        result = runner.invoke(cli, ['-i', "1.2.840.113619.2.340.3.2743924432.468.1441191460.240",
-            '-d', 'file:///',
-            '-c', generate_mhd_script_path,
-            '-p', project_name,
-            '-e', ext,
-            '-t', 'scan.unittest',
-            '-f', 'tests/test_config.yaml'])
+    assert result.exit_code == 0
+    df = spark.read.format("delta").load('file:///'+scan_table_path)
+    assert 2 == df.count()
 
-        assert result.exit_code == 0
-        df = spark.read.format("delta").load('file:///'+scan_table_path)
-        assert set(['SeriesInstanceUID', 'scan_record_uuid', 'filepath', 'filetype']) == set(df.columns)
+    # test nrrd
+    result = runner.invoke(cli, ['-i', "1.2.840.113619.2.340.3.2743924432.468.1441191460.240",
+        '-d', 'file:///',
+        '-c', generate_mhd_script_path,
+        '-p', project_name,
+        '-e', 'nrrd',
+        '-t', 'scan.unittest',
+        '-f', 'tests/test_config.yaml'])
+
+    assert result.exit_code == 0
+    df = spark.read.format("delta").load('file:///'+scan_table_path)
+    # check that new records are appended
+    assert 3 == df.filter("SeriesInstanceUID=='1.2.840.113619.2.340.3.2743924432.468.1441191460.240'").count()
+    assert set(['SeriesInstanceUID', 'scan_record_uuid', 'filepath', 'filetype']) == set(df.columns)
 

@@ -4,10 +4,10 @@ This module groups dicom images via SeriesInstanceUID, calls a script to generat
 This module is to be run from the top-level data-processing directory using the -m flag as follows:
 Usage:
     $ python3 -m data_processing.process_scan_job \
-		--query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
-		--hdfs_uri file:// \
-		--custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
-		--tag aukerman.test \
+        --query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
+        --hdfs_uri file:// \
+        --custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
+        --tag aukerman.test \
 
 Parameters:
     ENVIRONMENTAL VARIABLES:
@@ -65,10 +65,10 @@ def cli(uid, hdfs_uri, custom_preprocessing_script, tag, config_file, project_na
 
     Example:
     $ python3 -m data_processing.process_scan_job \
-		--query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
-		--hdfs_uri file:// \
-		--custom_preprocessing_script <path-to>/data_processing/radiology/refined_table/dicom_to_scan.py \
-		--uid 1.2.3.4.5 \
+        --query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
+        --hdfs_uri file:// \
+        --custom_preprocessing_script <path-to>/data_processing/radiology/refined_table/dicom_to_scan.py \
+        --uid 1.2.3.4.5 \
         --project_name test-project \
         --file_ext mhd \
         --config_file config.yaml
@@ -162,10 +162,21 @@ def generate_scan_table(spark, uid, hdfs_uri, custom_preprocessing_script, tag, 
         df_scan = df_scan.withColumn("exp", F.explode("scan_data"))
         df_scan = df_scan.select("metadata.SeriesInstanceUID", "exp.*")
 
-        # Add new data to the Scan table. Upsert?
-        df_scan.write.format("delta") \
-                .mode("append") \
-                .save(os.path.join(project_dir, const.SCAN_TABLE))
+        # Check if the same scan_record_uuid/filetype combo exists. if not, append to scan table.
+        scan_table_path = os.path.join(project_dir, const.SCAN_TABLE)
+
+        if os.path.exists(scan_table_path):
+            df_existing_scan = spark.read.format("delta").load(scan_table_path)
+            intersection = df_existing_scan.join(F.broadcast(df_scan), ["scan_record_uuid", "filetype"])
+
+            if intersection.count() == 0:
+                df_scan.write.format("delta") \
+                    .mode("append") \
+                    .save(scan_table_path)
+        else:
+            df_scan.write.format("delta") \
+                    .mode("append") \
+                    .save(scan_table_path)
 
     # Validation step
     df_scan.select("SeriesInstanceUID", "scan_record_uuid").show(200, truncate=False)
