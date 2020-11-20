@@ -10,7 +10,7 @@ from data_processing.radiology.refined_table.generate import generate_scan_table
 
 current_dir = os.getcwd()
 project_name = 'test-project'
-scan_table_path = os.path.join(current_dir, "tests/data_processing/testdata/data", project_name, "tables/scan")
+scan_table_path = os.path.join("tests/data_processing/testdata/data", project_name, "tables/scan")
 
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
@@ -47,7 +47,7 @@ def test_cli(mocker, spark):
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
-    df = spark.read.format("delta").load('file:///'+scan_table_path)
+    df = spark.read.format("delta").load(scan_table_path)
     assert 2 == df.count()
 
     # test nrrd
@@ -60,7 +60,7 @@ def test_cli(mocker, spark):
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
-    df = spark.read.format("delta").load('file:///'+scan_table_path)
+    df = spark.read.format("delta").load(scan_table_path)
     # check that new records are appended
     assert 3 == df.filter("SeriesInstanceUID=='1.2.840.113619.2.340.3.2743924432.468.1441191460.240'").count()
     assert set(['SeriesInstanceUID', 'scan_record_uuid', 'filepath', 'filetype']) == set(df.columns)
