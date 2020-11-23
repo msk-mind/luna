@@ -1,10 +1,4 @@
-'''
-Created on October 29, 2020
-
-@author: pashaa@mskcc.org
-'''
-
-import click
+from flask import Flask, request, jsonify
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.custom_logger import init_logger
@@ -16,15 +10,40 @@ from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType, MapType
 
 import pydicom
-import time
+import os, shutil, sys, importlib, json, yaml, subprocess, time
 from io import BytesIO
-import os, shutil, sys, importlib
-import json
-import yaml, os
-import subprocess
 from filehash import FileHash
+from distutils.util import strtobool
 
-logger = init_logger()
+app = Flask(__name__)
+logger = init_logger("flask-mind-server.log")
+# spark = SparkConfig().spark_session(os.environ['SPARK_CONFIG'], "data_processing.mind.api")
+
+# ==================================================================================================
+# Service functions
+# ==================================================================================================
+def setup_environment_from_yaml(template_file):
+    # read template_file yaml and set environmental variables for subprocesses
+    with open(template_file, 'r') as template_file_stream:
+        template_dict = yaml.safe_load(template_file_stream)
+
+    logger.info("Setting up environment:")
+    logger.info(template_dict)
+
+    # add all fields from template as env variables
+    for var in template_dict:
+        os.environ[var] = str(template_dict[var]).strip()
+
+def teardown_environment_from_yaml(template_file):
+    # read template_file yaml and set environmental variables for subprocesses
+    with open(template_file, 'r') as template_file_stream:
+        template_dict = yaml.safe_load(template_file_stream)
+
+    logger.info("Tearing down enviornment")
+
+    # delete all fields from template as env variables
+    for var in template_dict:
+        del os.environ[var]
 
 def generate_uuid(path, content):
 
@@ -65,88 +84,6 @@ def parse_dicom_from_delta_record(path, content):
     if "" in kv:
         kv.pop("")
     return kv
-
-
-@click.command()
-@click.option('-t', '--template_file', default=None, type=click.Path(exists=True),
-              help="path to yaml template file containing information required for radiology proxy data ingestion. "
-                   "See data_processing/radiology/proxy_table/data_ingestion_template.yaml.template")
-@click.option('-f', '--config_file', default='config.yaml', type=click.Path(exists=True),
-              help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-p', '--process_string', default='all',
-              help='comma separated list of processes to run or replay: e.g. transfer,delta,graph, or all')
-def cli(template_file, config_file, process_string):
-    """
-    This module generates a set of proxy tables for radiology data based on information specified in the tempalte file.
-
-    Example:
-        python -m data_processing.radiology.proxy_table.generate \
-        --template_file {PATH_TO_TEMPLATE_FILE} \
-        --config_file {PATH_TO_CONFIG_FILE}
-        --process_string transfer,delta
-
-    """
-    processes = process_string.lower().strip().split(",")
-    logger.info('data_ingestions_template: ' + template_file)
-    logger.info('config_file: ' + config_file)
-    logger.info('processes: ' + str(processes))
-
-    start_time = time.time()
-
-    # setup env variables
-    setup_environment_from_yaml(template_file)
-
-    # write template file to manifest_yaml under LANDING_PATH
-    if not os.path.exists(os.environ["LANDING_PATH"]):
-        os.makedirs(os.environ["LANDING_PATH"])
-    shutil.copy(template_file, os.path.join(os.environ["LANDING_PATH"], "manifest.yaml"))
-
-    # subprocess call will preserve environmental variables set by the parent thread.
-    if 'transfer' in processes or 'all' in processes:
-        exit_code = transfer_files()
-        if exit_code != 0:
-            return
-
-    # subprocess - create proxy table
-    if 'delta' in processes or 'all' in processes:
-        exit_code = create_proxy_table(config_file)
-        if exit_code != 0:
-            logger.error("Delta table creation had errors. Exiting.")
-            return
-
-    # update graph
-    if 'graph' in processes or 'all' in processes:
-        update_graph(config_file)
-
-    # subprocess - sync to graph
-    logger.info("--- Finished radiology proxy etl in %s seconds ---" % (time.time() - start_time))
-
-def setup_environment_from_yaml(template_file):
-    # read template_file yaml and set environmental variables for subprocesses
-    with open(template_file, 'r') as template_file_stream:
-        template_dict = yaml.safe_load(template_file_stream)
-
-    logger.info(template_dict)
-
-    # add all fields from template as env variables
-    for var in template_dict:
-        os.environ[var] = str(template_dict[var]).strip()
-
-def transfer_files():
-    start_time = time.time()
-    transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
-
-    try:
-        exit_code = subprocess.call(transfer_cmd)
-        logger.info("--- Finished transfering files in %s seconds ---" % (time.time() - start_time))
-    except Exception as err:
-        logger.error(("Error Transfering files with rsync" + str(err)))
-        return -1
-
-    if exit_code != 0:
-        logger.error(("Error Transfering files - Non-zero exit code: " + str(exit_code)))
-
-    return exit_code
 
 
 def create_proxy_table(config_file):
@@ -194,7 +131,7 @@ def create_proxy_table(config_file):
     df.printSchema()
     return exit_code
 
-def update_graph(config_file):
+def add_scan_to_graph(config_file):
     spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
 
     # Open a connection to the ID graph database
@@ -222,7 +159,7 @@ def update_graph(config_file):
     with CodeTimer(logger, 'setup proxy table'):
         # Reading dicom and opdata
         df_dcmdata = spark.read.format("delta").load(dicom_path)
-
+        df_dcmdata.printSchema()
         tuple_to_add = df_dcmdata.select("metadata.PatientName", "metadata.SeriesInstanceUID")\
             .groupBy("PatientName", "SeriesInstanceUID")\
             .count()\
@@ -234,7 +171,88 @@ def update_graph(config_file):
             query ='''MATCH (das:dataset {{DATASET_NAME: "{0}"}}) MERGE (px:xnat_patient_id {{value: "{1}"}}) MERGE (sc:scan {{SeriesInstanceUID: "{2}"}}) MERGE (px)-[r1:HAS_SCAN]->(sc) MERGE (das)-[r2:HAS_PX]-(px)'''.format(os.environ['DATASET_NAME'], row['PatientName'], row['SeriesInstanceUID'])
             logger.info (query)
             conn.query(query)
+    logger.info (f"Dataset {os.environ['DATASET_NAME']} added successfully!")
 
 
-if __name__ == "__main__":
-    cli()
+# ==================================================================================================
+# Routes
+# ==================================================================================================
+"""
+Example request:
+curl \
+--header "Content-Type: application/json" \
+--request POST \
+--data '{"TEMPLATE":"path/to/template.yaml"}' \
+  http://<server>:5001/mind/api/v1/buildRadiologyProxyTables
+"""
+@app.route('/mind/api/v1/buildRadiologyProxyTables', methods=['POST'])
+def buildRadiologyProxyTables():
+    data = request.json
+    if not "TEMPLATE" in data.keys(): return "You must supply a template file."
+
+    logger.setLevel('INFO')
+    logger.info("Radiology buildRadiologyProxyTables enter.....")
+    setup_environment_from_yaml(data["TEMPLATE"])
+    create_proxy_table(os.environ['SPARK_CONFIG'])
+    teardown_environment_from_yaml(data["TEMPLATE"])
+    logger.info("Radiology buildRadiologyProxyTables exit.")
+
+    return "Radiology proxy delta tables creation is successful"
+
+"""
+Example request:
+curl \
+--header "Content-Type: application/json" \
+--request POST \
+--data '{"TEMPLATE":"path/to/template.yaml"}' \
+  http://<server>:5001/mind/api/v1/buildRadiologyGraph
+"""
+@app.route('/mind/api/v1/buildRadiologyGraph', methods=['POST'])
+def buildRadiologyGraph():
+    data = request.json
+    if not "TEMPLATE" in data.keys(): return "You must supply a template file."
+
+    logger.setLevel('INFO')
+    logger.info("Radiology buildRadiologyGraph enter.....")
+    setup_environment_from_yaml(data["TEMPLATE"])
+    add_scan_to_graph(os.environ['SPARK_CONFIG'])
+    teardown_environment_from_yaml(data["TEMPLATE"])
+    logger.info("Radiology buildRadiologyGraph exit.")
+
+    return "Radiology buildRadiologyGraph successful"
+
+"""
+curl http://<server>:5001/mind/api/v1/datasets
+"""
+@app.route('/mind/api/v1/datasets', methods=['GET'])
+def datasets_list():
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+    res = conn.query(f'''MATCH (n:dataset) RETURN n''')
+    return jsonify([rec.data()['n']['DATASET_NAME'] for rec in res])
+
+"""
+curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
+"""
+@app.route('/mind/api/v1/datasets/<name>', methods=['GET'])
+def datasets_get(name):
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+    res = conn.query(f'''MATCH (n:dataset) WHERE n.DATASET_NAME = '{name}' RETURN n''')
+    return jsonify([rec.data()['n'] for rec in res])
+
+"""
+curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
+"""
+@app.route('/mind/api/v1/datasets/<name>/countDicom', methods=['GET'])
+def datasets_countDicom(name):
+    spark = SparkConfig().spark_session(os.environ['SPARK_CONFIG'], "data_processing.radiology.proxy_table.generate")
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+    res = conn.query(f'''MATCH (n:dataset) WHERE n.DATASET_NAME = '{name}' RETURN n''')
+    das = [rec.data()['n'] for rec in res]
+    if len (das) < 1: return f"Sorry, I cannot find that dataset {name}"
+    if len (das) > 1: return f"Sorry, this dataset has multiplicity > 1"
+    count = spark.read.format("delta").load(os.path.join(das[0]["LANDING_PATH"], const.DICOM_TABLE)).count()
+    das[0][f"countDicom"] = count
+    return jsonify(das)
+
+if __name__ == '__main__':
+    app.run(host=os.environ['HOSTNAME'],port=5001, debug=True)
