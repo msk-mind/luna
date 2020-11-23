@@ -36,7 +36,9 @@ def test_cli(mocker, spark):
     runner = CliRunner()
     generate_mhd_script_path = os.path.join(current_dir, "data_processing/radiology/refined_table/dicom_to_scan.py")
     
-    mocker.patch('data_processing.python_def_generate_scan.os.path.split', side_effect=['/home/circleci/project/tests/data_processing/testdata/data/test-project/dicoms/RIA_16_158A_000013/20150902_CT/2_Standard_5mm/'])
+    # This test doesn't pass as the paths extracted from the table don't match those on the circleci runner
+    # TODO: Some patching is neccessary
+#    mocker.patch('data_processing.radiology.refined_table.generate.generate_scan_table.python_def_generate_scan.os.path.split', side_effect=['/home/circleci/project/tests/data_processing/testdata/data/test-project/dicoms/RIA_16_158A_000013/20150902_CT/2_Standard_5mm/'])
     
     for ext in ['mhd', 'nrrd']:
         result = runner.invoke(cli, ['-i', "1.2.840.113619.2.340.3.2743924432.468.1441191460.240",
