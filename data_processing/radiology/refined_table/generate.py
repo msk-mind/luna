@@ -1,17 +1,9 @@
 """
-This module groups dicom images via SeriesInstanceUID, calls a script to generate volumetric images, and interfaces outputs to an IO service.
-
-This module is to be run from the top-level data-processing directory using the -m flag as follows:
-Usage:
-    $ python3 -m data_processing.process_scan_job \
-        --query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
-        --hdfs_uri file:// \
-        --custom_preprocessing_script /Users/aukermaa/Work/data-processing/data_processing/generateMHD.py \
-        --tag aukerman.test \
+This module generates a volumentric scan image for a given SeriesInstanceUID within a project
 
 Parameters:
     ENVIRONMENTAL VARIABLES:
-        MIND_ROOT_DIR: The root directory for the delta lake
+        MIND_ROOT_DIR: Root directory for *PROJECT* folders 
     REQUIRED PARAMETERS:
         --hdfs_uri: HDFS namenode uri e.g. hdfs://namenode-ip:8020
         --uid: a SeriesInstanceUID
@@ -64,14 +56,13 @@ def cli(uid, hdfs_uri, custom_preprocessing_script, tag, config_file, project_na
     This module is to be run from the top-level data-processing directory using the -m flag as follows:
 
     Example:
-    $ python3 -m data_processing.process_scan_job \
-        --query "WHERE source:xnat_accession_number AND source.value='RIA_16-158_001' AND ALL(rel IN r WHERE TYPE(rel) IN ['ID_LINK'])" \
-        --hdfs_uri file:// \
-        --custom_preprocessing_script <path-to>/data_processing/radiology/refined_table/dicom_to_scan.py \
-        --uid 1.2.3.4.5 \
-        --project_name test-project \
-        --file_ext mhd \
-        --config_file config.yaml
+    $ python3 -m data_processing.radiology.refined_table.generate \
+	--hdfs_uri file:// \
+	--custom_preprocessing_script data_processing/radiology/refined_table/dicom_to_scan.py \
+	--uid 1.2.840.113619......  \
+	--project_name OV_16-.... \
+	--file_ext mhd \
+	--config_file config.yaml
     """
     start_time = time.time()
 
@@ -94,8 +85,12 @@ def generate_scan_table(spark, uid, hdfs_uri, custom_preprocessing_script, tag, 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Reading dicom table
-    df_dcmdata = spark.read.format("delta").load( hdfs_uri + os.path.join(project_dir, const.DICOM_TABLE))
+    try:
+        df_dcmdata = spark.read.format("delta").load( hdfs_uri + os.path.join(project_dir, const.DICOM_TABLE))
+    except Exception as ex:
+        logger.error("Problem loading dicom table at " + hdfs_uri + os.path.join(project_dir, const.DICOM_TABLE))
+        logger.error(ex)
+        exit(1)
     logger.info (" >>> Loaded dicom table")
 
     def python_def_generate_scan(project_dir, file_ext, path):
@@ -154,6 +149,10 @@ def generate_scan_table(spark, uid, hdfs_uri, custom_preprocessing_script, tag, 
         .filter(F.col("metadata."+concept_id_type)==uid) \
         .limit(1)
 
+    if df.count()==0: 
+        logger.error("No matching scan for SeriesInstanceUID = " + uid)
+        exit(1)
+
     # Run jobs
     with CodeTimer(logger, 'Generate scans:'):
 
@@ -179,7 +178,7 @@ def generate_scan_table(spark, uid, hdfs_uri, custom_preprocessing_script, tag, 
                     .save(scan_table_path)
 
     # Validation step
-    df_scan.select("SeriesInstanceUID", "scan_record_uuid").show(200, truncate=False)
+    df_scan.show(200, truncate=False)
 
 
 if __name__ == "__main__":
