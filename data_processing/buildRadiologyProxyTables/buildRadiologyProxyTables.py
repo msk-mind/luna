@@ -1,13 +1,13 @@
 import os
 import sys
-sys.path.append(os.path.abspath('../'))
+# sys.path.append(os.path.abspath('../'))
 
 from flask import Flask, request, jsonify
 
-from common.CodeTimer import CodeTimer
-from common.custom_logger import init_logger
-from common.sparksession import SparkConfig
-from common.Neo4jConnection import Neo4jConnection
+from data_processing.common.CodeTimer import CodeTimer
+from data_processing.common.custom_logger import init_logger
+from data_processing.common.sparksession import SparkConfig
+from data_processing.common.Neo4jConnection import Neo4jConnection
 import common.constants as const
 
 from pyspark.sql.functions import udf, lit
@@ -41,7 +41,7 @@ app.register_blueprint(SWAGGERUI_BLUEPRINT, url_prefix=SWAGGER_URL)
 @app.route('/')
 def index():
     # setup env variables
-    return "Hello, MSK!"
+    return "Hello, buildRadiologyProxyTables!"
 
 # ==================================================================================================
 # Service functions

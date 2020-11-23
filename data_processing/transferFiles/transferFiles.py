@@ -1,3 +1,7 @@
+import os
+import sys
+# sys.path.append(os.path.abspath('../'))
+
 from flask import Flask, request
 
 from data_processing.common.CodeTimer import CodeTimer
@@ -17,9 +21,28 @@ from io import BytesIO
 from filehash import FileHash
 from distutils.util import strtobool
 
+from flask_swagger_ui import get_swaggerui_blueprint
+
 app = Flask(__name__)
 logger = init_logger("flask-mind-server.log")
 
+### swagger specific ###
+SWAGGER_URL = '/swagger'
+API_URL = '/static/swagger.json'
+SWAGGERUI_BLUEPRINT = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': "buildRadiologyProxyTables"
+    }
+)
+app.register_blueprint(SWAGGERUI_BLUEPRINT, url_prefix=SWAGGER_URL)
+### end swagger specific ###
+
+@app.route('/')
+def index():
+    # setup env variables
+    return "Hello, buildRadiologyProxyTables!"
 # ==================================================================================================
 # Service functions (should be factored out!!!!!!!)
 # ==================================================================================================
@@ -57,8 +80,10 @@ curl \
 --data '{"TEMPLATE":"path/to/template.yaml"}' \
   http://<server>:5000/mind/api/v1/transferFiles
 """
-@app.route('//mind/api/v1/transferFiles', methods=['POST'])
+@app.route('/mind/api/v1/transferFiles/', methods=['POST', 'GET'])
 def transferFiles():
+
+    TEMPLATE = "../../data_ingestion_template.yaml"
     data = request.json
     if not "TEMPLATE" in data.keys(): return "You must supply a template file."
     transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
