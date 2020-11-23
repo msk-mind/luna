@@ -44,7 +44,7 @@ FILE_TYPE: dcm
 FORMAT_TYPE: delta
 
 # ip or hostname of machine where source data file(s) reside, if applicable
-HOST:
+HOST: 127.0.0.1
 
 # file path to the source data file(s). if host is specified, the source data location is determined
 # as host:source_path, else the source data location is determined simply as source_path.

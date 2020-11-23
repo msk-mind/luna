@@ -24,3 +24,4 @@ jsonpath-ng==1.5.2
 yamale==3.0.4
 pydicom==2.1.0
 flask
+flask_swagger_ui

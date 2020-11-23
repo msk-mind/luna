@@ -3,12 +3,16 @@ Created on October 17, 2019
 
 @author: pashaa@mskcc.org
 '''
+import sys
+import os
+
+sys.path.append(os.path.abspath('../'))
 
 import yaml
 import yamale
 import sys
 from jsonpath_ng import parse
-from data_processing.common.custom_logger import init_logger
+from common.custom_logger import init_logger
 
 logger = init_logger()
 

@@ -1,5 +1,10 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath('../'))
+	
 from pyspark.sql import SparkSession
-from data_processing.common.config import Config
+from common.config import Config
 
 """Common spark session"""
 class SparkConfig:

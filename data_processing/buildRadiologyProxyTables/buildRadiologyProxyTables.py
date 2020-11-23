@@ -1,10 +1,14 @@
+import os
+import sys
+sys.path.append(os.path.abspath('../'))
+
 from flask import Flask, request, jsonify
 
-from data_processing.common.CodeTimer import CodeTimer
-from data_processing.common.custom_logger import init_logger
-from data_processing.common.sparksession import SparkConfig
-from data_processing.common.Neo4jConnection import Neo4jConnection
-import data_processing.common.constants as const
+from common.CodeTimer import CodeTimer
+from common.custom_logger import init_logger
+from common.sparksession import SparkConfig
+from common.Neo4jConnection import Neo4jConnection
+import common.constants as const
 
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType, MapType
@@ -15,9 +19,29 @@ from io import BytesIO
 from filehash import FileHash
 from distutils.util import strtobool
 
+from flask_swagger_ui import get_swaggerui_blueprint
+
 app = Flask(__name__)
 logger = init_logger("flask-mind-server.log")
 # spark = SparkConfig().spark_session(os.environ['SPARK_CONFIG'], "data_processing.mind.api")
+
+### swagger specific ###
+SWAGGER_URL = '/swagger'
+API_URL = '/static/swagger.json'
+SWAGGERUI_BLUEPRINT = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': "buildRadiologyProxyTables"
+    }
+)
+app.register_blueprint(SWAGGERUI_BLUEPRINT, url_prefix=SWAGGER_URL)
+### end swagger specific ###
+
+@app.route('/')
+def index():
+    # setup env variables
+    return "Hello, MSK!"
 
 # ==================================================================================================
 # Service functions
@@ -185,7 +209,7 @@ curl \
 --data '{"TEMPLATE":"path/to/template.yaml"}' \
   http://<server>:5001/mind/api/v1/buildRadiologyProxyTables
 """
-@app.route('/mind/api/v1/buildRadiologyProxyTables', methods=['POST'])
+@app.route('/mind/api/v1/buildRadiologyProxyTables', methods=['GET', 'POST'])
 def buildRadiologyProxyTables():
     data = request.json
     if not "TEMPLATE" in data.keys(): return "You must supply a template file."
