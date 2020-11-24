@@ -27,7 +27,9 @@ import glob, shutil, os, uuid, subprocess, sys, argparse, time
 import click
 import socket
 
+from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 import data_processing.common.constants as const
@@ -38,6 +40,8 @@ from pyspark.sql.types import StringType,StructType,StructField
 
 logger = init_logger()
 logger.info("Starting process_scan_job.py")
+
+APP_CFG='APP_CFG'
 
 @click.command()
 @click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
@@ -56,10 +60,10 @@ def cli(spark_master_uri, hdfs_uri, graph_uri, config_file) :
         --hdfs_uri file:// 
     """
     # Setup Spark context
-    start_time = time.time()
-    spark = SparkConfig().spark_session(config_file, "dicom-to-graph")
-    update_graph_with_scans(spark, graph_uri, hdfs_uri) 
-    logger.info("--- Finished in %s seconds ---" % (time.time() - start_time))
+    with CodeTimer(logger, 'convert dicom to graph'):
+        ConfigSet(name=APP_CFG, config_file=config_file)
+        spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="dicom-to-graph")
+        update_graph_with_scans(spark, graph_uri, hdfs_uri)
 
 
 def update_graph_with_scans(spark, graph_uri, hdfs_uri):

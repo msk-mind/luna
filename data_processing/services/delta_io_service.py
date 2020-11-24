@@ -10,12 +10,14 @@ import threading
 from pyspark import SQLContext
 
 from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 
 from checksumdir import dirhash
 from filehash import FileHash        
 
+APP_CFG='APP_CFG'
 
 # Parse arguements
 # TODO: Use click instead of ArgumentParser
@@ -37,7 +39,9 @@ spark_master_uri = os.environ["SPARK_MASTER_URL"]
 conn = Neo4jConnection(uri=graph_uri, user="neo4j", pwd="password")
 
 # Spark setup, persistent spark context for all threads/write/ETL jobs
-spark = SparkConfig().spark_session("config.yaml", "delta-io-service")
+ConfigSet(name=APP_CFG, config_file='config.yaml')
+spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="delta-io-service")
+
 sqlc = SQLContext(spark)
 
 # Setup logging

@@ -14,8 +14,11 @@ import datetime
 from pyspark import SQLContext
 
 from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
+
+APP_CFG='APP_CFG'
 
 # Parse arguements
 parser = argparse.ArgumentParser(description='Start a WRITE SCAN I/O service with a persistent spark context')
@@ -37,7 +40,8 @@ hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
 conn = Neo4jConnection(uri=graph_host, user="neo4j", pwd="password")
 
 # Spark setup, persistent spark context for all threads/write/ETL jobs
-spark = SparkConfig().spark_session("config.yaml", "object-io-service")
+ConfigSet(name=APP_CFG, config_file="config.yaml")
+spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="object-io-service")
 sqlc = SQLContext(spark)
 
 # Setup logging

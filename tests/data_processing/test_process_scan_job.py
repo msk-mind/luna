@@ -6,6 +6,7 @@ from pyspark.sql.types import StringType,StructType,StructField
 from click.testing import CliRunner
 import os
 
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.process_scan_job import generate_scan_table, cli
@@ -15,6 +16,7 @@ current_dir = os.getcwd()
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
     print('------setup------')
+    APP_CFG = 'APP_CFG'
     # setup env
     monkeypatch.setenv("MIND_ROOT_DIR", current_dir+"/tests/data_processing/testdata/data")
     monkeypatch.setenv("MIND_WORK_DIR", "/work/")
@@ -30,7 +32,9 @@ def spark(monkeypatch):
     # start delta_io_service
     os.system("python3 -m data_processing.services.delta_io_service --hdfs file:/// --host localhost &")
 
-    spark = SparkConfig().spark_session('tests/test_config.yaml', 'test-process-scan')
+    ConfigSet(name=APP_CFG, config_file='tests/test_config.yaml')
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-process-scan')
+
     yield spark
 
     print('------teardown------')

@@ -31,7 +31,9 @@ import socket
 
 from checksumdir import dirhash
 
+from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 import data_processing.common.constants as const
@@ -43,6 +45,7 @@ from pyspark.sql.types import StringType,StructType,StructField
 logger = init_logger()
 logger.info("Starting process_scan_job.py")
 
+APP_CFG='APP_CFG'
 max_retries = 10
 
 # pydoop.hdfs.cp("file:///Users/aukermaa/DB/test.txt", "/Users/aukermaa/")
@@ -72,12 +75,11 @@ def cli(query, hdfs_uri,  custom_preprocessing_script, tag, config_file):
 
     # Setup Spark context
     print (query)
-    start_time = time.time()
+    with CodeTimer(logger, 'generate scan table'):
+        ConfigSet(name=APP_CFG, config_file=config_file)
+        spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="dicom-to-scan")
 
-    spark = SparkConfig().spark_session(config_file, "dicom-to-scan")
-    generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, tag)
-
-    logger.info("--- Finished in %s seconds ---" % (time.time() - start_time))
+        generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, tag)
 
 
 def generate_scan_table(spark, query,  hdfs_uri, custom_preprocessing_script, tag):
