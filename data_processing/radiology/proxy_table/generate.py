@@ -35,7 +35,7 @@ def generate_uuid(path, content):
     file_path = path.split(':')[-1]
     content = BytesIO(content)
 
-    import EnsureByteContext 
+    import EnsureByteContext
     with EnsureByteContext.EnsureByteContext():
         dcm_hash = FileHash('sha256').hash_file(content)
 
@@ -44,7 +44,7 @@ def generate_uuid(path, content):
 
 
 def parse_dicom_from_delta_record(path, content):
-    
+
     dirs, filename  = os.path.split(path)
 
     dataset = pydicom.dcmread(BytesIO(content))
@@ -55,9 +55,9 @@ def parse_dicom_from_delta_record(path, content):
 
     for elem in dataset.iterall():
         types.add(type(elem.value))
-        if type(elem.value) in [int, float, str]: 
+        if type(elem.value) in [int, float, str]:
             kv[elem.keyword] = str(elem.value)
-        elif type(elem.value) in [pydicom.valuerep.DSfloat, pydicom.valuerep.DSdecimal, pydicom.valuerep.IS, pydicom.valuerep.PersonName, pydicom.uid.UID]: 
+        elif type(elem.value) in [pydicom.valuerep.DSfloat, pydicom.valuerep.DSdecimal, pydicom.valuerep.IS, pydicom.valuerep.PersonName, pydicom.uid.UID]:
             kv[elem.keyword] = str(elem.value)
         elif type(elem.value) in [list, pydicom.multival.MultiValue]:
             kv[elem.keyword] = "//".join([str(x) for x in elem.value])
@@ -65,7 +65,7 @@ def parse_dicom_from_delta_record(path, content):
             skipped_keys.append(elem.keyword)
         # not sure how to handle a sequence!
         # if type(elem.value) in [pydicom.sequence.Sequence]: print ( elem.keyword, type(elem.value), elem.value)
-    
+
     if "" in kv:
         kv.pop("")
     return kv
@@ -87,8 +87,8 @@ def cli(template_file, config_file, process_string):
         python -m data_processing.radiology.proxy_table.generate \
         --template_file {PATH_TO_TEMPLATE_FILE} \
         --config_file {PATH_TO_CONFIG_FILE}
-        --process_string transfer,delta 
-        
+        --process_string transfer,delta
+
     """
     with CodeTimer(logger, 'generate proxy table'):
         processes = process_string.lower().strip().split(",")
@@ -125,7 +125,6 @@ def cli(template_file, config_file, process_string):
 
 
 def transfer_files():
-
 
     with CodeTimer(logger, 'transfer files'):
 
@@ -166,7 +165,7 @@ def transfer_files():
 
 
 def create_proxy_table(config_file):
-    
+
     exit_code = 0
     cfg = ConfigSet()
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.radiology.proxy_table.generate")
@@ -179,7 +178,7 @@ def create_proxy_table(config_file):
     logger.info("generating binary proxy table... ")
 
     dicom_path = os.path.join(cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH'), const.DICOM_TABLE)
-    
+
     with CodeTimer(logger, 'load dicom files'):
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
 
@@ -195,7 +194,7 @@ def create_proxy_table(config_file):
     with CodeTimer(logger, 'parse and save dicom'):
         parse_dicom_from_delta_record_udf = udf(parse_dicom_from_delta_record, MapType(StringType(), StringType()))
         header = df.withColumn("metadata", lit(parse_dicom_from_delta_record_udf(df.path, df.content)))
-    
+
         header.coalesce(6144).write.format(cfg.get_value(name=DATA_CFG, jsonpath='FORMAT_TYPE')) \
             .mode("overwrite") \
             .option("mergeSchema", "true") \
@@ -224,6 +223,8 @@ def update_graph(config_file):
 
     # Which properties to include in dataset node
     dataset_ext_properties = [
+        'LANDING_PATH',
+        'DATASET_NAME',
         'REQUESTOR',
         'REQUESTOR_DEPARTMENT',
         'REQUESTOR_EMAIL',
@@ -231,28 +232,28 @@ def update_graph(config_file):
         'SOURCE',
         'MODALITY',
     ]
-     
+
     dataset_props = list ( set(dataset_ext_properties).intersection(set(cfg.get_keys(name=DATA_CFG))))
     dataset_props.insert(0, 'LANDING_PATH')
     dataset_props.insert(0, 'DATASET_NAME')
     
     prop_string = ','.join(['''{0}: "{1}"'''.format(
         prop, cfg.get_value(name=DATA_CFG, jsonpath=prop)) for prop in dataset_props])
+
     conn.query(f'''MERGE (n:dataset{{{prop_string}}})''')
 
     with CodeTimer(logger, 'setup proxy table'):
         # Reading dicom and opdata
         df_dcmdata = spark.read.format("delta").load(dicom_path)
-    
+
         tuple_to_add = df_dcmdata.select("metadata.PatientName", "metadata.SeriesInstanceUID")\
             .groupBy("PatientName", "SeriesInstanceUID")\
             .count()\
             .toPandas()
-    
-    with CodeTimer(logger, 'synchronize graph'):
 
+    with CodeTimer(logger, 'synchronize graph'):
         dataset_name = cfg.get_value(name=DATA_CFG, jsonpath='DATASET_NAME')
-    
+
         for index, row in tuple_to_add.iterrows():
             query ='''MATCH (das:dataset {{DATASET_NAME: "{0}"}}) MERGE (px:xnat_patient_id {{value: "{1}"}}) MERGE (sc:scan {{SeriesInstanceUID: "{2}"}}) MERGE (px)-[r1:HAS_SCAN]->(sc) MERGE (das)-[r2:HAS_PX]-(px)'''.format(dataset_name, row['PatientName'], row['SeriesInstanceUID'])
             logger.info (query)
