@@ -94,20 +94,38 @@ class ConfigSet():
         return config
 
 
+    def _get_match(self, name, jsonpath):
+        jsonpath_expression = parse(jsonpath)
+
+        return jsonpath_expression.find(ConfigSet.__INSTANCE.__config[name])
+
+
+    def has_value(self, name, jsonpath):
+        '''
+        :param name: logical name of the configuration
+        :param jsonpath: jsonpath to value. see config.yaml to generate a jsonpath. See https://pypi.org/project/jsonpath-ng/
+                         jsonpath expressions may be tested here - https://jsonpath.com/
+        :return: true if value is not an empty string, else false.
+        '''
+
+        if len(self._get_match(name, jsonpath)) == 0:
+            return False
+        else:
+            return True
+
+
     def get_value(self, name, jsonpath):
         '''
         Gets the value for the specified jsonpath from the specified configuration.
 
         :param name: logical name of the configuration
-        :param jsonpath: see config.yaml to generate a jsonpath. See https://pypi.org/project/jsonpath-ng/
+        :param jsonpath: jsonpath to value. see config.yaml to generate a jsonpath. See https://pypi.org/project/jsonpath-ng/
                          jsonpath expressions may be tested here - https://jsonpath.com/
         :return: string value from config file
         :raises: ValueError if no match is found for the specified exception
         '''
 
-        jsonpath_expression = parse(jsonpath)
-
-        match = jsonpath_expression.find(ConfigSet.__INSTANCE.__config[name])
+        match = self._get_match(name, jsonpath)
 
         if len(match) == 0:
             err = 'unable to find a config value for jsonpath: '+jsonpath
@@ -115,6 +133,7 @@ class ConfigSet():
             raise ValueError(err)
 
         return match[0].value
+
 
     def get_names(self):
         '''

@@ -54,3 +54,9 @@ def test_singleton_with_schema():
 def test_invalid_yaml():
     with pytest.raises(IOError):
         c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/does_not_exist.yml')
+
+def test_has_value():
+    c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
+
+    assert c1.has_value(name='app_config', jsonpath='$.spark_application_config[:1]["spark.executor.cores"]')
+    assert not c1.has_value(name='app_config', jsonpath='$.spark_application_config[:1]["spark.does.not.exist"]')
