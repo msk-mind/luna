@@ -42,7 +42,6 @@ conn = Neo4jConnection(uri=graph_uri, user="neo4j", pwd="password")
 # Spark setup, persistent spark context for all threads/write/ETL jobs
 ConfigSet(name=APP_CFG, config_file='config.yaml')
 spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="delta-io-service")
-
 sqlc = SQLContext(spark)
 
 # Setup logging

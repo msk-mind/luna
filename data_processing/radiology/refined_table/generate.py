@@ -37,6 +37,7 @@ logger.info("Starting process_scan_job.py")
 APP_CFG='APP_CFG'
 
 
+
 def validate_file_ext(ctx, param, value):
     if not value in ['mhd','nrrd']:
         raise click.UsageError("file_ext should be one of mhd|nrrd")

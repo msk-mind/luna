@@ -125,7 +125,6 @@ def cli(template_file, config_file, process_string):
 
 
 def transfer_files():
-
     with CodeTimer(logger, 'transfer files'):
 
         # set up env vars for transfer_files.sh
@@ -157,6 +156,7 @@ def transfer_files():
             del os.environ['RAW_DATA_PATH']
             del os.environ['FILE_COUNT']
             del os.environ['DATA_SIZE']
+
 
         if exit_code != 0:
             logger.error(("Error Transferring files - Non-zero exit code: " + str(exit_code)))
