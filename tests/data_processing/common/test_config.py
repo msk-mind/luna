@@ -12,7 +12,7 @@ from data_processing.common.config import ConfigSet
 
 def test_singleton_invocations():
     c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
-    c2 = ConfigSet(name='app_config')
+    c2 = ConfigSet()
 
     assert c1 == c2  # instance is reused for the same config.yaml
 
