@@ -57,7 +57,7 @@ class ConfigSet():
         :param schema_file a schema file for the yaml configuration (optional)
         :raises yamale.yamale_error.YamaleError if config file is invalid when validated against the schema
         '''
-        pass
+        pass  # see __new__() method implementation
 
     def _validate_config(cls, name):
         config_file = ConfigSet.__CONFIG_MAP[name]
@@ -84,7 +84,7 @@ class ConfigSet():
             stream = open(config_file, 'r')
         except IOError as err:
             logger.error("unable to find a config file with name "+config_file+
-                  ". Please use config.yaml.template to make a "+config_file+". "+err.message)
+                  ". Please use config.yaml.template to make a "+config_file+". "+str(err))
             raise err
         
         config = {}

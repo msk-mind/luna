@@ -51,3 +51,6 @@ def test_singleton_with_schema():
     assert c1.get_names() == ['app_config', 'data_config']
     assert c2.get_names() == ['app_config', 'data_config']
 
+def test_invalid_yaml():
+    with pytest.raises(IOError):
+        c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/does_not_exist.yml')
