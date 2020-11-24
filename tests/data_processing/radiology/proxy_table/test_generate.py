@@ -29,7 +29,7 @@ def test_cli(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
-        ['-t', 'tests/data_processing/data_ingestion_template_valid.yaml', 
+        ['-t', 'tests/data_processing/data_ingestion_template_valid.yml',
         '-f', 'tests/test_config.yaml',
         '-p', 'delta'])
 

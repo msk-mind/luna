@@ -12,7 +12,7 @@ from yamale import YamaleTestCase, YamaleError
 class TestValidYaml(YamaleTestCase):
     base_dir = os.path.dirname(os.path.realpath(__file__))
     schema = '../../data_ingestion_template_schema.yml'
-    yaml = 'data_ingestion_template_valid.yaml'
+    yaml = 'data_ingestion_template_valid.yml'
 
     def runTest(self):
         self.assertTrue(self.validate())
@@ -21,7 +21,7 @@ class TestValidYaml(YamaleTestCase):
 class TestInvalidYaml(YamaleTestCase):
     base_dir = os.path.dirname(os.path.realpath(__file__))
     schema = '../../data_ingestion_template_schema.yml'
-    yaml = 'data_ingestion_template_invalid.yaml'
+    yaml = 'data_ingestion_template_invalid.yml'
 
     def runTest(self):
         with pytest.raises(YamaleError) as error_info:

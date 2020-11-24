@@ -6,7 +6,6 @@ Created on October 17, 2019
 
 import yaml
 import yamale
-import sys
 from jsonpath_ng import parse
 from data_processing.common.custom_logger import init_logger
 
@@ -32,18 +31,22 @@ class ConfigSet():
 
 
     def __new__(cls, name, config_file, schema_file=None):
-        if ConfigSet.__INSTANCE is None or \
-                name not in ConfigSet.__CONFIG_MAP.keys() or \
-                ConfigSet.__CONFIG_MAP[name] != config_file:
-            ConfigSet.__CONFIG_MAP[name] = config_file
+        # initialize singleton
+        if ConfigSet.__INSTANCE is None:
+            ConfigSet.__INSTANCE = object.__new__(cls)
+            ConfigSet.__INSTANCE.__config = {}
 
+        # load or reload config into memory
+        if name not in ConfigSet.__CONFIG_MAP.keys() or \
+            ConfigSet.__CONFIG_MAP[name] != config_file:
+            ConfigSet.__CONFIG_MAP[name] = config_file
+            ConfigSet.__INSTANCE.__config[name] = ConfigSet._load_config(cls, name)
+
+            # add schema and validate config
             if schema_file is not None:
                 ConfigSet.__SCHEMA_MAP[name] = schema_file
                 ConfigSet._validate_config(cls, name)
 
-            ConfigSet.__INSTANCE = object.__new__(cls)
-            ConfigSet.__INSTANCE.__config = {}
-            ConfigSet.__INSTANCE.__config[name] = ConfigSet._load_config(cls, name)
         return ConfigSet.__INSTANCE
 
 
@@ -113,6 +116,12 @@ class ConfigSet():
 
         return match[0].value
 
+    def get_names(self):
+        '''
+
+        :return: a list of logical names of the configs stored in this instance.
+        '''
+        return list(ConfigSet.__INSTANCE.__config.keys())
 
 
 if __name__ == '__main__':
@@ -127,6 +136,8 @@ if __name__ == '__main__':
     except ValueError as ve:
         print("got expected value error: "+str(ve))
 
-    c4 = ConfigSet(name='data_config', config_file="tests/data_processing/common/test_data_ingestion_template.yml", schema_file="data_ingestion_template_schema.yml")
+    c4 = ConfigSet(name='data_config',
+                   config_file="tests/data_processing/common/test_data_ingestion_template.yml",
+                   schema_file="data_ingestion_template_schema.yml")
 
     print(str(c4) + ' ' + str(c4.get_value('data_config', '$.REQUESTOR')))
