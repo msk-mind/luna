@@ -10,6 +10,16 @@ import pytest
 from data_processing.common.config import ConfigSet
 
 
+def test_singleton_invocations():
+    c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
+    c2 = ConfigSet(name='app_config')
+
+    assert c1 == c2  # instance is reused for the same config.yaml
+
+    assert c1.get_value(name='app_config', jsonpath='$.spark_application_config[:1]["spark.executor.cores"]') == 111
+    assert c2.get_value(name='app_config', jsonpath='$.spark_application_config[:1]["spark.executor.cores"]') == 111
+
+
 def test_singleton():
     c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
     c2 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')

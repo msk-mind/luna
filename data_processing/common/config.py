@@ -30,7 +30,11 @@ class ConfigSet():
     __INSTANCE = None    # singleton instance containing the collection of configs keyed by logical name
 
 
-    def __new__(cls, name, config_file, schema_file=None):
+    def __new__(cls, name, config_file=None, schema_file=None):
+        # assume the collection with name has already been loaded
+        if config_file is None:
+            return ConfigSet.__INSTANCE
+
         # initialize singleton
         if ConfigSet.__INSTANCE is None:
             ConfigSet.__INSTANCE = object.__new__(cls)
@@ -50,10 +54,10 @@ class ConfigSet():
         return ConfigSet.__INSTANCE
 
 
-    def __init__(self, name, config_file, schema_file=None):
+    def __init__(self, name, config_file=None, schema_file=None):
         '''
         :param name logical name to be given for this configuration
-        :param config_file the config file to load
+        :param config_file the config file to load. This argument only needs to be passed on first invocation (optional).
         :param schema_file a schema file for the yaml configuration (optional)
         :raises yamale.yamale_error.YamaleError if config file is invalid when validated against the schema
         '''
