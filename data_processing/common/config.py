@@ -12,55 +12,68 @@ from data_processing.common.custom_logger import init_logger
 
 logger = init_logger()
 
-class Config():
+class ConfigSet():
     '''
-    This class loads the configuration from a config yaml file only once on first invocation of this class with
-    the specified config file. The class then maintains the configuration in memory in a singleton instance. All new
-    instances of this class that are created for the same config file specified as the argument, will use the same
-    singleton instance.
+    This is a singleton class that can load a collection of configurations from yaml files.
 
-    If a new instance of this class is created with a new config file specified as the argument, the singleton instance
-    is recreated and the class loads the config from the new config file.
+    ConfigSet loads configurations from yaml files only once on first invocation of this class with
+    the specified yaml file. The class then maintains the configuration in memory in a singleton instance. All new
+    invocations of this class will serve up the same configuration.
+
+    Each configuration in the collection is identified by a logical name.
+
+    If a new invocation of this class is created with an existing logical name and a different yaml file, the singleton
+    instance replaces the existing configuration with the newly specified yaml file for the given logical name.
     '''
 
-    __CONFIG_FILE = 'config.yaml'  # config file 
-    __INSTANCE = None              # singleton instance
+    __CONFIG_MAP = {}  # maps logical name to yaml config file name
+    __SCHEMA_MAP = {}  # maps logical name to schema file of yaml config file
+    __INSTANCE = None    # singleton instance containing the collection of configs keyed by logical name
 
 
-    def __new__(cls, config_file, schema_file=None):
-        if Config.__INSTANCE is None or Config.__CONFIG_FILE != config_file:
-            Config.__CONFIG_FILE = config_file
+    def __new__(cls, name, config_file, schema_file=None):
+        if ConfigSet.__INSTANCE is None or \
+                name not in ConfigSet.__CONFIG_MAP.keys() or \
+                ConfigSet.__CONFIG_MAP[name] != config_file:
+            ConfigSet.__CONFIG_MAP[name] = config_file
 
             if schema_file is not None:
-                Config.__SCHEMA_FILE = schema_file
-                Config._validate_config(cls)
+                ConfigSet.__SCHEMA_MAP[name] = schema_file
+                ConfigSet._validate_config(cls, name)
 
-            Config.__INSTANCE = object.__new__(cls)
-            Config.__INSTANCE.__config = Config._load_config(cls)
-        return Config.__INSTANCE
+            ConfigSet.__INSTANCE = object.__new__(cls)
+            ConfigSet.__INSTANCE.__config = {}
+            ConfigSet.__INSTANCE.__config[name] = ConfigSet._load_config(cls, name)
+        return ConfigSet.__INSTANCE
 
 
-    def __init__(self, config_file, schema_file=None):
-        ''':param config_file the config file to load. If none is provided, the class defaults to 'config.yaml' in
-        the base directory'''
+    def __init__(self, name, config_file, schema_file=None):
+        '''
+        :param name logical name to be given for this configuration
+        :param config_file the config file to load
+        :param schema_file a schema file for the yaml configuration (optional)
+        :raises yamale.yamale_error.YamaleError if config file is invalid when validated against the schema
+        '''
         pass
 
-    def _validate_config(cls):
-        config_file = Config.__CONFIG_FILE
-        schema_file = Config.__SCHEMA_FILE
-        logger.info("validating config " + config_file + " against schema " + schema_file)
+    def _validate_config(cls, name):
+        config_file = ConfigSet.__CONFIG_MAP[name]
+        schema_file = ConfigSet.__SCHEMA_MAP[name]
+        logger.info("validating config " + config_file + " against schema " + schema_file + " for " + name)
         schema = yamale.make_schema(schema_file)
         data = yamale.make_data(config_file)
         yamale.validate(schema, data)
 
-    def _load_config(cls):
+    def _load_config(cls, name):
         '''
 
-        :param config_file: Default config file is config.yaml
+        :param name: logical name of the config to load
         :return: config generator object
+
+        :raises: IOError if yaml config file for the specified logical name cannot be found
         '''
         # read config file
-        config_file = Config.__CONFIG_FILE
+        config_file = ConfigSet.__CONFIG_MAP[name]
         logger.info("loading config file "+config_file)
 
 
@@ -69,45 +82,51 @@ class Config():
         except IOError as err:
             logger.error("unable to find a config file with name "+config_file+
                   ". Please use config.yaml.template to make a "+config_file+". "+err.message)
-            sys.exit(1)
+            raise err
         
-        configs = {}
+        config = {}
         for items in yaml.load_all(stream, Loader=yaml.FullLoader):
-            configs.update(items)
+            config.update(items)
 
-        return configs
+        return config
 
 
-    def get_value(self, jsonpath):
+    def get_value(self, name, jsonpath):
         '''
-        Gets the value from the config file for the specified jsonpath.
+        Gets the value for the specified jsonpath from the specified configuration.
 
+        :param name: logical name of the configuration
         :param jsonpath: see config.yaml to generate a jsonpath. See https://pypi.org/project/jsonpath-ng/
                          jsonpath expressions may be tested here - https://jsonpath.com/
         :return: string value from config file
+        :raises: ValueError if no match is found for the specified exception
         '''
 
         jsonpath_expression = parse(jsonpath)
 
-        match = jsonpath_expression.find(Config.__INSTANCE.__config)
+        match = jsonpath_expression.find(ConfigSet.__INSTANCE.__config[name])
 
         if len(match) == 0:
-            logger.error('unable to find a config value for jsonpath: '+jsonpath)
-            return None
+            err = 'unable to find a config value for jsonpath: '+jsonpath
+            logger.error(err)
+            raise ValueError(err)
 
         return match[0].value
 
 
 
 if __name__ == '__main__':
-    c1 = Config('config.yaml')
-    c2 = Config('config.yaml')
-    c3 = Config('config.yaml')
+    c1 = ConfigSet('app_config', 'tests/data_processing/common/test_config.yml')
+    c2 = ConfigSet('app_config', 'tests/data_processing/common/test_config.yml')
+    c3 = ConfigSet('app_config', 'tests/data_processing/common/test_config.yml')
 
-    print(str(c1) + ' ' + str(c1.get_value('$.spark_application_config[:1]["spark.executor.cores"]')))
-    print(str(c2) + ' ' + str(c2.get_value('$.spark_application_config[:1]["spark.executor.cores"]')))
-    print(str(c3) + ' ' + str(c3.get_value('$.spark_application_config[:1]["doesnt_exist"]')))
+    print(str(c1) + ' ' + str(c1.get_value('app_config', '$.spark_application_config[:1]["spark.executor.cores"]')))
+    print(str(c2) + ' ' + str(c2.get_value('app_config', '$.spark_application_config[:1]["spark.executor.cores"]')))
+    try:
+        print(str(c3) + ' ' + str(c3.get_value('app_config', '$.spark_application_config[:1]["doesnt_exist"]')))
+    except ValueError as ve:
+        print("got expected value error: "+str(ve))
 
-    c4 = Config(config_file="data_ingestion_template.yaml", schema_file="data_ingestion_template_schema.yml")
+    c4 = ConfigSet(name='data_config', config_file="tests/data_processing/common/test_data_ingestion_template.yml", schema_file="data_ingestion_template_schema.yml")
 
-    print(str(c4) + ' ' + str(c4.get_value('$.requestor')))
+    print(str(c4) + ' ' + str(c4.get_value('data_config', '$.REQUESTOR')))
