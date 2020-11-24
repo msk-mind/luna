@@ -112,7 +112,11 @@ class ConfigSet():
         :param jsonpath: jsonpath to value. see config.yaml to generate a jsonpath. See https://pypi.org/project/jsonpath-ng/
                          jsonpath expressions may be tested here - https://jsonpath.com/
         :return: true if value is not an empty string, else false.
+        :raises: ValueError if a configuration with the specified name was never loaded
         '''
+
+        if ConfigSet.__INSTANCE is None or name not in ConfigSet.__INSTANCE.__config.keys():
+            raise ValueError('configuration with logical name '+name+' was never loaded')
 
         if len(self._get_match(name, jsonpath)) == 0:
             return False
@@ -128,8 +132,12 @@ class ConfigSet():
         :param jsonpath: jsonpath to value. see config.yaml to generate a jsonpath. See https://pypi.org/project/jsonpath-ng/
                          jsonpath expressions may be tested here - https://jsonpath.com/
         :return: string value from config file
-        :raises: ValueError if no match is found for the specified exception
+        :raises: ValueError if no match is found for the specified exception or a
+                 configuration with the specified name was never loaded
         '''
+
+        if ConfigSet.__INSTANCE is None or name not in ConfigSet.__INSTANCE.__config.keys():
+            raise ValueError('configuration with logical name '+name+' was never loaded')
 
         match = self._get_match(name, jsonpath)
 
@@ -146,7 +154,10 @@ class ConfigSet():
 
         :return: a list of logical names of the configs stored in this instance.
         '''
-        return list(ConfigSet.__INSTANCE.__config.keys())
+        if ConfigSet.__INSTANCE is not None:
+            return list(ConfigSet.__INSTANCE.__config.keys())
+        else:
+            return []
 
 
     def get_keys(self, name):
@@ -154,8 +165,21 @@ class ConfigSet():
 
         :param name: logical name of the configuration
         :return: a list of top-level keys in the config stored in this instance.
+        :raises: ValueError if a configuration with the specified name was never loaded
         '''
+        if ConfigSet.__INSTANCE is None or name not in ConfigSet.__INSTANCE.__config.keys():
+            raise ValueError('configuration with logical name '+name+' was never loaded')
+
         return list(ConfigSet.__INSTANCE.__config[name].keys())
+
+
+    def clear(self):
+        '''
+        clear the entire collection of configurations
+        '''
+        ConfigSet.__CONFIG_MAP = {}
+        ConfigSet.__SCHEMA_MAP = {}
+        ConfigSet.__INSTANCE = None
 
 
 if __name__ == '__main__':

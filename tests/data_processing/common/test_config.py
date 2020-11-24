@@ -9,8 +9,22 @@ import pytest
 
 from data_processing.common.config import ConfigSet
 
+@pytest.fixture(autouse=True)
+def cfg():
+    print('------setup------')
+    c1 = ConfigSet()
+    if c1 is not None:
+        c1.clear()
 
-def test_singleton_invocations():
+    yield cfg
+
+    print('------teardown------')
+    c1 = ConfigSet()
+    if c1 is not None:
+        c1.clear()
+
+
+def test_singleton_invocations(cfg):
     c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
     c2 = ConfigSet()
 
@@ -20,7 +34,7 @@ def test_singleton_invocations():
     assert c2.get_value(name='app_config', jsonpath='$.spark_application_config[:1]["spark.executor.cores"]') == 111
 
 
-def test_singleton():
+def test_singleton(cfg):
     c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
     c2 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
 
@@ -41,7 +55,7 @@ def test_singleton():
     assert c4.get_value(name='app_config', jsonpath='$.spark_application_config[:1]["spark.executor.cores"]') == 222
 
 
-def test_get_value():
+def test_get_value(cfg):
     c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
     c3 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
 
@@ -50,14 +64,20 @@ def test_get_value():
     with pytest.raises(ValueError):
         c3.get_value(name='app_config', jsonpath='$.spark_application_config[:1]["doesnt.exist"]') == None
 
+    with pytest.raises(ValueError):
+        ConfigSet().get_value('name_does_not_exist', jsonpath='$.spark_application_config[:1]["spark.executor.cores"]')
 
-def test_get_keys():
+
+def test_get_keys(cfg):
     c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
 
     assert c1.get_keys('app_config') == ['spark_cluster_config', 'spark_application_config']
 
+    with pytest.raises(ValueError):
+        ConfigSet().get_keys('name_does_not_exist')
 
-def test_singleton_with_schema():
+
+def test_singleton_with_schema(cfg):
     c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
     c2 = ConfigSet(name='data_config', config_file='tests/data_processing/common/test_data_ingestion_template.yml',
                    schema_file='data_ingestion_template_schema.yml')
@@ -67,12 +87,26 @@ def test_singleton_with_schema():
     assert c1.get_names() == ['app_config', 'data_config']
     assert c2.get_names() == ['app_config', 'data_config']
 
-def test_invalid_yaml():
-    with pytest.raises(IOError):
-        c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/does_not_exist.yml')
 
-def test_has_value():
+def test_invalid_yaml(cfg):
+    with pytest.raises(IOError):
+        ConfigSet(name='app_config', config_file='tests/data_processing/common/does_not_exist.yml')
+
+
+def test_has_value(cfg):
     c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
 
     assert c1.has_value(name='app_config', jsonpath='$.spark_application_config[:1]["spark.executor.cores"]')
     assert not c1.has_value(name='app_config', jsonpath='$.spark_application_config[:1]["spark.does.not.exist"]')
+
+    with pytest.raises(ValueError):
+        ConfigSet().has_value('name_does_not_exist', jsonpath='$.spark_application_config[:1]["spark.does.not.exist"]')
+
+def test_clear(cfg):
+    ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
+    ConfigSet(name='data_config', config_file='tests/data_processing/common/test_data_ingestion_template.yml',
+                   schema_file='data_ingestion_template_schema.yml')
+    c1 = ConfigSet()
+    assert c1.get_names() == ['app_config', 'data_config']
+    c1.clear()
+    assert c1.get_names() == []
