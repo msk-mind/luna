@@ -41,6 +41,12 @@ def test_get_value():
         c3.get_value(name='app_config', jsonpath='$.spark_application_config[:1]["doesnt.exist"]') == None
 
 
+def test_get_keys():
+    c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
+
+    assert c1.get_keys('app_config') == ['spark_cluster_config', 'spark_application_config']
+
+
 def test_singleton_with_schema():
     c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
     c2 = ConfigSet(name='data_config', config_file='tests/data_processing/common/test_data_ingestion_template.yml',

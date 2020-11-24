@@ -143,6 +143,15 @@ class ConfigSet():
         return list(ConfigSet.__INSTANCE.__config.keys())
 
 
+    def get_keys(self, name):
+        '''
+
+        :param name: logical name of the configuration
+        :return: a list of top-level keys in the config stored in this instance.
+        '''
+        return list(ConfigSet.__INSTANCE.__config[name].keys())
+
+
 if __name__ == '__main__':
     c1 = ConfigSet('app_config', 'tests/data_processing/common/test_config.yml')
     c2 = ConfigSet('app_config', 'tests/data_processing/common/test_config.yml')
