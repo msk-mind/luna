@@ -1,0 +1,41 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "description": "Transfer Files for ETL",
+    "version": "1.0.0",
+    "title": "Transfer Files",
+    "license": {
+      "name": "MIND Service",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Transfer Files",
+      "description": "Transfer Files for ETL"
+    }
+  ],
+  "paths": {
+    "/mind/api/v1/transferFiles": {
+      "get": {
+        "tags": [
+          "Transfer Files"
+        ],
+        "summary": "Transfer Files",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": ""
+            }
+          }
+        }
+      }
+    }
+  }
+}

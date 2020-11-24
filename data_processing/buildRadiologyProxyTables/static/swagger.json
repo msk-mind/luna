@@ -1,0 +1,38 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "description": "Build Radiology Proxy Tables",
+    "version": "1.0.0",
+    "title": "Build Radiology Proxy Tables",
+    "license": {
+      "name": "MIND Service",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Build Radiology Proxy Tables",
+      "description": "Build radiology proxy tables for all projects"
+    }
+  ],
+  "paths": {
+    "/mind/api/v1/buildRadiologyProxyTables": {
+      "get": {
+        "tags": [
+          "Build Radiology Proxy Tables"
+        ],
+        "summary": "Builds radiology proxy tables given a template",
+        "responses": {
+          "200": {
+            "description": "OK",
+          }
+        }
+      }
+    }
+  }
+}
