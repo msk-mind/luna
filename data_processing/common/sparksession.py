@@ -1,22 +1,25 @@
 from pyspark.sql import SparkSession
-from data_processing.common.config import Config
+from data_processing.common.config import ConfigSet
 
 """Common spark session"""
 class SparkConfig:
 
 	def spark_session(self, config_file, app_name):
 
+		cfg = 'app_config'
+		config_set = ConfigSet(name=cfg, config_file=config_file)
 
-		config = Config(config_file=config_file)
-
-		spark_uri = config.get_value('$.spark_cluster_config[:1]["spark.uri"]')
-		spark_driver_host = config.get_value('$.spark_cluster_config[:2]["spark.driver.host"]')
-		spark_executor_cores = config.get_value('$.spark_application_config[:1]["spark.executor.cores"]')
-		spark_cores_max = config.get_value('$.spark_application_config[:2]["spark.cores.max"]')
-		spark_executor_memory = config.get_value('$.spark_application_config[:3]["spark.executor.memory"]')
+		spark_uri = config_set.get_value(name=cfg, jsonpath='$.spark_cluster_config[:1]["spark.uri"]')
+		spark_driver_host = config_set.get_value(name=cfg, jsonpath='$.spark_cluster_config[:2]["spark.driver.host"]')
+		spark_executor_cores = config_set.get_value(name=cfg,
+													jsonpath='$.spark_application_config[:1]["spark.executor.cores"]')
+		spark_cores_max = config_set.get_value(name=cfg, jsonpath='$.spark_application_config[:2]["spark.cores.max"]')
+		spark_executor_memory = config_set.get_value(name=cfg,
+													 jsonpath='$.spark_application_config[:3]["spark.executor.memory"]')
 		spark_executor_pyspark_memory = \
-			config.get_value('$.spark_application_config[:4]["spark.executor.pyspark.memory"]')
-		spark_sql_shuffle_partitions = config.get_value('$.spark_application_config[:5]["spark.sql.shuffle.partitions"]')
+			config_set.get_value(name=cfg, jsonpath='$.spark_application_config[:4]["spark.executor.pyspark.memory"]')
+		spark_sql_shuffle_partitions = \
+			config_set.get_value(name=cfg, jsonpath='$.spark_application_config[:5]["spark.sql.shuffle.partitions"]')
 
 		return SparkSession.builder \
 			.appName(app_name) \
