@@ -28,6 +28,7 @@ logger = init_logger()
 
 SCHEMA_FILE='data_ingestion_template_schema.yml'
 DATA_CFG = 'DATA_CFG'
+APP_CFG = 'APP_CFG'
 
 def generate_uuid(path, content):
 
@@ -95,8 +96,9 @@ def cli(template_file, config_file, process_string):
         logger.info('config_file: ' + config_file)
         logger.info('processes: ' + str(processes))
 
-        # load config
+        # load configs
         cfg = ConfigSet(name=DATA_CFG, config_file=template_file, schema_file=SCHEMA_FILE)
+        cfg = ConfigSet(name=APP_CFG, config_file=config_file)
 
         # write template file to manifest_yaml under LANDING_PATH
         landing_path = cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH')
@@ -166,7 +168,7 @@ def create_proxy_table(config_file):
 
     exit_code = 0
     cfg = ConfigSet()
-    spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.radiology.proxy_table.generate")
 
     # setup for using external py in udf
     sys.path.append("data_processing/common")
@@ -211,9 +213,8 @@ def create_proxy_table(config_file):
     return exit_code
 
 def update_graph(config_file):
-    spark = SparkConfig().spark_session(config_file, "data_processing.radiology.proxy_table.generate")
-
     cfg = ConfigSet()
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.radiology.proxy_table.generate")
 
     # Open a connection to the ID graph database
     conn = Neo4jConnection(uri=cfg.get_value(name=DATA_CFG, jsonpath='GRAPH_URI'), user="neo4j", pwd="password")
@@ -238,6 +239,7 @@ def update_graph(config_file):
     
     prop_string = ','.join(['''{0}: "{1}"'''.format(
         prop, cfg.get_value(name=DATA_CFG, jsonpath=prop)) for prop in dataset_props])
+
     conn.query(f'''MERGE (n:dataset{{{prop_string}}})''')
 
     with CodeTimer(logger, 'setup proxy table'):
@@ -250,7 +252,6 @@ def update_graph(config_file):
             .toPandas()
 
     with CodeTimer(logger, 'synchronize graph'):
-
         dataset_name = cfg.get_value(name=DATA_CFG, jsonpath='DATASET_NAME')
 
         for index, row in tuple_to_add.iterrows():

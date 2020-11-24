@@ -24,6 +24,7 @@ from checksumdir import dirhash
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 import data_processing.common.constants as const
@@ -33,6 +34,8 @@ from pyspark.sql.types import ArrayType,StringType,StructType,StructField
 
 logger = init_logger()
 logger.info("Starting process_scan_job.py")
+APP_CFG='APP_CFG'
+
 
 
 def validate_file_ext(ctx, param, value):
@@ -66,7 +69,8 @@ def cli(uid, hdfs_uri, custom_preprocessing_script, tag, config_file, project_na
     """
     start_time = time.time()
 
-    spark = SparkConfig().spark_session(config_file, "dicom-to-scan")
+    ConfigSet(name=APP_CFG, config_file=config_file)
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='dicom-to-scan')
     generate_scan_table(spark, uid, hdfs_uri, custom_preprocessing_script, tag, project_name, file_ext)
 
     logger.info("--- Finished in %s seconds ---" % (time.time() - start_time))

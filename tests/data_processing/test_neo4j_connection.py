@@ -4,6 +4,7 @@ import pytest
 from pytest_mock import mocker
 
 from data_processing.common.Neo4jConnection import Neo4jConnection, pretty_path
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from pyspark import SQLContext, SparkContext
 '''
@@ -13,7 +14,10 @@ Mock tests for Neo4jConnection in common
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('tests/test_config.yaml', 'test-neo4j-connection')
+    APP_CFG = 'APP_CFG'
+    ConfigSet(name=APP_CFG, config_file='tests/test_config.yaml')
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-neo4j-connection')
+
     yield spark
 
     print('------teardown------')

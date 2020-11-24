@@ -2,6 +2,8 @@ import os, shutil
 import pytest
 from pytest_mock import mocker
 from click.testing import CliRunner
+
+from data_processing.common.config import ConfigSet
 from data_processing.preprocess_feature import cli, generate_feature_table, get_dmp_from_scan
 from data_processing.common.sparksession import SparkConfig
 
@@ -15,10 +17,12 @@ runner = CliRunner()
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
     print('------setup------')
+    APP_CFG = 'APP_CFG'
 
     monkeypatch.setenv("GRAPH_URI", "bolt://localhost:7883")
 
-    spark = SparkConfig().spark_session('tests/test_config.yaml', 'test-preprocessing-feature')
+    ConfigSet(name=APP_CFG, config_file='tests/test_config.yaml')
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-preprocessing-feature')
 
     os.environ['BASE_DIR'] = BASE_DIR
 

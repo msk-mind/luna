@@ -5,12 +5,14 @@ from pyspark import SQLContext
 from click.testing import CliRunner
 import os
 
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.radiology.refined_table.generate import generate_scan_table, cli
 
 current_dir = os.getcwd()
 project_name = 'test-project'
 scan_table_path = os.path.join("tests/data_processing/testdata/data", project_name, "tables/scan")
+APP_CFG='APP_CFG'
 
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
@@ -22,7 +24,8 @@ def spark(monkeypatch):
     monkeypatch.setenv("PYSPARK_PYTHON", pypath) # python in venv, need to update if running locally!
     monkeypatch.setenv("SPARK_MASTER_URL", "local[*]")
 
-    spark = SparkConfig().spark_session('tests/test_config.yaml', 'test-process-scan')
+    ConfigSet(name=APP_CFG, config_file='tests/test_config.yaml')
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-process-scan')
     yield spark
 
     print('------teardown------')

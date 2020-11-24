@@ -14,8 +14,10 @@ test_ingestion_template = "tests/data_processing/radiology/proxy_table/test_data
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('tests/test_config.yaml',
-                                        'test-radiology-proxy')
+    APP_CFG = 'APP_CFG'
+    ConfigSet(name=APP_CFG, config_file='tests/test_config.yaml')
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-radiology-proxy')
+
     yield spark
 
     print('------teardown------')
