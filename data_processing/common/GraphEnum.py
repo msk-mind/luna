@@ -27,7 +27,7 @@ class GraphEnum(Enum):
 	name: table name
 	value: list of Graphs - to accomodate multiple relationship update
 
-	>>> GraphEnum['DICOM'].value.src
+	>>> GraphEnum['DICOM'].value[0].src
 	'xnat_patient_id'
 	"""
 	DICOM = [Graph("xnat_patient_id", "HAS_SCAN", "SeriesInstanceUID", "metadata.PatientName", "metadata.SeriesInstanceUID")]
