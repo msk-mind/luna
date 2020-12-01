@@ -13,7 +13,7 @@ spark_application_config:
   - spark.cores.max: 2
 
   # 5% total memory in cluster
-  - spark.executor.memory: 6g
+  - spark.executor.memory: 3g
 
   # 80% executor memory
   - spark.executor.pyspark.memory: 3g
