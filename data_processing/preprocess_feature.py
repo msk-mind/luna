@@ -47,7 +47,10 @@ Example:
 
 import os, sys, subprocess, time,importlib
 import click
+
+from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 import data_processing.common.constants as const
@@ -65,6 +68,8 @@ from pyspark.sql.functions import udf, lit, expr
 from pyspark.sql.types import StringType
 
 logger = init_logger()
+
+APP_CFG='APP_CFG'
 
 def generate_absolute_path_from_hdfs(absolute_hdfs_path_col, filename_col):
     # do we need this if?
@@ -234,23 +239,22 @@ def cli(base_directory,
     if not os.path.exists(destination_directory):
         os.makedirs(destination_directory)
 
-    # Setup Spark context
-    import time
-    start_time = time.time()
+    with CodeTimer(logger, 'generate feature table'):
+        # setup env vars from arguments
+        os.environ['BASE_DIR'] = base_directory
 
-    # setup env vars from arguments
-    os.environ['BASE_DIR'] = base_directory
+        # Setup Spark context
+        ConfigSet(name=APP_CFG, config_file=config_file)
+        spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="preprocess_feature")
 
+        generate_feature_table(base_directory,
+                               destination_directory,
+                               target_spacing,
+                               spark,
+                               query,
+                               feature_table_output_name,
+                               custom_preprocessing_script)
 
-    spark = SparkConfig().spark_session(config_file, "preprocess_feature")
-    generate_feature_table(base_directory,
-                           destination_directory,
-                           target_spacing,
-                           spark,
-                           query,
-                           feature_table_output_name,
-                           custom_preprocessing_script)
-    print("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 def generate_feature_table(base_directory, destination_directory, target_spacing, spark, query, feature_table_output_name, custom_preprocessing_script):
 

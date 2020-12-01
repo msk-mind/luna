@@ -1,11 +1,14 @@
 import click
 from pyspark.sql import SparkSession
+
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 import re, os
 
 # Run Script: python3 dicom_to_delta.py -h <hdfs> -a <radiology_dataset_path>
 log = init_logger()
+APP_CFG='APP_CFG'
 
 def create_delta_table(df, table_name, delta_path, merge, purge):
 	"""
@@ -70,8 +73,8 @@ def cli(config_file, hdfs ,dataset_address, merge, purge):
 	if merge and purge:
 		raise ValueError("Cannot use flags merge and purge at the same time!")
 
-	sc = SparkConfig()
-	spark_session = sc.spark_session(config_file, "dicom-to-delta")
+	ConfigSet(name=APP_CFG, config_file=config_file)
+	spark_session = SparkConfig().spark_session(config_name=APP_CFG, app_name="dicom-to-delta")
 
 	write_to_delta(spark_session, hdfs , dataset_address, merge, purge)
 

@@ -1,5 +1,12 @@
 version: 2.1
 
+# ideas for the future:
+# @todo https://circleci.com/docs/2.0/workflows/
+# @todo https://github.com/features/actions (github actions are similar to circleci and works for also forked repos)
+# docker-compose integration testing in circleci
+# kubernetes deploy and integration test
+# usecase focussed integration tests if code changes frequently
+
 orbs:
   codecov: codecov/codecov@1.0.2
 

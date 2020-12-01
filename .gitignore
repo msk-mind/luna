@@ -3,7 +3,7 @@ __pycache__
 .coverage*
 *env/
 htmlcov/*
-*.yaml
+*.yaml   # use extension '.yml' to store test yaml and other yaml files that need to be checked in
 data_ingestion_template.yaml
 *.log
 preprocess_feature.spec

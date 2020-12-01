@@ -7,6 +7,8 @@ import os, shutil, sys
 import pytest
 from click.testing import CliRunner
 
+from data_processing.common.config import ConfigSet
+
 sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '../src/') ))
 
 from data_processing.clinical_proxy_tables import generate_proxy_table, cli
@@ -20,8 +22,10 @@ destination_dir = 'tests/data_processing/testdata/data/tables/test-patients'
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('tests/test_config.yaml',
-                                        'test-clinical-proxy-preprocessing')
+    APP_CFG = 'APP_CFG'
+    ConfigSet(name=APP_CFG, config_file='tests/test_config.yaml')
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-clinical-proxy-preprocessing')
+
     yield spark
 
     print('------teardown------')

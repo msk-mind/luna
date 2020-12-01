@@ -30,8 +30,10 @@ TABLES = [BINARY_TABLE, DCM_TABLE]
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('tests/test_config.yaml',
-        "test-dicom-to-delta")
+    APP_CFG = 'APP_CFG'
+    ConfigSet(name=APP_CFG, config_file='tests/test_config.yaml')
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-dicom-to-delta')
+
     yield spark
 
     print('------teardown------')

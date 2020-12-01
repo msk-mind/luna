@@ -1,22 +1,28 @@
 from pyspark.sql import SparkSession
-from data_processing.common.config import Config
+from data_processing.common.config import ConfigSet
 
 """Common spark session"""
 class SparkConfig:
 
-	def spark_session(self, config_file, app_name):
+	def spark_session(self, config_name, app_name):
+		'''
+		@:param config_name logical name of the configuration to use from the ConfigSet. See data_processing/common/config.py
+		@:param app_name application name to give to the spark session. This name will be used in the spark logs.
+		'''
 
+		cfg = ConfigSet()
 
-		config = Config(config_file=config_file)
-
-		spark_uri = config.get_value('$.spark_cluster_config[:1]["spark.uri"]')
-		spark_driver_host = config.get_value('$.spark_cluster_config[:2]["spark.driver.host"]')
-		spark_executor_cores = config.get_value('$.spark_application_config[:1]["spark.executor.cores"]')
-		spark_cores_max = config.get_value('$.spark_application_config[:2]["spark.cores.max"]')
-		spark_executor_memory = config.get_value('$.spark_application_config[:3]["spark.executor.memory"]')
+		spark_uri = cfg.get_value(name=config_name, jsonpath='$.spark_cluster_config[:1]["spark.uri"]')
+		spark_driver_host = cfg.get_value(name=config_name, jsonpath='$.spark_cluster_config[:2]["spark.driver.host"]')
+		spark_executor_cores = cfg.get_value(name=config_name,
+													jsonpath='$.spark_application_config[:1]["spark.executor.cores"]')
+		spark_cores_max = cfg.get_value(name=config_name, jsonpath='$.spark_application_config[:2]["spark.cores.max"]')
+		spark_executor_memory = cfg.get_value(name=config_name,
+													 jsonpath='$.spark_application_config[:3]["spark.executor.memory"]')
 		spark_executor_pyspark_memory = \
-			config.get_value('$.spark_application_config[:4]["spark.executor.pyspark.memory"]')
-		spark_sql_shuffle_partitions = config.get_value('$.spark_application_config[:5]["spark.sql.shuffle.partitions"]')
+			cfg.get_value(name=config_name, jsonpath='$.spark_application_config[:4]["spark.executor.pyspark.memory"]')
+		spark_sql_shuffle_partitions = \
+			cfg.get_value(name=config_name, jsonpath='$.spark_application_config[:5]["spark.sql.shuffle.partitions"]')
 
 		return SparkSession.builder \
 			.appName(app_name) \

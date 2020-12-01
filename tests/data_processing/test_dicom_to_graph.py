@@ -3,6 +3,7 @@ from pytest_mock import mocker
 import os
 from click.testing import CliRunner
 
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.dicom_to_graph import update_graph_with_scans, cli
@@ -12,7 +13,10 @@ current_dir = os.getcwd()
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    spark = SparkConfig().spark_session('tests/test_config.yaml', 'test-dicom-to-graph')
+    APP_CFG = 'APP_CFG'
+    ConfigSet(name=APP_CFG, config_file='tests/test_config.yaml')
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-dicom-to-graph')
+
     yield spark
 
     print('------teardown------')

@@ -10,18 +10,21 @@ import threading
 from pyspark import SQLContext
 
 from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 
 from checksumdir import dirhash
-from filehash import FileHash        
+from filehash import FileHash
 
+APP_CFG='APP_CFG'
 
 # Parse arguements
 # TODO: Use click instead of ArgumentParser
 parser = argparse.ArgumentParser(description='Start a WRITE SCAN I/O service with a persistent spark context')
 parser.add_argument('--hdfs', dest='hdfs', type=str, help='HDFS host (ex. hdfs://some_ip:8020)')
 parser.add_argument('--host', dest='host', type=str, help='Target host for server (ex. localhost)')
+parser.add_argument('--config', dest='config', type=str, help='Config file')
 args = parser.parse_args()
 
 hdfs_host       = args.hdfs
@@ -29,7 +32,7 @@ io_host         = args.host
 port = 5090  # initiate port no above 1024
 
 hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
-gpfs_mount      = os.environ["MIND_GPFS_DIR"] 
+gpfs_mount      = os.environ["MIND_GPFS_DIR"]
 graph_uri	 = os.environ["GRAPH_URI"]
 spark_master_uri = os.environ["SPARK_MASTER_URL"]
 
@@ -37,7 +40,8 @@ spark_master_uri = os.environ["SPARK_MASTER_URL"]
 conn = Neo4jConnection(uri=graph_uri, user="neo4j", pwd="password")
 
 # Spark setup, persistent spark context for all threads/write/ETL jobs
-spark = SparkConfig().spark_session("config.yaml", "delta-io-service")
+ConfigSet(name=APP_CFG, config_file='config.yaml')
+spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="delta-io-service")
 sqlc = SQLContext(spark)
 
 # Setup logging
@@ -75,10 +79,10 @@ class ClientThread(threading.Thread):
 
         # Get output directory to read raw files from
         if os.path.isdir(WORK_DIR):
-            OUTPUTS_GLOB = glob.glob(os.path.join(WORK_DIR,"*")) 
+            OUTPUTS_GLOB = glob.glob(os.path.join(WORK_DIR,"*"))
             record_hash = dirhash(WORK_DIR, "sha256")
         elif os.path.isfile(WORK_DIR):
-            OUTPUTS_GLOB = glob.glob(WORK_DIR) 
+            OUTPUTS_GLOB = glob.glob(WORK_DIR)
             record_hash = FileHash('sha256').hash_file(WORK_DIR)
         else:
             logger.error("Not a valid payload path: " + WORK_DIR)
@@ -104,10 +108,10 @@ class ClientThread(threading.Thread):
         RECORD_ID = f"{DATA_TYPE}-{TAG_ID}-{record_hash}"
 
         # Make sure there is exactly 1 concept ID and 0 record IDs
-        if not len(conn.match_concept_node(CONCEPT_ID)) == 1: 
+        if not len(conn.match_concept_node(CONCEPT_ID)) == 1:
             logger.error("No concept node in DB: " + CONCEPT_ID)
             return
-        if not len(conn.match_concept_node(RECORD_ID))  == 0: 
+        if not len(conn.match_concept_node(RECORD_ID))  == 0:
             logger.warning("Identical record already exists: " + RECORD_ID)
             return
 
@@ -147,7 +151,7 @@ class ClientThread(threading.Thread):
             MATCH (record_node:{RECORD_ID_TYPE})
             WHERE record_node.value = '{RECORD_ID}'
             MERGE (concept_node)-[rid:HAS_RECORD]->(record_node)
-            SET record_node.status = 'VALID' 
+            SET record_node.status = 'VALID'
             """
         logger.info (f"\nRunning {query}\n")
 
@@ -176,11 +180,11 @@ def server_program():
         data = conn.recv(1024).decode()
 
         if not data:
-            continue 
+            continue
 
         if data=="STOP": break
-        if data=="PING": 
-            logger.info("Hello from " + str(address)) 
+        if data=="PING":
+            logger.info("Hello from " + str(address))
             continue
 
         action, work_dir, concept_id, record_id, tag_id = data.split(",")
