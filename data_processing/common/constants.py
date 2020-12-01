@@ -19,14 +19,12 @@ SCAN_TABLE 			=TABLE_DIR + 'scan'
 SCAN_ANNOTATION_TABLE		=TABLE_DIR + 'scan_annotation'
 FEATURE_TABLE		=TABLE_DIR + 'feature'
 
-<<<<<<< HEAD
-# Configurations
-APP_CONFIG			='APP_CONFIG'
-DATA_CONFIG			='DATA_CONFIG'
-=======
 #### Raw Data Directories ####
 DICOMS				='dicoms'
 SCANS				='scans'
 SCAN_ANNOTATIONS	='scan_annotations'
 FEATURES			='features'
->>>>>>> master
+
+# Configurations
+APP_CFG				='APP_CFG'
+DATA_CONFIG			='DATA_CFG'
