@@ -1,3 +1,4 @@
+#!/bin/bash
 ########################### setup pre-conditions ###########################
 set -x
 LOG_FILE=transfer_files.log
@@ -14,7 +15,6 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: RAW_DATA_PATH = $RAW_DATA_PATH" >> $LOG
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: FILE_COUNT = $FILE_COUNT" >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: DATA_SIZE = $DATA_SIZE" >> $LOG_FILE;
 
-# todo: make keys in ingestion template all caps
 
 # validate env vars - check if they exist
 [ "${BWLIMIT}" ]
@@ -60,7 +60,7 @@ num_procs=${bw%?}
 #   process left off logic)
 time cat $CHUNK_FILE | xargs -I {} -P $num_procs -n 1 \
 rsync -ahW --delete --stats --log-file=$LOG_FILE \
---exclude='*.'{$EXCLUDES} \
+$EXCLUDES \
 --bwlimit=$BWLIMIT  \
 $HOST:$SOURCE_PATH/{} $RAW_DATA_PATH
 
@@ -90,7 +90,7 @@ else
 fi
 
 # verify and log transfer data size (bytes)
-data_size=$(find $RAW_DATA_PATH -type d | xargs du -s | cut -f1)
+data_size=$(find $RAW_DATA_PATH -type d | xargs du -d 0 | head -n 1 | cut -f1)
 [ $DATA_SIZE -eq $data_size ];
 
 let exit_code=$?+$exit_code

@@ -72,15 +72,13 @@ def test_transfer_files(env):
 
 
 
-
-# @todo: this test fails on excludes. A better pattern is needed in the rsync exclude argument
 def test_transfer_files_with_excludes(env):
     os.environ['CHUNK_FILE'] = 'tests/data_processing/radiology/proxy_table/test_data/chunk_file2.txt'
     os.environ['SOURCE_PATH'] = os.getcwd() + \
                                 '/tests/data_processing/radiology/proxy_table/test_data'
-    os.environ['EXCLUDES'] = 'raw,mhd'
-    os.environ['FILE_COUNT'] = '2'
-    os.environ['DATA_SIZE'] = '16'
+    os.environ['EXCLUDES'] = '--exclude=*.raw --exclude=*.mhd'
+    os.environ['FILE_COUNT'] = '4'
+    os.environ['DATA_SIZE'] = '32'
 
     transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
 
