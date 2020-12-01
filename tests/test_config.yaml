@@ -20,3 +20,7 @@ spark_application_config:
 
   - spark.sql.shuffle.partitions: 30
 
+# mock graph configs
+GRAPH_URI: localhost:7897
+GRAPH_USER: graphuser
+GRAPH_PW: graphpw
