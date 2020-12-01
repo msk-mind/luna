@@ -25,10 +25,10 @@ class Graph(object):
 class GraphEnum(Enum):
 	"""
 	name: table name
-	value: Graph object - this could be a list of Graphs if needed..
+	value: list of Graphs - to accomodate multiple relationship update
 
 	>>> GraphEnum['DICOM'].value.src
 	'xnat_patient_id'
 	"""
-	DICOM = Graph("xnat_patient_id", "HAS_SCAN", "SeriesInstanceUID", "metadata.PatientName", "metadata.SeriesInstanceUID")
-	PROJECT = Graph("project_name", "HAS_PX", "some_patient_id")
+	DICOM = [Graph("xnat_patient_id", "HAS_SCAN", "SeriesInstanceUID", "metadata.PatientName", "metadata.SeriesInstanceUID")]
+	#PROJECT = Graph("project_name", "HAS_PX", "dmp_patient_id")

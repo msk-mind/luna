@@ -18,3 +18,6 @@ DICOM_TABLE			=BASE + 'dicom'
 SCAN_TABLE 			=BASE + 'scan'
 SCAN_ANNOTATION_TABLE		=BASE + 'scan_annotation'
 
+# Configurations
+APP_CONFIG			='APP_CONFIG'
+DATA_CONFIG			='DATA_CONFIG'
