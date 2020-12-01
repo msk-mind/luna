@@ -48,12 +48,16 @@ def env():
 
 
 '''
-def test_transfer_files(env):
+def test_transfer_files_1(env):
+    #
+    # Chunk file points to a files and include limits to one file types
+    #
     os.environ['CHUNK_FILE'] = 'tests/data_processing/radiology/proxy_table/test_data/chunk_file1.txt'
     os.environ['SOURCE_PATH'] = os.getcwd() + \
-                                '/tests/data_processing/radiology/proxy_table/test_data/source'
-    os.environ['FILE_COUNT'] = '4'
-    os.environ['DATA_SIZE'] = '32'
+                                '/tests/data_processing/radiology/proxy_table/test_data/source/'
+    os.environ['INCLUDE'] = '--include=*.dcm'
+    os.environ['FILE_COUNT'] = '3'
+    os.environ['DATA_SIZE'] = '24'
 
     transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
 
@@ -65,20 +69,30 @@ def test_transfer_files(env):
 
     assert(exit_code == 0)
     assert os.path.exists(os.getenv('RAW_DATA_PATH'))
+
     assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.dcm')
-    assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.mha')
-    assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.mhd')
-    assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.raw')
+    assert os.path.exists(os.getenv('RAW_DATA_PATH') + '/test2.dcm')
+    assert os.path.exists(os.getenv('RAW_DATA_PATH') + '/test3.dcm')
+
+    assert not os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.mha')
+    assert not os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.mhd')
+    assert not os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.raw')
+
+    assert not os.path.exists(os.getenv('RAW_DATA_PATH')+'/nested_dir')
+'''
 
 
-
-def test_transfer_files_with_excludes(env):
+'''
+def test_transfer_files_2(env):
+    #
+    # Chunk file points to a dir and include limits to two file types
+    #
     os.environ['CHUNK_FILE'] = 'tests/data_processing/radiology/proxy_table/test_data/chunk_file2.txt'
     os.environ['SOURCE_PATH'] = os.getcwd() + \
                                 '/tests/data_processing/radiology/proxy_table/test_data'
-    os.environ['EXCLUDES'] = '--exclude=*.raw --exclude=*.mhd'
-    os.environ['FILE_COUNT'] = '4'
-    os.environ['DATA_SIZE'] = '32'
+    os.environ['INCLUDE'] = '--include=*.dcm --include=*.mha'
+    os.environ['FILE_COUNT'] = '6'
+    os.environ['DATA_SIZE'] = '48'
 
     transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
 
@@ -90,8 +104,19 @@ def test_transfer_files_with_excludes(env):
 
     assert(exit_code == 0)
     assert os.path.exists(os.getenv('RAW_DATA_PATH'))
+
     assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/source/test1.dcm')
     assert os.path.exists(os.getenv('RAW_DATA_PATH')+'/source/test1.mha')
     assert not os.path.exists(os.getenv('RAW_DATA_PATH')+'/source/test1.mhd')
     assert not os.path.exists(os.getenv('RAW_DATA_PATH')+'/source/test1.raw')
+
+    assert os.path.exists(os.getenv('RAW_DATA_PATH') + '/source/nested_dir/test2.dcm')
+    assert os.path.exists(os.getenv('RAW_DATA_PATH') + '/source/nested_dir/test2.mha')
+    assert not os.path.exists(os.getenv('RAW_DATA_PATH') + '/source/nested_dir/test2.mhd')
+    assert not os.path.exists(os.getenv('RAW_DATA_PATH') + '/source/nested_dir/test2.raw')
+
+    assert os.path.exists(os.getenv('RAW_DATA_PATH') + '/source/nested_dir/double_nested_dir/test3.dcm')
+    assert os.path.exists(os.getenv('RAW_DATA_PATH') + '/source/nested_dir/double_nested_dir/test3.mha')
+    assert not os.path.exists(os.getenv('RAW_DATA_PATH') + '/source/nested_dir/double_nested_dir/test3.mhd')
+    assert not os.path.exists(os.getenv('RAW_DATA_PATH') + '/source/nested_dir/double_nested_dir/test3.raw')
 '''
