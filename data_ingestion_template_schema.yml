@@ -40,8 +40,6 @@ CHUNK_FILE: any(str(required=True))
 
 FILE_COUNT: int(required=True, min=1)
 
-FILE_TYPE_COUNT: int(required=True, min=1)
-
 DATA_SIZE: int(required=True, min=0)
 
 # The  suffixes  are  as  follows:  "K" (or "KiB") is a kibibyte (1024), "M" (or "MiB") is a mebibyte
