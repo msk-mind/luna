@@ -203,10 +203,10 @@ def create_proxy_table(config_file):
     processed_count = header.count()
     logger.info("Processed {} dicom headers out of total {} dicom files".format(processed_count,
                                                                                 cfg.get_value(name=DATA_CFG,
-                                                                                                    jsonpath='FILE_TYPE_COUNT')))
+                                                                                                    jsonpath='FILE_COUNT')))
 
     # validate and show created dataset
-    if processed_count != int(cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE_COUNT')):
+    if processed_count != int(cfg.get_value(name=DATA_CFG, jsonpath='FILE_COUNT')):
         exit_code = 1
     df = spark.read.format(cfg.get_value(name=DATA_CFG, jsonpath='FORMAT_TYPE')).load(dicom_path)
     df.printSchema()

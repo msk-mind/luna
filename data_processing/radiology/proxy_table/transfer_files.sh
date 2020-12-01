@@ -1,3 +1,9 @@
+#!/bin/bash
+
+# transfers data from a remote source to a destination.
+# For inputs, see preconditions below for required environment variables.
+# For usage, see tests/data_processing/radiology/proxy_table/test_transfer_files.py.
+
 ########################### setup pre-conditions ###########################
 set -x
 LOG_FILE=transfer_files.log
@@ -7,19 +13,20 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: >>>> writing data transfer logs to $LOG
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: Running data_processing/radiology/proxy_table/transfer_files.sh with - " >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: BWLIMIT = $BWLIMIT" >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: CHUNK_FILE = $CHUNK_FILE" >> $LOG_FILE;
-echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: EXCLUDES = $EXCLUDES" >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: INCLUDES = $INCLUDE" >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: HOST = $HOST" >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: SOURCE_PATH = $SOURCE_PATH" >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: RAW_DATA_PATH = $RAW_DATA_PATH" >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: FILE_COUNT = $FILE_COUNT" >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: DATA_SIZE = $DATA_SIZE" >> $LOG_FILE;
 
-# todo: make keys in ingestion template all caps
 
 # validate env vars - check if they exist
 [ "${BWLIMIT}" ]
 let exit_code=$?+$exit_code
 [ "${CHUNK_FILE}" ]
+let exit_code=$?+$exit_code
+[ "${INCLUDE}" ]
 let exit_code=$?+$exit_code
 [ "${HOST}" ]
 let exit_code=$?+$exit_code
@@ -54,13 +61,13 @@ num_procs=${bw%?}
 # - delete any files in the destination location that are not in the source location
 # - output stats at the end
 # - output a log file
-# - exclude transfer of any files with the excluded file extensions
+# - include transfer of any files with the included file extensions
 # - limit each process's network utilization to the specified bwlimit
 # - if files already exist in destination dir, then they are not overwritten (continue from where
 #   process left off logic)
 time cat $CHUNK_FILE | xargs -I {} -P $num_procs -n 1 \
 rsync -ahW --delete --stats --log-file=$LOG_FILE \
---exclude='*.'{$EXCLUDES} \
+$INCLUDE --include=*/ --exclude=* \
 --bwlimit=$BWLIMIT  \
 $HOST:$SOURCE_PATH/{} $RAW_DATA_PATH
 
@@ -90,7 +97,7 @@ else
 fi
 
 # verify and log transfer data size (bytes)
-data_size=$(find $RAW_DATA_PATH -type d | xargs du -s | cut -f1)
+data_size=$(find $RAW_DATA_PATH -type d | xargs du -d 0 | head -n 1 | cut -f1)
 [ $DATA_SIZE -eq $data_size ];
 
 let exit_code=$?+$exit_code

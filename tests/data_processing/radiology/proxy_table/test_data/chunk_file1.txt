@@ -1,4 +1,3 @@
 test1.dcm
-test1.mha
-test1.mhd
-test1.raw
+nested_dir/test2.dcm
+nested_dir/double_nested_dir/test3.dcm
