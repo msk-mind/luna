@@ -50,20 +50,22 @@ def update_graph(project, table, config_file):
 		src_column_name = graph.src_column_name
 		target_column_name = graph.target_column_name
 
-		# update graph
 		logger.info("Update graph with {0} - {1} - {2}".format(src, relationship, target))
 
-		def add_to_graph(record: pd.DataFrame) -> pd.DataFrame:
-			query = '''MERGE (n:"{0}"{{"{0}": record["{0}"]}}) MERGE (m:"{1}"{{"{1}": record["{1}"]}}) MERGE (n)-[r:"{2}"]->(m)''' \
-				.format(src, target, relationship)
+		# subset dataframe
+		pdf = df.select(F.col(src_column_name).alias(src), F.col(target_column_name).alias(target)) \
+			.groupBy(src, target) \
+			.count() \
+			.toPandas()
+
+		# update graph
+		for index, row in pdf.iterrows():
+			query = '''MERGE (n:{0} {{{0}: "{1}"}}) MERGE (m:{2} {{{2}: "{3}"}}) MERGE (n)-[r:{4}]->(m)''' \
+				.format(src, row[src], target, row[target], relationship)
 			logger.info(query)
 			conn.query(query)
 
-		# subset dataframe
-		df = df.select(F.col(src_column_name).alias(src), F.col(target_column_name).alias(target))
 
-		df.groupBy(src).applyInPandas(add_to_graph, schema=df.schema)
-	
 	logger.info("Finished update-graph in %s seconds" % (time.time() - start_time))
 
 if __name__ == "__main__":
