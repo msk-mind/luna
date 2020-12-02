@@ -17,6 +17,7 @@ import data_processing.common.constants as const
 
 from pyspark.sql.functions import udf, lit, col
 from pyspark.sql.types import StringType, MapType
+from pyspark import SparkFiles
 
 import pydicom
 import time
@@ -25,10 +26,13 @@ import shutil, sys, importlib, glob
 import yaml, os
 import subprocess
 from filehash import FileHash
-    
 
+from minio import Minio
+from minio.error import ResponseError
+ 
 logger = init_logger()
 
+TRY_S3=False
 SCHEMA_FILE='data_ingestion_template_schema.yml'
 DATA_CFG = 'DATA_CFG'
 APP_CFG = 'APP_CFG'
@@ -55,6 +59,25 @@ def parse_openslide(path):
 
     return kv
 
+def upload_to_s3(path, bucket):
+
+    posix_file_path = path.split(':')[-1]
+    dirs, filename =  os.path.split(path)
+    mock_path = os.path.join (SparkFiles.getRootDirectory(), filename)
+    with open(mock_path, "w") as f:
+
+        f.write("Hi, I'm pretending to be a wholeslide image\nOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+
+    minioClient = Minio(
+        'dlliskimind1.mskcc.org:9001',
+        access_key='mind',
+        secret_key='mskcc123',
+        secure=False,
+    )
+    print ("calling minioClient.fput_object with ", bucket, filename, mock_path)
+    minioClient.fput_object(bucket, filename, mock_path) 
+    store_result = minioClient.stat_object(bucket, filename).metadata
+    return store_result 
 
 @click.command()
 @click.option('-t', '--template_file', default=None, type=click.Path(exists=True),
@@ -134,6 +157,21 @@ def create_proxy_table(config_file):
 
         df.printSchema()
         df.show()
+
+
+    if TRY_S3==True:
+        upload_to_s3_udf = udf (upload_to_s3, StringType())
+        bucket = cfg.get_value(name=DATA_CFG, jsonpath='PROJECT').lower()
+        minioClient = Minio(
+            'dlliskimind1.mskcc.org:9001',
+            access_key='mind',
+            secret_key='mskcc123',
+            secure=False,
+        )
+    
+        if not minioClient.bucket_exists(bucket):
+            minioClient.make_bucket(bucket)
+        df.withColumn("bucket", lit(bucket)).withColumn("result", upload_to_s3_udf(col("path"), col("bucket"))).show()
     # parse all dicoms and save
 
     processed_count = df.count()
