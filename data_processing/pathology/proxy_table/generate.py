@@ -146,7 +146,7 @@ def create_proxy_table(config_file):
     dicom_path = os.path.join(cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH'), const.DICOM_TABLE)
 
 
-    with CodeTimer(logger, 'load dicom files'):
+    with CodeTimer(logger, 'load wsi metadata'):
         print (cfg.get_value(name=DATA_CFG, jsonpath='SOURCE_PATH') + "**" + cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE'))
         for path in glob.glob(cfg.get_value(name=DATA_CFG, jsonpath='SOURCE_PATH') + "**" + cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE'), recursive=True):
             print (path)
@@ -166,16 +166,17 @@ def create_proxy_table(config_file):
 
 
     if TRY_S3==True:
-        minioClient = Minio( '<dll>:9001', access_key='mind', secret_key='mskcc123', secure=False)
-    
-        bucket = cfg.get_value(name=DATA_CFG, jsonpath='PROJECT').lower()
-        if not minioClient.bucket_exists(bucket):
-            minioClient.make_bucket(bucket)
+        with CodeTimer(logger, 'test load thumbnail to object store'):
+            minioClient = Minio( '<dll>:9001', access_key='mind', secret_key='mskcc123', secure=False)
+        
+            bucket = cfg.get_value(name=DATA_CFG, jsonpath='PROJECT').lower()
+            if not minioClient.bucket_exists(bucket):
+                minioClient.make_bucket(bucket)
 
-        upload_to_s3_udf = udf (upload_to_s3, StringType())
-        df = df.\
-            withColumn("bucket", lit(bucket)).\
-            withColumn("result", upload_to_s3_udf(col("path"), col("bucket")))
+            upload_to_s3_udf = udf (upload_to_s3, StringType())
+            df = df.\
+                withColumn("bucket", lit(bucket)).\
+                withColumn("result", upload_to_s3_udf(col("path"), col("bucket")))
 
     # parse all dicoms and save
     df.printSchema()
