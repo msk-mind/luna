@@ -26,13 +26,15 @@ import shutil, sys, importlib, glob
 import yaml, os
 import subprocess
 from filehash import FileHash
+from pathlib import Path
 
 from minio import Minio
 from minio.error import ResponseError
- 
+import openslide 
+
 logger = init_logger()
 
-TRY_S3=False
+TRY_S3=True
 SCHEMA_FILE='data_ingestion_template_schema.yml'
 DATA_CFG = 'DATA_CFG'
 APP_CFG = 'APP_CFG'
@@ -51,11 +53,14 @@ def generate_uuid(path):
 
 def parse_openslide(path):
 
+    posix_file_path = path.split(':')[-1]
     dirs, filename  = os.path.split(path)
  
-    kv = {}
+    slide_os_handle = openslide.OpenSlide(posix_file_path)
 
-    kv['image_id'] = os.path.basename(filename) 
+    kv = dict(slide_os_handle.properties) 
+
+    kv['image_id'] =  Path(posix_file_path).stem 
 
     return kv
 
@@ -63,20 +68,23 @@ def upload_to_s3(path, bucket):
 
     posix_file_path = path.split(':')[-1]
     dirs, filename =  os.path.split(path)
-    mock_path = os.path.join (SparkFiles.getRootDirectory(), filename)
-    with open(mock_path, "w") as f:
+    basename = Path(posix_file_path).stem 
 
-        f.write("Hi, I'm pretending to be a wholeslide image\nOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+    slide_os_handle = openslide.OpenSlide(posix_file_path)
 
-    minioClient = Minio(
-        '<dll>:9001',
-        access_key='mind',
-        secret_key='mskcc123',
-        secure=False,
-    )
-    print ("calling minioClient.fput_object with", bucket, filename, mock_path)
-    minioClient.fput_object(bucket, filename, mock_path) 
-    store_result = minioClient.stat_object(bucket, filename).metadata
+    # Setup PNG paths
+    png_path   = os.path.join (SparkFiles.getRootDirectory(), basename + ".png") 
+    object_key = os.path.basename(png_path)
+
+    # Generate PNG
+    slide_os_handle.get_thumbnail((200,200)).save( png_path )
+
+    minioClient = Minio('<dll>:9001', access_key='mind', secret_key='mskcc123', secure=False)
+
+    print ("calling minioClient.fput_object with", bucket, object_key, png_path )
+    minioClient.fput_object(bucket, object_key, png_path ) 
+    store_result = minioClient.stat_object(bucket, object_key).metadata
+
     return store_result 
 
 @click.command()
