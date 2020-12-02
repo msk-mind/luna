@@ -19,17 +19,14 @@ from pyspark.sql.functions import udf, lit, col
 from pyspark.sql.types import StringType, MapType
 from pyspark import SparkFiles
 
-import pydicom
-import time
 from io import BytesIO
-import shutil, sys, importlib, glob
-import yaml, os
-import subprocess
+import shutil, sys, importlib, glob, yaml, os, subprocess, time
 from filehash import FileHash
 from pathlib import Path
 
 from minio import Minio
 from minio.error import ResponseError
+
 import openslide 
 
 logger = init_logger()
@@ -65,6 +62,7 @@ def parse_openslide(path):
     return kv
 
 def upload_to_s3(path, bucket):
+    """ Add a tiny version of a WSI to the object store """
 
     posix_file_path = path.split(':')[-1]
     dirs, filename =  os.path.split(path)
@@ -138,13 +136,10 @@ def create_proxy_table(config_file):
 
     # setup for using external py in udf
     sys.path.append("data_processing/common")
-    importlib.import_module("data_processing.common.EnsureByteContext")
-    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-    # use spark to read data from file system and write to parquet format_type
+
     logger.info("generating binary proxy table... ")
 
     dicom_path = os.path.join(cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH'), const.DICOM_TABLE)
-
 
     with CodeTimer(logger, 'load wsi metadata'):
         print (cfg.get_value(name=DATA_CFG, jsonpath='SOURCE_PATH') + "**" + cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE'))
@@ -162,7 +157,6 @@ def create_proxy_table(config_file):
             drop("content").\
             withColumn("wsi_record_uuid", lit(generate_uuid_udf  (col("path")))).\
             withColumn("metadata",        lit(parse_openslide_udf(col("path"))))
-
 
 
     if TRY_S3==True:
