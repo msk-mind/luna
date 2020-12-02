@@ -11,13 +11,17 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.config import ConfigSet
 import data_processing.common.constants as const
 
+
 @click.command()
 @click.option('-p', '--project', help="project name", required=True)
 @click.option('-t', '--table', help="table name", required=True)
 @click.option('-f', '--config_file', default = 'config.yaml', required=True,
               help="path to config file containing application configuration. See config.yaml.template")
 def update_graph(project, table, config_file):
-
+	"""
+	Usage:
+		python3 -m data_processing.services.graph_service -p TEST_PROJECT -t dicom -f config.yaml
+	"""
 	logger = init_logger('update_graph.log')
 	start_time = time.time()
 
@@ -59,8 +63,9 @@ def update_graph(project, table, config_file):
 			.toPandas()
 
 		# update graph
+		# NOTE: only simple id field updates are supported for now.
 		for index, row in pdf.iterrows():
-			query = '''MERGE (n:{0} {{{0}: "{1}"}}) MERGE (m:{2} {{{2}: "{3}"}}) MERGE (n)-[r:{4}]->(m)''' \
+			query = '''MERGE (n:{0} {{{0}_id: "{1}"}}) MERGE (m:{2} {{{2}_id: "{3}"}}) MERGE (n)-[r:{4}]->(m)''' \
 				.format(src, row[src], target, row[target], relationship)
 			logger.info(query)
 			conn.query(query)

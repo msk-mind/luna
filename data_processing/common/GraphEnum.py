@@ -41,5 +41,5 @@ class GraphEnum(Enum):
 	>>> GraphEnum['DICOM'].value[0].src
 	'xnat_patient_id'
 	"""
-	DICOM = [Graph("xnat_patient_id", "HAS_SCAN", "SeriesInstanceUID", "metadata.PatientName", "metadata.SeriesInstanceUID")]
+	DICOM = [Graph("xnat_patient", "HAS_SCAN", "scan", "metadata.PatientName", "metadata.SeriesInstanceUID")]
 	#PROJECT = Graph("project_name", "HAS_PX", "dmp_patient_id")

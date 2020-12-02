@@ -1,7 +1,6 @@
 import pytest
 from pytest_mock import mocker
 import os, shutil
-from pyspark import SQLContext
 from click.testing import CliRunner
 from neo4j import Record
 
@@ -32,16 +31,8 @@ def spark(monkeypatch):
 
 def test_cli_dicom_table(mocker, spark):
 
-    sqlc = SQLContext(spark)
-
-    # mock data
+    # mock graph connection
     mocker.patch.object(Neo4jConnection, 'query')
-    record1 = {'source': {'value': 'P-123'}, 'sink': {'value': '1.1.1'}, 'path': [{'value': 'P-123'}, 'ID_LINK', {'value': 'RIA_11-111_111'}, 'HAS_SCAN', {'value': '1.1.1'}]}
-    record2 = {'source': {'value': 'P-123'}, 'sink': {'value': '1.2.2'}, 'path': [{'value': 'P-123'}, 'ID_LINK', {'value': 'RIA_11-111_222'}, 'HAS_SCAN', {'value': '1.2.2'}]}
-    r1 = Record(record1)
-    r2 = Record(record2)
-    query_result = [r1, r2]
-    Neo4jConnection.query.return_value = query_result
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
