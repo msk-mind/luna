@@ -1,5 +1,6 @@
 import os
 import click
+import time
 import pandas as pd
 from pyspark.sql import functions as F
 
@@ -18,6 +19,7 @@ import data_processing.common.constants as const
 def update_graph(project, table, config_file):
 
 	logger = init_logger('update_graph.log')
+	start_time = time.time()
 
 	# Set up : Neo4j connection and Spark session
 	logger.info("Setting up graph connection and spark session")
@@ -29,10 +31,7 @@ def update_graph(project, table, config_file):
 		pwd=cfg.get_value(name=const.APP_CFG, jsonpath='GRAPH_PW'))
 
 	# get project / table path
-	if "MIND_ROOT_DIR" in os.environ:
-		base_path = os.environ["MIND_ROOT_DIR"]
-	else:
-		base_path = "/gpfs/mskmindhdp_emc/data/"
+	base_path = cfg.get_value(name=const.APP_CFG, jsonpath='MIND_ROOT_DIR')
 	project_dir = os.path.join(base_path, project)
 	logger.info("Got project path : " + project_dir)
 
@@ -55,12 +54,17 @@ def update_graph(project, table, config_file):
 		logger.info("Update graph with {0} - {1} - {2}".format(src, relationship, target))
 
 		def add_to_graph(record: pd.DataFrame) -> pd.DataFrame:
-			conn.query(f'''MERGE (n:"{src}"{{"{src}": "{record[src]}"}}) MERGE (m:"{target}"{{"{target}": "{record[target]}"}}) MERGE (n)-[r:"{relationship}"]->(m)''')
+			query = '''MERGE (n:"{0}"{{"{0}": record["{0}"]}}) MERGE (m:"{1}"{{"{1}": record["{1}"]}}) MERGE (n)-[r:"{2}"]->(m)''' \
+				.format(src, target, relationship)
+			logger.info(query)
+			conn.query(query)
 
 		# subset dataframe
 		df = df.select(F.col(src_column_name).alias(src), F.col(target_column_name).alias(target))
 
 		df.groupBy(src).applyInPandas(add_to_graph, schema=df.schema)
+	
+	logger.info("Finished update-graph in %s seconds" % (time.time() - start_time))
 
 if __name__ == "__main__":
 	update_graph()

@@ -18,7 +18,7 @@ project_name = 'test-project'
 def spark(monkeypatch):
     print('------setup------')
     # setup env
-    monkeypatch.setenv("MIND_ROOT_DIR", os.path.join(current_dir, "tests/data_processing/testdata/data"))
+    #monkeypatch.setenv("MIND_ROOT_DIR", os.path.join(current_dir, "tests/data_processing/testdata/data"))
     stream = os.popen('which python')
     pypath = stream.read().rstrip()
     monkeypatch.setenv("PYSPARK_PYTHON", pypath)
