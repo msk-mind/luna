@@ -1,7 +1,18 @@
 from enum import Enum
 
 class Graph(object):
+	"""
+	Graph object that stores src-[relationship]-target information.
+	This object is used get data from existing delta tables to populate the graph database.
+	src_column_name and target_column_name are "id" columns for querying the tables.
 
+	:params:
+	src: source node name
+	relationship: relationship name e.g. HAS_PX, HAS_RECORD etc
+	target: target node name
+	src_column_name: (optional) source column name. if not provided, this is set to `src`.
+	target_column_name: (optional) target column name. if not provided, this is set to `target`
+	"""
 	def __init__(self, src, relationship, target, src_column_name=None, target_column_name=None):
 		# src node
 		self.src = src
