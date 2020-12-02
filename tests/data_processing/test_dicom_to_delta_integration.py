@@ -45,7 +45,7 @@ def assertions(spark):
     for table in TABLES:
         df = spark.read.format("delta").load(table)
         assert 3 == df.count()
-
+    df.unpersist()
 
 def test_write_to_delta(spark):
 

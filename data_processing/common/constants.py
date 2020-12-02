@@ -24,3 +24,7 @@ DICOMS				='dicoms'
 SCANS				='scans'
 SCAN_ANNOTATIONS	='scan_annotations'
 FEATURES			='features'
+
+# Configurations
+APP_CFG				='APP_CFG'
+DATA_CFG			='DATA_CFG'

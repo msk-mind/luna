@@ -42,3 +42,4 @@ def test_cli(spark):
     assert df.count() == 1
     assert "dicom_record_uuid" in df.columns
     assert "metadata" in df.columns
+    df.unpersist()

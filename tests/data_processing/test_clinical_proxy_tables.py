@@ -39,7 +39,7 @@ def test_generate_proxy_table(spark):
 
     df = spark.read.format('delta').load(destination_dir)
     assert df.count() == 3
-
+    df.unpersist()
 
 def test_generate_proxy_table_error(spark):
     with pytest.raises(Exception, match=r'Make sure input file is a valid tab delimited csv file'):
@@ -57,4 +57,5 @@ def test_cli(spark):
 
     df = spark.read.format('delta').load(destination_dir)
     assert df.count() == 3
+    df.unpersist()
 
