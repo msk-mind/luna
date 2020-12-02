@@ -27,4 +27,4 @@ FEATURES			='features'
 
 # Configurations
 APP_CFG				='APP_CFG'
-DATA_CONFIG			='DATA_CFG'
+DATA_CFG			='DATA_CFG'

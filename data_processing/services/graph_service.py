@@ -15,9 +15,11 @@ import data_processing.common.constants as const
 @click.command()
 @click.option('-p', '--project', help="project name", required=True)
 @click.option('-t', '--table', help="table name", required=True)
-@click.option('-f', '--config_file', default = 'config.yaml', required=True,
+@click.option('-d', '--data_config_file', default = 'data_processing/services/config.yaml', required=True,
+		help="path to configuration related to package.")
+@click.option('-f', '--app_config_file', default = 'config.yaml', required=True,
               help="path to config file containing application configuration. See config.yaml.template")
-def update_graph(project, table, config_file):
+def update_graph(project, table, data_config_file, app_config_file):
 	"""
 	Usage:
 		python3 -m data_processing.services.graph_service -p TEST_PROJECT -t dicom -f config.yaml
@@ -27,7 +29,7 @@ def update_graph(project, table, config_file):
 
 	# Set up : Neo4j connection and Spark session
 	logger.info("Setting up graph connection and spark session")
-	cfg = ConfigSet(name=const.APP_CFG, config_file=config_file)
+	cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
 	spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="update-graph")
 
 	conn = Neo4jConnection(uri=cfg.get_value(name=const.APP_CFG, jsonpath='GRAPH_URI'),
@@ -35,7 +37,8 @@ def update_graph(project, table, config_file):
 		pwd=cfg.get_value(name=const.APP_CFG, jsonpath='GRAPH_PW'))
 
 	# get project / table path
-	base_path = cfg.get_value(name=const.APP_CFG, jsonpath='MIND_ROOT_DIR')
+	cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
+	base_path = cfg.get_value(name=const.DATA_CFG, jsonpath='MIND_DATA_PATH')
 	project_dir = os.path.join(base_path, project)
 	logger.info("Got project path : " + project_dir)
 

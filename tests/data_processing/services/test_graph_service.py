@@ -38,6 +38,7 @@ def test_cli_dicom_table(mocker, spark):
     result = runner.invoke(update_graph, [
         '-p', project_name,
         '-t', 'dicom',
+        '-d', 'tests/data_processing/services/config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
