@@ -69,12 +69,12 @@ def upload_to_s3(path, bucket):
         f.write("Hi, I'm pretending to be a wholeslide image\nOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
 
     minioClient = Minio(
-        'dlliskimind1.mskcc.org:9001',
+        '<dll>:9001',
         access_key='mind',
         secret_key='mskcc123',
         secure=False,
     )
-    print ("calling minioClient.fput_object with ", bucket, filename, mock_path)
+    print ("calling minioClient.fput_object with", bucket, filename, mock_path)
     minioClient.fput_object(bucket, filename, mock_path) 
     store_result = minioClient.stat_object(bucket, filename).metadata
     return store_result 
@@ -163,7 +163,7 @@ def create_proxy_table(config_file):
         upload_to_s3_udf = udf (upload_to_s3, StringType())
         bucket = cfg.get_value(name=DATA_CFG, jsonpath='PROJECT').lower()
         minioClient = Minio(
-            'dlliskimind1.mskcc.org:9001',
+            '<dll>:9001',
             access_key='mind',
             secret_key='mskcc123',
             secure=False,
