@@ -10,14 +10,12 @@ from data_processing.common import constants as const
 from data_processing.common.sparksession import SparkConfig
 from data_processing.services.graph_service import update_graph
 
-current_dir = os.getcwd()
 project_name = 'test-project'
 
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
     print('------setup------')
     # setup env
-    #monkeypatch.setenv("MIND_ROOT_DIR", os.path.join(current_dir, "tests/data_processing/testdata/data"))
     stream = os.popen('which python')
     pypath = stream.read().rstrip()
     monkeypatch.setenv("PYSPARK_PYTHON", pypath)

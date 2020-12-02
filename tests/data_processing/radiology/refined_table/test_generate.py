@@ -31,7 +31,6 @@ def spark(monkeypatch):
     print('------teardown------')
     if os.path.exists(scan_table_path):
         shutil.rmtree(scan_table_path)
-    spark.stop()
 
 
 def test_cli(mocker, spark):
@@ -55,4 +54,5 @@ def test_cli(mocker, spark):
         assert result.exit_code == 0
         df = spark.read.format("delta").load(scan_table_path)
         assert set(['SeriesInstanceUID', 'scan_record_uuid', 'filepath', 'filetype']) == set(df.columns)
+        df.unpersist()
 

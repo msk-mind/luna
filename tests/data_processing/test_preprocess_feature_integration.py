@@ -54,6 +54,7 @@ def test_local_feature_table_generation(mocker, spark):
     # Read Delta Table and Verify
     feature_df = spark.read.format("delta").load(feature_table_path)
     assert feature_df.count() == 1
+    feature_df.unpersist()
     print ("test_local_feature_table_generation passed.")
 
 
