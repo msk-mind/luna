@@ -163,24 +163,23 @@ def create_proxy_table(config_file):
             withColumn("wsi_record_uuid", lit(generate_uuid_udf  (col("path")))).\
             withColumn("metadata",        lit(parse_openslide_udf(col("path"))))
 
-        df.printSchema()
-        df.show()
 
 
     if TRY_S3==True:
-        upload_to_s3_udf = udf (upload_to_s3, StringType())
-        bucket = cfg.get_value(name=DATA_CFG, jsonpath='PROJECT').lower()
-        minioClient = Minio(
-            '<dll>:9001',
-            access_key='mind',
-            secret_key='mskcc123',
-            secure=False,
-        )
+        minioClient = Minio( '<dll>:9001', access_key='mind', secret_key='mskcc123', secure=False)
     
+        bucket = cfg.get_value(name=DATA_CFG, jsonpath='PROJECT').lower()
         if not minioClient.bucket_exists(bucket):
             minioClient.make_bucket(bucket)
-        df.withColumn("bucket", lit(bucket)).withColumn("result", upload_to_s3_udf(col("path"), col("bucket"))).show()
+
+        upload_to_s3_udf = udf (upload_to_s3, StringType())
+        df = df.\
+            withColumn("bucket", lit(bucket)).\
+            withColumn("result", upload_to_s3_udf(col("path"), col("bucket")))
+
     # parse all dicoms and save
+    df.printSchema()
+    df.show()
 
     processed_count = df.count()
     logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE_COUNT')))
