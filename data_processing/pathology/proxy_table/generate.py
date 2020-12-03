@@ -24,14 +24,11 @@ import shutil, sys, importlib, glob, yaml, os, subprocess, time
 from filehash import FileHash
 from pathlib import Path
 
-from minio import Minio
-from minio.error import ResponseError
-
 import openslide 
 
 logger = init_logger()
 
-TRY_S3=True
+TRY_S3=False
 SCHEMA_FILE='data_ingestion_template_schema.yml'
 DATA_CFG = 'DATA_CFG'
 APP_CFG = 'APP_CFG'
@@ -61,29 +58,6 @@ def parse_openslide(path):
 
     return kv
 
-def upload_to_s3(path, bucket):
-    """ Add a tiny version of a WSI to the object store """
-
-    posix_file_path = path.split(':')[-1]
-    dirs, filename =  os.path.split(path)
-    basename = Path(posix_file_path).stem 
-
-    slide_os_handle = openslide.OpenSlide(posix_file_path)
-
-    # Setup PNG paths
-    png_path   = os.path.join (SparkFiles.getRootDirectory(), basename + ".png") 
-    object_key = os.path.basename(png_path)
-
-    # Generate PNG
-    slide_os_handle.get_thumbnail((200,200)).save( png_path )
-
-    minioClient = Minio('<dll>:9001', access_key='mind', secret_key='mskcc123', secure=False)
-
-    print ("calling minioClient.fput_object with", bucket, object_key, png_path )
-    minioClient.fput_object(bucket, object_key, png_path ) 
-    store_result = minioClient.stat_object(bucket, object_key).metadata
-
-    return store_result 
 
 @click.command()
 @click.option('-t', '--template_file', default=None, type=click.Path(exists=True),
@@ -157,20 +131,6 @@ def create_proxy_table(config_file):
             drop("content").\
             withColumn("wsi_record_uuid", lit(generate_uuid_udf  (col("path")))).\
             withColumn("metadata",        lit(parse_openslide_udf(col("path"))))
-
-
-    if TRY_S3==True:
-        with CodeTimer(logger, 'test load thumbnail to object store'):
-            minioClient = Minio( '<dll>:9001', access_key='mind', secret_key='mskcc123', secure=False)
-        
-            bucket = cfg.get_value(name=DATA_CFG, jsonpath='PROJECT').lower()
-            if not minioClient.bucket_exists(bucket):
-                minioClient.make_bucket(bucket)
-
-            upload_to_s3_udf = udf (upload_to_s3, StringType())
-            df = df.\
-                withColumn("bucket", lit(bucket)).\
-                withColumn("result", upload_to_s3_udf(col("path"), col("bucket")))
 
     # parse all dicoms and save
     df.printSchema()
