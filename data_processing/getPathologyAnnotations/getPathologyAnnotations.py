@@ -65,4 +65,4 @@ def getPathologyAnnotation(project,slide_hid,labelset):
 	return geojson
 
 if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'],port=5092, debug=True)
+    app.run(host=os.environ['HOSTNAME'],port=5002, debug=True)
