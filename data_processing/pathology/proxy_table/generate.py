@@ -34,11 +34,10 @@ DATA_CFG = 'DATA_CFG'
 APP_CFG = 'APP_CFG'
 
 def generate_uuid(path):
-    logger.info("Processing " + path)
+    """ Add WSI hash record """
+    posix_file_path = path.split(':')[-1]
 
-    file_path = path.split(':')[-1]
-
-    rec_hash = FileHash('sha256').hash_file(file_path)
+    rec_hash = FileHash('sha256').hash_file(posix_file_path)
 
     record_uuid = f'WSI-{rec_hash}'
 
@@ -46,6 +45,8 @@ def generate_uuid(path):
 
 
 def parse_openslide(path):
+    """ From https://github.com/msk-mind/sandbox/blob/master/pathology/slide_to_proxy.py """
+    """ Parse openslide header information """
 
     posix_file_path = path.split(':')[-1]
     dirs, filename  = os.path.split(path)
@@ -86,7 +87,7 @@ def cli(template_file, config_file, process_string):
 
         # load configs
         cfg = ConfigSet(name=DATA_CFG, config_file=template_file, schema_file=SCHEMA_FILE)
-        cfg = ConfigSet(name=APP_CFG, config_file=config_file)
+        cfg = ConfigSet(name=APP_CFG,  config_file=config_file)
 
         # write template file to manifest_yaml under LANDING_PATH
         landing_path = cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH')
