@@ -16,7 +16,7 @@ import data_processing.common.constants as const
 @click.option('-p', '--project', help="project name", required=True)
 @click.option('-t', '--table', help="table name", required=True)
 @click.option('-d', '--data_config_file', default = 'data_processing/services/config.yaml', required=True,
-		help="path to configuration related to package.")
+		help="path to configuration related to package. See config.yaml.template in this package.")
 @click.option('-f', '--app_config_file', default = 'config.yaml', required=True,
               help="path to config file containing application configuration. See config.yaml.template")
 def update_graph(project, table, data_config_file, app_config_file):
