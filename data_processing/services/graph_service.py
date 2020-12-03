@@ -30,14 +30,14 @@ def update_graph(project, table, data_config_file, app_config_file):
 	# Set up : Neo4j connection and Spark session
 	logger.info("Setting up graph connection and spark session")
 	cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
+	cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
 	spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="update-graph")
 
-	conn = Neo4jConnection(uri=cfg.get_value(name=const.APP_CFG, jsonpath='GRAPH_URI'),
-		user=cfg.get_value(name=const.APP_CFG, jsonpath='GRAPH_USER'),
-		pwd=cfg.get_value(name=const.APP_CFG, jsonpath='GRAPH_PW'))
+	conn = Neo4jConnection(uri=cfg.get_value(name=const.DATA_CFG, jsonpath='GRAPH_URI'),
+		user=cfg.get_value(name=const.DATA_CFG, jsonpath='GRAPH_USER'),
+		pwd=cfg.get_value(name=const.DATA_CFG, jsonpath='GRAPH_PW'))
 
 	# get project / table path
-	cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
 	base_path = cfg.get_value(name=const.DATA_CFG, jsonpath='MIND_DATA_PATH')
 	project_dir = os.path.join(base_path, project)
 	logger.info("Got project path : " + project_dir)
