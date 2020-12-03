@@ -29,6 +29,22 @@ def get_slide_id( alias_id, alias_name ):
 	return results[0].data()['n']['slide_id']
 
 """
+Return slide (slides) given partial match to an slide ID alias
+"""
+@app.route('/mind/api/v1/getSlideIDs/<string:input_id>', methods=['GET'])
+def getSlideIDs(input_id):
+        conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+        results = conn.query(f'''MATCH (n:slide) WHERE (any (prop in keys(n) where n[prop] contains '{input_id}')) RETURN n''')
+        return jsonify([res.data()['n'] for res in results])
+"""
+Return slide (slides) given hobS case ID
+"""
+@app.route('/mind/api/v1/getSlideIDs/case/<string:input_id>', methods=['GET'])
+def getSlideIDs_case(input_id):
+        conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+        results = conn.query(f'''MATCH (m:accession)-[HAS_SLIDE]-(n:slide) WHERE m.case_hid='{input_id}' RETURN n''')
+        return jsonify([res.data()['n'] for res in results])
+"""
 curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
 """
 @app.route('/mind/api/v1/getPathologyAnnotation/<string:project>/<string:slide_hid>/<labelset>', methods=['GET'])
