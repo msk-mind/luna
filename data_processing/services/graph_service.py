@@ -17,7 +17,7 @@ def prop_str(fields, row):
 	Returns a kv string like 'id: 123, ...' where prop values come from row.
 	"""
 	kv = [f" {x}: '{row[x]}'" for x in fields]
-	return ",".join(kv)
+	return ','.join(kv)
 
 @click.command()
 @click.option('-p', '--project', help="project name", required=True)
@@ -80,25 +80,18 @@ def update_graph(project, table, data_config_file, app_config_file):
 			.groupBy(fields_alias) \
 			.count() \
 			.toPandas()
-		"""pdf = df.select(F.col(src_column_name).alias(src), F.col(target_column_name).alias(target)) \
-			.groupBy(src, target) \
-			.count() \
-			.toPandas()"""
-		logger.info(pdf.columns)
 
 		# update graph
 		for index, row in pdf.iterrows():
 
 			src_props = prop_str(src_alias, row)
 			target_props = prop_str(target_alias, row)
-			logger.info(src_props)
-			logger.info(target_props)
 
-			# fire query!
-			query = f"MERGE (n:{src_node_type} { {src_props} }) MERGE (m:{target_node_type} { {target_props} }) MERGE (n)-[r:{relationship}]->(m)"
+			# fire query! # match on "ID" in case of update?
+			query = f'''MERGE (n:{src_node_type} {{{src_props}}}) MERGE (m:{target_node_type} {{{target_props}}}) MERGE (n)-[r:{relationship}]->(m)'''
 			logger.info(query)
 			conn.query(query)
-
+			
 	logger.info("Finished update-graph in %s seconds" % (time.time() - start_time))
 
 if __name__ == "__main__":
