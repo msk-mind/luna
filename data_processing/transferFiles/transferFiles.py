@@ -16,9 +16,23 @@ import os, shutil, sys, importlib, json, yaml, subprocess, time
 from io import BytesIO
 from filehash import FileHash
 from distutils.util import strtobool
+from flask_swagger_ui import get_swaggerui_blueprint
 
 app = Flask(__name__)
 logger = init_logger("flask-mind-server.log")
+
+### swagger specific ###
+SWAGGER_URL = '/mind/api/v1/docs'
+API_URL = '/static/swagger.json'
+SWAGGERUI_BLUEPRINT = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': "buildRadiologyProxyTables"
+    }
+)
+app.register_blueprint(SWAGGERUI_BLUEPRINT, url_prefix=SWAGGER_URL)
+### end swagger specific ###
 
 # ==================================================================================================
 # Service functions (should be factored out!!!!!!!)
