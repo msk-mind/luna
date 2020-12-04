@@ -43,6 +43,13 @@ def generate_uuid(path):
 
     return record_uuid
 
+def parse_slide_id(path):
+    """ Slide stem is their slide id """
+    posix_file_path = path.split(':')[-1]
+
+    slide_id = Path(posix_file_path).stem
+
+    return slide_id 
 
 def parse_openslide(path):
     """ From https://github.com/msk-mind/sandbox/blob/master/pathology/slide_to_proxy.py """
@@ -54,8 +61,6 @@ def parse_openslide(path):
     slide_os_handle = openslide.OpenSlide(posix_file_path)
 
     kv = dict(slide_os_handle.properties) 
-
-    kv['image_id'] =  Path(posix_file_path).stem 
 
     return kv
 
@@ -70,7 +75,7 @@ def parse_openslide(path):
               help='comma separated list of processes to run or replay: e.g. transfer,delta,graph, or all')
 def cli(template_file, config_file, process_string):
     """
-    This module generates a set of proxy tables for pathology data based on information specified in the tempalte file.
+    This module generates a set of proxy tables for pathology data based on information specified in the template file.
 
     Example:
         python -m data_processing.pathology.proxy_table.generate \
@@ -109,12 +114,10 @@ def create_proxy_table(config_file):
     cfg = ConfigSet()
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.pathology.proxy_table.generate")
 
-    # setup for using external py in udf
-    sys.path.append("data_processing/common")
-
     logger.info("generating binary proxy table... ")
 
-    dicom_path = os.path.join(cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH'), const.DICOM_TABLE)
+#    setup for saving tables at the correct location
+#    wsi_path = os.path.join(cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH'), const.WSI_TABLE)
 
     with CodeTimer(logger, 'load wsi metadata'):
         print (cfg.get_value(name=DATA_CFG, jsonpath='SOURCE_PATH') + "**" + cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE'))
@@ -122,7 +125,8 @@ def create_proxy_table(config_file):
             print (path)
 
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
-        generate_uuid_udf = udf(generate_uuid, StringType())
+        generate_uuid_udf   = udf(generate_uuid,   StringType())
+        parse_slide_id_udf  = udf(parse_slide_id,  StringType())
         parse_openslide_udf = udf(parse_openslide, MapType(StringType(), StringType()))
 
         df = spark.read.format("binaryFile"). \
@@ -130,11 +134,13 @@ def create_proxy_table(config_file):
             option("recursiveFileLookup", "true"). \
             load(cfg.get_value(name=DATA_CFG, jsonpath='SOURCE_PATH')). \
             drop("content").\
-            withColumn("wsi_record_uuid", lit(generate_uuid_udf  (col("path")))).\
-            withColumn("metadata",        lit(parse_openslide_udf(col("path"))))
+            withColumn("wsi_record_uuid", generate_uuid_udf  (col("path"))).\
+            withColumn("slide_id",        parse_slide_id_udf (col("path"))).\
+            withColumn("metadata",        parse_openslide_udf(col("path")))
 
     # parse all dicoms and save
     df.printSchema()
+    print (df.first().metadata)
     df.show()
 
     processed_count = df.count()
