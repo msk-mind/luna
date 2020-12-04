@@ -32,8 +32,8 @@ class TestInvalidYaml(YamaleTestCase):
         assert "REQUESTOR_EMAIL: 'None' is not a str" in str(error_info.value)
         assert "PROJECT: 'None' is not a str" in str(error_info.value)
         assert "SOURCE: 'None' is not a str" in str(error_info.value)
-        assert "MODALITY: 'None' not in ('clinical', 'radiology', 'pathology', 'genomics')" in str(error_info.value)
-        assert "DATA_TYPE: 'CAT' not in ('diagnosis', 'medication', 'treatment', 'CT', 'MRI', 'PET')" in \
+        assert "MODALITY: 'None' not in" in str(error_info.value)
+        assert "DATA_TYPE: 'CAT' not in" in \
                str(error_info.value)
-        assert "DATE: '2020-10-29' is not a timestamp" in str(error_info.value)
+        assert "DATE: '555-3' is not a day" in str(error_info.value)
         assert "BWLIMIT: '5T' is not a regex match." in str(error_info.value)
