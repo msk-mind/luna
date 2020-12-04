@@ -121,7 +121,8 @@ def create_proxy_table(config_file):
 
     logger.info("generating binary proxy table... ")
 
-    wsi_path = const.TABLE_LOCATION(cfg, DATA_CFG)
+    wsi_path  = const.TABLE_LOCATION(cfg)
+    write_uri = os.environ["HDFS_URI"]
 
     with CodeTimer(logger, 'load wsi metadata'):
         print (cfg.get_value(name=DATA_CFG, jsonpath='SOURCE_PATH') + "**" + cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE'))
@@ -144,7 +145,7 @@ def create_proxy_table(config_file):
 
     # parse all dicoms and save
     df.printSchema()
-    df.coalesce(48).write.format("delta").save("hdfs://pllimsksparky1.mskcc.org:8020" + wsi_path)
+    df.coalesce(48).write.format("delta").save(write_uri + wsi_path)
 
     processed_count = df.count()
     logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE_COUNT')))
