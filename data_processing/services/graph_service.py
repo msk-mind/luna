@@ -12,6 +12,13 @@ from data_processing.common.config import ConfigSet
 import data_processing.common.constants as const
 
 
+def prop_str(fields, row):
+	"""
+	Returns a kv string like 'id: 123, ...' where prop values come from row.
+	"""
+	kv = [f" {x}: '{row[x]}'" for x in fields]
+	return ','.join(kv)
+
 @click.command()
 @click.option('-p', '--project', help="project name", required=True)
 @click.option('-t', '--table', help="table name", required=True)
@@ -49,31 +56,42 @@ def update_graph(project, table, data_config_file, app_config_file):
 	# get graph info
 	table = table.upper()
 	graphs = GraphEnum[table].value
-
+	# graph ~= relationship
 	for graph in graphs:
-		src = graph.src
-		relationship = graph.relationship
-		target = graph.target
-		src_column_name = graph.src_column_name
-		target_column_name = graph.target_column_name
 
-		logger.info("Update graph with {0} - {1} - {2}".format(src, relationship, target))
+		src_node_type = graph.src.type
+		src_node_fields = graph.src.fields
+
+		relationship = graph.relationship
+
+		target_node_type = graph.target.type
+		target_node_fields = graph.target.fields
+
+		logger.info("Update graph with {0} - {1} - {2}".format(src_node_type, relationship, target_node_type))
 
 		# subset dataframe
-		pdf = df.select(F.col(src_column_name).alias(src), F.col(target_column_name).alias(target)) \
-			.groupBy(src, target) \
+		fields = src_node_fields + target_node_fields
+		# alias removes top-level column name if '.' is part of the column name: i.e. metadata.PatientName -> PatientName
+		src_alias = [x[x.find('.')+1:] for x in src_node_fields]
+		target_alias = [x[x.find('.')+1:] for x in target_node_fields]
+		fields_alias = src_alias + target_alias
+
+		pdf = df.select([F.col(c).alias(a) for c, a in zip(fields, fields_alias)]) \
+			.groupBy(fields_alias) \
 			.count() \
 			.toPandas()
 
 		# update graph
-		# NOTE: only simple id field updates are supported for now.
 		for index, row in pdf.iterrows():
-			query = '''MERGE (n:{0} {{{0}_id: "{1}"}}) MERGE (m:{2} {{{2}_id: "{3}"}}) MERGE (n)-[r:{4}]->(m)''' \
-				.format(src, row[src], target, row[target], relationship)
+
+			src_props = prop_str(src_alias, row)
+			target_props = prop_str(target_alias, row)
+
+			# fire query! # match on "ID" in case of update?
+			query = f'''MERGE (n:{src_node_type} {{{src_props}}}) MERGE (m:{target_node_type} {{{target_props}}}) MERGE (n)-[r:{relationship}]->(m)'''
 			logger.info(query)
 			conn.query(query)
-
-
+			
 	logger.info("Finished update-graph in %s seconds" % (time.time() - start_time))
 
 if __name__ == "__main__":

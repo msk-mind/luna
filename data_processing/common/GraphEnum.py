@@ -1,45 +1,45 @@
 from enum import Enum
 
+class Node(object):
+	"""
+	Node object defines the type and attributes of a graph node.
+
+	:param: node_type: node type. e.g. scan
+	:param: fields: list of column names. e.g. slide_id
+	"""
+	def __init__(self, node_type, fields):
+
+		self.type = node_type
+		self.fields = fields
+
 class Graph(object):
 	"""
 	Graph object that stores src-[relationship]-target information.
 	This object is used get data from existing delta tables to populate the graph database.
-	src_column_name and target_column_name are "id" columns for querying the tables.
 
-	:params:
-	src: source node name
-	relationship: relationship name e.g. HAS_PX, HAS_RECORD etc
-	target: target node name
-	src_column_name: (optional) source column name. if not provided, this is set to `src`.
-	target_column_name: (optional) target column name. if not provided, this is set to `target`
+	:param: src: Node - source node
+	:param: relationship: str - relationship name e.g. HAS_PX, HAS_RECORD etc
+	:param: target: Node - target node
 	"""
-	def __init__(self, src, relationship, target, src_column_name=None, target_column_name=None):
-		# src node
+	def __init__(self, src, relationship, target):
+
 		self.src = src
 		self.relationship = relationship
-		# target node
 		self.target = target
-
-		# optional fields
-		if src_column_name is None:
-			self.src_column_name = src
-		else:
-			self.src_column_name = src_column_name
-
-		if target_column_name is None:
-			self.target_column_name = target
-		else:
-			self.target_column_name = target_column_name
-
 
 
 class GraphEnum(Enum):
 	"""
+	Defines Graph relationships. 
+	We assume that all properties come from the table defined in GraphEnum.name
+
 	name: table name
 	value: list of Graphs - to accomodate multiple relationship update
 
-	>>> GraphEnum['DICOM'].value[0].src
-	'xnat_patient_id'
+	>>> GraphEnum['DICOM'].value[0].src.type
+	'xnat_patient'
 	"""
-	DICOM = [Graph("xnat_patient", "HAS_SCAN", "scan", "metadata.PatientName", "metadata.SeriesInstanceUID")]
+	DICOM = [Graph(Node("xnat_patient", ["metadata.PatientName"]),
+			"HAS_SCAN", 
+			Node("scan", ["metadata.SeriesInstanceUID"]))]
 	#PROJECT = Graph("project_name", "HAS_PX", "dmp_patient_id")

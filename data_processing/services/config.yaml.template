@@ -1,1 +1,9 @@
-MIND_DATA_PATH: /gpfs/mskmindhdp_emc/tmp
+# mind data path
+MIND_DATA_PATH: /path/to/data/path
+
+# graph database
+GRAPH_URI: graph-ip:graph-port
+
+GRAPH_USER: somegraphuser
+
+GRAPH_PW: somepw
