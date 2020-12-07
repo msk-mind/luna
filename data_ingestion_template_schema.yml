@@ -12,17 +12,17 @@ SOURCE: any(str(required=True))
 
 MODALITY: enum('clinical','radiology','pathology','genomics')
 
-DATA_TYPE: enum('diagnosis', 'medication', 'treatment', 'CT', 'MRI', 'PET')
+DATA_TYPE: enum('diagnosis', 'medication', 'treatment', 'CT', 'MRI', 'PET', 'WSI')
 
 COMMENTS: any(str(required=False))
 
-DATE: timestamp(min='2020-01-01 01:00:00')
+DATE: day()
 
 DATASET_NAME: any(str(required=True))
 
 ETL_TYPE: enum('proxy', 'refined', 'feature')
 
-FILE_TYPE: enum('csv', 'dcm')
+FILE_TYPE: enum('csv', 'dcm', 'svs')
 
 FORMAT_TYPE: enum('parquet', 'delta')
 

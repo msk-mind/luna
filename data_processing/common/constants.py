@@ -28,3 +28,6 @@ FEATURES			='features'
 # Configurations
 APP_CFG				='APP_CFG'
 DATA_CFG			='DATA_CFG'
+
+def TABLE_LOCATION(cfg): 
+    return "/data/{0}/tables/{1}".format(  cfg.get_value(name=DATA_CFG, jsonpath='PROJECT'), cfg.get_value(name=DATA_CFG, jsonpath='DATASET_NAME' ))

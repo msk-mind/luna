@@ -33,6 +33,9 @@ SCHEMA_FILE='data_ingestion_template_schema.yml'
 DATA_CFG = 'DATA_CFG'
 APP_CFG = 'APP_CFG'
 
+def sql_cleaner(s):
+    return s.replace(".","_").replace(" ","_")
+
 def generate_uuid(path):
     """ Add WSI hash record """
     posix_file_path = path.split(':')[-1]
@@ -58,11 +61,13 @@ def parse_openslide(path):
     posix_file_path = path.split(':')[-1]
     dirs, filename  = os.path.split(path)
  
-    slide_os_handle = openslide.OpenSlide(posix_file_path)
-
-    kv = dict(slide_os_handle.properties) 
-
-    return kv
+    with openslide.OpenSlide(posix_file_path) as slide_os_handle:
+        kv = dict(slide_os_handle.properties) 
+    
+    meta = {}
+    for key in kv.keys():
+        meta[sql_cleaner(key)] = kv[key]
+    return meta 
 
 
 @click.command()
@@ -116,8 +121,8 @@ def create_proxy_table(config_file):
 
     logger.info("generating binary proxy table... ")
 
-#    setup for saving tables at the correct location
-#    wsi_path = os.path.join(cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH'), const.WSI_TABLE)
+    wsi_path  = const.TABLE_LOCATION(cfg)
+    write_uri = os.environ["HDFS_URI"]
 
     with CodeTimer(logger, 'load wsi metadata'):
         print (cfg.get_value(name=DATA_CFG, jsonpath='SOURCE_PATH') + "**" + cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE'))
@@ -140,8 +145,7 @@ def create_proxy_table(config_file):
 
     # parse all dicoms and save
     df.printSchema()
-    print (df.first().metadata)
-    df.show()
+    df.coalesce(48).write.format("delta").save(write_uri + wsi_path)
 
     processed_count = df.count()
     logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE_COUNT')))
