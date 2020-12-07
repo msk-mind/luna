@@ -148,7 +148,7 @@ def create_proxy_table(config_file):
     df.coalesce(48).write.format("delta").save(write_uri + wsi_path)
 
     processed_count = df.count()
-    logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE_COUNT')))
+    logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(name=DATA_CFG, jsonpath='FILE_COUNT')))
     return exit_code
 
 
