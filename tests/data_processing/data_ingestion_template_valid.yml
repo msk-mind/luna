@@ -41,6 +41,9 @@ FILE_TYPE: dcm
 
 FORMAT_TYPE: delta
 
+# num partition for delta table creation
+NUM_PARTITION: 1
+
 # ip or hostname of machine where source data file(s) reside, if applicable
 HOST: localhost
 
