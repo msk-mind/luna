@@ -21,6 +21,8 @@ FEATURE_TABLE		=TABLE_DIR + 'feature'
 
 #### Raw Data Directories ####
 DICOMS				='dicoms'
+DICOM_PNGS			='dicom_pngs'
+MHA_PNGS			='mha_pngs'
 SCANS				='scans'
 SCAN_ANNOTATIONS	='scan_annotations'
 FEATURES			='features'
