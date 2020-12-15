@@ -103,7 +103,7 @@ def generate_uuid(png_path):
 @click.command()
 @click.option('-f', '--config_file', default='config.yaml', required=True, 
     help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-d', '--data_config_file', default='data_processing/services/config.yaml', required=True,
+@click.option('-t', '--data_config_file', default='data_processing/services/config.yaml', required=True,
     help="path to data configuration file. See data_processing/services/config.yaml.template")
 def cli(config_file, data_config_file):
     """
@@ -133,27 +133,30 @@ def generate_png_tables(cfg):
     """
     # setup project path
     base_path = cfg.get_value(name=const.DATA_CFG, jsonpath='MIND_DATA_PATH')
-    project_path = os.path.join(base_path, project)
+    project_path = os.path.join(base_path, cfg.get_value(name=const.DATA_CFG, jsonpath='PROJECT_NAME'))
     logger.info("Got project path : " + project_path)
 
     # load dicom and mha tables
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='dicom-to-png')
 
     dicom_table_path = os.path.join(project_path, const.DICOM_TABLE) # earlier version
-    mha_table_path = os.path.join(project_path, const.TABLE_NAME(cfg)) # MHA_BR_16-512_20201212
+    mha_table_path = os.path.join(project_path, const.TABLE_DIR, const.TABLE_NAME(cfg)) # MHA_BR_16-512_20201212
 
     dicom_df = spark.read.format("delta").load(dicom_table_path)
     dicom_df = dicom_df.drop("content")
+
     mha_df = spark.read.format("delta").load(mha_table_path)
     logger.info("Loaded dicom and mha tables")
 
     # join with accession number and series number/description
-    cond = [dicom_df.metadata.AccessionNumber == mha_df.accession_number, 
-            dicom_df.metadata.SeriesDescription == 'Ph1/Axial T1 FS post'] # Use series number once available
-
-    dicom_alias = dicom_df.select(dicom_df.path.alias("dicom_path"),
+    dicom_alias = dicom_df.select("dicom_record_uuid",
+                    dicom_df.path.alias("dicom_path"),
                     dicom_df.metadata.alias("dicom_metadata"))
-    subset_df = dicom_df.join(mha_df, cond)
+
+    cond = [dicom_alias.dicom_metadata.AccessionNumber == mha_df.accession_number, 
+            dicom_alias.dicom_metadata.SeriesDescription == 'Ph1/Axial T1 FS post'] # Use series number once available
+
+    subset_df = dicom_alias.join(mha_df, cond)
     logger.info("Joined dicom and mha tables")
 
     generate_uuid_udf = F.udf(generate_uuid, StringType())
@@ -161,16 +164,23 @@ def generate_png_tables(cfg):
     with CodeTimer(logger, 'Generate pngs and dicom_png table'):
 
         png_dir = os.path.join(project_path, const.DICOM_PNGS)
-        dicom_png_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("DICOM_PNG", "DATASETNAME"))
+
+        if not os.path.exists(png_dir):
+            os.makedirs(png_dir)
+
+        dicom_png_table_path = os.path.join(project_path, const.TABLE_DIR, 
+            "{0}_{1}".format("DICOM_PNG", cfg.get_value(name=const.DATA_CFG, jsonpath='DATASET_NAME')))
 
         create_png_udf = F.udf(create_png, StringType())
         subset_df = subset_df.withColumn("dicom_png_path", 
-            F.lit(create_png_udf(subset_df.path, subset_df.dicom_record_uuid,F.lit(png_dir))))
+            F.lit(create_png_udf(subset_df.dicom_path, subset_df.dicom_record_uuid,F.lit(png_dir))))
 
-        subset_df = subset_df.withColunn("png_record_uuid",
+        subset_df = subset_df.withColumn("png_record_uuid",
             F.lit(generate_uuid_udf(subset_df.dicom_png_path)))
 
-        columns = ["dicom_record_uuid", F.col("path").alias("dicom_path"), "png_record_uuid", "dicom_png_path", F.col("metadata.InstanceNumber").alias("instance_number")]
+        subset_df.show(10, False)
+
+        columns = ["dicom_record_uuid", F.col("dicom_path").alias("path"), "png_record_uuid", "dicom_png_path", F.col("metadata.InstanceNumber").alias("instance_number")]
         subset_df.select(columns) \
             .coalesce(cfg.get_value(name=const.DATA_CFG, jsonpath='NUM_PARTITION')).write.format("delta") \
             .mode("overwrite") \
@@ -180,7 +190,12 @@ def generate_png_tables(cfg):
 
         # mha_png_path: create pngs for all mhas
         png_dir = os.path.join(project_path, const.MHA_PNGS)
-        mha_png_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("MHA_PNG", "DATASETNAME"))
+
+        if not os.path.exists(png_dir):
+            os.makedirs(png_dir)
+
+        mha_png_table_path = os.path.join(project_path, const.TABLE_DIR, 
+            "{0}_{1}".format("MHA_PNG", cfg.get_value(name=const.DATA_CFG, jsonpath='DATASET_NAME')))
 
         mha_df = mha_df.withColumn("instanceid_mha_png_path", 
             F.lit(create_png_udf(mha_df.path, mha_df.scan_annotation_record_uuid, F.lit(png_dir))))
@@ -191,7 +206,7 @@ def generate_png_tables(cfg):
                     .withColumn("mha_png_path", split_col.getItem(1)) \
                     .drop("instanceid_mha_png_path")
 
-        mha_df = mha_df.withColunn("png_record_uuid",
+        mha_df = mha_df.withColumn("png_record_uuid",
             F.lit(generate_uuid_udf(mha_df.mha_png_path)))
 
         # overlay_path: blend mha and "the dicom" found through mha looping
@@ -206,8 +221,15 @@ def generate_png_tables(cfg):
         mha_png_df = mha_png_df.withColumn("overlay_path",
             F.lit(overlay_pngs_udf(mha_png_df.dicom_png_path, mha_png_df.mha_png_path, F.lit(png_dir))))
         
+        mha_png_df.show(10, False)
+        
         columns = [F.col("mha_png_record_uuid").alias("png_record_uuid"), "mha_png_path", "dicom_png_path", "instance_number", "overlay_path"]
         mha_png_df.select(columns) \
             .coalesce(cfg.get_value(name=const.DATA_CFG, jsonpath='NUM_PARTITION')).write.format("delta") \
             .mode("overwrite") \
             .save(mha_png_table_path)
+
+
+if __name__ == "__main__":
+    cli()
+
