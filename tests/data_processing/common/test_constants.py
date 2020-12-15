@@ -17,5 +17,5 @@ def test_table_name():
 def test_table_location():
     c1 = ConfigSet(name=const.DATA_CFG, config_file='tests/data_processing/data_ingestion_template_valid.yml')
 
-    assert const.TABLE_LOCATION(c1) == "/data/OV_16-158/tables/CT_OV_16-158_CT_20201028" 
+    assert const.TABLE_LOCATION(c1) == "tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/tables/CT_OV_16-158_CT_20201028" 
 
