@@ -4,6 +4,7 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.config import ConfigSet
 import data_processing.common.constants as const
 
 from pyspark.sql.functions import udf, lit
@@ -17,6 +18,12 @@ from distutils.util import strtobool
 
 app = Flask(__name__)
 logger = init_logger("flask-mind-server.log")
+config_file = "config.yaml"
+APP_CFG = "getPathologyAnnotations"
+
+
+ConfigSet(name=APP_CFG, config_file=config_file)
+spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="dicom-to-graph")	
 # spark = SparkConfig().spark_session(os.environ['SPARK_CONFIG'], "data_processing.mind.api")
 
 # ==================================================================================================
@@ -47,14 +54,18 @@ def getSlideIDs_case(input_id):
 """
 curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
 """
-@app.route('/mind/api/v1/getPathologyAnnotation/<string:project>/<string:slide_hid>/<labelset>', methods=['GET'])
-def getPathologyAnnotation(project,slide_hid,labelset):
+@app.route('/mind/api/v1/getPathologyAnnotation/<string:project>/<string:slide_hid>/<string:annotation_type>/<labelset>', methods=['GET'])
+def getPathologyAnnotation(annotation_type, project,slide_hid,labelset):
 	slide_id = get_slide_id(slide_hid, "slide_hid")
 
-	spark = SparkConfig().spark_session(os.environ['SPARK_CONFIG'], "data_processing.getPathologyAnnotation")
-
 	ANNOTATIONS_FOLDER = os.path.join("/gpfs/mskmindhdp_emc/data/pathology", project, "annotations")
-	GEOJSON_TABLE_PATH = ANNOTATIONS_FOLDER + "/table/geojson"
+
+	if annotation_type == "regional":
+		GEOJSON_TABLE_PATH = ANNOTATIONS_FOLDER + "/table/regional_geojson"
+	elif annotation_type == "point":
+		GEOJSON_TABLE_PATH = ANNOTATIONS_FOLDER + "/table/point_refined_geojson"
+	else:
+		return None
 
 	filepath = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset}' and latest=True").first()["geojson_filepath"]
 
