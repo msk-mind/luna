@@ -11,7 +11,6 @@
 Refined table generation for 2D analysis using PNGs.
 """
 import os, time
-#import itk
 from medpy.io import load
 import click
 import numpy as np
@@ -26,39 +25,22 @@ from data_processing.common.custom_logger import init_logger
 import data_processing.common.constants as const
 
 from pyspark.sql import functions as F
-from pyspark.sql.types import StringType, IntegerType
+from pyspark.sql.types import StringType, IntegerType, ArrayType, StructType, StructField
 
 logger = init_logger()
 logger.info("Starting data_processing.radiology.refined_table.annotation.generate")
 
 
-def create_png(src_path, uuid, accession_number, png_dir):
+def create_dicom_png(src_path, uuid, accession_number, png_dir):
     """
     Create a png from src_path image, and save a png in png_dir.
-    Returns a path to the png file along with an instance number in case of a 3d mha.
     """
     file_path = src_path.split(':')[-1]
 
     data, header = load(file_path)
 
-    num_images = data.shape[2]
-    dicom_idx_in_series = num_images
-
-    if num_images == 1:
-        # Convert 2d image to float to avoid overflow or underflow losses.
-        image_2d = data[:,:,0].astype(float)
-
-    else:
-        # Find the 2d image with Segmentation from 3d annotation.
-        # Some reverse engineering.. save the instance number 
-        # from the series to identify the dicom image that was annotated.
-        for i in range(num_images):
-            image_slice = data[:,:,i]
-            if np.any(image_slice):
-                image_2d = image_slice.astype(float)
-                # double check that subtracting is needed for all.
-                dicom_idx_in_series -= i+1
-                break
+    # Convert 2d image to float to avoid overflow or underflow losses.
+    image_2d = data[:,:,0].astype(float)
 
     # Rescaling grey scale between 0-255
     image_2d_scaled = (np.maximum(image_2d, 0) / image_2d.max()) * 255.0
@@ -66,43 +48,80 @@ def create_png(src_path, uuid, accession_number, png_dir):
     # Convert to uint
     image_2d_scaled = np.uint8(image_2d_scaled)
 
-    # Save png named as hash of dicom/mha
+    # Save png named as hash of dicom/seg
     png_path = os.path.join(png_dir, accession_number)
     os.makedirs(png_path, exist_ok=True)
 
     png_path = os.path.join(png_path, uuid.split("-")[-1] + '.png')
 
     im = Image.fromarray(image_2d_scaled)
+    im.save(png_path)
+    return png_path
+   
 
-    if num_images == 1:
-        im.save(png_path)
-        return png_path
-    else:
-        # save segmentation in red color.
-        rgb = im.convert('RGB')
-        red_channel = rgb.getdata(0)
-        rgb.putdata(red_channel)
-        rgb.save(png_path)
-        return str(dicom_idx_in_series) + ":" + png_path
-
-def overlay_pngs(dicom_png_path, mha_png_path, accession_number, png_dir):
+def create_seg_png(src_path, uuid, accession_number, png_dir):
     """
-    blend dicom and segmentation images with 7:3 ratio. 
+    Create pngs from src_path image, and save pngs in png_dir.
+    Returns an array of (instance_number, png_path) tuple.
+    """
+    # Save png named as hash of dicom/seg
+    png_path = os.path.join(png_dir, accession_number)
+    os.makedirs(png_path, exist_ok=True)
+
+    file_path = src_path.split(':')[-1]
+    data, header = load(file_path)
+
+    num_images = data.shape[2]
+
+    # Find the annotated slices with 3d segmentation.
+    # Some reverse engineering.. save the instance numbers 
+    # from the series to identify the dicom slices that were annotated.
+    slices = []
+    for i in range(num_images):
+        image_slice = data[:,:,i]
+        if np.any(image_slice):
+            image_2d = image_slice.astype(float)
+            # double check that subtracting is needed for all.
+            slice_num = num_images - (i+1)
+
+            image_2d_scaled = (np.maximum(image_2d, 0) / image_2d.max()) * 255.0
+            image_2d_scaled = np.uint8(image_2d_scaled)
+
+            png_path = os.path.join(png_path, "{0}_{1}.png".format(uuid.split("-")[-1], str(slice_num)))
+
+            im = Image.fromarray(image_2d_scaled)
+
+            # save segmentation in red color.
+            rgb = im.convert('RGB')
+            red_channel = rgb.getdata(0)
+            rgb.putdata(red_channel)
+            rgb.save(png_path)
+
+            slices.append( (slice_num, png_path) )
+
+    return slices
+
+ 
+def overlay_pngs(uuid, instance_number, dicom_path, seg_png_path, accession_number, png_dir):
+    """
+    Create dicom png images.
+    Blend dicom and segmentation images with 7:3 ratio. 
     Returns the path to the combined image.
     """
+    dicom_png_path = create_dicom_png(dicom_path, uuid, accession_number, png_dir)
     dcmpng = Image.open(dicom_png_path).convert('RGB')
-    mhapng = Image.open(mha_png_path)
+    segpng = Image.open(seg_png_path)
 
-    res = Image.blend(dcmpng, mhapng, 0.3)
+    res = Image.blend(dcmpng, segpng, 0.3)
 
-    filename = mha_png_path.split("/")[-1]
+    filename = seg_png_path.split("/")[-1]
     filedir = os.path.join(png_dir, accession_number)
     os.makedirs(filedir, exist_ok=True)
 
-    filepath = os.path.join(filedir, "overlay-"+filename)
-    res.save(filepath)
+    overlay_png_path = os.path.join(filedir, "overlay-"+filename)
+    res.save(overlay_png_path)
 
-    return filepath
+    return dicom_png_path + ":" + overlay_png_path
 
 
 def generate_uuid(png_path):
@@ -141,40 +160,40 @@ def cli(config_file, data_config_file):
 def generate_png_tables(cfg):
     """
     Create pngs for all dicoms in a series that have corresponding annotations.
-    Generate dicom_png and mha_png tables.
+    Generate dicom_png and seg_png tables.
     """
     # setup project path
     base_path = cfg.get_value(name=const.DATA_CFG, jsonpath='MIND_DATA_PATH')
     project_path = os.path.join(base_path, cfg.get_value(name=const.DATA_CFG, jsonpath='PROJECT_NAME'))
     logger.info("Got project path : " + project_path)
 
-    # load dicom and mha tables
+    # load dicom and seg tables
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='dicom-to-png')
 
     # TODO earlier version.. to be updated
     dicom_table_path = os.path.join(base_path, 'radiology/BC_16-512_MR_20201110_UWpYXajT5F/table/dicom')
-    mha_table_path = os.path.join(project_path, const.TABLE_DIR, const.TABLE_NAME(cfg)) # MHA_BR_16-512_20201212
+    seg_table_path = os.path.join(project_path, const.TABLE_DIR, const.TABLE_NAME(cfg))
 
     dicom_df = spark.read.format("delta").load(dicom_table_path)
     dicom_df = dicom_df.drop("content") \
              .filter("UPPER(metadata.SeriesDescription) LIKE 'PH1%AX%T1%FS%POST' or UPPER(metadata.SeriesDescription) LIKE 'PH1%AX%T1%POST%FS'")
 
-    mha_df = spark.read.format("delta").load(mha_table_path)
-    logger.info("Loaded dicom and mha tables")
+    seg_df = spark.read.format("delta").load(seg_table_path)
+    logger.info("Loaded dicom and seg tables")
 
     # join with accession number and series number/description
-    mha_alias = mha_df.select(mha_df.accession_number,
-                    mha_df.path.alias("mha_path"),
-                    mha_df.metadata.alias("mha_metadata"))
+    seg_alias = seg_df.select(seg_df.accession_number,
+                    seg_df.path.alias("seg_path"),
+                    seg_df.metadata.alias("seg_metadata"))
 
-    cond = [dicom_df.metadata.AccessionNumber == mha_df.accession_number] # Add series number match once available
+    cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number] # Add series number match once available
 
-    subset_df = dicom_df.join(mha_alias, cond)
-    logger.info("Joined dicom and mha tables")
+    subset_df = dicom_df.join(seg_alias, cond)
+    logger.info("Joined dicom and seg tables")
 
     generate_uuid_udf = F.udf(generate_uuid, StringType())
 
-    with CodeTimer(logger, 'Generate pngs and dicom_png table'):
+    """with CodeTimer(logger, 'Generate pngs and dicom_png table'):
 
         png_dir = os.path.join(project_path, const.DICOM_PNGS)
 
@@ -190,64 +209,67 @@ def generate_png_tables(cfg):
             F.lit(create_png_udf("path", "dicom_record_uuid", "metadata.AccessionNumber", F.lit(png_dir))))
 
         subset_df = subset_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf("dicom_png_path"))) \
-                             .withColumn("instance_number", subset_df["metadata.InstanceNumber"].cast(IntegerType())
-)
+                             .withColumn("instance_number", subset_df["metadata.InstanceNumber"].cast(IntegerType()))
         columns = ["dicom_record_uuid", "png_record_uuid", "accession_number", "dicom_png_path", "instance_number"]
         subset_df.select(columns) \
             .coalesce(cfg.get_value(name=const.DATA_CFG, jsonpath='NUM_PARTITION')).write.format("delta") \
             .mode("overwrite") \
             .save(dicom_png_table_path)
+    """
 
-    with CodeTimer(logger, 'Generate pngs and mha_png table'):
+    with CodeTimer(logger, 'Generate pngs and seg_png table'):
 
-        # mha_png_path: create pngs for all mhas
-        png_dir = os.path.join(project_path, const.MHA_PNGS)
+        # seg_png_path: create pngs for all segs
+        png_dir = os.path.join(project_path, const.MHD_PNGS)
 
         if not os.path.exists(png_dir):
             os.makedirs(png_dir)
 
-        mha_png_table_path = os.path.join(project_path, const.TABLE_DIR, 
-            "{0}_{1}".format("MHA_PNG", cfg.get_value(name=const.DATA_CFG, jsonpath='DATASET_NAME')))
+        seg_png_table_path = os.path.join(project_path, const.TABLE_DIR, 
+            "{0}_{1}".format("MHD_PNG", cfg.get_value(name=const.DATA_CFG, jsonpath='DATASET_NAME')))
 
-        mha_df = mha_df.withColumn("instanceid_mha_png_path", 
+        create_seg_png_udf = F.udf(create_seg_png, ArrayType(StructType([StructField("instance_number", IntegerType()),
+									 StructField("seg_png_path", StringType())])))
+        
+        seg_df = seg_df.withColumn("slices_pngs", 
             F.lit(create_png_udf("path", "scan_annotation_record_uuid", "accession_number", F.lit(png_dir))))
 
-        # split instanceid|mha_png_path into 2 columns
-        split_col = F.split(mha_df.instanceid_mha_png_path, ':')
-        mha_df = mha_df.withColumn("instance_number", split_col.getItem(0).cast(IntegerType())) \
-                    .withColumn("mha_png_path", split_col.getItem(1)) \
-                    .drop("instanceid_mha_png_path")
+        seg_df = seg_df.withColumn("slices_pngs", F.explode("slices_pngs")) \
+                       .withColumn("instance_number", "slices_pngs.instance_number") \
+                       .withColumn("seg_png_path", "slices_pngs.seg_png_path") \
+                       .drop("slices_pngs")
 
-        mha_df.show(10, False)
-        logger.info("Created mha pngs")
+        seg_df.show(10, False)
+        logger.info("Created segmentation pngs")
 	
-        mha_df = mha_df.withColumn("png_record_uuid",
-            F.lit(generate_uuid_udf(mha_df.mha_png_path)))
+        seg_df = seg_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf(seg_df.seg_png_path)))
 
-        # overlay_path: blend mha and the dicom instance
+        # overlay_path: blend seg and the dicom instance
         overlay_pngs_udf = F.udf(overlay_pngs, StringType())
 
-        mha_df = mha_df.select(mha_df.png_record_uuid.alias("mha_png_record_uuid"), mha_df.accession_number.alias("access_no"), mha_df.instance_number.alias("instance_no"), "mha_png_path", "scan_annotation_record_uuid")
+        seg_df = seg_df.select(seg_df.png_record_uuid.alias("seg_png_record_uuid"), seg_df.accession_number.alias("access_no"), seg_df.path.alias("seg_path"),
+                               seg_df.instance_number.alias("instance_no"), "seg_png_path", "scan_annotation_record_uuid")
         
-        cond = [subset_df.metadata.AccessionNumber == mha_df.access_no, subset_df.instance_number == mha_df.instance_no] 
+        cond = [subset_df.metadata.AccessionNumber == seg_df.access_no, subset_df.instance_number == seg_df.instance_no] 
         
-        mha_png_df = mha_df.join(subset_df, cond)
+        seg_png_df = seg_df.join(subset_df, cond)
 
-        mha_png_df = mha_png_df.withColumn("overlay_path",
-            F.lit(overlay_pngs_udf("dicom_png_path", "mha_png_path", "accession_number", F.lit(png_dir))))
+        seg_png_df = seg_png_df.withColumn("overlay_path",
+            F.lit(overlay_pngs_udf("dicom_record_uuid", "instance_no", "path", "seg_png_path", "accession_number", F.lit(png_dir))))
         
-        mha_png_df.show(10, False)
-        mha_png_df.printSchema()
+        seg_png_df.show(10, False)
+        seg_png_df.printSchema()
 
         logger.info("Created overlay images")
         
-        columns = [F.col("mha_png_record_uuid").alias("png_record_uuid"), "accession_number", "mha_png_path", "dicom_png_path", "instance_number", "overlay_path", "scan_annotation_record_uuid"]
+        columns = [F.col("seg_png_record_uuid").alias("png_record_uuid"), "accession_number", "instance_number",
+                   "seg_png_path", "dicom_png_path", "overlay_path", "scan_annotation_record_uuid"]
 
-        mha_png_df.select(columns) \
+        seg_png_df.select(columns) \
             .distinct() \
             .coalesce(cfg.get_value(name=const.DATA_CFG, jsonpath='NUM_PARTITION')).write.format("delta") \
             .mode("overwrite") \
-            .save(mha_png_table_path)
+            .save(seg_png_table_path)
 
 
 if __name__ == "__main__":
