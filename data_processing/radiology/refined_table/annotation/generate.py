@@ -5,13 +5,14 @@
 # 3. Grab dicom file
 # 4. Convert and save dicom to png & mha selected array to png (scale *255!!!)
 # 5. Blend dicom and mha
-# end result 3 images per 
+# end result 3 images per annotations
 
 """
 Refined table generation for 2D analysis using PNGs.
 """
 import os, time
-import itk
+#import itk
+from medpy.io import load
 import click
 import numpy as np
 from PIL import Image 
@@ -25,40 +26,39 @@ from data_processing.common.custom_logger import init_logger
 import data_processing.common.constants as const
 
 from pyspark.sql import functions as F
-from pyspark.sql.types import StringType
+from pyspark.sql.types import StringType, IntegerType
 
 logger = init_logger()
 logger.info("Starting data_processing.radiology.refined_table.annotation.generate")
 
 
-def create_png(src_path, uuid, png_dir):
+def create_png(src_path, uuid, accession_number, png_dir):
     """
     Create a png from src_path image, and save a png in png_dir.
     Returns a path to the png file along with an instance number in case of a 3d mha.
     """
     file_path = src_path.split(':')[-1]
 
-    image = itk.imread(file_path)
-    arrays = itk.GetArrayViewFromImage(image)
+    data, header = load(file_path)
 
-    num_images = arrays.shape[0]
+    num_images = data.shape[2]
     dicom_idx_in_series = num_images
 
     if num_images == 1:
         # Convert 2d image to float to avoid overflow or underflow losses.
-        image_2d = arrays[0].pixel_array.astype(float)
+        image_2d = data[:,:,0].astype(float)
 
     else:
         # Find the 2d image with Segmentation from 3d annotation.
         # Some reverse engineering.. save the instance number 
         # from the series to identify the dicom image that was annotated.
-        for i,v in enumerate(arrays):
-            if np.any(v):
-                image_2d = v
+        for i in range(num_images):
+            image_slice = data[:,:,i]
+            if np.any(image_slice):
+                image_2d = image_slice.astype(float)
                 # double check that subtracting is needed for all.
                 dicom_idx_in_series -= i+1
-                print(i+1)
-                return
+                break
 
     # Rescaling grey scale between 0-255
     image_2d_scaled = (np.maximum(image_2d, 0) / image_2d.max()) * 255.0
@@ -67,7 +67,11 @@ def create_png(src_path, uuid, png_dir):
     image_2d_scaled = np.uint8(image_2d_scaled)
 
     # Save png named as hash of dicom/mha
-    png_path = os.path.join(png_dir, uuid.split("-")[-1])
+    png_path = os.path.join(png_dir, accession_number)
+    os.makedirs(png_path, exist_ok=True)
+
+    png_path = os.path.join(png_path, uuid.split("-")[-1] + '.png')
+
     im = Image.fromarray(image_2d_scaled)
 
     if num_images == 1:
@@ -79,18 +83,26 @@ def create_png(src_path, uuid, png_dir):
         red_channel = rgb.getdata(0)
         rgb.putdata(red_channel)
         rgb.save(png_path)
-        return dicom_idx_in_series + "|" + png_path
+        return str(dicom_idx_in_series) + ":" + png_path
 
-def overlay_pngs(dicom_png_path, mha_png_path, png_dir):
-    # blend dicom and segmentation images with 7:3 ratio. 
+def overlay_pngs(dicom_png_path, mha_png_path, accession_number, png_dir):
+    """
+    blend dicom and segmentation images with 7:3 ratio. 
+    Returns the path to the combined image.
+    """
     dcmpng = Image.open(dicom_png_path).convert('RGB')
     mhapng = Image.open(mha_png_path)
 
     res = Image.blend(dcmpng, mhapng, 0.3)
 
     filename = mha_png_path.split("/")[-1]
-    filepath = os.path.join(png_dir, "overlay-"+filename)
+    filedir = os.path.join(png_dir, accession_number)
+    os.makedirs(filedir, exist_ok=True)
+
+    filepath = os.path.join(filedir, "overlay-"+filename)
     res.save(filepath)
+
+    return filepath
 
 
 def generate_uuid(png_path):
@@ -139,24 +151,25 @@ def generate_png_tables(cfg):
     # load dicom and mha tables
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='dicom-to-png')
 
-    dicom_table_path = os.path.join(project_path, const.DICOM_TABLE) # earlier version
+    # TODO earlier version.. to be updated
+    dicom_table_path = os.path.join(base_path, 'radiology/BC_16-512_MR_20201110_UWpYXajT5F/table/dicom')
     mha_table_path = os.path.join(project_path, const.TABLE_DIR, const.TABLE_NAME(cfg)) # MHA_BR_16-512_20201212
 
     dicom_df = spark.read.format("delta").load(dicom_table_path)
-    dicom_df = dicom_df.drop("content")
+    dicom_df = dicom_df.drop("content") \
+             .filter("UPPER(metadata.SeriesDescription) LIKE 'PH1%AX%T1%FS%POST' or UPPER(metadata.SeriesDescription) LIKE 'PH1%AX%T1%POST%FS'")
 
     mha_df = spark.read.format("delta").load(mha_table_path)
     logger.info("Loaded dicom and mha tables")
 
     # join with accession number and series number/description
-    dicom_alias = dicom_df.select("dicom_record_uuid",
-                    dicom_df.path.alias("dicom_path"),
-                    dicom_df.metadata.alias("dicom_metadata"))
+    mha_alias = mha_df.select(mha_df.accession_number,
+                    mha_df.path.alias("mha_path"),
+                    mha_df.metadata.alias("mha_metadata"))
 
-    cond = [dicom_alias.dicom_metadata.AccessionNumber == mha_df.accession_number, 
-            dicom_alias.dicom_metadata.SeriesDescription == 'Ph1/Axial T1 FS post'] # Use series number once available
+    cond = [dicom_df.metadata.AccessionNumber == mha_df.accession_number] # Add series number match once available
 
-    subset_df = dicom_alias.join(mha_df, cond)
+    subset_df = dicom_df.join(mha_alias, cond)
     logger.info("Joined dicom and mha tables")
 
     generate_uuid_udf = F.udf(generate_uuid, StringType())
@@ -172,15 +185,14 @@ def generate_png_tables(cfg):
             "{0}_{1}".format("DICOM_PNG", cfg.get_value(name=const.DATA_CFG, jsonpath='DATASET_NAME')))
 
         create_png_udf = F.udf(create_png, StringType())
+        
         subset_df = subset_df.withColumn("dicom_png_path", 
-            F.lit(create_png_udf(subset_df.dicom_path, subset_df.dicom_record_uuid,F.lit(png_dir))))
+            F.lit(create_png_udf("path", "dicom_record_uuid", "metadata.AccessionNumber", F.lit(png_dir))))
 
-        subset_df = subset_df.withColumn("png_record_uuid",
-            F.lit(generate_uuid_udf(subset_df.dicom_png_path)))
-
-        subset_df.show(10, False)
-
-        columns = ["dicom_record_uuid", F.col("dicom_path").alias("path"), "png_record_uuid", "dicom_png_path", F.col("metadata.InstanceNumber").alias("instance_number")]
+        subset_df = subset_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf("dicom_png_path"))) \
+                             .withColumn("instance_number", subset_df["metadata.InstanceNumber"].cast(IntegerType())
+)
+        columns = ["dicom_record_uuid", "png_record_uuid", "accession_number", "dicom_png_path", "instance_number"]
         subset_df.select(columns) \
             .coalesce(cfg.get_value(name=const.DATA_CFG, jsonpath='NUM_PARTITION')).write.format("delta") \
             .mode("overwrite") \
@@ -198,33 +210,41 @@ def generate_png_tables(cfg):
             "{0}_{1}".format("MHA_PNG", cfg.get_value(name=const.DATA_CFG, jsonpath='DATASET_NAME')))
 
         mha_df = mha_df.withColumn("instanceid_mha_png_path", 
-            F.lit(create_png_udf(mha_df.path, mha_df.scan_annotation_record_uuid, F.lit(png_dir))))
+            F.lit(create_png_udf("path", "scan_annotation_record_uuid", "accession_number", F.lit(png_dir))))
 
         # split instanceid|mha_png_path into 2 columns
-        split_col = F.split(mha_df.instanceid_mha_png_path, '|')
-        mha_df = mha_df.withColumn("instance_number", split_col.getItem(0)) \
+        split_col = F.split(mha_df.instanceid_mha_png_path, ':')
+        mha_df = mha_df.withColumn("instance_number", split_col.getItem(0).cast(IntegerType())) \
                     .withColumn("mha_png_path", split_col.getItem(1)) \
                     .drop("instanceid_mha_png_path")
 
+        mha_df.show(10, False)
+        logger.info("Created mha pngs")
+	
         mha_df = mha_df.withColumn("png_record_uuid",
             F.lit(generate_uuid_udf(mha_df.mha_png_path)))
 
-        # overlay_path: blend mha and "the dicom" found through mha looping
+        # overlay_path: blend mha and the dicom instance
         overlay_pngs_udf = F.udf(overlay_pngs, StringType())
 
-        cond = [subset_df.metadata.AccessionNumber == mha_df.accession_number, 
-            subset_df.metadata.SeriesDescription == 'Ph1/Axial T1 FS post',
-            subset_df.metadata.InstanceNumber == mha_df.instance_number]
-        mha_png_df = mha_df.select(mha_df.png_record_uuid.alias("mha_png_record_uuid"), mha_df.accession_number, mha_df.instance_number) \
-            .join(subset_df, cond)
+        mha_df = mha_df.select(mha_df.png_record_uuid.alias("mha_png_record_uuid"), mha_df.accession_number.alias("access_no"), mha_df.instance_number.alias("instance_no"), "mha_png_path", "scan_annotation_record_uuid")
+        
+        cond = [subset_df.metadata.AccessionNumber == mha_df.access_no, subset_df.instance_number == mha_df.instance_no] 
+        
+        mha_png_df = mha_df.join(subset_df, cond)
 
         mha_png_df = mha_png_df.withColumn("overlay_path",
-            F.lit(overlay_pngs_udf(mha_png_df.dicom_png_path, mha_png_df.mha_png_path, F.lit(png_dir))))
+            F.lit(overlay_pngs_udf("dicom_png_path", "mha_png_path", "accession_number", F.lit(png_dir))))
         
         mha_png_df.show(10, False)
+        mha_png_df.printSchema()
+
+        logger.info("Created overlay images")
         
-        columns = [F.col("mha_png_record_uuid").alias("png_record_uuid"), "mha_png_path", "dicom_png_path", "instance_number", "overlay_path"]
+        columns = [F.col("mha_png_record_uuid").alias("png_record_uuid"), "accession_number", "mha_png_path", "dicom_png_path", "instance_number", "overlay_path", "scan_annotation_record_uuid"]
+
         mha_png_df.select(columns) \
+            .distinct() \
             .coalesce(cfg.get_value(name=const.DATA_CFG, jsonpath='NUM_PARTITION')).write.format("delta") \
             .mode("overwrite") \
             .save(mha_png_table_path)
