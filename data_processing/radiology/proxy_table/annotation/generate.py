@@ -16,20 +16,22 @@ from pyspark.sql.types import StringType, MapType
 
 import shutil, sys, os, time
 from pathlib import Path
+from filehash import FileHash
 
 from medpy.io import load
 
 logger = init_logger()
 
 
-def parse_uuid(path):
-    # expected path: accession_number/filehash.mha
+def generate_uuid(path):
+
     posix_file_path = path.split(':')[-1]
-    uuid = Path(posix_file_path).stem
-    return "SCAN_ANNOTATION-"+uuid 
+
+    rec_hash = FileHash('sha256').hash_file(posix_file_path)
+    return "SCAN_ANNOTATION-"+rec_hash 
 
 def parse_accession_number(path):
-    # expected path: accession_number/filehash.mha
+    # expected path: accession_number/some.mha
     return path.split("/")[-2]
 
 def parse_metadata(path):
@@ -104,7 +106,7 @@ def create_proxy_table(template_file):
 
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
 
-        parse_uuid_udf = udf(parse_uuid, StringType())
+        generate_uuid_udf = udf(generate_uuid, StringType())
         parse_accession_number_udf = udf(parse_accession_number, StringType())
         parse_metadata_udf = udf(parse_metadata, MapType(StringType(), StringType()))
 
@@ -115,7 +117,7 @@ def create_proxy_table(template_file):
             .drop("content")
 
         df = df.withColumn("accession_number", parse_accession_number_udf(df.path)) \
-            .withColumn("scan_annotation_record_uuid", parse_uuid_udf(df.path)) \
+            .withColumn("scan_annotation_record_uuid", generate_uuid_udf(df.path)) \
             .withColumn("metadata", parse_metadata_udf(df.path))
 
     # parse all dicoms and save
