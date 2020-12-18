@@ -35,13 +35,13 @@ def parse_accession_number(path):
     return path.split("/")[-2]
 
 def parse_metadata(path):
-    # parse mha metadata
+    # parse mha/mhd metadata
     posix_file_path = path.split(':')[-1]
  
     data, header = load(posix_file_path)
     img = header.get_sitkimage()
 
-    # some metadata from mha
+    # some metadata from mha/mhd
     kv = {}
     kv["origin"] = str(img.GetOrigin())
     kv["direction"] = str(img.GetDirection())
@@ -62,6 +62,7 @@ def parse_metadata(path):
 def cli(template_file, config_file, process_string):
     """
     This module generates annotation tables for radiology data based on information specified in the template file.
+    This supports MHA and MHD as the raw files. Specify mha or mhd as the file_type and data_type in the ingestion template. 
 
     Example:
         python -m data_processing.radiology.proxy_table.annotation.generate \
