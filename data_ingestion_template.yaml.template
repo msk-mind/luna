@@ -43,6 +43,9 @@ FILE_TYPE: dcm
 # format type of the output proxy table
 FORMAT_TYPE: delta
 
+# num partition for delta table creation
+NUM_PARTITION: 10
+
 # ip or hostname of machine where source data file(s) reside, if applicable
 HOST:
 

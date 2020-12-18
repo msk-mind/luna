@@ -30,9 +30,10 @@ FEATURES			='features'
 # Configurations
 APP_CFG				='APP_CFG'
 DATA_CFG			='DATA_CFG'
+SCHEMA_FILE			='data_ingestion_template_schema.yml'
 
 def TABLE_LOCATION(cfg): 
-    return "/data/{0}/tables/{1}".format(  cfg.get_value(name=DATA_CFG, jsonpath='PROJECT'), TABLE_NAME(cfg))
+    return "{0}/tables/{1}".format(cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH'), TABLE_NAME(cfg))
 
 def TABLE_NAME(cfg):
     return "{0}_{1}".format( cfg.get_value(name=DATA_CFG, jsonpath='DATA_TYPE'), cfg.get_value(name=DATA_CFG, jsonpath='DATASET_NAME' ) )
