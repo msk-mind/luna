@@ -23,8 +23,7 @@ APP_CFG = "getPathologyAnnotations"
 
 
 ConfigSet(name=APP_CFG, config_file=config_file)
-spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="dicom-to-graph")	
-# spark = SparkConfig().spark_session(os.environ['SPARK_CONFIG'], "data_processing.mind.api")
+spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.mind.api")	
 
 # ==================================================================================================
 # Service functions
