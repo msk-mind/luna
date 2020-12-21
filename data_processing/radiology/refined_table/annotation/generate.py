@@ -6,7 +6,7 @@ Generates Refined PNG table for dicom slices in the series that
 
 This process uses dicom and mhd annotation proxy tables.
 
-The PNG table contains paths to dicom_png, seg_png, and overlay image that combines dicom and its corresponding segmentation.
+The PNG table contains paths to dicom png and overlay image that combines dicom and its corresponding segmentation.
 """
 
 import os, time, shutil
