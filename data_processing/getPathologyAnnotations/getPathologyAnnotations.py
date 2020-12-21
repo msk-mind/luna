@@ -16,6 +16,7 @@ from io import BytesIO
 from filehash import FileHash
 from distutils.util import strtobool
 
+
 app = Flask(__name__)
 logger = init_logger("flask-mind-server.log")
 config_file = "data_processing/getPathologyAnnotations/config.yaml"
@@ -27,34 +28,37 @@ spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processi
 pathology_root_path = cfg.get_value(name=APP_CFG, jsonpath='$.pathology[:1]["root_path"]')
 
 
+cfg = ConfigSet(name="APP_CFG",  config_file='/app/config.yaml')
+
 # ==================================================================================================
 # Service functions
 # ==================================================================================================
 def get_slide_id( alias_id, alias_name ):
-	conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-	results = conn.query(f'''MATCH (n:slide) where n.{alias_name}="{alias_id}" RETURN n''')
-	if len(results)==0: return "NULL"
-	return results[0].data()['n']['slide_id']
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+    results = conn.query(f'''MATCH (n:slide) where n.{alias_name}="{alias_id}" RETURN n''')
+    if len(results)==0: return "NULL"
+    return results[0].data()['n']['slide_id']
 
 """
 Return slide (slides) given partial match to an slide ID alias
 """
 @app.route('/mind/api/v1/getSlideIDs/<string:input_id>', methods=['GET'])
 def getSlideIDs(input_id):
-        conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-        results = conn.query(f'''MATCH (n:slide) WHERE (any (prop in keys(n) where n[prop] contains '{input_id}')) RETURN n''')
-        return jsonify([res.data()['n'] for res in results])
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+    results = conn.query(f'''MATCH (n:slide) WHERE (any (prop in keys(n) where n[prop] contains '{input_id}')) RETURN n''')
+    return jsonify([res.data()['n'] for res in results])
 """
 Return slide (slides) given hobS case ID
 """
 @app.route('/mind/api/v1/getSlideIDs/case/<string:input_id>', methods=['GET'])
 def getSlideIDs_case(input_id):
-        conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-        results = conn.query(f'''MATCH (m:accession)-[HAS_SLIDE]-(n:slide) WHERE m.case_hid='{input_id}' RETURN n''')
-        return jsonify([res.data()['n'] for res in results])
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+    results = conn.query(f'''MATCH (m:accession)-[HAS_SLIDE]-(n:slide) WHERE m.case_hid='{input_id}' RETURN n''')
+    return jsonify([res.data()['n'] for res in results])
 """
 curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
 """
+
 @app.route('/mind/api/v1/getPathologyAnnotation/<string:project>/<string:slide_hid>/<string:annotation_type>/<labelset>', methods=['GET'])
 def getPathologyAnnotation(annotation_type, project,slide_hid,labelset):
 	slide_id = get_slide_id(slide_hid, "slide_hid")
@@ -68,14 +72,15 @@ def getPathologyAnnotation(annotation_type, project,slide_hid,labelset):
 	else:
 		return None
 
-	filepath = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset}' and latest=True").first()["geojson_filepath"]
 
-	print (filepath)
+    filepath = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset}' and latest=True").first()["geojson_filepath"]
 
-	with open(filepath) as f:
-		geojson = f.read()
-	return geojson
+    print (filepath)
+
+    with open(filepath) as f:
+        geojson = f.read()
+    return geojson
 
 
 if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'],port=5002, debug=True)
+    app.run(host='0.0.0.0',port=5002, debug=True)
