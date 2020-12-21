@@ -11,19 +11,21 @@ from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType, MapType
 
 import pydicom
-import os, shutil, sys, importlib, json, yaml, subprocess, time
+import os, shutil, sys, importlib, json, yaml, subprocess, time, click
 from io import BytesIO
 from filehash import FileHash
 from distutils.util import strtobool
 
 app = Flask(__name__)
 logger = init_logger("flask-mind-server.log")
-config_file = "config.yaml"
+config_file = "data_processing/getPathologyAnnotations/config.yaml"
 APP_CFG = "getPathologyAnnotations"
 
 
-ConfigSet(name=APP_CFG, config_file=config_file)
+cfg = ConfigSet(name=APP_CFG, config_file=config_file)
 spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.mind.api")	
+pathology_root_path = cfg.get_value(name=APP_CFG, jsonpath='$.pathology[:1]["root_path"]')
+
 
 # ==================================================================================================
 # Service functions
@@ -57,7 +59,7 @@ curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
 def getPathologyAnnotation(annotation_type, project,slide_hid,labelset):
 	slide_id = get_slide_id(slide_hid, "slide_hid")
 
-	ANNOTATIONS_FOLDER = os.path.join("/gpfs/mskmindhdp_emc/data/pathology", project, "annotations")
+	ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, project, "annotations")
 
 	if annotation_type == "regional":
 		GEOJSON_TABLE_PATH = ANNOTATIONS_FOLDER + "/table/regional_geojson"
@@ -73,6 +75,7 @@ def getPathologyAnnotation(annotation_type, project,slide_hid,labelset):
 	with open(filepath) as f:
 		geojson = f.read()
 	return geojson
+
 
 if __name__ == '__main__':
     app.run(host=os.environ['HOSTNAME'],port=5002, debug=True)
