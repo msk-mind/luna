@@ -28,7 +28,6 @@ spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processi
 pathology_root_path = cfg.get_value(name=APP_CFG, jsonpath='$.pathology[:1]["root_path"]')
 
 
-cfg = ConfigSet(name="APP_CFG",  config_file='/app/config.yaml')
 
 # ==================================================================================================
 # Service functions
@@ -71,15 +70,14 @@ def getPathologyAnnotation(annotation_type, project,slide_hid,labelset):
 		GEOJSON_TABLE_PATH = ANNOTATIONS_FOLDER + "/table/point_refined_geojson"
 	else:
 		return None
+	
+	filepath = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset}' and latest=True").first()["geojson_filepath"]
 
+	print (filepath)
 
-    filepath = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset}' and latest=True").first()["geojson_filepath"]
-
-    print (filepath)
-
-    with open(filepath) as f:
-        geojson = f.read()
-    return geojson
+	with open(filepath) as f:
+		geojson = f.read()
+	return geojson
 
 
 if __name__ == '__main__':
