@@ -55,6 +55,26 @@ def test_singleton(cfg):
     assert c4.get_value(name='app_config', jsonpath='$.spark_application_config[:1]["spark.executor.cores"]') == 222
 
 
+def test_parse_path():
+    c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
+
+    parsed = c1._parse_path('name::jsonpath')
+
+    assert parsed['name'] == 'name'
+    assert parsed['jsonpath'] == 'jsonpath'
+
+    parsed = c1._parse_path('name::jsonpath::jsonpath')
+
+    assert parsed['name'] == 'name'
+    assert parsed['jsonpath'] == 'jsonpath::jsonpath'
+
+    with pytest.raises(ValueError) as ve:
+        c1._parse_path('name:jsonpath')
+
+    assert "Illegal config path: " in str(ve.value)
+
+
+
 def test_get_value(cfg):
     c1 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')
     c3 = ConfigSet(name='app_config', config_file='tests/data_processing/common/test_config.yml')

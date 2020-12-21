@@ -99,6 +99,18 @@ class ConfigSet():
 
         return config
 
+    def _parse_path(self, path):
+        path_segments = path.split('::', 1) # split just once
+
+        if len(path_segments) != 2:
+            err = 'Illegal config path: '+path+'. must be of form "name::jsonpath" ' \
+                        'where name is the logical name of the configuration and jsonpath is the ' \
+                                                      'jsonpath into the yaml configuration'
+            logger.error(err)
+            raise ValueError(err)
+
+        return {'name': path_segments[0], 'jsonpath': path_segments[1]}
+
 
     def _get_match(self, name, jsonpath):
         jsonpath_expression = parse(jsonpath)
