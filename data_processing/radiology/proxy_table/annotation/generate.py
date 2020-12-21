@@ -112,9 +112,9 @@ def create_proxy_table(template_file):
         parse_metadata_udf = udf(parse_metadata, MapType(StringType(), StringType()))
 
         df = spark.read.format("binaryFile") \
-            .option("pathGlobFilter", "*." + cfg.get_value(name=const.DATA_CFG, jsonpath='FILE_TYPE')) \
+            .option("pathGlobFilter", "*." + cfg.get_value(path=const.DATA_CFG+'::FILE_TYPE')) \
             .option("recursiveFileLookup", "true") \
-            .load(cfg.get_value(name=const.DATA_CFG, jsonpath='RAW_DATA_PATH')) \
+            .load(cfg.get_value(path=const.DATA_CFG+'::RAW_DATA_PATH')) \
             .drop("content")
 
         df = df.withColumn("accession_number", parse_accession_number_udf(df.path)) \
@@ -124,7 +124,7 @@ def create_proxy_table(template_file):
     # parse all dicoms and save
     df.printSchema()
 
-    df.coalesce(cfg.get_value(name=const.DATA_CFG, jsonpath='NUM_PARTITION')) \
+    df.coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')) \
         .write.format("delta") \
         .mode("overwrite") \
         .save(table_path)
@@ -132,9 +132,9 @@ def create_proxy_table(template_file):
     # validation
     processed_count = df.count()
     logger.info("Processed {} scan annotations out of total {} files".format(
-        processed_count,cfg.get_value(name=const.DATA_CFG, jsonpath='FILE_COUNT')))
+        processed_count,cfg.get_value(path=const.DATA_CFG+'::FILE_COUNT')))
 
-    if processed_count != int(cfg.get_value(name=const.DATA_CFG, jsonpath='FILE_COUNT')):
+    if processed_count != int(cfg.get_value(path=const.DATA_CFG+'::FILE_COUNT')):
         exit_code = 1
     return exit_code
 
