@@ -1,0 +1,17 @@
+# mind data path
+MIND_DATA_PATH: /path/to/data/path
+
+# dicom table path - remove once all tables follow the same convention.
+DICOM_TABLE_PATH: /path/to/dicom/table
+
+PROJECT_NAME: DMT_IRB
+
+DATASET_NAME: DMT_IRB_DATE
+
+DATA_TYPE: PNG
+
+# SQL to filter dicom proxy table.
+SQL_STRING: metadata.SeriesDescription LIKE 'Ph1%Axial%'
+
+# num partition for delta table
+NUM_PARTITION: 240
