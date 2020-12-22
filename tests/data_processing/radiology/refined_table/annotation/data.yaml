@@ -1,0 +1,15 @@
+
+MIND_DATA_PATH: tests/data_processing/testdata/data
+
+DICOM_TABLE_PATH: tests/data_processing/testdata/data/test-project/tables/dicom
+
+PROJECT_NAME: test-project
+
+DATASET_NAME: datasetname
+
+DATA_TYPE: PNG
+
+SQL_STRING: metadata.SeriesDescription == 'Standard 5mm'
+
+# num partition for delta table
+NUM_PARTITION: 1
