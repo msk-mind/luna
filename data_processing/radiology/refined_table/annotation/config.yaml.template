@@ -1,4 +1,4 @@
-# mind data path
+# mind root data path
 MIND_DATA_PATH: /path/to/data/path
 
 # dicom table path - remove once all tables follow the same convention.
