@@ -5,7 +5,7 @@ DICOM_TABLE_PATH: tests/data_processing/testdata/data/test-project/tables/dicom
 
 PROJECT_NAME: test-project
 
-DATASET_NAME: datasetname
+DATASET_NAME: ds
 
 DATA_TYPE: PNG
 

@@ -11,7 +11,7 @@ from data_processing.radiology.refined_table.annotation.generate import cli
 import data_processing.common.constants as const
 
 
-png_table_path = "tests/data_processing/testdata/data/test-project/tables/PNG_datasetname"
+png_table_path = "tests/data_processing/testdata/data/test-project/tables/PNG_ds"
 
 @pytest.fixture(autouse=True)
 def spark():
