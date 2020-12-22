@@ -27,6 +27,7 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 STREAMS = {}
 METHODS = {}
+HOST = os.environ['HOSTNAME']
 
 # ==================================================================================================
 # Starts a spark stream!!!
@@ -58,11 +59,11 @@ def START_STREAM(stream_dir, table_dir):
 # Process all scans in a cohort
 @app.route('/mind/api/v1/processScans/<cohort_id>/<method_id>', methods=['GET'])
 def processScans(cohort_id, method_id):
-    ids_ = requests.get(f'http://pllimsksparky1:5003/mind/api/v1/getScanIDs/{cohort_id}').json()
+    ids_ = requests.get(f'http://{HOST}:5003/mind/api/v1/getScanIDs/{cohort_id}').json()
 
     responses = []
     for id in ids_:
-        response = requests.get(f'http://pllimsksparky1:5003/mind/api/v1/radiomics/{method_id}/{id}')
+        response = requests.get(f'http://{HOST}:5003/mind/api/v1/radiomics/{method_id}/{id}')
         responses.append(response.text)
 
     return jsonify(responses)

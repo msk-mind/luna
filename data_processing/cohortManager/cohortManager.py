@@ -27,6 +27,7 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 STREAMS = {}
 METHODS = {}
+HOST = os.environ['HOSTNAME']
 
 # ==================================================================================================
 # Routes to list things
@@ -40,7 +41,7 @@ def listPatients(cohort_id):
     for rec in res:
         px_dict = rec.data()['px']
         patient_id = px_dict['name']
-        px_dict['cases'] = requests.get(f'http://pllimsksparky1:5004/mind/api/v1/listCases/{cohort_id}/{patient_id}').json()
+        px_dict['cases'] = requests.get(f'http://{HOST}:5004/mind/api/v1/listCases/{cohort_id}/{patient_id}').json()
         all_px.append(px_dict)
     return jsonify(all_px)
 
@@ -52,7 +53,7 @@ def listCases(cohort_id, patient_id):
     for rec in res:
         case_dict = rec.data()['case']
         case_id   = case_dict['AccessionNumber']
-        case_dict['scans'] = requests.get(f'http://pllimsksparky1:5004/mind/api/v1/listScans/{cohort_id}/{patient_id}/{case_id}').json()
+        case_dict['scans'] = requests.get(f'http://{HOST}:5004/mind/api/v1/listScans/{cohort_id}/{patient_id}/{case_id}').json()
         all_case.append(case_dict)
     return jsonify(all_case)
 
@@ -65,7 +66,7 @@ def listScans(cohort_id, patient_id, case_id):
         scan_dict = rec.data()['scan']
         scan_id   = rec.data()['id(scan)']
         scan_dict['id']   = scan_id
-        scan_dict['data'] = requests.get(f'http://pllimsksparky1:5004/mind/api/v1/listData/{scan_id}').json()
+        scan_dict['data'] = requests.get(f'http://{HOST}:5004/mind/api/v1/listData/{scan_id}').json()
         all_scan.append(scan_dict)
     return jsonify(all_scan)
 
