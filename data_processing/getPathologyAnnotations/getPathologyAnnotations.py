@@ -25,7 +25,7 @@ APP_CFG = "getPathologyAnnotations"
 
 cfg = ConfigSet(name=APP_CFG, config_file=config_file)
 spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.mind.api")	
-pathology_root_path = cfg.get_value(name=APP_CFG, jsonpath='$.pathology[:1]["root_path"]')
+pathology_root_path = cfg.get_value(path=APP_CFG+'::$.pathology[:1]["root_path"]')
 
 
 

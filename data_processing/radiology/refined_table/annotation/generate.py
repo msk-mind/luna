@@ -164,23 +164,23 @@ def generate_png_tables(cfg):
     Generate dicom_png and seg_png tables.
     """
     # setup project path
-    project_path = os.path.join(cfg.get_value(name=const.DATA_CFG, jsonpath='MIND_DATA_PATH'),
-                                cfg.get_value(name=const.DATA_CFG, jsonpath='PROJECT_NAME'))
+    project_path = os.path.join(cfg.get_value(path=const.DATA_CFG+'::MIND_DATA_PATH'),
+                                cfg.get_value(path=const.DATA_CFG+'::PROJECT_NAME'))
     logger.info("Got project path : " + project_path)
 
     # load dicom and seg tables
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='dicom-to-png')
 
     # TODO earlier version.. dicom table path can be removed once clean up is done.
-    dicom_table_path = cfg.get_value(name=const.DATA_CFG, jsonpath='DICOM_TABLE_PATH')
+    dicom_table_path = cfg.get_value(path=const.DATA_CFG+'::DICOM_TABLE_PATH')
     seg_table_path = os.path.join(project_path, const.TABLE_DIR, 
-                     "{0}_{1}".format("MHD", cfg.get_value(name=const.DATA_CFG, jsonpath='DATASET_NAME')))
+                     "{0}_{1}".format("MHD", cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')))
 
     dicom_df = spark.read.format("delta").load(dicom_table_path)
    
     # subset dicom based on SQL_STRING - to identify a series within the case.
     dicom_df = dicom_df.drop("content") \
-                       .filter(cfg.get_value(name=const.DATA_CFG, jsonpath='SQL_STRING'))
+                       .filter(cfg.get_value(path=const.DATA_CFG+'::SQL_STRING'))
 
     seg_df = spark.read.format("delta").load(seg_table_path)
     logger.info("Loaded dicom and seg tables")
@@ -247,7 +247,7 @@ def generate_png_tables(cfg):
         columns = ["png_record_uuid", "metadata", "dicom_png_path", "overlay_path", "scan_annotation_record_uuid"]
 
         seg_df.select(columns) \
-            .coalesce(cfg.get_value(name=const.DATA_CFG, jsonpath='NUM_PARTITION')).write.format("delta") \
+            .coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')).write.format("delta") \
             .mode("overwrite") \
             .save(seg_png_table_path)
 
