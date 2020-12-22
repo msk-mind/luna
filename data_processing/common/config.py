@@ -99,6 +99,18 @@ class ConfigSet():
 
         return config
 
+    def _parse_path(self, path):
+        path_segments = path.split('::', 1)  # split just once
+
+        if len(path_segments) != 2:
+            err = 'Illegal config path: '+path+'. must be of form "name::jsonpath" ' \
+                        'where name is the logical name of the configuration and jsonpath is the ' \
+                                                      'jsonpath into the yaml configuration'
+            logger.error(err)
+            raise ValueError(err)
+
+        return {'name': path_segments[0], 'jsonpath': path_segments[1]}
+
 
     def _get_match(self, name, jsonpath):
         jsonpath_expression = parse(jsonpath)
@@ -106,14 +118,20 @@ class ConfigSet():
         return jsonpath_expression.find(ConfigSet.__INSTANCE.__config[name])
 
 
-    def has_value(self, name, jsonpath):
+    def has_value(self, path):
         '''
-        :param name: logical name of the configuration
-        :param jsonpath: jsonpath to value. see config.yaml to generate a jsonpath. See https://pypi.org/project/jsonpath-ng/
+        :param path: path to a value in a configuration. The path must be of the form
+                        "name::jsonpath" where name is the logical name of the configuration
+                        and jsonpath is the jsonpath to value.
+                        see config.yaml to generate a jsonpath.
+                        See https://pypi.org/project/jsonpath-ng/
                          jsonpath expressions may be tested here - https://jsonpath.com/
         :return: true if value is not an empty string, else false.
         :raises: ValueError if a configuration with the specified name was never loaded
         '''
+        parsed = self._parse_path(path)
+        name= parsed['name']
+        jsonpath = parsed['jsonpath']
 
         if ConfigSet.__INSTANCE is None or name not in ConfigSet.__INSTANCE.__config.keys():
             raise ValueError('configuration with logical name '+name+' was never loaded')
@@ -124,17 +142,23 @@ class ConfigSet():
             return True
 
 
-    def get_value(self, name, jsonpath):
+    def get_value(self, path):
         '''
         Gets the value for the specified jsonpath from the specified configuration.
 
-        :param name: logical name of the configuration
-        :param jsonpath: jsonpath to value. see config.yaml to generate a jsonpath. See https://pypi.org/project/jsonpath-ng/
+        :param path: path to a value in a configuration. The path must be of the form
+                        "name::jsonpath" where name is the logical name of the configuration
+                        and jsonpath is the jsonpath to value.
+                        see config.yaml to generate a jsonpath.
+                        See https://pypi.org/project/jsonpath-ng/
                          jsonpath expressions may be tested here - https://jsonpath.com/
         :return: string value from config file
         :raises: ValueError if no match is found for the specified exception or a
                  configuration with the specified name was never loaded
         '''
+        parsed = self._parse_path(path)
+        name = parsed['name']
+        jsonpath = parsed['jsonpath']
 
         if ConfigSet.__INSTANCE is None or name not in ConfigSet.__INSTANCE.__config.keys():
             raise ValueError('configuration with logical name '+name+' was never loaded')
@@ -187,10 +211,10 @@ if __name__ == '__main__':
     c2 = ConfigSet('app_config', 'tests/data_processing/common/test_config.yml')
     c3 = ConfigSet('app_config', 'tests/data_processing/common/test_config.yml')
 
-    print(str(c1) + ' ' + str(c1.get_value('app_config', '$.spark_application_config[:1]["spark.executor.cores"]')))
-    print(str(c2) + ' ' + str(c2.get_value('app_config', '$.spark_application_config[:1]["spark.executor.cores"]')))
+    print(str(c1) + ' ' + str(c1.get_value('app_config::$.spark_application_config[:1]["spark.executor.cores"]')))
+    print(str(c2) + ' ' + str(c2.get_value('app_config::$.spark_application_config[:1]["spark.executor.cores"]')))
     try:
-        print(str(c3) + ' ' + str(c3.get_value('app_config', '$.spark_application_config[:1]["doesnt_exist"]')))
+        print(str(c3) + ' ' + str(c3.get_value('app_config::$.spark_application_config[:1]["doesnt_exist"]')))
     except ValueError as ve:
         print("got expected value error: "+str(ve))
 
@@ -198,4 +222,4 @@ if __name__ == '__main__':
                    config_file="tests/data_processing/common/test_data_ingestion_template.yml",
                    schema_file="data_ingestion_template_schema.yml")
 
-    print(str(c4) + ' ' + str(c4.get_value('data_config', '$.REQUESTOR')))
+    print(str(c4) + ' ' + str(c4.get_value('data_config::$.REQUESTOR')))

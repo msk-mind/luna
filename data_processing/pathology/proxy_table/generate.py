@@ -100,7 +100,7 @@ def cli(template_file, config_file, process_string):
         cfg = ConfigSet(name=APP_CFG,  config_file=config_file)
 
         # write template file to manifest_yaml under LANDING_PATH
-        landing_path = cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH')
+        landing_path = cfg.get_value(path=DATA_CFG+'::LANDING_PATH')
         if not os.path.exists(landing_path):
             os.makedirs(landing_path)
         shutil.copy(template_file, os.path.join(landing_path, "manifest.yaml"))
@@ -125,8 +125,9 @@ def create_proxy_table(config_file):
     write_uri = os.environ["HDFS_URI"]
 
     with CodeTimer(logger, 'load wsi metadata'):
-        print (cfg.get_value(name=DATA_CFG, jsonpath='SOURCE_PATH') + "**" + cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE'))
-        for path in glob.glob(cfg.get_value(name=DATA_CFG, jsonpath='SOURCE_PATH') + "**" + cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE'), recursive=True):
+        print (cfg.get_value(path=DATA_CFG+'::SOURCE_PATH') + "**" + cfg.get_value(path=DATA_CFG+'::FILE_TYPE'))
+        for path in glob.glob(cfg.get_value(path=DATA_CFG+'::SOURCE_PATH') + "**" +
+                              cfg.get_value(path=DATA_CFG+'::FILE_TYPE'), recursive=True):
             print (path)
 
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
@@ -135,9 +136,9 @@ def create_proxy_table(config_file):
         parse_openslide_udf = udf(parse_openslide, MapType(StringType(), StringType()))
 
         df = spark.read.format("binaryFile"). \
-            option("pathGlobFilter", "*."+cfg.get_value(name=DATA_CFG, jsonpath='FILE_TYPE')). \
+            option("pathGlobFilter", "*."+cfg.get_value(path=DATA_CFG+'::FILE_TYPE')). \
             option("recursiveFileLookup", "true"). \
-            load(cfg.get_value(name=DATA_CFG, jsonpath='SOURCE_PATH')). \
+            load(cfg.get_value(path=DATA_CFG+'::SOURCE_PATH')). \
             drop("content").\
             withColumn("wsi_record_uuid", generate_uuid_udf  (col("path"))).\
             withColumn("slide_id",        parse_slide_id_udf (col("path"))).\
@@ -148,7 +149,7 @@ def create_proxy_table(config_file):
     df.coalesce(48).write.format("delta").save(write_uri + wsi_path)
 
     processed_count = df.count()
-    logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(name=DATA_CFG, jsonpath='FILE_COUNT')))
+    logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(path=DATA_CFG+'::FILE_COUNT')))
     return exit_code
 
 

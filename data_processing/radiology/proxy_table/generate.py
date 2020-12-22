@@ -101,7 +101,7 @@ def cli(template_file, config_file, process_string):
         cfg = ConfigSet(name=APP_CFG, config_file=config_file)
 
         # write template file to manifest_yaml under LANDING_PATH
-        landing_path = cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH')
+        landing_path = cfg.get_value(path=DATA_CFG+'::LANDING_PATH')
         if not os.path.exists(landing_path):
             os.makedirs(landing_path)
         shutil.copy(template_file, os.path.join(landing_path, "manifest.yaml"))
@@ -129,15 +129,15 @@ def transfer_files():
 
         # set up env vars for transfer_files.sh
         cfg = ConfigSet()
-        os.environ['BWLIMIT'] = cfg.get_value(name=DATA_CFG, jsonpath='BWLIMIT')
-        os.environ['CHUNK_FILE'] = cfg.get_value(name=DATA_CFG, jsonpath='CHUNK_FILE')
-        if cfg.has_value(name=DATA_CFG, jsonpath='EXCLUDES'):
-            os.environ['EXCLUDES'] = cfg.get_value(name=DATA_CFG, jsonpath='EXCLUDES')
-        os.environ['HOST'] = cfg.get_value(name=DATA_CFG, jsonpath='HOST')
-        os.environ['SOURCE_PATH'] = cfg.get_value(name=DATA_CFG, jsonpath='SOURCE_PATH')
-        os.environ['RAW_DATA_PATH'] = cfg.get_value(name=DATA_CFG, jsonpath='RAW_DATA_PATH')
-        os.environ['FILE_COUNT'] = str(cfg.get_value(name=DATA_CFG, jsonpath='FILE_COUNT'))
-        os.environ['DATA_SIZE'] = str(cfg.get_value(name=DATA_CFG, jsonpath='DATA_SIZE'))
+        os.environ['BWLIMIT'] = cfg.get_value(path=DATA_CFG+'::BWLIMIT')
+        os.environ['CHUNK_FILE'] = cfg.get_value(path=DATA_CFG+'::CHUNK_FILE')
+        if cfg.has_value(path=DATA_CFG+'::EXCLUDES'):
+            os.environ['EXCLUDES'] = cfg.get_value(path=DATA_CFG+'::EXCLUDES')
+        os.environ['HOST'] = cfg.get_value(path=DATA_CFG+'::HOST')
+        os.environ['SOURCE_PATH'] = cfg.get_value(path=DATA_CFG+'::SOURCE_PATH')
+        os.environ['RAW_DATA_PATH'] = cfg.get_value(path=DATA_CFG+'::RAW_DATA_PATH')
+        os.environ['FILE_COUNT'] = str(cfg.get_value(path=DATA_CFG+'::FILE_COUNT'))
+        os.environ['DATA_SIZE'] = str(cfg.get_value(path=DATA_CFG+'::DATA_SIZE'))
 
         transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
 
@@ -171,13 +171,13 @@ def create_proxy_table(config_file):
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.radiology.proxy_table.generate")
 
     # setup for using external py in udf
-    sys.path.append("data_processing/common")
-    importlib.import_module("data_processing.common.EnsureByteContext")
+    #sys.path.append("data_processing/common")
+    #importlib.import_module("data_processing.common.EnsureByteContext")
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
     # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
 
-    dicom_path = os.path.join(cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH'), const.DICOM_TABLE)
+    dicom_path = os.path.join(cfg.get_value(path=DATA_CFG+'::LANDING_PATH'), const.DICOM_TABLE)
 
     with CodeTimer(logger, 'load dicom files'):
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
@@ -185,7 +185,7 @@ def create_proxy_table(config_file):
         df = spark.read.format("binaryFile"). \
             option("pathGlobFilter", "*.dcm"). \
             option("recursiveFileLookup", "true"). \
-            load(cfg.get_value(name=DATA_CFG, jsonpath='RAW_DATA_PATH'))
+            load(cfg.get_value(path=DATA_CFG+'::RAW_DATA_PATH'))
 
         generate_uuid_udf = udf(generate_uuid, StringType())
         df = df.withColumn("dicom_record_uuid", lit(generate_uuid_udf(df.path, df.content)))
@@ -195,20 +195,19 @@ def create_proxy_table(config_file):
         parse_dicom_from_delta_record_udf = udf(parse_dicom_from_delta_record, MapType(StringType(), StringType()))
         header = df.withColumn("metadata", lit(parse_dicom_from_delta_record_udf(df.path, df.content)))
 
-        header.coalesce(6144).write.format(cfg.get_value(name=DATA_CFG, jsonpath='FORMAT_TYPE')) \
+        header.coalesce(6144).write.format(cfg.get_value(path=DATA_CFG+'::FORMAT_TYPE')) \
             .mode("overwrite") \
             .option("mergeSchema", "true") \
             .save(dicom_path)
 
     processed_count = header.count()
     logger.info("Processed {} dicom headers out of total {} dicom files".format(processed_count,
-                                                                                cfg.get_value(name=DATA_CFG,
-                                                                                                    jsonpath='FILE_COUNT')))
+                                                                        cfg.get_value(path=DATA_CFG+'::FILE_COUNT')))
 
     # validate and show created dataset
-    if processed_count != int(cfg.get_value(name=DATA_CFG, jsonpath='FILE_COUNT')):
+    if processed_count != int(cfg.get_value(path=DATA_CFG+'::FILE_COUNT')):
         exit_code = 1
-    df = spark.read.format(cfg.get_value(name=DATA_CFG, jsonpath='FORMAT_TYPE')).load(dicom_path)
+    df = spark.read.format(cfg.get_value(path=DATA_CFG+'::FORMAT_TYPE')).load(dicom_path)
     df.printSchema()
     return exit_code
 
@@ -217,9 +216,9 @@ def update_graph(config_file):
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.radiology.proxy_table.generate")
 
     # Open a connection to the ID graph database
-    conn = Neo4jConnection(uri=cfg.get_value(name=DATA_CFG, jsonpath='GRAPH_URI'), user="neo4j", pwd="password")
+    conn = Neo4jConnection(uri=cfg.get_value(path=DATA_CFG+'::GRAPH_URI'), user="neo4j", pwd="password")
 
-    dicom_path = os.path.join(cfg.get_value(name=DATA_CFG, jsonpath='LANDING_PATH'), const.DICOM_TABLE)
+    dicom_path = os.path.join(cfg.get_value(path=DATA_CFG+'::LANDING_PATH'), const.DICOM_TABLE)
 
     # Which properties to include in dataset node
     dataset_ext_properties = [
@@ -238,7 +237,7 @@ def update_graph(config_file):
     dataset_props.insert(0, 'DATASET_NAME')
     
     prop_string = ','.join(['''{0}: "{1}"'''.format(
-        prop, cfg.get_value(name=DATA_CFG, jsonpath=prop)) for prop in dataset_props])
+        prop, cfg.get_value(path=DATA_CFG+'::'+prop)) for prop in dataset_props])
 
     conn.query(f'''MERGE (n:dataset{{{prop_string}}})''')
 
@@ -252,7 +251,7 @@ def update_graph(config_file):
             .toPandas()
 
     with CodeTimer(logger, 'synchronize graph'):
-        dataset_name = cfg.get_value(name=DATA_CFG, jsonpath='DATASET_NAME')
+        dataset_name = cfg.get_value(path=DATA_CFG+'::DATASET_NAME')
 
         for index, row in tuple_to_add.iterrows():
             query ='''MATCH (das:dataset {{DATASET_NAME: "{0}"}}) MERGE (px:xnat_patient_id {{value: "{1}"}}) MERGE (sc:scan {{SeriesInstanceUID: "{2}"}}) MERGE (px)-[r1:HAS_SCAN]->(sc) MERGE (das)-[r2:HAS_PX]-(px)'''.format(dataset_name, row['PatientName'], row['SeriesInstanceUID'])
