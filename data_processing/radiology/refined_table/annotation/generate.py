@@ -136,8 +136,8 @@ def generate_uuid(png_path):
 @click.command()
 @click.option('-f', '--config_file', default='config.yaml', required=True, 
     help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-t', '--data_config_file', default='data_processing/services/config.yaml', required=True,
-    help="path to data configuration file. See data_processing/services/config.yaml.template")
+@click.option('-t', '--data_config_file', default='data_processing/refined_table/annotation/config.yaml', required=True,
+    help="path to data configuration file. See data_processing/refined_table/annotation/config.yaml.template")
 def cli(config_file, data_config_file):
     """
     This module takes a SeriesInstanceUID, calls a script to generate volumetric images, and updates the scan table.
@@ -146,7 +146,7 @@ def cli(config_file, data_config_file):
 
     Example:
     $ python3 -m data_processing.radiology.refined_table.annotation.generate \
-	--data_config_file data_processing/services/config.yaml \
+	--data_config_file data_processing/refined_table/annotation/config.yaml \
 	--config_file config.yaml
     """
     start_time = time.time()
