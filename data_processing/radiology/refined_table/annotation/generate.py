@@ -39,7 +39,8 @@ def create_dicom_png(src_path, uuid, accession_number, png_dir):
     data, header = load(file_path)
 
     # Convert 2d image to float to avoid overflow or underflow losses.
-    image_2d = data[:,:,0].astype(float)
+    # Transpose to get the preserve x, y coordinates.
+    image_2d = data[:,:,0].astype(float).T
 
     # Rescaling grey scale between 0-255
     image_2d_scaled = (np.maximum(image_2d, 0) / image_2d.max()) * 255.0
@@ -80,7 +81,7 @@ def create_seg_png(src_path, uuid, accession_number, png_dir):
     for i in range(num_images):
         image_slice = data[:,:,i]
         if np.any(image_slice):
-            image_2d = image_slice.astype(float)
+            image_2d = image_slice.astype(float).T
             # double check that subtracting is needed for all.
             slice_num = num_images - (i+1)
 
