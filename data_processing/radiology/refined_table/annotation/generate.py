@@ -110,9 +110,9 @@ def overlay_pngs(uuid, instance_number, dicom_path, seg_png_path, accession_numb
     Returns the path to the combined image.
     """
     
-    dicom_png_path = create_dicom_png(dicom_path, uuid, accession_number, png_dir)
+    dicom_path = create_dicom_png(dicom_path, uuid, accession_number, png_dir)
     
-    dcmpng = Image.open(dicom_png_path).convert('RGB')
+    dcmpng = Image.open(dicom_path).convert('RGB')
     segpng = Image.open(seg_png_path)
 
     res = Image.blend(dcmpng, segpng, 0.3)
@@ -123,7 +123,7 @@ def overlay_pngs(uuid, instance_number, dicom_path, seg_png_path, accession_numb
     overlay_png_path = os.path.join(filedir, "overlay_"+filename)
     res.save(overlay_png_path)
 
-    return dicom_png_path + ":" + overlay_png_path
+    return dicom_path + ":" + overlay_png_path
 
 
 def generate_uuid(png_path):
@@ -185,17 +185,7 @@ def generate_png_tables(cfg):
 
     seg_df = spark.read.format("delta").load(seg_table_path)
     logger.info("Loaded dicom and seg tables")
-
-    # join with accession number and series number/description
-    seg_alias = seg_df.select(seg_df.accession_number,
-                    seg_df.path.alias("seg_path"),
-                    seg_df.metadata.alias("seg_metadata"))
-
-    cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number] # Add series number match once available
-
-    subset_df = dicom_df.join(seg_alias, cond)
-    logger.info("Joined dicom and seg tables")
-
+    
     with CodeTimer(logger, 'Generate pngs and seg_png table'):
 
         # seg_png_path: create pngs for all segs
@@ -224,28 +214,30 @@ def generate_png_tables(cfg):
         # overlay_path: blend seg and the dicom instance
         overlay_png_udf = F.udf(overlay_pngs, StringType())
 
-        seg_df = seg_df.select(seg_df.accession_number.alias("access_no"), seg_df.path.alias("seg_path"),
+        seg_df = seg_df.select("accession_number", seg_df.path.alias("seg_path"),
                                "instance_number", "seg_png_path", "scan_annotation_record_uuid")
         
-        cond = [subset_df.metadata.AccessionNumber == seg_df.access_no, subset_df.metadata.InstanceNumber == seg_df.instance_number] 
+        cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number, dicom_df.metadata.InstanceNumber == seg_df.instance_number] 
         
-        seg_df = seg_df.join(subset_df, cond)
+        seg_df = seg_df.join(dicom_df, cond)
 
         seg_df = seg_df.withColumn("dicom_overlay",
             F.lit(overlay_png_udf("dicom_record_uuid", "instance_number", "path", "seg_png_path", "accession_number", F.lit(png_dir))))
  
         # split dicom:overlay paths
         split_col = F.split(seg_df.dicom_overlay, ':')
-        seg_df = seg_df.withColumn("dicom_png_path", split_col.getItem(0)) \
+        seg_df = seg_df.withColumn("dicom_path", split_col.getItem(0)) \
                     .withColumn("overlay_path", split_col.getItem(1)) \
-                    .drop("dicom_overlay")
+                    .drop("dicom_overlay") \
+                    .dropDuplicates(["overlay_path"]) \
+                    .dropDuplicates(["dicom_path"]) # TODO could remove once we have more annotation metadata
 
         generate_uuid_udf = F.udf(generate_uuid, StringType())
         seg_df = seg_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf(seg_df.overlay_path)))
        
         logger.info("Created overlay images")
         
-        columns = ["png_record_uuid", "metadata", "dicom_png_path", "overlay_path", "scan_annotation_record_uuid"]
+        columns = ["png_record_uuid", "metadata", "dicom_path", "overlay_path", "scan_annotation_record_uuid"]
 
         seg_df.select(columns) \
             .coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')).write.format("delta") \
