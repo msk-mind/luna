@@ -9,7 +9,7 @@ DATASET_NAME: ds
 
 DATA_TYPE: PNG
 
-SQL_STRING: metadata.SeriesDescription == 'Standard 5mm'
+SQL_STRING: metadata.SeriesNumber == '801'
 
 # num partition for delta table
 NUM_PARTITION: 1
