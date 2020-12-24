@@ -72,8 +72,7 @@ def cli(config_file, data_config_file):
 
 def generate_feature_table(cfg):
     """
-    Create pngs for all dicoms in a series that have corresponding annotations.
-    Generate dicom_png and seg_png tables.
+    Load PNG and MHA table, find the centroid of the 2d segmentation, and crop PNG images around the centroid.
     """
     # setup project path
     project_path = os.path.join(cfg.get_value(path=const.DATA_CFG+'::MIND_DATA_PATH'),
