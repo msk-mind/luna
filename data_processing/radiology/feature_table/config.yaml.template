@@ -10,3 +10,6 @@ CROP_SIZE: 256
 
 # num partition for delta table
 NUM_PARTITION: 240
+
+# sql string to filter dicom metadata. To be removed once correct metadata to identify scan is around..
+SQL_STRING: metadata.SeriesDescription LIKE 'PH1%AX%'
