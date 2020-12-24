@@ -27,10 +27,21 @@ logger.info("Starting data_processing.radiology.feature_table.generate")
 
 
 def generate_uuid(path):
-
+    
     uuid = FileHash('sha256').hash_file(path)
-
     return "FEATURE-"+uuid
+
+def crop_and_save(png, features, xmin, ymin, xmax, ymax):
+    # crop png with xmin, ymin, xmax, ymax boundary
+    # save cropped image in in features directory
+    png_name = os.path.basename(png)
+    feature_path = os.path.join(features, png_name)
+
+    im = Image.open(png)
+    im_crop = im.crop((xmin, ymin, xmax, ymax))
+    im_crop.save(feature_path)
+
+    return feature_path
 
 
 @click.command()
@@ -103,12 +114,13 @@ def generate_feature_table(cfg):
 
         feature_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("FEATURE", DATASET_NAME))
     
-        def crop_png(df: pd.DataFrame) -> pd.DataFrame:
+        def crop_images(df: pd.DataFrame) -> pd.DataFrame:
             """
             Find the centroid of the 2d segmentation for the scan.
             Crop PNG images around the centroid.
             """
             # Save feature pngs
+            print("Processing accession number: " + str(df.accession_number.values[0]))
             features = os.path.join(feature_dir, df.accession_number.values[0])
             os.makedirs(features, exist_ok=True)
 
@@ -152,30 +164,15 @@ def generate_feature_table(cfg):
                 ymax = h
 
             # Crop all overlay, dicom pngs.
-            #png_dir = os.path.dirname(df.overlay_path.values[0])
-
-            #pngs = glob.glob(os.path.join(png_dir, "*.png"))
-            
-            dicom_paths, overlay_paths = [], []
-            for png in df.overlay_path.values:
-                png_name = os.path.basename(png)
-                feature_path = os.path.join(features, png_name)
-
-                im = Image.open(png)
-                im_crop = im.crop((xmin, ymin, xmax, ymax))
-                im_crop.save(feature_path)
-
-                overlay_paths.append(feature_path)
-
+            dicom_paths = []
             for png in df.dicom_path.values:
-                png_name = os.path.basename(png)
-                feature_path = os.path.join(features, png_name)
-
-                im = Image.open(png)
-                im_crop = im.crop((xmin, ymin, xmax, ymax))
-                im_crop.save(feature_path)
-
+                feature_path = crop_and_save(png, features, xmin, ymin, xmax, ymax)
                 dicom_paths.append(feature_path)
+
+            overlay_paths = []
+            for png in df.overlay_path.values:
+                feature_path = crop_and_save(png, features, xmin, ymin, xmax, ymax)
+                overlay_paths.append(feature_path)
 
             df["dicom_path"] = dicom_paths
             df["overlay_path"] = overlay_paths
@@ -183,7 +180,7 @@ def generate_feature_table(cfg):
             return df
         
 
-        df = df.groupBy("accession_number").applyInPandas(crop_png, schema = df.schema)
+        df = df.groupBy("accession_number").applyInPandas(crop_images, schema = df.schema)
        
         logger.info("Cropped pngs")
 
