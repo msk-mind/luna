@@ -9,7 +9,7 @@ DATA_TYPE: FEATURE
 
 CROP_SIZE: 256
 
-SQL_STRING: metadata.SeriesNumber == '801'
+SQL_STRING: metadata.SeriesNumber == '10'
 
 # num partition for delta table
 NUM_PARTITION: 1

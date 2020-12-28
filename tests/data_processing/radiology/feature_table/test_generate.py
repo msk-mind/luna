@@ -38,5 +38,5 @@ def test_cli(spark):
     assert result.exit_code == 0
 
     df = spark.read.format("delta").load(feature_table_path)
-    assert df.count() == 2
+    assert df.count() == 1
     df.unpersist()

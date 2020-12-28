@@ -43,7 +43,7 @@ def test_cli(mocker, spark):
 #    mocker.patch('data_processing.radiology.refined_table.generate.generate_scan_table.python_def_generate_scan.os.path.split', side_effect=['/home/circleci/project/tests/data_processing/testdata/data/test-project/dicoms/RIA_16_158A_000013/20150902_CT/2_Standard_5mm/'])
     
     for ext in ['mhd', 'nrrd']:
-        result = runner.invoke(cli, ['-i', "1.2.840.113619.2.353.6945.1176946.23573.1407497226.474",
+        result = runner.invoke(cli, ['-i', "1.2.840.113619.2.353.2807.624957.15092.1438009271.852",
             '-d', 'file:///',
             '-c', generate_mhd_script_path,
             '-p', project_name,
