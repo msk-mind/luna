@@ -131,8 +131,8 @@ def transfer_files():
         cfg = ConfigSet()
         os.environ['BWLIMIT'] = cfg.get_value(path=DATA_CFG+'::BWLIMIT')
         os.environ['CHUNK_FILE'] = cfg.get_value(path=DATA_CFG+'::CHUNK_FILE')
-        if cfg.has_value(path=DATA_CFG+'::EXCLUDES'):
-            os.environ['EXCLUDES'] = cfg.get_value(path=DATA_CFG+'::EXCLUDES')
+        if cfg.has_value(path=DATA_CFG+'::INCLUDE'):
+            os.environ['INCLUDE'] = cfg.get_value(path=DATA_CFG+'::INCLUDE')
         os.environ['HOST'] = cfg.get_value(path=DATA_CFG+'::HOST')
         os.environ['SOURCE_PATH'] = cfg.get_value(path=DATA_CFG+'::SOURCE_PATH')
         os.environ['RAW_DATA_PATH'] = cfg.get_value(path=DATA_CFG+'::RAW_DATA_PATH')
@@ -150,7 +150,7 @@ def transfer_files():
             # teardown env vars
             del os.environ['BWLIMIT']
             del os.environ['CHUNK_FILE']
-            del os.environ['EXCLUDES']
+            del os.environ['INCLUDE']
             del os.environ['HOST']
             del os.environ['SOURCE_PATH']
             del os.environ['RAW_DATA_PATH']
