@@ -36,7 +36,7 @@ LANDING_PATH: any(str(required=True))
 
 RAW_DATA_PATH: any(str(required=True))
 
-EXCLUDE:  any(str(required=False))
+INCLUDE:  any(str(required=False))
 
 CHUNK_FILE: any(str(required=True))
 

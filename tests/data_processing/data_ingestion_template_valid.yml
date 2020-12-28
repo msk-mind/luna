@@ -58,7 +58,7 @@ LANDING_PATH: tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT
 RAW_DATA_PATH: tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/raw_data
 
 # a comma separated list of files types/extensions to exclude. leave empty to include all files.
-EXCLUDE: mha,mhd,raw
+INCLUDE: --includes=*.dcm
 
 # a file containing names of files and sub-directories that exist under the source_path of the remote system and that
 # need to be transferred. One name should be placed on each line. An easy way to generate such a file is by changing
