@@ -12,7 +12,6 @@ import data_processing.common.constants as const
 
 
 feature_table_path = "tests/data_processing/testdata/data/test-project/tables/FEATURE_dsn"
-feature_raw_path = "tests/data_processing/testdata/data/test-project/features"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -25,9 +24,7 @@ def spark():
     print('------teardown------')
     if os.path.exists(feature_table_path):
         shutil.rmtree(feature_table_path)
-    if os.path.exists(feature_raw_path):
-        shutil.rmtree(feature_raw_path)
-
+        
 def test_cli(spark):
 
     runner = CliRunner()

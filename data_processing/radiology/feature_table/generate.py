@@ -28,26 +28,14 @@ logger.info("Starting data_processing.radiology.feature_table.generate")
 
 
 def generate_uuid(content):
+
     content = BytesIO(content)
 
     import EnsureByteContext
     with EnsureByteContext.EnsureByteContext():
         uuid = FileHash('sha256').hash_file(content)
  
-    #uuid = FileHash('sha256').hash_file(path)
     return "FEATURE-"+uuid
-
-def crop_and_save(png, features, xmin, ymin, xmax, ymax):
-    # crop png with xmin, ymin, xmax, ymax boundary
-    # save cropped image in in features directory
-    png_name = os.path.basename(png)
-    feature_path = os.path.join(features, png_name)
-
-    im = Image.open(png)
-    im_crop = im.crop((xmin, ymin, xmax, ymax))
-    im_crop.save(feature_path)
-    return feature_path
-    #return im_crop.tobytes()
 
 
 @click.command()
@@ -110,12 +98,8 @@ def generate_feature_table(cfg):
                .dropna(subset=["dicom_path", "overlay_path"])
 
     logger.info("Joined mha and png tables")
-    logger.info("COUNT::: " + str(df.count()))
 
     with CodeTimer(logger, 'Crop pngs and create feature table'):
-
-        # seg_png_path: create pngs for all segs
-        feature_dir = os.path.join(project_path, const.FEATURES)
 
         feature_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("FEATURE", DATASET_NAME))
     
@@ -126,8 +110,6 @@ def generate_feature_table(cfg):
             """
             # Save feature pngs
             print("Processing accession number: " + str(df.accession_number.values[0]))
-            #features = os.path.join(feature_dir, df.accession_number.values[0])
-            #os.makedirs(features, exist_ok=True)
 
             # mha file path
             file_path = df.path.values[0].split(':')[-1]
@@ -171,14 +153,14 @@ def generate_feature_table(cfg):
             # Crop all overlay, dicom pngs.
             dicom_paths = []
             for png in df.dicom_path.values:
-                #feature_path = crop_and_save(png, features, xmin, ymin, xmax, ymax)
+
                 im = Image.open(png)
                 feature_path = im.crop((xmin, ymin, xmax, ymax)).tobytes()
                 dicom_paths.append(feature_path)
 
             overlay_paths = []
             for png in df.overlay_path.values:
-                #feature_path = crop_and_save(png, features, xmin, ymin, xmax, ymax)
+
                 im = Image.open(png)
                 feature_path = im.crop((xmin, ymin, xmax, ymax)).tobytes()
                 overlay_paths.append(feature_path)
@@ -188,7 +170,6 @@ def generate_feature_table(cfg):
             
             return df
         
-        logger.info(df.schema)
         schema = StructType([StructField("accession_number",StringType(),True),
                              StructField("instance_number",IntegerType(),True),
                              StructField("dicom_path",BinaryType(),True),
@@ -206,7 +187,8 @@ def generate_feature_table(cfg):
         columns = ["feature_record_uuid", "accession_number", "instance_number", "dicom_path", "overlay_path", "png_record_uuid"]
 
         df.select(columns) \
-            .coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')).write.format("delta") \
+            .coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')) \
+            .write.format("delta") \
             .mode("overwrite") \
             .save(feature_table_path)
 
