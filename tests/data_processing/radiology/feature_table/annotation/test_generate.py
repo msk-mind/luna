@@ -7,7 +7,7 @@ import os
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
-from data_processing.radiology.feature_table.generate import cli
+from data_processing.radiology.feature_table.annotation.generate import cli
 import data_processing.common.constants as const
 
 
@@ -29,7 +29,7 @@ def test_cli(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
-        ['-t', 'tests/data_processing/radiology/feature_table/data.yaml',
+        ['-t', 'tests/data_processing/radiology/feature_table/annotation/data.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0

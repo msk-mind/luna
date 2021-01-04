@@ -24,7 +24,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, IntegerType, StructType, StructField, BinaryType
 
 logger = init_logger()
-logger.info("Starting data_processing.radiology.feature_table.generate")
+logger.info("Starting data_processing.radiology.feature_table.annotation.generate")
 
 
 def generate_uuid(content):
@@ -41,8 +41,8 @@ def generate_uuid(content):
 @click.command()
 @click.option('-f', '--config_file', default='config.yaml', required=True, 
     help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-t', '--data_config_file', default='data_processing/radiology/feature_table/config.yaml', required=True,
-    help="path to data configuration file. See data_processing/radiology/feature_table/config.yaml.template")
+@click.option('-t', '--data_config_file', default='data_processing/radiology/feature_table/annotation/config.yaml', required=True,
+    help="path to data configuration file. See data_processing/radiology/feature_table/annotation/config.yaml.template")
 def cli(config_file, data_config_file):
     """
     This module generates cropped png images based on png and mha (2d segmentation) tables.
@@ -89,11 +89,12 @@ def generate_feature_table(cfg):
  
     logger.info("Loaded mha and png tables")
 
-    columns = [F.col("metadata.InstanceNumber").alias("instance_number").cast(IntegerType()), "accession_number", 
-               "dicom_path", "overlay_path", "path", "png_record_uuid"]
+    columns = [F.col("metadata.InstanceNumber").alias("instance_number").cast(IntegerType()), 
+                F.col("metadata.PatientID").alias("xnat_patient_id"), 
+                F.col("metadata.SeriesInstanceUID").alias("SeriesInstanceUID"), 
+                "accession_number", "dicom_path", "overlay_path", "path", "png_record_uuid"]
 
     df = mha_df.join(png_df, png_df.metadata.AccessionNumber == mha_df.accession_number) \
-               .drop("scan_annotation_record_uuid") \
                .select(columns).distinct() \
                .dropna(subset=["dicom_path", "overlay_path"])
 
@@ -110,7 +111,7 @@ def generate_feature_table(cfg):
             """
             # Save feature pngs
             print("Processing accession number: " + str(df.accession_number.values[0]))
-
+            print(df.columns)
             # mha file path
             file_path = df.path.values[0].split(':')[-1]
             data, header = load(file_path)
@@ -151,27 +152,31 @@ def generate_feature_table(cfg):
                 ymax = h
 
             # Crop all overlay, dicom pngs.
-            dicom_paths = []
+            dicom_features = []
             for png in df.dicom_path.values:
-
+                print("dicom: "+ png)
                 im = Image.open(png)
-                feature_path = im.crop((xmin, ymin, xmax, ymax)).tobytes()
-                dicom_paths.append(feature_path)
+                feature = im.crop((xmin, ymin, xmax, ymax)).tobytes()
+                dicom_features.append(feature)
 
-            overlay_paths = []
+            overlay_features = []
             for png in df.overlay_path.values:
-
+                print("overlay: "+ png)
                 im = Image.open(png)
-                feature_path = im.crop((xmin, ymin, xmax, ymax)).tobytes()
-                overlay_paths.append(feature_path)
+                feature = im.crop((xmin, ymin, xmax, ymax)).tobytes()
+                overlay_features.append(feature)
 
-            df["dicom_path"] = dicom_paths
-            df["overlay_path"] = overlay_paths
+            df["dicom"] = dicom_features
+            df["overlay"] = overlay_features
             
             return df
         
-        schema = StructType([StructField("accession_number",StringType(),True),
+        schema = StructType([StructField("xnat_patient_id",StringType(),True),
+                             StructField("accession_number",StringType(),True),
                              StructField("instance_number",IntegerType(),True),
+                             StructField("SeriesInstanceUID",StringType(),True),
+                             StructField("dicom",BinaryType(),True),
+                             StructField("overlay",BinaryType(),True),
                              StructField("dicom_path",BinaryType(),True),
                              StructField("overlay_path",BinaryType(),True),
                              StructField("png_record_uuid",StringType(),True),
@@ -182,9 +187,10 @@ def generate_feature_table(cfg):
 
         spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
         generate_uuid_udf = F.udf(generate_uuid, StringType())
-        df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf(df.overlay_path)))
+        df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf(df.overlay)))
 
-        columns = ["feature_record_uuid", "accession_number", "instance_number", "dicom_path", "overlay_path", "png_record_uuid"]
+        columns = ["feature_record_uuid", "accession_number", "instance_number", "SeriesInstanceUID", 
+                    "xnat_patient_id", "dicom", "overlay", "png_record_uuid"]
 
         df.select(columns) \
             .coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')) \
