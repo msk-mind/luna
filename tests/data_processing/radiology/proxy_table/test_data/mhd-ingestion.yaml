@@ -55,8 +55,7 @@ LANDING_PATH: tests/data_processing/testdata/data/test-project
 # location where the data should be transferred on the destination machine.
 RAW_DATA_PATH: tests/data_processing/testdata/data/test-project/scans
 
-# a comma separated list of files types/extensions to exclude. leave empty to include all files.
-EXCLUDE: mha,mhd,raw
+INCLUDE: --include=*.dcm
 
 # a file containing names of files and sub-directories that exist under the source_path of the remote system and that
 # need to be transferred. One name should be placed on each line. An easy way to generate such a file is by changing
