@@ -63,7 +63,7 @@ def binary_to_png(cfg):
     COLUMN_NAME = cfg.get_value(path=const.DATA_CFG+"::COLUMN_NAME")
 
     # create destination directory
-    os.makedirs(DESTINATION_PATH)
+    os.makedirs(DESTINATION_PATH, exist_ok=True)
 
     # unpack COLUMN_NAME
     for index, row in df.iterrows():
@@ -75,7 +75,7 @@ def binary_to_png(cfg):
         image = Image.frombytes(mode, (256,256), bytes(row[COLUMN_NAME]))
 
         image_dir = os.path.join(DESTINATION_PATH, COLUMN_NAME, row.accession_number)
-        os.makedirs(image_dir)
+        os.makedirs(image_dir, exist_ok=True)
 
         # save image to png
         image.save(os.path.join(image_dir, str(row.instance_number)+".png"))
