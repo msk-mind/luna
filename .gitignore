@@ -7,3 +7,4 @@ htmlcov/*
 data_ingestion_template.yaml
 *.log
 preprocess_feature.spec
+.idea/
