@@ -1,15 +1,13 @@
-# mind root data path
+# path to mind data
+# hdfs:// or absolute or relative datapath
 MIND_DATA_PATH: /path/to/data/path
 
 PROJECT_NAME: DMT_IRB
 
-DATASET_NAME: DMT_IRB_DATE
+TABLE_NAME: FEATURE_DMT
 
-# size of image. e.g. 256 will create 256 x 256 images.
-CROP_SIZE: 256
+# local path to unpack pngs.
+DESTINATION_PATH: /where/to/create/data
 
-# num partition for delta table
-NUM_PARTITION: 240
-
-# sql string to filter dicom metadata. To be removed once correct metadata to identify scan is around..
-SQL_STRING: metadata.SeriesDescription LIKE 'PH1%AX%'
+# field to unpack dicom or overlay
+COLUMN_NAME: dicom

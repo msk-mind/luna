@@ -1,15 +1,13 @@
-
+# path to mind data
+# hdfs:// or absolute or relative datapath
 MIND_DATA_PATH: tests/data_processing/testdata/data
 
 PROJECT_NAME: test-project
 
-DATASET_NAME: dsn
+TABLE_NAME: FEATURE_unpack
 
-DATA_TYPE: FEATURE
+# local path to unpack pngs.
+DESTINATION_PATH: tests/data_processing/testdata/data/unpacked_pngs
 
-CROP_SIZE: 256
-
-SQL_STRING: metadata.SeriesNumber == '10'
-
-# num partition for delta table
-NUM_PARTITION: 1
+# field to unpack dicom or overlay
+COLUMN_NAME: dicom
