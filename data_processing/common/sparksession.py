@@ -23,6 +23,8 @@ class SparkConfig:
 			cfg.get_value(path=config_name+'::$.spark_application_config[:4]["spark.executor.pyspark.memory"]')
 		spark_sql_shuffle_partitions = \
 			cfg.get_value(path=config_name+'::$.spark_application_config[:5]["spark.sql.shuffle.partitions"]')
+		spark_driver_maxresultsize = \
+			cfg.get_value(path=config_name+'::$.spark_application_config[:6]["spark.driver.maxResultSize"]')
 
 		return SparkSession.builder \
 			.appName(app_name) \
@@ -40,6 +42,7 @@ class SparkConfig:
 			.config("spark.cores.max", spark_cores_max) \
 			.config("spark.executor.pyspark.memory", spark_executor_pyspark_memory) \
 			.config("spark.sql.shuffle.partitions", spark_sql_shuffle_partitions) \
+			.config("spark.driver.maxResultSize", spark_driver_maxresultsize) \
 			.config("fs.defaultFS", "file:///") \
 			.config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
