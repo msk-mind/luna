@@ -1,38 +1,26 @@
 version: 2.1
 
-# ideas for the future:
-# @todo https://circleci.com/docs/2.0/workflows/
-# @todo https://github.com/features/actions (github actions are similar to circleci and works for also forked repos)
-# docker-compose integration testing in circleci
-# kubernetes deploy and integration test
-# usecase focussed integration tests if code changes frequently
-
-orbs:
-  codecov: codecov/codecov@1.0.2
-
+workflows:
+  test-env-vars:
+    jobs:
+      - build:
+          context: MIND-Data-Processing
 jobs:
   build:
+    environment:
+      IMAGE_NAME: eelsherif/mind-app-getpath
     docker:
       - image: circleci/python:3.6.8  # primary container for the build job
-
     steps:
       - checkout
-      - run: cat /etc/os-release
-      - run: sudo apt update
-      - run: sudo apt install default-jre
-      - run: java -version
-      - run: which java
-      - run: echo "export PATH=/home/circleci/.local/bin:$PATH" >> $BASH_ENV  # some python packages get installed  here
-      - run: echo "export CODECOV_TOKEN="4d2ae912-4489-4e40-ac13-02add6c0d1a6"" >> $BASH_ENV
-      - run: echo $PATH
-      - run: python --version
-      - run: pip install --upgrade --user pip
-      - run: pip install --use-feature=2020-resolver -r requirements.txt
-      - run: pip list
-      - run: sudo python setup.py install  # needed to run the cli unit tests
-      - run: pytest -s --cov=data_processing tests --cov-report=xml
-      - run: coverage report -m
-      - store_artifacts:
-          path: htmlcov
-      - codecov/upload:
-          file: coverage.xml
+      - setup_remote_docker
+      - run: pip install --user --upgrade pip && pip --no-cache-dir install -r ./data_processing/getPathologyAnnotations/requirements.txt
+      - run: cp ./config.yaml.template ./config.yaml
+      - run:
+          name: Build Docker image
+          command: docker build -t $IMAGE_NAME:latest .
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push $IMAGE_NAME:latest
