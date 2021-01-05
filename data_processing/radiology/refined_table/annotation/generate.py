@@ -15,6 +15,7 @@ import numpy as np
 from PIL import Image 
 from medpy.io import load
 from filehash import FileHash
+from io import BytesIO
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.Neo4jConnection import Neo4jConnection
@@ -48,13 +49,9 @@ def create_dicom_png(src_path, uuid, accession_number):
     # Convert to uint
     image_2d_scaled = np.uint8(image_2d_scaled)
 
-    # Save png named as hash of dicom/seg
-    png_path = os.path.join(png_dir, accession_number)
-    os.makedirs(png_path, exist_ok=True)
+    im = Image.fromarray(image_2d_scaled)
 
-    png_path = os.path.join(png_path, uuid.split("-")[-1] + '.png')
-    
-    return image_2d_scaled.tobytes()
+    return im.tobytes()
        
 
 def create_seg_png(src_path, uuid, accession_number):
@@ -108,7 +105,8 @@ def overlay_pngs(uuid, instance_number, dicom_path, seg, accession_number, image
 
     # load dicom and seg images from bytes
     size =  int(image_size)
-    dcm_img = Image.frombytes("L", (size, size), bytes(dicom_binary)).convert("RGB")
+    dcm_img = Image.frombytes("L", (size, size), bytes(dicom_binary))
+    dcm_img = dcm_img.convert("RGB")
     seg_img = Image.frombytes("RGB", (size, size), bytes(seg))
 
     res = Image.blend(dcm_img, seg_img, 0.3)
@@ -166,6 +164,7 @@ def generate_png_tables(cfg):
 
     # load dicom and seg tables
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='dicom-to-png')
+    spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")
 
     # TODO earlier version.. dicom table path can be removed once clean up is done.
     dicom_table_path = cfg.get_value(path=const.DATA_CFG+'::DICOM_TABLE_PATH')
