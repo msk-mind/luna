@@ -13,3 +13,5 @@ SQL_STRING: metadata.SeriesDescription == 'Standard 5mm'
 
 # num partition for delta table
 NUM_PARTITION: 1
+
+IMAGE_SIZE: 512

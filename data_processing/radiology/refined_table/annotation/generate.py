@@ -24,15 +24,15 @@ from data_processing.common.custom_logger import init_logger
 import data_processing.common.constants as const
 
 from pyspark.sql import functions as F
-from pyspark.sql.types import StringType, IntegerType, ArrayType, StructType, StructField
+from pyspark.sql.types import StringType, IntegerType, ArrayType, StructType, StructField, BinaryType
 
 logger = init_logger()
 logger.info("Starting data_processing.radiology.refined_table.annotation.generate")
 
 
-def create_dicom_png(src_path, uuid, accession_number, png_dir):
+def create_dicom_png(src_path, uuid, accession_number):
     """
-    Create a png from src_path image, and save a png in png_dir.
+    Create a png from src_path image, and return image as bytes.
     """
     file_path = src_path.split(':')[-1]
 
@@ -53,21 +53,18 @@ def create_dicom_png(src_path, uuid, accession_number, png_dir):
     os.makedirs(png_path, exist_ok=True)
 
     png_path = os.path.join(png_path, uuid.split("-")[-1] + '.png')
-
-    im = Image.fromarray(image_2d_scaled)
-    im.save(png_path)
     
-    return png_path
-   
+    return image_2d_scaled.tobytes()
+       
 
-def create_seg_png(src_path, uuid, accession_number, png_dir):
+def create_seg_png(src_path, uuid, accession_number):
     """
-    Create pngs from src_path image, and save pngs in png_dir.
-    Returns an array of (instance_number, seg_png_path) tuple.
+    Create pngs from src_path image.
+    Returns an array of (instance_number, png binary) tuple.
     """
     # Save png named as hash of dicom/seg
-    png_dir = os.path.join(png_dir, accession_number)
-    os.makedirs(png_dir, exist_ok=True)
+    #png_dir = os.path.join(png_dir, accession_number)
+    #os.makedirs(png_dir, exist_ok=True)
 
     file_path = src_path.split(':')[-1]
     data, header = load(file_path)
@@ -88,47 +85,45 @@ def create_seg_png(src_path, uuid, accession_number, png_dir):
             image_2d_scaled = (np.maximum(image_2d, 0) / image_2d.max()) * 255.0
             image_2d_scaled = np.uint8(image_2d_scaled)
 
-            png_path = os.path.join(png_dir, "{0}_{1}.png".format(uuid.split("-")[-1], str(slice_num)))
-
             im = Image.fromarray(image_2d_scaled)
 
             # save segmentation in red color.
             rgb = im.convert('RGB')
             red_channel = rgb.getdata(0)
             rgb.putdata(red_channel)
-            rgb.save(png_path)
+            png_binary = rgb.tobytes()
 
-            slices.append( (slice_num, png_path) )
+            slices.append( (slice_num, png_binary) )
 
     return slices
 
  
-def overlay_pngs(uuid, instance_number, dicom_path, seg_png_path, accession_number, png_dir):
+def overlay_pngs(uuid, instance_number, dicom_path, seg, accession_number, image_size):
     """
     Create dicom png images.
     Blend dicom and segmentation images with 7:3 ratio. 
-    Returns the path to the combined image.
+    Returns tuple of binaries to the combined image.
     """
-    
-    dicom_png_path = create_dicom_png(dicom_path, uuid, accession_number, png_dir)
-    
-    dcmpng = Image.open(dicom_png_path).convert('RGB')
-    segpng = Image.open(seg_png_path)
+    dicom_binary = create_dicom_png(dicom_path, uuid, accession_number)
 
-    res = Image.blend(dcmpng, segpng, 0.3)
+    # load dicom and seg images from bytes
+    size =  int(image_size)
+    dcm_img = Image.frombytes("L", (size, size), bytes(dicom_binary)).convert("RGB")
+    seg_img = Image.frombytes("RGB", (size, size), bytes(seg))
 
-    filename = seg_png_path.split("/")[-1]
-    filedir = os.path.join(png_dir, accession_number)
+    res = Image.blend(dcm_img, seg_img, 0.3)
+    overlay = res.tobytes()
 
-    overlay_png_path = os.path.join(filedir, "overlay_"+filename)
-    res.save(overlay_png_path)
-
-    return dicom_png_path + ":" + overlay_png_path
+    return (dicom_binary, overlay)
 
 
-def generate_uuid(png_path):
+def generate_uuid(content):
 
-    uuid = FileHash('sha256').hash_file(png_path)
+    content = BytesIO(content)
+
+    import EnsureByteContext
+    with EnsureByteContext.EnsureByteContext():
+        uuid = FileHash('sha256').hash_file(content)
 
     return "PNG-"+uuid
 
@@ -198,62 +193,55 @@ def generate_png_tables(cfg):
 
     with CodeTimer(logger, 'Generate pngs and seg_png table'):
 
-        # seg_png_path: create pngs for all segs
-        png_dir = os.path.join(project_path, const.PNGS)
-        seg_png_dir = png_dir + "_seg"
-
-        os.makedirs(png_dir, exist_ok=True)
-        os.makedirs(seg_png_dir, exist_ok=True)
-
+        # create pngs for all segs
         seg_png_table_path = os.path.join(project_path, const.TABLE_DIR, const.TABLE_NAME(cfg))
-
+        
+        # create segmentation images
         create_seg_png_udf = F.udf(create_seg_png, ArrayType(StructType([StructField("instance_number", IntegerType()),
-									 StructField("seg_png_path", StringType())])))
+									 StructField("seg_png", BinaryType())])))
         
         seg_df = seg_df.withColumn("slices_pngs", 
-            F.lit(create_seg_png_udf("path", "scan_annotation_record_uuid", "accession_number", F.lit(seg_png_dir))))
+            F.lit(create_seg_png_udf("path", "scan_annotation_record_uuid", "accession_number")))
 
         logger.info("Created segmentation pngs")
 
         seg_df = seg_df.withColumn("slices_pngs", F.explode("slices_pngs")) \
-                       .select(F.col("slices_pngs.instance_number").alias("instance_number"), F.col("slices_pngs.seg_png_path").alias("seg_png_path"),
+                       .select(F.col("slices_pngs.instance_number").alias("instance_number"), F.col("slices_pngs.seg_png").alias("seg_png"),
                                "scan_annotation_record_uuid", "accession_number", "path") 
 
         logger.info("Exploded rows")
-	
-        # overlay_path: blend seg and the dicom instance
-        overlay_png_udf = F.udf(overlay_pngs, StringType())
 
+        # create overlay images: blend seg and the dicom images
         seg_df = seg_df.select(seg_df.accession_number.alias("access_no"), seg_df.path.alias("seg_path"),
-                               "instance_number", "seg_png_path", "scan_annotation_record_uuid")
+                               "instance_number", "seg_png", "scan_annotation_record_uuid")
         
         cond = [subset_df.metadata.AccessionNumber == seg_df.access_no, subset_df.metadata.InstanceNumber == seg_df.instance_number] 
         
         seg_df = seg_df.join(subset_df, cond)
+    
+        overlay_png_udf = F.udf(overlay_pngs, StructType([StructField("dicom", BinaryType()), StructField("overlay", BinaryType())]))
 
         seg_df = seg_df.withColumn("dicom_overlay",
-            F.lit(overlay_png_udf("dicom_record_uuid", "instance_number", "path", "seg_png_path", "accession_number", F.lit(png_dir))))
+            F.lit(overlay_png_udf("dicom_record_uuid", "instance_number", "path", "seg_png", "accession_number", 
+                                    F.lit(cfg.get_value(path=const.DATA_CFG+'::IMAGE_SIZE')))))
  
-        # split dicom:overlay paths
-        split_col = F.split(seg_df.dicom_overlay, ':')
-        seg_df = seg_df.withColumn("dicom_png_path", split_col.getItem(0)) \
-                    .withColumn("overlay_path", split_col.getItem(1)) \
-                    .drop("dicom_overlay")
+        # unpack dicom_overlay struct into 2 columns
+        seg_df = seg_df.select(F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"),
+                                "metadata", "scan_annotation_record_uuid")
 
+        # generate uuid
+        spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
         generate_uuid_udf = F.udf(generate_uuid, StringType())
-        seg_df = seg_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf(seg_df.overlay_path)))
+        seg_df = seg_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf(seg_df.overlay)))
        
         logger.info("Created overlay images")
         
-        columns = ["png_record_uuid", "metadata", "dicom_png_path", "overlay_path", "scan_annotation_record_uuid"]
-
-        seg_df.select(columns) \
-            .coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')).write.format("delta") \
+        seg_df.coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')).write.format("delta") \
             .mode("overwrite") \
             .save(seg_png_table_path)
 
-        # clean up seg png folder
-        shutil.rmtree(seg_png_dir)
+        seg_df.printSchema()
+        
        
 if __name__ == "__main__":
     cli()
