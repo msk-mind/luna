@@ -48,11 +48,8 @@ def create_dicom_png(src_path, accession_number):
 
     # Convert to uint
     image_2d_scaled = np.uint8(image_2d_scaled)
-
-    print(image_2d_scaled.shape)
-    im = Image.fromarray(image_2d_scaled, mode="L")
-
-    return im.tobytes()
+    
+    return image_2d_scaled.tobytes()
        
 
 def create_seg_png(src_path, accession_number):
@@ -103,7 +100,7 @@ def overlay_pngs(instance_number, dicom_path, seg, accession_number, image_size)
     Returns tuple of binaries to the combined image.
     """
     dicom_binary = create_dicom_png(dicom_path, accession_number)
-
+    
     # load dicom and seg images from bytes
     size =  int(image_size)
     dcm_img = Image.frombytes("L", (size, size), bytes(dicom_binary))
@@ -196,12 +193,12 @@ def generate_png_tables(cfg):
 
         seg_df = seg_df.withColumn("slices_pngs", F.explode("slices_pngs")) \
                        .select(F.col("slices_pngs.instance_number").alias("instance_number"), F.col("slices_pngs.seg_png").alias("seg_png"),
-                               "accession_number", "path") 
+                               "accession_number", "path", "scan_annotation_record_uuid") 
 
         logger.info("Exploded rows")
 
         # create overlay images: blend seg and the dicom images
-        seg_df = seg_df.select(seg_df.accession_number.alias("access_no"), seg_df.path.alias("seg_path"),
+        seg_df = seg_df.select("accession_number", seg_df.path.alias("seg_path"),
                                "instance_number", "seg_png", "scan_annotation_record_uuid")
         
         cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number, dicom_df.metadata.InstanceNumber == seg_df.instance_number] 
