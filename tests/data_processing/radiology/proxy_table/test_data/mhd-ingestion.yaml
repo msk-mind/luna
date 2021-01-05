@@ -47,13 +47,13 @@ HOST: localhost
 
 # file path to the source data file(s). if host is specified, the source data location is determined
 # as host:source_path
-SOURCE_PATH: tests/data_processing/testdata/data/test-project/scans
+SOURCE_PATH: tests/data_processing/testdata/data/test-project/scan_annotations
 
 # root path for tables and file transfer
 LANDING_PATH: tests/data_processing/testdata/data/test-project
 
 # location where the data should be transferred on the destination machine.
-RAW_DATA_PATH: tests/data_processing/testdata/data/test-project/scans
+RAW_DATA_PATH: tests/data_processing/testdata/data/test-project/scan_annotations
 
 INCLUDE: --include=*.dcm
 

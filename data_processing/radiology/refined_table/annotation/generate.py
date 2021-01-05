@@ -130,8 +130,8 @@ def generate_uuid(content):
 @click.command()
 @click.option('-f', '--config_file', default='config.yaml', required=True, 
     help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-t', '--data_config_file', default='data_processing/services/config.yaml', required=True,
-    help="path to data configuration file. See data_processing/services/config.yaml.template")
+@click.option('-t', '--data_config_file', default='data_processing/refined_table/annotation/config.yaml', required=True,
+    help="path to data configuration file. See data_processing/refined_table/annotation/config.yaml.template")
 def cli(config_file, data_config_file):
     """
     This module takes a SeriesInstanceUID, calls a script to generate volumetric images, and updates the scan table.
@@ -140,7 +140,7 @@ def cli(config_file, data_config_file):
 
     Example:
     $ python3 -m data_processing.radiology.refined_table.annotation.generate \
-	--data_config_file data_processing/services/config.yaml \
+	--data_config_file data_processing/refined_table/annotation/config.yaml \
 	--config_file config.yaml
     """
     start_time = time.time()
@@ -180,17 +180,7 @@ def generate_png_tables(cfg):
 
     seg_df = spark.read.format("delta").load(seg_table_path)
     logger.info("Loaded dicom and seg tables")
-
-    # join with accession number and series number/description
-    seg_alias = seg_df.select(seg_df.accession_number,
-                    seg_df.path.alias("seg_path"),
-                    seg_df.metadata.alias("seg_metadata"))
-
-    cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number] # Add series number match once available
-
-    subset_df = dicom_df.join(seg_alias, cond)
-    logger.info("Joined dicom and seg tables")
-
+    
     with CodeTimer(logger, 'Generate pngs and seg_png table'):
 
         seg_png_table_path = os.path.join(project_path, const.TABLE_DIR, const.TABLE_NAME(cfg))
@@ -214,9 +204,9 @@ def generate_png_tables(cfg):
         seg_df = seg_df.select(seg_df.accession_number.alias("access_no"), seg_df.path.alias("seg_path"),
                                "instance_number", "seg_png", "scan_annotation_record_uuid")
         
-        cond = [subset_df.metadata.AccessionNumber == seg_df.access_no, subset_df.metadata.InstanceNumber == seg_df.instance_number] 
+        cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number, dicom_df.metadata.InstanceNumber == seg_df.instance_number] 
         
-        seg_df = seg_df.join(subset_df, cond)
+        seg_df = seg_df.join(dicom_df, cond)
 
         overlay_png_udf = F.udf(overlay_pngs, StructType([StructField("dicom", BinaryType()), StructField("overlay", BinaryType())]))
 
