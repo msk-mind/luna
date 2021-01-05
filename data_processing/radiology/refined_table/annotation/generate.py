@@ -93,7 +93,7 @@ def create_seg_png(src_path, accession_number):
     return slices
 
  
-def overlay_pngs(instance_number, dicom_path, seg, accession_number, image_size):
+def overlay_pngs(instance_number, dicom_path, seg, accession_number, nrows, ncolumns):
     """
     Create dicom png images.
     Blend dicom and segmentation images with 7:3 ratio. 
@@ -102,10 +102,10 @@ def overlay_pngs(instance_number, dicom_path, seg, accession_number, image_size)
     dicom_binary = create_dicom_png(dicom_path, accession_number)
     
     # load dicom and seg images from bytes
-    size =  int(image_size)
-    dcm_img = Image.frombytes("L", (size, size), bytes(dicom_binary))
+    nrows, ncolumns =  int(nrows), int(ncolumns)
+    dcm_img = Image.frombytes("L", (nrows, ncolumns), bytes(dicom_binary))
     dcm_img = dcm_img.convert("RGB")
-    seg_img = Image.frombytes("RGB", (size, size), bytes(seg))
+    seg_img = Image.frombytes("RGB", (nrows, ncolumns), bytes(seg))
 
     res = Image.blend(dcm_img, seg_img, 0.3)
     overlay = res.tobytes()
@@ -208,8 +208,7 @@ def generate_png_tables(cfg):
         overlay_png_udf = F.udf(overlay_pngs, StructType([StructField("dicom", BinaryType()), StructField("overlay", BinaryType())]))
 
         seg_df = seg_df.withColumn("dicom_overlay",
-            F.lit(overlay_png_udf("instance_number", "path", "seg_png", "accession_number", 
-                                    F.lit(cfg.get_value(path=const.DATA_CFG+'::IMAGE_SIZE')))))
+            F.lit(overlay_png_udf("instance_number", "path", "seg_png", "accession_number", "metadata.Rows", "metadata.Columns")))
  
         # unpack dicom_overlay struct into 2 columns
         seg_df = seg_df.select(F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"),

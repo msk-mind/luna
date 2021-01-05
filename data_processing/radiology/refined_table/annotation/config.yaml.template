@@ -16,5 +16,3 @@ SQL_STRING: metadata.SeriesDescription LIKE 'Ph1%Axial%'
 # num partition for delta table
 NUM_PARTITION: 240
 
-# image size, 512 for 512x512 image
-IMAGE_SIZE: 512
