@@ -212,6 +212,63 @@ def extractRadiomics(method_id, id):
 
     return make_response("Successfully extracted radiomics for case: " + scan_node["object.AccessionNumber"], 200)
 
+# ==================================================================================================
+# Routes to extract scan data
+# ==================================================================================================
+# Initilize scans with DCM data
+@app.route('/mind/api/v1/initScans/<cohort_id>/<query>', methods=['GET'])
+def initScans(cohort_id, query):
+    # Get relevant patients and cases
+    res_tree = conn.query(f"""
+        MATCH (co:cohort{{CohortID:'{cohort_id}'}})-[:INCLUDE]-(cases:accession)-[*]->(das:dataset) WHERE das.DATA_TYPE="DCM" \
+        RETURN DISTINCT co, cases
+        """
+    )
+
+    # Get the "Parquet Dataset"
+    res_data = conn.query(f"""
+        MATCH (co:cohort{{CohortID:'{cohort_id}'}})-[:INCLUDE]-(cases:accession)-[*]->(das:dataset) WHERE das.DATA_TYPE="DCM" \
+        RETURN DISTINCT das
+        """
+    )
+
+    logger.info("Length of dataset = {}".format(len(res_data)))
+
+    cSchema = StructType([StructField("CohortID", StringType(), True), StructField("AccessionNumber", StringType(), True)])
+    df_cohort = spark.createDataFrame(([(x.data()['co']['CohortID'], x.data()['cases']['AccessionNumber']) for x in res_tree]),schema=cSchema)
+
+    if not len(res_data)==1: return make_response(("Operations only support singleton datasets right now", 500))
+
+    df = spark.read\
+        .format("delta")\
+        .load(res_data[0]['das']['TABLE_LOCATION'])\
+        .select("path", \
+            "AccessionNumber", \
+            "SeriesInstanceUID", \
+            "metadata.SeriesNumber", \
+            "metadata.SeriesDescription", \
+            "metadata.PerformedProcedureStepDescription", \
+            "metadata.ImageType", \
+            "metadata.InstanceNumber")\
+        .where(query)\
+        .where("InstanceNumber='1'")\
+        .orderBy("AccessionNumber") \
+        .join(df_cohort, ['AccessionNumber'])
+
+    for index, row in df.toPandas().iterrows():
+        prop_string = ",".join( ['''{0}:"{1}"'''.format(key, row[key]) for key in row.index] )
+        query = """
+                MATCH (co:cohort{{CohortID:'{2}'}})
+                MATCH (sc:scan{{SeriesInstanceUID:'{0}'}})
+                MERGE (data:dcm{{{1}}})
+                MERGE (sc)-[:HAS_DATA]-(data)
+                MERGE (co)-[:INCLUDE]-(sc) RETURN data
+                """.format(row['SeriesInstanceUID'], prop_string, cohort_id)
+        logger.info (query)
+        conn.query(query)
+
+    return make_response("Done", 200)
+
 
 if __name__ == '__main__':
     app.run(host=os.environ['HOSTNAME'],port=5003, threaded=True, debug=False)
