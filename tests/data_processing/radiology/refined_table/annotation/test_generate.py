@@ -38,3 +38,4 @@ def test_cli(spark):
     df = spark.read.format("delta").load(png_table_path)
     assert df.count() == 1
     df.unpersist()
+    
