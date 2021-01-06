@@ -3,7 +3,7 @@ This final preprocessing step
 1. Loads PNG table and MHA table (2d segmentation)
 2. Finds the centroid of the 2d segmentation for the scan.
 3. Crop PNG images around the centroid.
-4. Saves the raw PNG images and paths in a table.
+4. Saves the PNG binaries in a table.
 """
 import os, time, glob
 import click
@@ -76,7 +76,6 @@ def generate_feature_table(cfg):
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='crop_png')
 
     DATASET_NAME = cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')
-    CROP_SIZE = cfg.get_value(path=const.DATA_CFG+'::CROP_SIZE')
 
     png_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("PNG", DATASET_NAME))
     mha_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("MHA", DATASET_NAME))
@@ -91,12 +90,14 @@ def generate_feature_table(cfg):
 
     columns = [F.col("metadata.InstanceNumber").alias("instance_number").cast(IntegerType()), 
                 F.col("metadata.PatientID").alias("xnat_patient_id"), 
-                F.col("metadata.SeriesInstanceUID").alias("SeriesInstanceUID"), 
-                "accession_number", "dicom_path", "overlay_path", "path", "png_record_uuid"]
+                F.col("metadata.SeriesInstanceUID").alias("SeriesInstanceUID"),
+                F.col("metadata.Rows").alias("nrows"),
+                F.col("metadata.Columns").alias("ncolumns"),
+                "accession_number", "dicom", "overlay", "path", "png_record_uuid"]
 
     df = mha_df.join(png_df, png_df.metadata.AccessionNumber == mha_df.accession_number) \
                .select(columns).distinct() \
-               .dropna(subset=["dicom_path", "overlay_path"])
+               .dropna(subset=["dicom", "overlay"])
 
     logger.info("Joined mha and png tables")
 
@@ -111,7 +112,7 @@ def generate_feature_table(cfg):
             """
             # Save feature pngs
             print("Processing accession number: " + str(df.accession_number.values[0]))
-            print(df.columns)
+
             # mha file path
             file_path = df.path.values[0].split(':')[-1]
             data, header = load(file_path)
@@ -132,6 +133,10 @@ def generate_feature_table(cfg):
                     break
 
             # Find xmin, ymin, xmax, ymax based on CROP_SIZE
+            nrows, ncolumns = int(df.nrows.values[0]), int(df.ncolumns.values[0])
+
+            # Cropped image size is /2 of width, height
+            CROP_SIZE = nrows // 2
             rad = CROP_SIZE // 2
             xmin, ymin, xmax, ymax = (xcenter - rad), (ycenter - rad), (xcenter + rad), (ycenter + rad)
 
@@ -153,16 +158,14 @@ def generate_feature_table(cfg):
 
             # Crop all overlay, dicom pngs.
             dicom_features = []
-            for png in df.dicom_path.values:
-                print("dicom: "+ png)
-                im = Image.open(png)
+            for png in df.dicom.values:
+                im = Image.frombytes("L", (nrows, ncolumns), bytes(png)) 
                 feature = im.crop((xmin, ymin, xmax, ymax)).tobytes()
                 dicom_features.append(feature)
 
             overlay_features = []
-            for png in df.overlay_path.values:
-                print("overlay: "+ png)
-                im = Image.open(png)
+            for png in df.overlay.values:
+                im = Image.frombytes("RGB", (nrows, ncolumns), bytes(png)) 
                 feature = im.crop((xmin, ymin, xmax, ymax)).tobytes()
                 overlay_features.append(feature)
 
@@ -175,10 +178,10 @@ def generate_feature_table(cfg):
                              StructField("accession_number",StringType(),True),
                              StructField("instance_number",IntegerType(),True),
                              StructField("SeriesInstanceUID",StringType(),True),
+                             StructField("nrows",StringType(),True),
+                             StructField("ncolumns",StringType(),True),
                              StructField("dicom",BinaryType(),True),
                              StructField("overlay",BinaryType(),True),
-                             StructField("dicom_path",BinaryType(),True),
-                             StructField("overlay_path",BinaryType(),True),
                              StructField("png_record_uuid",StringType(),True),
                              StructField("path",StringType(),True)])
         df = df.groupBy("accession_number").applyInPandas(crop_images, schema = schema)

@@ -5,9 +5,6 @@ PROJECT_NAME: DMT_IRB
 
 DATASET_NAME: DMT_IRB_DATE
 
-# size of image. e.g. 256 will create 256 x 256 images.
-CROP_SIZE: 256
-
 # num partition for delta table
 NUM_PARTITION: 240
 
