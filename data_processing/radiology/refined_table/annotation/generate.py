@@ -31,7 +31,7 @@ logger = init_logger()
 logger.info("Starting data_processing.radiology.refined_table.annotation.generate")
 
 
-def create_dicom_png(src_path, accession_number):
+def create_dicom_png(src_path, accession_number, width, height):
     """
     Create a png from src_path image, and return image as bytes.
     """
@@ -48,11 +48,15 @@ def create_dicom_png(src_path, accession_number):
 
     # Convert to uint
     image_2d_scaled = np.uint8(image_2d_scaled)
+
+    im = Image.fromarray(image_2d_scaled)
+    # resize pngs to user provided width/height
+    im = im.resize( (width, height) )
     
-    return image_2d_scaled.tobytes()
+    return im.tobytes()
        
 
-def create_seg_png(src_path, accession_number):
+def create_seg_png(src_path, accession_number, width, height):
     """
     Create pngs from src_path image.
     Returns an array of (instance_number, png binary) tuple.
@@ -81,6 +85,8 @@ def create_seg_png(src_path, accession_number):
             image_2d_scaled = np.uint8(image_2d_scaled)
 
             im = Image.fromarray(image_2d_scaled)
+            # resize pngs to user provided width/height
+            im = im.resize( (int(width), int(height)) )
 
             # save segmentation in red color.
             rgb = im.convert('RGB')
@@ -93,19 +99,19 @@ def create_seg_png(src_path, accession_number):
     return slices
 
  
-def overlay_pngs(instance_number, dicom_path, seg, accession_number, nrows, ncolumns):
+def overlay_pngs(instance_number, dicom_path, seg, accession_number, width, height):
     """
     Create dicom png images.
     Blend dicom and segmentation images with 7:3 ratio. 
     Returns tuple of binaries to the combined image.
     """
-    dicom_binary = create_dicom_png(dicom_path, accession_number)
+    width, height = int(width), int(height)
+    dicom_binary = create_dicom_png(dicom_path, accession_number, width, height)
     
     # load dicom and seg images from bytes
-    nrows, ncolumns =  int(nrows), int(ncolumns)
-    dcm_img = Image.frombytes("L", (nrows, ncolumns), bytes(dicom_binary))
+    dcm_img = Image.frombytes("L", (width, height), bytes(dicom_binary))
     dcm_img = dcm_img.convert("RGB")
-    seg_img = Image.frombytes("RGB", (nrows, ncolumns), bytes(seg))
+    seg_img = Image.frombytes("RGB", (width, height), bytes(seg))
 
     res = Image.blend(dcm_img, seg_img, 0.3)
     overlay = res.tobytes()
@@ -180,6 +186,9 @@ def generate_png_tables(cfg):
     
     with CodeTimer(logger, 'Generate pngs and seg_png table'):
 
+        width = cfg.get_value(path=const.DATA_CFG+'::IMAGE_WIDTH')
+        height = cfg.get_value(path=const.DATA_CFG+'::IMAGE_HEIGHT')
+
         seg_png_table_path = os.path.join(project_path, const.TABLE_DIR, const.TABLE_NAME(cfg))
         
         # find images with tumor
@@ -187,7 +196,7 @@ def generate_png_tables(cfg):
 									 StructField("seg_png", BinaryType())])))
         
         seg_df = seg_df.withColumn("slices_pngs", 
-            F.lit(create_seg_png_udf("path", "accession_number")))
+            F.lit(create_seg_png_udf("path", "accession_number", F.lit(width), F.lit(height))))
 
         logger.info("Created segmentation pngs")
 
@@ -208,7 +217,7 @@ def generate_png_tables(cfg):
         overlay_png_udf = F.udf(overlay_pngs, StructType([StructField("dicom", BinaryType()), StructField("overlay", BinaryType())]))
 
         seg_df = seg_df.withColumn("dicom_overlay",
-            F.lit(overlay_png_udf("instance_number", "path", "seg_png", "accession_number", "metadata.Rows", "metadata.Columns")))
+            F.lit(overlay_png_udf("instance_number", "path", "seg_png", "accession_number", F.lit(width), F.lit(height))))
  
         # unpack dicom_overlay struct into 2 columns
         seg_df = seg_df.select(F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"),

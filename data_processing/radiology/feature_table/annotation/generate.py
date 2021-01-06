@@ -76,6 +76,10 @@ def generate_feature_table(cfg):
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='crop_png')
 
     DATASET_NAME = cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')
+    CROP_WIDTH = int(cfg.get_value(path=const.DATA_CFG+'::CROP_WIDTH'))
+    CROP_HEIGHT = int(cfg.get_value(path=const.DATA_CFG+'::CROP_HEIGHT'))
+    IMAGE_WIDTH = int(cfg.get_value(path=const.DATA_CFG+'::IMAGE_WIDTH'))
+    IMAGE_HEIGHT = int(cfg.get_value(path=const.DATA_CFG+'::IMAGE_HEIGHT'))
 
     png_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("PNG", DATASET_NAME))
     mha_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("MHA", DATASET_NAME))
@@ -132,40 +136,44 @@ def generate_feature_table(cfg):
 
                     break
 
+            print(xcenter, ycenter)
             # Find xmin, ymin, xmax, ymax based on CROP_SIZE
-            nrows, ncolumns = int(df.nrows.values[0]), int(df.ncolumns.values[0])
+            width_rad = CROP_WIDTH // 2
+            height_rad = CROP_HEIGHT // 2
+            # Check if h,w matches IMAGE_WIDTH, IMAGE_HEIGHT. If not, this is due to png being rescaled. So scale centers.
+            if not h == IMAGE_HEIGHT and not w == IMAGE_WIDTH:
+                xcenter = int(xcenter * IMAGE_WIDTH//w)
+                ycenter = int(ycenter * IMAGE_HEIGHT//h)
+            print(xcenter, ycenter)
 
-            # Cropped image size is /2 of width, height
-            CROP_SIZE = nrows // 2
-            rad = CROP_SIZE // 2
-            xmin, ymin, xmax, ymax = (xcenter - rad), (ycenter - rad), (xcenter + rad), (ycenter + rad)
+            xmin, ymin, xmax, ymax = (xcenter - width_rad), (ycenter - height_rad), (xcenter + width_rad), (ycenter + height_rad)
 
             if xmin < 0:
                 xmin = 0
-                xmax = CROP_SIZE
+                xmax = CROP_WIDTH
 
-            if xmax > w:
-                xmin = w - CROP_SIZE
-                xmax = w
+            if xmax > IMAGE_WIDTH:
+                xmin = IMAGE_WIDTH - CROP_WIDTH
+                xmax = IMAGE_WIDTH
 
             if ymin < 0:
                 ymin = 0
-                ymax = CROP_SIZE
+                ymax = CROP_HEIGHT
 
-            if ymax > h:
-                ymin = h - CROP_SIZE
-                ymax = h
+            if ymax > IMAGE_HEIGHT:
+                ymin = IMAGE_HEIGHT - CROP_HEIGHT
+                ymax = IMAGE_HEIGHT
 
             # Crop all overlay, dicom pngs.
             dicom_features = []
             for png in df.dicom.values:
-                im = Image.frombytes("L", (nrows, ncolumns), bytes(png)) 
+                im = Image.frombytes("L", (IMAGE_WIDTH, IMAGE_HEIGHT), bytes(png)) 
                 feature = im.crop((xmin, ymin, xmax, ymax)).tobytes()
                 dicom_features.append(feature)
 
             overlay_features = []
             for png in df.overlay.values:
-                im = Image.frombytes("RGB", (nrows, ncolumns), bytes(png)) 
+                im = Image.frombytes("RGB", (IMAGE_WIDTH, IMAGE_HEIGHT), bytes(png)) 
                 feature = im.crop((xmin, ymin, xmax, ymax)).tobytes()
                 overlay_features.append(feature)
 

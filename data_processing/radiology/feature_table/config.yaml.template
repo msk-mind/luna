@@ -12,3 +12,7 @@ DESTINATION_PATH: /where/to/create/data
 # field to unpack dicom or overlay
 COLUMN_NAME: dicom
 
+# png image size to unpack
+IMAGE_WIDTH: 256
+
+IMAGE_HEIGHT: 256

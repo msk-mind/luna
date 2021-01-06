@@ -7,7 +7,6 @@ Data Transfer / Unpack binaries
 """
 import os, time
 import click
-import math
 import pandas as pd
 from PIL import Image 
 from io import BytesIO
@@ -62,6 +61,8 @@ def binary_to_png(cfg):
 
     DESTINATION_PATH = cfg.get_value(path=const.DATA_CFG+"::DESTINATION_PATH")
     COLUMN_NAME = cfg.get_value(path=const.DATA_CFG+"::COLUMN_NAME")
+    IMAGE_WIDTH = int(cfg.get_value(path=const.DATA_CFG+"::IMAGE_WIDTH"))
+    IMAGE_HEIGHT = int(cfg.get_value(path=const.DATA_CFG+"::IMAGE_HEIGHT"))
 
     # create destination directory
     os.makedirs(DESTINATION_PATH, exist_ok=True)
@@ -69,15 +70,12 @@ def binary_to_png(cfg):
     # unpack COLUMN_NAME
     for index, row in df.iterrows():
         # mode set to L for b/w images, RGB for colored images.
-        array_len = len(row[COLUMN_NAME])
         if "dicom" == COLUMN_NAME.lower():
-            dim = int(math.sqrt(array_len))
             mode = "L"
         if "overlay" == COLUMN_NAME.lower():
-            dim = int(math.sqrt(array_len//3))
             mode = "RGB"
 
-        image = Image.frombytes(mode, (dim, dim), bytes(row[COLUMN_NAME]))
+        image = Image.frombytes(mode, (IMAGE_WIDTH, IMAGE_HEIGHT), bytes(row[COLUMN_NAME]))
 
         image_dir = os.path.join(DESTINATION_PATH, COLUMN_NAME, row.accession_number)
         os.makedirs(image_dir, exist_ok=True)

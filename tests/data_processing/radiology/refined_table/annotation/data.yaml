@@ -14,3 +14,6 @@ SQL_STRING: metadata.SeriesNumber == '10'
 # num partition for delta table
 NUM_PARTITION: 1
 
+IMAGE_WIDTH: 512
+
+IMAGE_HEIGHT: 512

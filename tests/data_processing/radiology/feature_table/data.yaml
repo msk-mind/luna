@@ -12,3 +12,7 @@ DESTINATION_PATH: tests/data_processing/testdata/data/unpacked_pngs
 # field to unpack dicom or overlay
 COLUMN_NAME: dicom
 
+# png image width, height
+IMAGE_WIDTH: 256
+
+IMAGE_HEIGHT: 256
