@@ -1,0 +1,12 @@
+ObjectType = Image
+NDims = 3
+DimSize = 256  256  196
+ElementSpacing = 1.3281      1.3281         1.1
+Position = 163.71       104.648      -100.375
+BinaryData = True
+BinaryDataByteOrderMSB = False
+Offset = 163.71       104.648      -100.375
+Orientation = -1 0 0 0 -1 0 0 0 1 
+ElementType = MET_SHORT
+ElementDataFile = segimg-growcutGMM--contour.raw
+TransformMatrix = 1 0 0 0 1 0

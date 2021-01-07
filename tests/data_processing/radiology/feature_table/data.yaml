@@ -1,0 +1,18 @@
+# path to mind data
+# hdfs:// or absolute or relative datapath
+MIND_DATA_PATH: tests/data_processing/testdata/data
+
+PROJECT_NAME: test-project
+
+TABLE_NAME: FEATURE_unpack
+
+# local path to unpack pngs.
+DESTINATION_PATH: tests/data_processing/testdata/data/unpacked_pngs
+
+# field to unpack dicom or overlay
+COLUMN_NAME: dicom
+
+# png image width, height
+IMAGE_WIDTH: 256
+
+IMAGE_HEIGHT: 256

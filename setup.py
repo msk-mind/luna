@@ -33,6 +33,13 @@ setup(
         'data_processing',
         'data_processing.common',
         'data_processing.services',
+        'data_processing.pathology.proxy_table',
+        'data_processing.radiology.proxy_table',
+        'data_processing.radiology.proxy_table.annotation',
+        'data_processing.radiology.refined_table',
+        'data_processing.radiology.refined_table.annotation',
+        'data_processing.radiology.feature_table',
+        'data_processing.radiology.feature_table.annotation'
     ],
     package_dir={'data-processing': 'data-processing'},
     include_package_data=True,

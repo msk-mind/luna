@@ -1,5 +1,4 @@
 import pytest
-from pytest_mock import mocker
 import os, shutil
 from pyspark import SQLContext
 from click.testing import CliRunner
@@ -17,7 +16,7 @@ png_table_path = "tests/data_processing/testdata/data/test-project/tables/PNG_ds
 def spark():
     print('------setup------')
     ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yaml')
-    spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-radiology-proxy-annotation')
+    spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-radiology-refined-annotation')
 
     yield spark
 
@@ -34,3 +33,7 @@ def test_cli(spark):
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
+
+    df = spark.read.format("delta").load(png_table_path)
+    assert df.count() == 1
+    df.unpersist()
