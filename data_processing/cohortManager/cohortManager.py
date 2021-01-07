@@ -116,12 +116,13 @@ HOST = os.environ['HOSTNAME']
 
 
 # ============================================================================================
+# get-put-cohort
 @api.route('/mind/api/v1/cohort/<cohort_id>', 
     methods=['PUT', 'GET'],
     doc={"description": "Create a cohort and get information (the patient listing) from a cohort"}
 )
 @api.doc(
-    params={'cohort_id': 'Cohort Identifier'},
+    params={'cohort_id': 'Cohort identifier, must be unique if creating a new cohort'},
     responses={200:"Success", 201:"Created successfully", 400:"Bad query", 404:"Cohort not found"}
 )
 class cohort(Resource):
@@ -161,23 +162,26 @@ class cohort(Resource):
                 """
             )
 
+            if co_res is None:
+                return make_response("Bad query", 400)
+            if len(co_res)==0:
+                return make_response("Cohort not found, please create it first", 400)
+        
             # Build summary responses:
             cohort_summary = co_res[0].data()['co']
             cohort_summary['Patients'] = []
             for rec in px_res:
                 px_dict     = rec.data()['px']
                 patient_id  = px_dict['PatientID']
-                px_dict['Patient Accessions'] = requests.get(f'http://{HOST}:5004/mind/api/v1/patient/{patient_id}').json()
+                px_dict['Patient Accessions'] = requests.get(f'http://{HOST}:5004/mind/api/v1/patient/{cohort_id}/{patient_id}').json()
                 cohort_summary['Patients'].append(px_dict)
-            
-            if not co_res is None: 
-                return jsonify(cohort_summary)
-            else:           
-                return make_response("Cohort not found", 404)
+            return jsonify(cohort_summary)
+           
 # --------------------------------------------------------------------------------------------
 
 
 # ============================================================================================
+# get-put-cohort
 @api.route('/mind/api/v1/cohort/<cohort_id>/<patient_id>', 
     methods=['PUT', 'DELETE'],
     doc={"description": "Modify/Update the patient listing within a cohort"}
@@ -189,32 +193,36 @@ class updatePatient(Resource):
     # Add (include) patient, inverse of removePatient
     def put(self, cohort_id, patient_id):
         """ (Re)-include patient with cohort"""
+        context_path = f"{cohort_id}:{patient_id}"
 
-        res = conn.query(f"""MATCH (co:cohort{{CohortID:'{cohort_id}'}}) MATCH (px:patient{{PatientID:'{patient_id}'}}) MERGE (co)-[r:INCLUDE]-(px) RETURN r""")
+        res = conn.query(f"""MATCH (co:cohort{{CohortID:'{cohort_id}'}}) MATCH (px:patient{{Context:'{context_path}'}}) MERGE (co)-[r:INCLUDE]-(px) RETURN r""")
         return ("Added {} patients from cohort".format(len(res)))
 
     # Remove (exclude) patient, inverse of addPatient
     def delete(self, cohort_id, patient_id):
         """ Exclude patient from cohort"""
+        context_path = f"{cohort_id}:{patient_id}"
 
-        res = conn.query(f"""MATCH (co:cohort{{CohortID:'{cohort_id}'}})-[r:INCLUDE]-(px:patient{{PatientID:'{patient_id}'}}) DELETE r RETURN r""")
+        res = conn.query(f"""MATCH (co:cohort{{CohortID:'{cohort_id}'}})-[r:INCLUDE]-(px:patient{{Context:'{context_path}'}}) DELETE r RETURN r""")
         return ("Deleted {} patients from cohort".format(len(res)))
 # --------------------------------------------------------------------------------------------
 
 
 # ============================================================================================
-@api.route('/mind/api/v1/patient/<patient_id>', 
+@api.route('/mind/api/v1/patient/<cohort_id>/<patient_id>', 
     methods=['GET', 'PUT'],
     doc={"description": "Create a patient and get information about that patient"}
 )
-@api.doc(params={'patient_id': 'Patient Identifier'})
+@api.doc(params={'cohort_id': 'Cohort Identifier', 'patient_id': 'Patient Identifier, must be unique if creating a new patient'})
 class listCases(Resource):
-    def get(self, patient_id):
+    def get(self, cohort_id, patient_id):
         """ Retrieve case listing for patient"""
+        
+        context_path = f"{cohort_id}:{patient_id}"
 
         # Matches (cohort <include> patients <has_case> cases)
         res = conn.query(f"""
-            MATCH (px:patient{{PatientID:'{patient_id}'}})-[:HAS_CASE]-(cases:accession) 
+            MATCH (px:patient{{Context:'{context_path}'}})-[:HAS_CASE]-(cases:accession) 
             RETURN cases
             """
         )
@@ -225,16 +233,24 @@ class listCases(Resource):
             all_case.append(case_dict)
         return jsonify(all_case)
 
-    def put(self, patient_id):
+    def put(self, cohort_id, patient_id):
             """ Create new patient """
+            
+            cohort_res = conn.query(f""" MATCH (co:cohort{{CohortID:'{cohort_id}'}}) RETURN co """)
+
+            if not len(cohort_res)==1: return make_response("No cohort context created", 300)
+
+            context_path = f"{cohort_id}:{patient_id}"
 
             create_res = conn.query(f"""
-                CREATE (px:patient{{PatientID:'{patient_id}'}})
+                CREATE (px:patient{{PatientID:'{patient_id}', Context:'{context_path}'}})
                 RETURN px
                 """
             )
             match_res = conn.query(f"""
-                MATCH (px:patient{{PatientID:'{patient_id}'}})
+                MATCH (px:patient{{Context:'{context_path}'}})
+                MATCH (co:cohort{{CohortID:'{cohort_id}'}})
+                MERGE (co)-[r:INCLUDE]-(px)
                 RETURN px
                 """
             )
@@ -248,38 +264,45 @@ class listCases(Resource):
 
 
 # ============================================================================================
-@api.route('/mind/api/v1/patient/<patient_id>/<case_list>', 
+@api.route('/mind/api/v1/patient/<cohort_id>/<patient_id>/<case_list>', 
     methods=['PUT', 'DELETE'],
     doc={"description": "Modify/Update the case listing of a patients"}
 )
 @api.doc(
-    params={'patient_id': 'New patient identifier to create', 'case_list':'Comma seperated list of accession numbers to add'},
+    params={'cohort_id': 'Cohort Identifier', 'patient_id': 'Patient Identifier', 'case_list':'Comma seperated list of accession numbers to add/remove'},
     responses={200:"Success", 400:"Failed to add patient"}
 )
 class newPatient(Resource):
-    def put(self, patient_id, case_list):
+    def put(self, cohort_id, patient_id, case_list):
         """ Add case listing to patient """
+
+        cohort_res = conn.query(f""" MATCH (co:cohort{{CohortID:'{cohort_id}'}}) RETURN co """)
+
+        if not len(cohort_res)==1: return make_response("No cohort context created", 300)
+
+        context_path = f"{cohort_id}:{patient_id}"
 
         res = conn.query(f"""
             MATCH (cases:accession) 
             WHERE cases.AccessionNumber IN [{case_list}] 
-            MATCH (px:patient{{PatientID:'{patient_id}'}})
+            MATCH (px:patient{{Context:'{context_path}'}})
             MERGE (px)-[r:HAS_CASE]->(cases) 
             RETURN px, cases, r
             """
         )
-        print (res)
         if res is None: 
             return make_response (f"Bad query", 400)
         else:
             dict_res = [rec.data()['cases'] for rec in res]
             return make_response (f"Added {patient_id} with {len(dict_res)} cases: {dict_res}", 200)
 
-    def delete(self, patient_id, case_list):
+    def delete(self, cohort_id, patient_id, case_list):
         """ Remove case listing from patient """
 
+        context_path = f"{cohort_id}:{patient_id}"
+
         res = conn.query(f"""
-            MATCH (px:patient{{PatientID:'{patient_id}'}})-[r:HAS_CASE]->(cases:accession)
+            MATCH (px:patient{{Context:'{context_path}'}})-[r:HAS_CASE]->(cases:accession)
             WHERE cases.AccessionNumber IN [{case_list}] 
             DELETE r RETURN r
             """
