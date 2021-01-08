@@ -4,6 +4,7 @@
 Scripts for data processing
 
 
+
 ## Steps to generate radiology proxy table.
 1. Make a copy of data_ingestion_template.yaml.template and fill it out. This template contains operational metadata associated with the data and the data transfer process. 
 
