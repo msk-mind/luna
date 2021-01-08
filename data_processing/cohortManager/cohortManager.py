@@ -29,95 +29,6 @@ STREAMS = {}
 METHODS = {}
 HOST = os.environ['HOSTNAME']
 
-
-
-# ==================================================================================================
-# Routes to list things
-# ==================================================================================================
-
-# # List all the patients
-# @api.route('/mind/api/v1/patient/list/<cohort_id>', 
-#     methods=['GET'],
-#     doc={"description": "List all the patients and recursively, their cases"}
-# )
-# @api.doc(params={'cohort_id': 'Cohort Identifier'})
-# class listPatients(Resource):
-#     def get(self, cohort_id):
-#         """ Retrieve patient listing """
-
-#         # Matches (cohort <include> patients)
-#         res = conn.query(f"""
-#             MATCH (co:cohort{{CohortID:'{cohort_id}'}})-[:INCLUDE]-(px:patient) 
-#             RETURN px
-#             """
-#         )
-
-#         all_px = []
-#         for rec in res:
-#             px_dict = rec.data()['px']
-#             patient_id = px_dict['PatientID']
-#             px_dict['cases'] = requests.get(f'http://{HOST}:5004/mind/api/v1/case/list/{cohort_id}/{patient_id}').json()
-#             all_px.append(px_dict)
-#         return jsonify(all_px)
-
-
-# # List all the scans
-# @api.route('/mind/api/v1/scan/list/<cohort_id>/<patient_id>/<accession_number>', 
-#     methods=['GET'],
-#     doc={"description": "List all scans for a given case accession number and recursively their available data"}
-# )
-# @api.doc(params={'cohort_id': 'Cohort Identifier', 'patient_id': 'Patient Identifier', 'accession_number':'Case Accession Number'})
-# class listScans(Resource):
-#     def get (self, cohort_id, patient_id, accession_number):
-#         """ Retrieve scan listing """
-
-#         # Matches (cohort <include> patients <has_case> cases <has_scan> scan <include> cohort)
-#         res = conn.query(f"""
-#             MATCH (co:cohort{{CohortID:'{cohort_id}'}})
-#             -[:INCLUDE]-(px:patient{{PatientID:'{patient_id}'}})
-#             -[:HAS_CASE]-(cases:accession{{AccessionNumber:'{accession_number}'}})
-#             -[:HAS_SCAN]-(sc:scan)
-#             -[:INCLUDE]-(co)
-#             RETURN sc, id(sc)
-#             """
-#         )
-
-#         all_scan = []
-#         for rec in res:
-#             scan_dict = rec.data()['sc']
-#             scan_id   = rec.data()['id(sc)']
-#             scan_dict['id']   = scan_id
-#             scan_dict['data'] = requests.get(f'http://{HOST}:5004/mind/api/v1/container/scan/{scan_id}').json()
-#             all_scan.append(scan_dict)
-#         return jsonify(all_scan)
-
-# # List all the data
-# @api.route('/mind/api/v1/container/<container_type>/<container_id>', 
-#     methods=['GET'],
-#     doc={"description": "List all available data for a given a scan container"}
-# )
-# @api.doc(params={'container_type': 'Container type, e.g. scan, slide', 'container_id': 'Unique container identifier'})
-# class listContainer(Resource):
-#     def get (self, container_type, container_id):
-#         """ Retrieve container data listing """
-
-#         # Matches (scan <has_data> data)
-#         res = conn.query(f"""
-#             MATCH (sc:{container_type})-[:HAS_DATA]-(data) 
-#             WHERE id(sc)={container_id} 
-#             RETURN data, labels(data)
-#             """
-#         )
-
-#         all_data = []
-#         for rec in res:
-#             data_dict = rec.data()['data']
-#             data_dict['type'] = rec.data()['labels(data)'][0]
-#             all_data.append(data_dict)
-#         return jsonify(all_data)
-
-
-
 # ============================================================================================
 # get-put-cohort
 @api.route('/mind/api/v1/cohort/<cohort_id>', 
@@ -187,7 +98,7 @@ class modifyPatientInCohort(Resource):
         patient = Node("patient", properties={"Namespace":cohort_id, "PatientID":patient_id})
 
         res = conn.query(f"""MATCH (co:{cohort.match()}) MATCH (px:{patient.match()}) MERGE (co)-[r:INCLUDE]-(px) RETURN r""")
-        return ("Added {} patients from cohort".format(len(res)))
+        return ("Added {} patients to cohort".format(len(res)))
 
     # Remove (exclude) patient, inverse of addPatient
     def delete(self, cohort_id, patient_id):
@@ -251,7 +162,7 @@ class createOrGetPatient(Resource):
 
 # ============================================================================================
 @api.route('/mind/api/v1/patient/<cohort_id>/<patient_id>/<case_list>', 
-    methods=['PUT', 'DELETE'],
+    methods=['PUT', 'DELETE', 'GET'],
     doc={"description": "Modify/Update the case listing of a patients"}
 )
 @api.doc(
@@ -259,6 +170,32 @@ class createOrGetPatient(Resource):
     responses={200:"Success", 400:"Failed to add patient"}
 )
 class addOrRemoveCases(Resource):
+    def get(self, cohort_id, patient_id, case_list):
+        """ Get container listings for a given case list """
+        cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        if not len(conn.query(f""" MATCH (co:{cohort.match()}) RETURN co """ ))==1: 
+            return make_response("No cohort namespace found", 300)
+
+        patient = Node("patient", properties={"Namespace":cohort_id, "PatientID":patient_id})
+        res = conn.query(f"""
+            MATCH (px:{patient.match()})
+            -[:HAS_CASE]->(cases:accession) 
+            -[:HAS_SCAN]->(sc:scan) 
+            -[:HAS_DATA]->(data) 
+            WHERE cases.AccessionNumber IN [{case_list}] 
+            RETURN sc.SeriesInstanceUID, data
+            """
+        )
+
+        if res is None: 
+            return make_response (f"Bad query", 400)
+        else:
+            collection = {}
+            for rec in res: collection[rec.data()['sc.SeriesInstanceUID']] = []
+            for rec in res: collection[rec.data()['sc.SeriesInstanceUID']].append(rec.data()['data'])
+
+            return jsonify (collection)
+
     def put(self, cohort_id, patient_id, case_list):
         """ Add case listing to patient """
         cohort = Node("cohort",  properties={"CohortID":cohort_id})
