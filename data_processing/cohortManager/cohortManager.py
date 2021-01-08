@@ -3,6 +3,7 @@ from flask_restx import Api, Resource
 from werkzeug.utils import secure_filename
 
 from data_processing.common.custom_logger import init_logger
+from data_processing.common.GraphEnum import Node
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 import data_processing.common.constants as const
@@ -28,10 +29,7 @@ STREAMS = {}
 METHODS = {}
 HOST = os.environ['HOSTNAME']
 
-def get_patient_name(namespace, patient_id): 
-    return f"{namespace}::{patient_id}"
-def match_cohort(cohort_id):
-    return conn.query(f""" MATCH (co:cohort{{CohortID:'{cohort_id}'}}) RETURN co """)
+
 
 # ==================================================================================================
 # Routes to list things
@@ -135,8 +133,9 @@ class createOrGetCohort(Resource):
         """ Create new cohort """
         if ":" in cohort_id: return make_response("Invalid cohort name, only use alphanumeric characters", 400)
 
-        create_res = conn.query(f""" CREATE (co:cohort{{CohortID:'{cohort_id}'}}) RETURN co""")
-        match_res  = conn.query(f""" MATCH  (co:cohort{{CohortID:'{cohort_id}'}}) RETURN co""")
+        cohort = Node("cohort", properties={"CohortID":cohort_id})
+        create_res = conn.query(f""" CREATE (co:{cohort.create()}) RETURN co""")
+        match_res  = conn.query(f""" MATCH  (co:{cohort.match()} ) RETURN co""")
 
         if not create_res is None: 
             return make_response("Created successfully", 201)
@@ -149,9 +148,9 @@ class createOrGetCohort(Resource):
     def get(self, cohort_id):
             """ Retrieve listing for cohort """
 
-            co_res = conn.query(f""" MATCH (co:cohort{{CohortID:'{cohort_id}'}}) RETURN co """ )
-
-            px_res = conn.query(f""" MATCH (co:cohort{{CohortID:'{cohort_id}'}})-[:INCLUDE]-(px:patient) RETURN px """ )
+            cohort = Node("cohort", properties={"CohortID":cohort_id})
+            co_res = conn.query(f""" MATCH (co:{cohort.match()}) RETURN co """ )
+            px_res = conn.query(f""" MATCH (co:{cohort.match()})-[:INCLUDE]-(px:patient) RETURN px """ )
 
             if co_res is None:
                 return make_response("Bad query", 400)
@@ -184,17 +183,20 @@ class modifyPatientInCohort(Resource):
     # Add (include) patient, inverse of removePatient
     def put(self, cohort_id, patient_id):
         """ (Re)-include patient with cohort"""
-        patient_name = get_patient_name(cohort_id, patient_id)
+        cohort  = Node("cohort",  properties={"CohortID":cohort_id})
+        patient = Node("patient", properties={"Namespace":cohort_id, "PatientID":patient_id})
 
-        res = conn.query(f"""MATCH (co:cohort{{CohortID:'{cohort_id}'}}) MATCH (px:patient{{Name:'{patient_name}'}}) MERGE (co)-[r:INCLUDE]-(px) RETURN r""")
+        res = conn.query(f"""MATCH (co:{cohort.match()}) MATCH (px:{patient.match()}) MERGE (co)-[r:INCLUDE]-(px) RETURN r""")
         return ("Added {} patients from cohort".format(len(res)))
 
     # Remove (exclude) patient, inverse of addPatient
     def delete(self, cohort_id, patient_id):
         """ Exclude patient from cohort"""
-        patient_name = get_patient_name(cohort_id, patient_id)
+        cohort  = Node("cohort",  properties={"CohortID":cohort_id})
+        patient = Node("patient", properties={"Namespace":cohort_id, "PatientID":patient_id})
+        print ((f"""MATCH (co:{cohort.match()})-[r:INCLUDE]-(px:{patient.match()}) DELETE r RETURN r"""))
 
-        res = conn.query(f"""MATCH (co:cohort{{CohortID:'{cohort_id}'}})-[r:INCLUDE]-(px:patient{{Name:'{patient_name}'}}) DELETE r RETURN r""")
+        res = conn.query(f"""MATCH (co:{cohort.match()})-[r:INCLUDE]-(px:{patient.match()}) DELETE r RETURN r""")
         return ("Deleted {} patients from cohort".format(len(res)))
 # --------------------------------------------------------------------------------------------
 
@@ -209,10 +211,9 @@ class createOrGetPatient(Resource):
     def get(self, cohort_id, patient_id):
         """ Retrieve case listing for patient"""
         
-        patient_name = get_patient_name(cohort_id, patient_id)
-
         # Matches (cohort <include> patients <has_case> cases)
-        res = conn.query(f""" MATCH (px:patient{{Name:'{patient_name}'}})-[:HAS_CASE]-(cases:accession) RETURN cases """)
+        patient = Node("patient", properties={"Namespace":cohort_id, "PatientID":patient_id})
+        res = conn.query(f""" MATCH (px:{patient.match()})-[:HAS_CASE]-(cases:accession) RETURN cases """)
 
         all_case = []
         for rec in res:
@@ -222,23 +223,19 @@ class createOrGetPatient(Resource):
 
     def put(self, cohort_id, patient_id):
             """ Create new patient """
-            
-            cohort_res = match_cohort(cohort_id)
+            cohort  = Node("cohort",  properties={"CohortID":cohort_id})
+            patient = Node("patient", properties={"Namespace":cohort_id, "PatientID":patient_id})
 
-            if not len(cohort_res)==1: return make_response("No cohort namespace found", 300)
+            if ":" in patient_id: 
+                return make_response("Invalid patient name, only use alphanumeric characters", 400)
 
-            if ":" in patient_id: return make_response("Invalid patient name, only use alphanumeric characters", 400)
+            if not len(conn.query(f""" MATCH (co:{cohort.match()}) RETURN co """ ))==1: 
+                return make_response("No cohort namespace found", 300)
 
-            patient_name = get_patient_name(cohort_id, patient_id)
-
-            create_res = conn.query(f"""
-                CREATE (px:patient{{PatientID:'{patient_id}', Namepsace:'{cohort_id}', Name:'{patient_name}'}})
-                RETURN px
-                """
-            )
-            match_res = conn.query(f"""
-                MATCH (px:patient{{Name:'{patient_name}'}})
-                MATCH (co:cohort{{CohortID:'{cohort_id}'}})
+            create_res = conn.query(f""" CREATE (px:{patient.create()}) RETURN px """)
+            match_res  = conn.query(f"""
+                MATCH (px:{patient.create()})
+                MATCH (co:{cohort.match()})
                 MERGE (co)-[r:INCLUDE]-(px)
                 RETURN px
                 """
@@ -264,21 +261,20 @@ class createOrGetPatient(Resource):
 class addOrRemoveCases(Resource):
     def put(self, cohort_id, patient_id, case_list):
         """ Add case listing to patient """
+        cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        if not len(conn.query(f""" MATCH (co:{cohort.match()}) RETURN co """ ))==1: 
+            return make_response("No cohort namespace found", 300)
 
-        cohort_res = match_cohort(cohort_id)
-
-        if not len(cohort_res)==1: return make_response("No cohort context created", 300)
-
-        patient_name = get_patient_name(cohort_id, patient_id)
-
+        patient = Node("patient", properties={"Namespace":cohort_id, "PatientID":patient_id})
         res = conn.query(f"""
+            MATCH (px:{patient.match()})
             MATCH (cases:accession) 
             WHERE cases.AccessionNumber IN [{case_list}] 
-            MATCH (px:patient{{Name:'{patient_name}'}})
             MERGE (px)-[r:HAS_CASE]->(cases) 
             RETURN px, cases, r
             """
         )
+
         if res is None: 
             return make_response (f"Bad query", 400)
         else:
@@ -287,11 +283,13 @@ class addOrRemoveCases(Resource):
 
     def delete(self, cohort_id, patient_id, case_list):
         """ Remove case listing from patient """
+        cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        if not len(conn.query(f""" MATCH (co:{cohort.match()}) RETURN co """ ))==1: 
+            return make_response("No cohort namespace found", 300)
 
-        patient_name = get_get_patient_name(cohort_id, patient_id)
-
+        patient = Node("patient", properties={"Namespace":cohort_id, "PatientID":patient_id})
         res = conn.query(f"""
-            MATCH (px:patient{{Name:'{patient_name}'}})-[r:HAS_CASE]->(cases:accession)
+            MATCH (px:{patient.match()})-[r:HAS_CASE]->(cases:accession)
             WHERE cases.AccessionNumber IN [{case_list}] 
             DELETE r RETURN r
             """
