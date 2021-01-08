@@ -24,3 +24,5 @@ spark_application_config:
   - spark.executor.pyspark.memory: 30g
 
   - spark.sql.shuffle.partitions: 300
+
+  - spark.driver.maxResultSize: 2g
