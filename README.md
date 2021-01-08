@@ -1,8 +1,7 @@
-[![MSK-MIND](https://circleci.com/gh/msk-mind/data-processing.svg?style=shield)](https://circleci.com/gh/msk-mind/data-processing) [![codecov](https://codecov.io/gh/msk-mind/data-processing/branch/circleci-project-setup/graph/badge.svg)](https://codecov.io/gh/msk-mind/data-processing)
+[![MSK-MIND](https://circleci.com/gh/msk-mind/data-processing.svg?style=shield)](https://circleci.com/gh/msk-mind/data-processing) [![codecov](https://codecov.io/gh/msk-mind/data-processing/branch/master/graph/badge.svg)](https://codecov.io/gh/msk-mind/data-processing)
 
 # Data Processing
 Scripts for data processing
-
 
 
 ## Steps to generate radiology proxy table.
