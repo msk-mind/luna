@@ -42,4 +42,12 @@ def test_cohort_wrong_properties():
 def test_patient_wrong_properties():
     with pytest.raises(RuntimeError):
         Node("patient", properties={"Description":"a patient"})
+
+def test_patient_bad_id():
+    with pytest.raises(ValueError):
+        Node("patient", properties={"PatientID":"my:patient", "Namespace":"my_cohort", "Description":"a patient"})
+
+def test_cohort_bad_id():
+    with pytest.raises(ValueError):
+        Node("cohort", properties={"CohortID":"my:cohort", "Description":"a cohort"})
        

@@ -47,6 +47,7 @@ class Node(object):
 		"""
 		Returns the full name given a namespace and patient ID
 		"""
+		if ":" in namespace or ":" in identifier: raise ValueError("Qualified path cannot be constructed, namespace or identifier cannot contain ':'")
 		return f"{namespace}::{identifier}"
 	
 
