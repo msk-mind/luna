@@ -16,7 +16,7 @@ def test_patient_create():
     assert "ExtraKey"   in create_string
 
 def test_patient_match():
-    match_string = Node("pvim atient", properties={"PatientID":"my_patient", "Namespace":"my_cohort"}).match()
+    match_string = Node("patient", properties={"PatientID":"my_patient", "Namespace":"my_cohort"}).match()
     assert "patient" in match_string    
     assert "QualifiedPath: 'my_cohort::my_patient'"   in match_string
     assert "ExtraKey"  not in match_string
