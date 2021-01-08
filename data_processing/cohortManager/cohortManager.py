@@ -1,14 +1,11 @@
 from flask import Flask, request, jsonify, render_template, make_response
 from flask_restx import Api, Resource
-from werkzeug.utils import secure_filename
 
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.GraphEnum import Node
-from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 import data_processing.common.constants as const
 from data_processing.common.config import ConfigSet
-from pyspark.sql.types import StringType, IntegerType, StructType, StructField
 
 import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests
 import pandas as pd
