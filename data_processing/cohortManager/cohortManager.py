@@ -239,5 +239,5 @@ class addOrRemoveCases(Resource):
 
 
 if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'],port=5004, threaded=True, debug=True)
+    app.run(host=os.environ['HOSTNAME'],port=5004, threaded=True, debug=False)
 

@@ -20,7 +20,7 @@ class Node(object):
 			self.properties["QualifiedPath"] = self.get_qualified_name(properties["CohortID"], properties["CohortID"])
 
 		if self.type=="patient":
-			if not "PatientID" in properties.keys() and "Namespace" in properties.keys():
+			if not ("PatientID" in properties.keys() and "Namespace" in properties.keys()):
 				raise RuntimeError("Patients must have a PatientID and Namespace property!")
 			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["PatientID"])
 
