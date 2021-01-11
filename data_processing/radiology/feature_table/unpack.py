@@ -10,6 +10,7 @@ import click
 import pandas as pd
 from PIL import Image 
 from io import BytesIO
+from pyspark.sql.functions import countDistinct
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
@@ -57,7 +58,7 @@ def binary_to_png(cfg):
                                 const.TABLE_DIR,
                                 cfg.get_value(path=const.DATA_CFG+"::TABLE_NAME"))
 
-    df = spark.read.format("delta").load(table_path).toPandas()
+    df = spark.read.format("delta").load(table_path)
 
     DESTINATION_PATH = cfg.get_value(path=const.DATA_CFG+"::DESTINATION_PATH")
     COLUMN_NAME = cfg.get_value(path=const.DATA_CFG+"::COLUMN_NAME")
@@ -67,8 +68,16 @@ def binary_to_png(cfg):
     # create destination directory
     os.makedirs(DESTINATION_PATH, exist_ok=True)
 
+    # find edge cases with more than 1 annotations
+    # (sometimes both L/R organs have tumor, and we end up with 2 annotations per accesion.)
+    multiple_annotations = df.groupby("accession_number") \
+        .agg(countDistinct("scan_annotation_record_uuid").alias("count")) \
+        .filter("count > 1").toPandas()
+
+    multiple_cases = multiple_annotations['accession_number'].to_list()
+
     # unpack COLUMN_NAME
-    for index, row in df.iterrows():
+    for index, row in df.toPandas().iterrows():
         # mode set to L for b/w images, RGB for colored images.
         if "dicom" == COLUMN_NAME.lower():
             mode = "L"
@@ -78,6 +87,11 @@ def binary_to_png(cfg):
         image = Image.frombytes(mode, (IMAGE_WIDTH, IMAGE_HEIGHT), bytes(row[COLUMN_NAME]))
 
         image_dir = os.path.join(DESTINATION_PATH, COLUMN_NAME, row.accession_number)
+
+        #TODO if there we have better metadata (L/R labels..), we can make this more user-friendly.
+        if row.accession_number in multiple_cases:
+            image_dir = os.path.join(DESTINATION_PATH, COLUMN_NAME, row.accession_number + "_" + row.scan_annotation_record_uuid)
+
         os.makedirs(image_dir, exist_ok=True)
 
         # save image to png

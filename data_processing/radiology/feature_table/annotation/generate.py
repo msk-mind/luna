@@ -97,7 +97,7 @@ def generate_feature_table(cfg):
                 F.col("metadata.SeriesInstanceUID").alias("SeriesInstanceUID"),
                 F.col("metadata.Rows").alias("nrows"),
                 F.col("metadata.Columns").alias("ncolumns"),
-                "accession_number", "dicom", "overlay", "path", "png_record_uuid"]
+                "accession_number", "dicom", "overlay", "path", "png_record_uuid", "scan_annotation_record_uuid"]
 
     df = mha_df.join(png_df, png_df.metadata.AccessionNumber == mha_df.accession_number) \
                .select(columns).distinct() \
@@ -191,6 +191,7 @@ def generate_feature_table(cfg):
                              StructField("dicom",BinaryType(),True),
                              StructField("overlay",BinaryType(),True),
                              StructField("png_record_uuid",StringType(),True),
+                             StructField("scan_annotation_record_uuid",StringType(),True),
                              StructField("path",StringType(),True)])
         df = df.groupBy("accession_number").applyInPandas(crop_images, schema = schema)
        
@@ -201,7 +202,7 @@ def generate_feature_table(cfg):
         df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf(df.overlay)))
 
         columns = ["feature_record_uuid", "accession_number", "instance_number", "SeriesInstanceUID", 
-                    "xnat_patient_id", "dicom", "overlay", "png_record_uuid"]
+                    "xnat_patient_id", "dicom", "overlay", "png_record_uuid","scan_annotation_record_uuid"]
 
         df.select(columns) \
             .coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')) \

@@ -31,7 +31,7 @@ logger = init_logger()
 logger.info("Starting data_processing.radiology.refined_table.annotation.generate")
 
 
-def create_dicom_png(src_path, accession_number, width, height):
+def create_dicom_png(src_path, width, height):
     """
     Create a png from src_path image, and return image as bytes.
     """
@@ -56,14 +56,11 @@ def create_dicom_png(src_path, accession_number, width, height):
     return im.tobytes()
        
 
-def create_seg_png(src_path, accession_number, width, height):
+def create_seg_png(src_path, width, height):
     """
     Create pngs from src_path image.
     Returns an array of (instance_number, png binary) tuple.
     """
-    # Save png named as hash of dicom/seg
-    #png_dir = os.path.join(png_dir, accession_number)
-    #os.makedirs(png_dir, exist_ok=True)
 
     file_path = src_path.split(':')[-1]
     data, header = load(file_path)
@@ -99,14 +96,14 @@ def create_seg_png(src_path, accession_number, width, height):
     return slices
 
  
-def overlay_pngs(instance_number, dicom_path, seg, accession_number, width, height):
+def overlay_pngs(instance_number, dicom_path, seg, width, height):
     """
     Create dicom png images.
     Blend dicom and segmentation images with 7:3 ratio. 
     Returns tuple of binaries to the combined image.
     """
     width, height = int(width), int(height)
-    dicom_binary = create_dicom_png(dicom_path, accession_number, width, height)
+    dicom_binary = create_dicom_png(dicom_path, width, height)
     
     # load dicom and seg images from bytes
     dcm_img = Image.frombytes("L", (width, height), bytes(dicom_binary))
@@ -196,7 +193,7 @@ def generate_png_tables(cfg):
 									 StructField("seg_png", BinaryType())])))
         
         seg_df = seg_df.withColumn("slices_pngs", 
-            F.lit(create_seg_png_udf("path", "accession_number", F.lit(width), F.lit(height))))
+            F.lit(create_seg_png_udf("path", F.lit(width), F.lit(height))))
 
         logger.info("Created segmentation pngs")
 
@@ -217,7 +214,7 @@ def generate_png_tables(cfg):
         overlay_png_udf = F.udf(overlay_pngs, StructType([StructField("dicom", BinaryType()), StructField("overlay", BinaryType())]))
 
         seg_df = seg_df.withColumn("dicom_overlay",
-            F.lit(overlay_png_udf("instance_number", "path", "seg_png", "accession_number", F.lit(width), F.lit(height))))
+            F.lit(overlay_png_udf("instance_number", "path", "seg_png", F.lit(width), F.lit(height))))
  
         # unpack dicom_overlay struct into 2 columns
         seg_df = seg_df.select(F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"),
