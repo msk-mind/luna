@@ -56,7 +56,7 @@ def create_dicom_png(src_path, width, height):
     return im.tobytes()
        
 
-def create_seg_png(src_path, width, height):
+def create_seg_png(src_path, uuid, width, height):
     """
     Create pngs from src_path image.
     Returns an array of (instance_number, png binary) tuple.
@@ -91,7 +91,7 @@ def create_seg_png(src_path, width, height):
             rgb.putdata(red_channel)
             png_binary = rgb.tobytes()
 
-            slices.append( (slice_num, png_binary) )
+            slices.append( (slice_num, uuid, png_binary) )
 
     return slices
 
@@ -189,17 +189,20 @@ def generate_png_tables(cfg):
         seg_png_table_path = os.path.join(project_path, const.TABLE_DIR, const.TABLE_NAME(cfg))
         
         # find images with tumor
-        create_seg_png_udf = F.udf(create_seg_png, ArrayType(StructType([StructField("instance_number", IntegerType()),
+        create_seg_png_udf = F.udf(create_seg_png, ArrayType(StructType(
+                                    [StructField("instance_number", IntegerType()),
+                                     StructField("scan_annotation_record_uuid", IntegerType()),
 									 StructField("seg_png", BinaryType())])))
         
-        seg_df = seg_df.withColumn("slices_pngs", 
-            F.lit(create_seg_png_udf("path", F.lit(width), F.lit(height))))
+        seg_df = seg_df.withColumn("slices_uuid_pngs", 
+            F.lit(create_seg_png_udf("path", "scan_annotation_record_uuid", F.lit(width), F.lit(height))))
 
         logger.info("Created segmentation pngs")
 
-        seg_df = seg_df.withColumn("slices_pngs", F.explode("slices_pngs")) \
-                       .select(F.col("slices_pngs.instance_number").alias("instance_number"), F.col("slices_pngs.seg_png").alias("seg_png"),
-                               "accession_number", "path", "scan_annotation_record_uuid") 
+        seg_df = seg_df.withColumn("slices_uuid_pngs", F.explode("slices_uuid_pngs")) \
+                       .select(F.col("slices_uuid_pngs.instance_number").alias("instance_number"), F.col("slices_uuid_pngs.seg_png").alias("seg_png"),
+                                F.col("slices_uuid_pngs.scan_annotation_record_uuid").alias("scan_annotation_record_uuid"),
+                               "accession_number", "path") 
 
         logger.info("Exploded rows")
 
