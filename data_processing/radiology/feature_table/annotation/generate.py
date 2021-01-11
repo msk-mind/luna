@@ -193,7 +193,7 @@ def generate_feature_table(cfg):
                              StructField("png_record_uuid",StringType(),True),
                              StructField("scan_annotation_record_uuid",StringType(),True),
                              StructField("path",StringType(),True)])
-        df = df.groupBy("accession_number").applyInPandas(crop_images, schema = schema)
+        df = df.groupBy("accession_number", "scan_annotation_record_uuid").applyInPandas(crop_images, schema = schema)
        
         logger.info("Cropped pngs")
 
