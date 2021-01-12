@@ -23,7 +23,17 @@ class Node(object):
 			if not ("PatientID" in properties.keys() and "Namespace" in properties.keys()):
 				raise RuntimeError("Patients must have a PatientID and Namespace property!")
 			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["PatientID"])
+		
+		if self.type=="metadata":
+			if not ("RecordID" in properties.keys() and "Namespace" in properties.keys() and "Type" in properties.keys()):
+				raise RuntimeError("metadata must have a RecordID, Namespace, and Type property!")
+			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["RecordID"])
 
+		if self.type=="method":
+			if not ("MethodID" in properties.keys() and "Namespace" in properties.keys()):
+				raise RuntimeError("method must have a MethodID and Namespace")
+			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["MethodID"])
+			
 	def create(self):
 		prop_string = self.prop_str(self.properties.keys(), self.properties)
 		return f"""{self.type}:globals{{ {prop_string} }}"""
