@@ -1,11 +1,14 @@
-import os
+import os, json
 import itk
 import click
-from checksumdir import dirhash
+from filehash import FileHash
+import pandas as pd
 
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.GraphEnum import Node
 from data_processing.common.custom_logger import init_logger
+
+from radiomics import featureextractor  # This module is used for interaction with pyradiomics
 
 logger = init_logger("generateScan.log")
 
@@ -14,39 +17,58 @@ logger = init_logger("generateScan.log")
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
+    properties = {}
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
-    scan_node = conn.query(f"""
+    properties['Namespace'] = cohort_id
+    properties['MethodID']  = method_id
+
+    with open(f'{method_id}.json') as json_file:
+        method_config = json.load(json_file)['params']
+
+    input_nodes = conn.query(f"""
         MATCH (object:scan)-[:HAS_DATA]-(image:mhd)
         MATCH (object:scan)-[:HAS_DATA]-(label:mha)
-        WHERE id(object)={id}
-        RETURN object.cohort, object.AccessionNumber, image.path, label.path"""
+        WHERE id(object)={container_id}
+        RETURN object.SeriesInstanceUID, image.path, label.path"""
     )
 
-    if not scan_node:
-        return make_response("Scan is not ready for radiomics (missing annotation?)", 500)
+    if not input_nodes:
+        return ("Scan is not ready for radiomics (missing annotation?)")
 
-    scan_node = scan_node[0].data()
+    input_data = input_nodes[0].data()
 
-    JOB_CONFIG = METHODS[method_id]
+    print (input_data)
 
-    config      = JOB_CONFIG['config']
-    streams_dir = JOB_CONFIG['streams_dir']
-    dataset_dir = JOB_CONFIG['dataset_dir']
-
-    extractor = featureextractor.RadiomicsFeatureExtractor(**config['params'])
+    extractor = featureextractor.RadiomicsFeatureExtractor(**method_config)
 
     try:
-        result = extractor.execute(scan_node["image.path"].split(':')[-1], scan_node["label.path"].split(':')[-1])
+        result = extractor.execute(input_data["image.path"].split(':')[-1], input_data["label.path"].split(':')[-1])
     except Exception as e:
-        return make_response(str(e), 200)
+        return (str(e), 200)
+
+    output_dir = os.path.join("/gpfs/mskmindhdp_emc/data/COHORTS", cohort_id, "scans", input_data['object.SeriesInstanceUID'], method_id+".csv")
 
     sers = pd.Series(result)
-    sers["AccessionNumber"] = scan_node["object.AccessionNumber"]
-    sers["config"]          = config
-    sers.to_frame().transpose().to_csv(os.path.join(streams_dir, id+".csv"))
 
-    with lock:
-        if not method_id in STREAMS.keys(): STREAMS[method_id] = START_STREAM(streams_dir, dataset_dir)
-        METHODS[method_id]['streamer'] = str(STREAMS[method_id])
+    sers.to_frame().transpose().to_csv(output_dir)
 
-    return make_response("Successfully extracted radiomics for case: " + scan_node["object.AccessionNumber"], 200)
+    logger.info("Saving to " + output_dir)
+
+    properties['RecordID'] = "RAD" + "-" + str(FileHash('sha256').hash_file(output_dir))
+    properties['path'] = output_dir
+
+    n_meta = Node("radiomics", properties=properties)
+
+    conn.query(f""" 
+        MATCH (sc:scan) WHERE id(sc)={container_id}
+        MERGE (da:{n_meta.create()})
+        MERGE (sc)-[:HAS_DATA]->(da)"""
+    )
+
+    return ("Successfully extracted radiomics for scan: " + input_data["object.SeriesInstanceUID"], 200)
+
+
+
+if __name__ == "__main__":
+    cli()

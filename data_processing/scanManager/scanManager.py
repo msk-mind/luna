@@ -14,7 +14,6 @@ import subprocess
 import threading
 from multiprocessing import Pool
 
-from radiomics import featureextractor  # This module is used for interaction with pyradiomics
 
 app    = Flask(__name__)
 api = Api(app, version='1.1', title='scanManager', description='Manages and exposes study scans and associated data', ordered=True)
@@ -93,7 +92,7 @@ class runMethods(Resource):
         for scan_id in scan_ids:
             args_list.append(["python3","-m",method_config["image"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
 
-        p = Pool(16)
+        p = Pool(20)
         p.map(subprocess.call, args_list)
 
         return "Done"
@@ -117,14 +116,21 @@ class methods(Resource):
         if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1: 
             return make_response("No cohort namespace found", 300)
 
-        properties = request.json
+        properties = {}
+
         properties['Namespace'] = cohort_id
         properties['MethodID']  = method_id
+        properties['image']     = request.json["image"]
         n_method = Node("method",  properties=properties)
 
         res = conn.query(f"""CREATE (me:{n_method.create()}) RETURN me""")
         if res is None: return make_response(f"Method at {cohort_id}::{method_id} already exists!", 400)
+        
+        with open(f'{method_id}.json', 'w') as outfile:
+            json.dump(request.json, outfile, indent=4)
+
         return make_response(f"Created new method at {cohort_id}::{method_id}!", 200)
+
     def get(self, cohort_id, method_id):
         """ Get configuration for a method """
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})

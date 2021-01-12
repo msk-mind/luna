@@ -1,4 +1,4 @@
-import os
+import os, json
 import itk
 import click
 from checksumdir import dirhash
@@ -15,25 +15,18 @@ logger = init_logger("generateScan.log")
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
     properties = {}
-
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
     properties = {}
     properties['Namespace'] = cohort_id
     properties['MethodID']  = method_id
 
-    n_method = Node("method",  properties=properties)
-
-    res = conn.query(f"""MATCH (me:{n_method.match()}) RETURN me""")
-
-    if not len(res)==1:
-        return "No method namespace found"
-
-    method_config = res[0].data()['me']
+    with open(f'{method_id}.json') as json_file:
+        method_config = json.load(json_file)['params']
 
     file_ext     = method_config['file_ext']
 
-    input_nodes = conn.query(f""" MATCH (object:scan)-[:HAS_DATA]-(data:metadata) WHERE id(object)={container_id} and data.Type="dcm" RETURN data""")
+    input_nodes = conn.query(f""" MATCH (object:scan)-[:HAS_DATA]-(data:dicom) WHERE id(object)={container_id} RETURN data""")
     
     if not input_nodes: return "Nothing there!"
 
@@ -92,11 +85,11 @@ def cli(cohort_id, container_id, method_id):
         writer.Update()
 
     properties['RecordID'] = file_ext + "-" + dirhash(input_dir, "sha256")
-    properties['Type'] = file_ext
     properties['path'] = outFileName
     properties['zdim'] = n_slices
 
-    n_meta = Node("metadata", properties=properties)
+    n_meta = Node(file_ext, properties=properties)
+
 
     conn.query(f""" 
         MATCH (sc:scan) WHERE id(sc)={container_id}
