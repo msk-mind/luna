@@ -235,7 +235,7 @@ def update_graph(config_file):
     dataset_props = list ( set(dataset_ext_properties).intersection(set(cfg.get_keys(name=const.DATA_CFG))))
 
     prop_string = ','.join(['''{0}: "{1}"'''.format(
-        prop, cfg.get_value(name=const.DATA_CFG, jsonpath=prop)) for prop in dataset_props])
+        prop, cfg.get_value(path=DATA_CFG+'::'+prop)) for prop in dataset_props])
 
     prop_string += f',TABLE_LOCATION:"{table_path}"'
 
@@ -252,7 +252,7 @@ def update_graph(config_file):
             .toPandas()
 
     with CodeTimer(logger, 'synchronize graph'):
-        dataset_name = cfg.get_value(name=DATA_CFG, jsonpath='DATASET_NAME')
+        dataset_name = cfg.get_value(path='DATA_CFG::DATASET_NAME')
 
         for index, row in tuple_to_add.iterrows():
             query ='''MATCH (das:dataset {{DATASET_NAME: "{0}"}}) 
