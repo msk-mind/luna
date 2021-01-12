@@ -191,8 +191,8 @@ def generate_png_tables(cfg):
         # find images with tumor
         create_seg_png_udf = F.udf(create_seg_png, ArrayType(StructType(
                                     [StructField("instance_number", IntegerType()),
-                                     StructField("scan_annotation_record_uuid", IntegerType()),
-									 StructField("seg_png", BinaryType())])))
+                                     StructField("scan_annotation_record_uuid", StringType()),
+				     StructField("seg_png", BinaryType())])))
         
         seg_df = seg_df.withColumn("slices_uuid_pngs", 
             F.lit(create_seg_png_udf("path", "scan_annotation_record_uuid", F.lit(width), F.lit(height))))

@@ -95,11 +95,9 @@ def generate_feature_table(cfg):
     columns = [F.col("metadata.InstanceNumber").alias("instance_number").cast(IntegerType()), 
                 F.col("metadata.PatientID").alias("xnat_patient_id"), 
                 F.col("metadata.SeriesInstanceUID").alias("SeriesInstanceUID"),
-                F.col("metadata.Rows").alias("nrows"),
-                F.col("metadata.Columns").alias("ncolumns"),
                 "accession_number", "dicom", "overlay", "path", "png_record_uuid", "scan_annotation_record_uuid"]
 
-    df = mha_df.join(png_df, png_df.metadata.AccessionNumber == mha_df.accession_number) \
+    df = png_df.join(mha_df, png_df.metadata.AccessionNumber == mha_df.accession_number) \
                .select(columns).distinct() \
                .dropna(subset=["dicom", "overlay"])
 
@@ -114,9 +112,10 @@ def generate_feature_table(cfg):
             Find the centroid of the 2d segmentation for the scan.
             Crop PNG images around the centroid.
             """
-            # Save feature pngs
             print("Processing accession number: " + str(df.accession_number.values[0]))
-
+           
+            scan_uuid, dicom_features, overlay_features = [], [], []
+            
             # mha file path
             file_path = df.path.values[0].split(':')[-1]
             data, header = load(file_path)
@@ -136,7 +135,6 @@ def generate_feature_table(cfg):
 
                     break
 
-            print(xcenter, ycenter)
             # Find xmin, ymin, xmax, ymax based on CROP_SIZE
             width_rad = CROP_WIDTH // 2
             height_rad = CROP_HEIGHT // 2
@@ -144,7 +142,6 @@ def generate_feature_table(cfg):
             if not h == IMAGE_HEIGHT and not w == IMAGE_WIDTH:
                 xcenter = int(xcenter * IMAGE_WIDTH//w)
                 ycenter = int(ycenter * IMAGE_HEIGHT//h)
-            print(xcenter, ycenter)
 
             xmin, ymin, xmax, ymax = (xcenter - width_rad), (ycenter - height_rad), (xcenter + width_rad), (ycenter + height_rad)
 
@@ -164,21 +161,22 @@ def generate_feature_table(cfg):
                 ymin = IMAGE_HEIGHT - CROP_HEIGHT
                 ymax = IMAGE_HEIGHT
 
-            # Crop all overlay, dicom pngs.
-            dicom_features = []
+            # Crop overlay, dicom pngs.
             for png in df.dicom.values:
                 im = Image.frombytes("L", (IMAGE_WIDTH, IMAGE_HEIGHT), bytes(png)) 
                 feature = im.crop((xmin, ymin, xmax, ymax)).tobytes()
                 dicom_features.append(feature)
 
-            overlay_features = []
             for png in df.overlay.values:
                 im = Image.frombytes("RGB", (IMAGE_WIDTH, IMAGE_HEIGHT), bytes(png)) 
                 feature = im.crop((xmin, ymin, xmax, ymax)).tobytes()
                 overlay_features.append(feature)
 
+            scan_uuid.extend(df.scan_annotation_record_uuid.values)
+
             df["dicom"] = dicom_features
             df["overlay"] = overlay_features
+            df["scan_annotation_record_uuid"] = scan_uuid
             
             return df
         
@@ -186,13 +184,12 @@ def generate_feature_table(cfg):
                              StructField("accession_number",StringType(),True),
                              StructField("instance_number",IntegerType(),True),
                              StructField("SeriesInstanceUID",StringType(),True),
-                             StructField("nrows",StringType(),True),
-                             StructField("ncolumns",StringType(),True),
                              StructField("dicom",BinaryType(),True),
                              StructField("overlay",BinaryType(),True),
                              StructField("png_record_uuid",StringType(),True),
                              StructField("scan_annotation_record_uuid",StringType(),True),
                              StructField("path",StringType(),True)])
+        #df = df.groupBy("accession_number").applyInPandas(crop_images, schema = schema)
         df = df.groupBy("accession_number", "scan_annotation_record_uuid").applyInPandas(crop_images, schema = schema)
        
         logger.info("Cropped pngs")
@@ -204,7 +201,7 @@ def generate_feature_table(cfg):
         columns = ["feature_record_uuid", "accession_number", "instance_number", "SeriesInstanceUID", 
                     "xnat_patient_id", "dicom", "overlay", "png_record_uuid","scan_annotation_record_uuid"]
 
-        df.select(columns) \
+        df.select(columns).distinct() \
             .coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')) \
             .write.format("delta") \
             .mode("overwrite") \
