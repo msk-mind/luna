@@ -1,0 +1,62 @@
+# ==================================================================================================
+# Starts a spark stream!!!
+# ==================================================================================================
+
+# Start stream from stream dir to delta table
+def START_STREAM(stream_dir, table_dir):
+    ckpt_dir = stream_dir.replace("streams", "checkpointLocation")
+    if not os.path.exists(ckpt_dir): os.makedirs(ckpt_dir)
+
+    logger.info("STARTING STREAM FROM: "+ stream_dir)
+
+    return spark\
+    .readStream\
+        .option("header", "true")\
+        .schema(spark.read.option("header", "true").csv(stream_dir).schema)\
+        .csv(stream_dir)\
+    .writeStream\
+        .format("delta")\
+        .option("checkpointLocation", ckpt_dir)\
+        .trigger(processingTime="1 minute")\
+        .outputMode("append")\
+        .start(table_dir)
+
+
+# ==================================================================================================
+# Utility orchestrators
+# ==================================================================================================
+
+# # Process all scans in a cohort
+# @app.route('/mind/api/v1/processScans/<cohort_id>/<method_id>', methods=['GET'])
+# def processScans(cohort_id, method_id):
+#     ids_ = requests.get(f'http://{HOST}:5003/mind/api/v1/getScanIDs/{cohort_id}').json()
+
+#     responses = []
+#     for id in ids_:
+#         response = requests.get(f'http://{HOST}:5003/mind/api/v1/radiomics/{method_id}/{id}')
+#         responses.append(response.text)
+
+#     return jsonify(responses)
+
+# # Create radiomics extractor
+# @app.route('/mind/api/v1/configureRadiomics/<cohort_id>/<method_id>', methods=['POST'])
+# def configureRadiomics(cohort_id, method_id):
+#     # !!!!!!!!! NOT PROCESS SAFE !!!!!!!!
+
+#     with lock:
+#         if not method_id in METHODS.keys():
+#             dataset_id = f"RAD_{method_id}"
+#             METHODS[method_id] = {}
+#             METHODS[method_id]['config']      = request.json
+#             METHODS[method_id]['cohort_id']   = cohort_id
+#             METHODS[method_id]['dataset_id']  = dataset_id
+#             METHODS[method_id]['streams_dir'] = os.path.join("/gpfs/mskmindhdp_emc/data/", cohort_id, "streams",  dataset_id)
+#             METHODS[method_id]['dataset_dir'] = os.path.join("/gpfs/mskmindhdp_emc/data/", cohort_id, "tables", dataset_id)
+#             if not os.path.exists(METHODS[method_id]['streams_dir']): os.makedirs(METHODS[method_id]['streams_dir'])
+#             if not os.path.exists(METHODS[method_id]['dataset_dir']): os.makedirs(METHODS[method_id]['dataset_dir'])
+
+#             print (METHODS)
+#             return jsonify(METHODS[method_id])
+
+#         else:
+#             return jsonify(METHODS[method_id])
