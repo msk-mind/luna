@@ -40,11 +40,10 @@ def test_metadata_create():
     properties = {}
     properties['RecordID'] = "SCAN-001"
     properties['Namespace'] = "my_cohort"
-    properties['Type'] = "file"
     properties['dim'] = 3
 
-    create_string = Node("metadata", properties=properties).create()
-    assert "metadata:globals" in create_string    
+    create_string = Node("mhd", properties=properties).create()
+    assert "mhd:globals" in create_string    
     assert "QualifiedPath: 'my_cohort::SCAN-001'"  in create_string
     assert "dim"  in create_string
 
@@ -52,10 +51,9 @@ def test_metadata_match():
     properties = {}
     properties['RecordID'] = "SCAN-001"
     properties['Namespace'] = "my_cohort"
-    properties['Type'] = "file"
     properties['dim'] = 3
 
-    match_string = Node("metadata", properties=properties).match()
+    match_string = Node("mhd", properties=properties).match()
     assert "QualifiedPath: 'my_cohort::SCAN-001'"  in match_string
     assert "dim"  not in match_string
 
