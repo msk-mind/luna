@@ -218,7 +218,7 @@ def update_graph(config_file):
     # Open a connection to the ID graph database
     conn = Neo4jConnection(uri=cfg.get_value(path=DATA_CFG+'::GRAPH_URI'), user="neo4j", pwd="password")
 
-    dicom_path = os.path.join(cfg.get_value(path=DATA_CFG+'::LANDING_PATH'), const.DICOM_TABLE)
+    table_path = const.TABLE_LOCATION(cfg)
 
     # Which properties to include in dataset node
     dataset_ext_properties = [
@@ -232,21 +232,22 @@ def update_graph(config_file):
         'MODALITY',
     ]
 
-    dataset_props = list ( set(dataset_ext_properties).intersection(set(cfg.get_keys(name=DATA_CFG))))
-    dataset_props.insert(0, 'LANDING_PATH')
-    dataset_props.insert(0, 'DATASET_NAME')
-    
+    dataset_props = list ( set(dataset_ext_properties).intersection(set(cfg.get_keys(name=const.DATA_CFG))))
+
     prop_string = ','.join(['''{0}: "{1}"'''.format(
         prop, cfg.get_value(path=DATA_CFG+'::'+prop)) for prop in dataset_props])
+
+    prop_string += f',TABLE_LOCATION:"{table_path}"'
 
     conn.query(f'''MERGE (n:dataset{{{prop_string}}})''')
 
     with CodeTimer(logger, 'setup proxy table'):
         # Reading dicom and opdata
+        logger.info("Loading!")
         df_dcmdata = spark.read.format("delta").load(dicom_path)
 
-        tuple_to_add = df_dcmdata.select("metadata.PatientName", "metadata.SeriesInstanceUID")\
-            .groupBy("PatientName", "SeriesInstanceUID")\
+        tuple_to_add = df_dcmdata.select("metadata.PatientID", "metadata.AccessionNumber", "metadata.SeriesInstanceUID")\
+            .groupBy("PatientID", "AccessionNumber", "SeriesInstanceUID")\
             .count()\
             .toPandas()
 
@@ -254,9 +255,17 @@ def update_graph(config_file):
         dataset_name = cfg.get_value(path=DATA_CFG+'::DATASET_NAME')
 
         for index, row in tuple_to_add.iterrows():
-            query ='''MATCH (das:dataset {{DATASET_NAME: "{0}"}}) MERGE (px:xnat_patient_id {{value: "{1}"}}) MERGE (sc:scan {{SeriesInstanceUID: "{2}"}}) MERGE (px)-[r1:HAS_SCAN]->(sc) MERGE (das)-[r2:HAS_PX]-(px)'''.format(dataset_name, row['PatientName'], row['SeriesInstanceUID'])
+            query ='''MATCH (das:dataset {{DATASET_NAME: "{0}"}}) 
+                MERGE (px:xnat_patient {{PatientID: "{1}"}}) 
+                MERGE (cas:case {{AccessionNumber: "{2}", type: "radiology"}}) 
+                MERGE (sc:scan {{SeriesInstanceUID: "{3}"}}) 
+                MERGE (px)-[r1:HAS_CASE]->(cas) 
+                MERGE (cas)-[r2:HAS_SCAN]->(sc) 
+                MERGE (sc)-[r3:HAS_DATA]->(das)'''.format(dataset_name, row['PatientID'], row['AccessionNumber'], row['SeriesInstanceUID'])
             logger.info (query)
             conn.query(query)
+
+
 
 
 if __name__ == "__main__":
