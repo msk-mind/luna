@@ -8,7 +8,6 @@ This final preprocessing step
 import os, time, glob
 import click
 import numpy as np
-import pandas as pd
 from PIL import Image 
 from medpy.io import load
 from filehash import FileHash
@@ -36,6 +35,77 @@ def generate_uuid(content):
         uuid = FileHash('sha256').hash_file(content)
  
     return "FEATURE-"+uuid
+
+def find_centroid(path, image_w, image_h):
+    """
+    Find the centroid of the 2d segmentation.
+    Return (x, y) center point.
+    """
+    # mha file path
+    file_path = path.split(':')[-1]
+    data, header = load(file_path)
+
+    h, w, num_images = data.shape
+
+    # Find the annotated slice
+    xcenter, ycenter = 0, 0
+    for i in range(num_images):
+        seg = data[:,:,i]
+        if np.any(seg):
+            seg = seg.astype(float)
+                    
+            # find centroid using mean
+            xcenter = np.argmax(np.mean(seg, axis=1))
+            ycenter = np.argmax(np.mean(seg, axis=0))
+            break
+
+    # Check if h,w matches IMAGE_WIDTH, IMAGE_HEIGHT. If not, this is due to png being rescaled. So scale centers.
+    image_w, image_h = int(image_w), int(image_h)
+    if not h == image_h:
+        xcenter = int(xcenter * image_w // w)
+    if not w == image_w:
+        ycenter = int(ycenter * image_h // h)
+
+    return (int(xcenter), int(ycenter))
+
+
+def crop_images(xcenter, ycenter, dicom, overlay, crop_w, crop_h, image_w, image_h):
+    """
+    Crop PNG images around the centroid.
+    Return (dicom, overlay) binaries.
+    """
+    crop_w, crop_h = int(crop_w), int(crop_h)
+    image_w, image_h = int(image_w), int(image_h)
+    # Find xmin, ymin, xmax, ymax based on CROP_SIZE
+    width_rad = crop_w // 2
+    height_rad = crop_h // 2
+   
+    xmin, ymin, xmax, ymax = (xcenter - width_rad), (ycenter - height_rad), (xcenter + width_rad), (ycenter + height_rad)
+
+    if xmin < 0:
+        xmin = 0
+        xmax = crop_w
+
+    if xmax > image_w:
+        xmin = image_w - crop_w
+        xmax = image_w
+
+    if ymin < 0:
+        ymin = 0
+        ymax = crop_h
+
+    if ymax > image_h:
+        ymin = image_h - crop_h
+        ymax = image_h
+
+    # Crop overlay, dicom pngs.
+    dicom_img = Image.frombytes("L", (image_w, image_h), bytes(dicom)) 
+    dicom_feature = dicom_img.crop((xmin, ymin, xmax, ymax)).tobytes()
+
+    overlay_img = Image.frombytes("RGB", (image_w, image_h), bytes(overlay)) 
+    overlay_feature = overlay_img.crop((xmin, ymin, xmax, ymax)).tobytes()
+    
+    return (dicom_feature, overlay_feature)
 
 
 @click.command()
@@ -84,129 +154,50 @@ def generate_feature_table(cfg):
     png_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("PNG", DATASET_NAME))
     mha_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("MHA", DATASET_NAME))
 
-    png_df = spark.read.format("delta").load(png_table_path)
-    # TODO filtering here can be removed once we have more metadata for the annotations
-    png_df = png_df.filter(cfg.get_value(path=const.DATA_CFG+'::SQL_STRING'))
+    png_df = spark.read.format("delta").load(png_table_path).drop("scan_annotation_record_uuid")
+    
     mha_df = spark.read.format("delta").load(mha_table_path) \
-                  .drop("metadata", "scan_annotation_record_uuid")
- 
+                  .drop("metadata", "length", "modificationTime")
+
+    # Find x,y centroid using MHA segmentation
+    find_centroid_udf = F.udf(find_centroid, StructType([StructField("x", IntegerType()), StructField("y", IntegerType())]))
+    mha_df = mha_df.withColumn("center", find_centroid_udf("path", F.lit(IMAGE_WIDTH), F.lit(IMAGE_HEIGHT))) \
+                   .select(F.col("center.x").alias("x"), F.col("center.y").alias("y"), "accession_number", "scan_annotation_record_uuid")
+    
     logger.info("Loaded mha and png tables")
 
-    columns = [F.col("metadata.InstanceNumber").alias("instance_number").cast(IntegerType()), 
-                F.col("metadata.PatientID").alias("xnat_patient_id"), 
-                F.col("metadata.SeriesInstanceUID").alias("SeriesInstanceUID"),
-                "accession_number", "dicom", "overlay", "path", "png_record_uuid", "scan_annotation_record_uuid"]
-
-    df = png_df.join(mha_df, png_df.metadata.AccessionNumber == mha_df.accession_number) \
-               .select(columns).distinct() \
-               .dropna(subset=["dicom", "overlay"])
-
+    # Join PNG and MHA tables
+    columns = ["metadata", "dicom", "overlay", "png_record_uuid", "scan_annotation_record_uuid", "x","y", F.col("metadata.InstanceNumber").alias("instance_number")]
+    
+    #TODO add L/R labels in MHD/MHA so we can match MHA/MHD, based on the accession, label
+    df = mha_df.join(png_df, png_df.metadata.AccessionNumber == mha_df.accession_number) \
+               .select(columns) \
+               .dropna(subset=["dicom", "overlay"]) \
+               .dropDuplicates(subset=["instance_number", "x", "y", "scan_annotation_record_uuid"])
+    logger.info(df.count())
     logger.info("Joined mha and png tables")
 
     with CodeTimer(logger, 'Crop pngs and create feature table'):
 
         feature_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("FEATURE", DATASET_NAME))
-    
-        def crop_images(df: pd.DataFrame) -> pd.DataFrame:
-            """
-            Find the centroid of the 2d segmentation for the scan.
-            Crop PNG images around the centroid.
-            """
-            print("Processing accession number: " + str(df.accession_number.values[0]))
-           
-            scan_uuid, dicom_features, overlay_features = [], [], []
-            
-            # mha file path
-            file_path = df.path.values[0].split(':')[-1]
-            data, header = load(file_path)
-
-            h, w, num_images = data.shape
-
-            # Find the annotated slice
-            xcenter, ycenter = 0, 0
-            for i in range(num_images):
-                seg = data[:,:,i]
-                if np.any(seg):
-                    seg = seg.astype(float)
-                    
-                    # find centroid using mean
-                    xcenter = np.argmax(np.mean(seg, axis=1))
-                    ycenter = np.argmax(np.mean(seg, axis=0))
-
-                    break
-
-            # Find xmin, ymin, xmax, ymax based on CROP_SIZE
-            width_rad = CROP_WIDTH // 2
-            height_rad = CROP_HEIGHT // 2
-            # Check if h,w matches IMAGE_WIDTH, IMAGE_HEIGHT. If not, this is due to png being rescaled. So scale centers.
-            if not h == IMAGE_HEIGHT and not w == IMAGE_WIDTH:
-                xcenter = int(xcenter * IMAGE_WIDTH//w)
-                ycenter = int(ycenter * IMAGE_HEIGHT//h)
-
-            xmin, ymin, xmax, ymax = (xcenter - width_rad), (ycenter - height_rad), (xcenter + width_rad), (ycenter + height_rad)
-
-            if xmin < 0:
-                xmin = 0
-                xmax = CROP_WIDTH
-
-            if xmax > IMAGE_WIDTH:
-                xmin = IMAGE_WIDTH - CROP_WIDTH
-                xmax = IMAGE_WIDTH
-
-            if ymin < 0:
-                ymin = 0
-                ymax = CROP_HEIGHT
-
-            if ymax > IMAGE_HEIGHT:
-                ymin = IMAGE_HEIGHT - CROP_HEIGHT
-                ymax = IMAGE_HEIGHT
-
-            # Crop overlay, dicom pngs.
-            for png in df.dicom.values:
-                im = Image.frombytes("L", (IMAGE_WIDTH, IMAGE_HEIGHT), bytes(png)) 
-                feature = im.crop((xmin, ymin, xmax, ymax)).tobytes()
-                dicom_features.append(feature)
-
-            for png in df.overlay.values:
-                im = Image.frombytes("RGB", (IMAGE_WIDTH, IMAGE_HEIGHT), bytes(png)) 
-                feature = im.crop((xmin, ymin, xmax, ymax)).tobytes()
-                overlay_features.append(feature)
-
-            scan_uuid.extend(df.scan_annotation_record_uuid.values)
-
-            df["dicom"] = dicom_features
-            df["overlay"] = overlay_features
-            df["scan_annotation_record_uuid"] = scan_uuid
-            
-            return df
-        
-        schema = StructType([StructField("xnat_patient_id",StringType(),True),
-                             StructField("accession_number",StringType(),True),
-                             StructField("instance_number",IntegerType(),True),
-                             StructField("SeriesInstanceUID",StringType(),True),
-                             StructField("dicom",BinaryType(),True),
-                             StructField("overlay",BinaryType(),True),
-                             StructField("png_record_uuid",StringType(),True),
-                             StructField("scan_annotation_record_uuid",StringType(),True),
-                             StructField("path",StringType(),True)])
-        #df = df.groupBy("accession_number").applyInPandas(crop_images, schema = schema)
-        df = df.groupBy("accession_number", "scan_annotation_record_uuid").applyInPandas(crop_images, schema = schema)
+   
+        crop_images_udf = F.udf(crop_images, StructType([StructField("dicom", BinaryType()), StructField("overlay", BinaryType())]))   
+        df = df.withColumn("dicom_overlay", crop_images_udf("x","y","dicom","overlay", F.lit(CROP_WIDTH), F.lit(CROP_HEIGHT), F.lit(IMAGE_WIDTH), F.lit(IMAGE_HEIGHT))) \
+               .drop("dicom", "overlay") \
+               .select("metadata", "png_record_uuid", "scan_annotation_record_uuid",
+                       F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"))
        
         logger.info("Cropped pngs")
 
         spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
         generate_uuid_udf = F.udf(generate_uuid, StringType())
-        df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf(df.overlay)))
+        df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf("overlay")))
 
-        columns = ["feature_record_uuid", "accession_number", "instance_number", "SeriesInstanceUID", 
-                    "xnat_patient_id", "dicom", "overlay", "png_record_uuid","scan_annotation_record_uuid"]
-
-        df.select(columns).distinct() \
-            .coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')) \
+        df.coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')) \
             .write.format("delta") \
             .mode("overwrite") \
             .save(feature_table_path)
-
+        df.printSchema()
 
 if __name__ == "__main__":
     cli()
