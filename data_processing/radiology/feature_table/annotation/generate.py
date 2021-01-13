@@ -154,7 +154,8 @@ def generate_feature_table(cfg):
     png_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("PNG", DATASET_NAME))
     mha_table_path = os.path.join(project_path, const.TABLE_DIR, "{0}_{1}".format("MHA", DATASET_NAME))
 
-    png_df = spark.read.format("delta").load(png_table_path).drop("scan_annotation_record_uuid")
+    png_df = spark.read.format("delta").load(png_table_path) \
+                  .drop("scan_annotation_record_uuid")
     
     mha_df = spark.read.format("delta").load(mha_table_path) \
                   .drop("metadata", "length", "modificationTime")
@@ -162,18 +163,17 @@ def generate_feature_table(cfg):
     # Find x,y centroid using MHA segmentation
     find_centroid_udf = F.udf(find_centroid, StructType([StructField("x", IntegerType()), StructField("y", IntegerType())]))
     mha_df = mha_df.withColumn("center", find_centroid_udf("path", F.lit(IMAGE_WIDTH), F.lit(IMAGE_HEIGHT))) \
-                   .select(F.col("center.x").alias("x"), F.col("center.y").alias("y"), "accession_number", "scan_annotation_record_uuid")
+                   .select(F.col("center.x").alias("x"), F.col("center.y").alias("y"), "accession_number", "scan_annotation_record_uuid", F.col("label").alias("mha_label"))
     
     logger.info("Loaded mha and png tables")
 
     # Join PNG and MHA tables
-    columns = ["metadata", "dicom", "overlay", "png_record_uuid", "scan_annotation_record_uuid", "x","y", F.col("metadata.InstanceNumber").alias("instance_number")]
+    columns = ["metadata", "dicom", "overlay", "png_record_uuid", "scan_annotation_record_uuid", "x","y", "label"]
     
     #TODO add L/R labels in MHD/MHA so we can match MHA/MHD, based on the accession, label
-    df = mha_df.join(png_df, png_df.metadata.AccessionNumber == mha_df.accession_number) \
+    df = mha_df.join(png_df, [png_df.metadata.AccessionNumber == mha_df.accession_number, png_df.label.eqNullSafe(mha_df.mha_label)]) \
                .select(columns) \
-               .dropna(subset=["dicom", "overlay"]) \
-               .dropDuplicates(subset=["instance_number", "x", "y", "scan_annotation_record_uuid"])
+               .dropna(subset=["dicom", "overlay"])
     logger.info(df.count())
     logger.info("Joined mha and png tables")
 
@@ -184,7 +184,7 @@ def generate_feature_table(cfg):
         crop_images_udf = F.udf(crop_images, StructType([StructField("dicom", BinaryType()), StructField("overlay", BinaryType())]))   
         df = df.withColumn("dicom_overlay", crop_images_udf("x","y","dicom","overlay", F.lit(CROP_WIDTH), F.lit(CROP_HEIGHT), F.lit(IMAGE_WIDTH), F.lit(IMAGE_HEIGHT))) \
                .drop("dicom", "overlay") \
-               .select("metadata", "png_record_uuid", "scan_annotation_record_uuid",
+               .select("metadata", "png_record_uuid", "scan_annotation_record_uuid", "label",
                        F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"))
        
         logger.info("Cropped pngs")
@@ -197,7 +197,7 @@ def generate_feature_table(cfg):
             .write.format("delta") \
             .mode("overwrite") \
             .save(feature_table_path)
-        df.printSchema()
+    
 
 if __name__ == "__main__":
     cli()

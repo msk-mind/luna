@@ -202,12 +202,12 @@ def generate_png_tables(cfg):
         seg_df = seg_df.withColumn("slices_uuid_pngs", F.explode("slices_uuid_pngs")) \
                        .select(F.col("slices_uuid_pngs.instance_number").alias("instance_number"), F.col("slices_uuid_pngs.seg_png").alias("seg_png"),
                                 F.col("slices_uuid_pngs.scan_annotation_record_uuid").alias("scan_annotation_record_uuid"),
-                               "accession_number", "path") 
+                               "accession_number", "path", "label") 
 
         logger.info("Exploded rows")
 
         # create overlay images: blend seg and the dicom images
-        seg_df = seg_df.select("accession_number", seg_df.path.alias("seg_path"),
+        seg_df = seg_df.select("accession_number", seg_df.path.alias("seg_path"), "label",
                                "instance_number", "seg_png", "scan_annotation_record_uuid")
         
         cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number, dicom_df.metadata.InstanceNumber == seg_df.instance_number] 
@@ -221,7 +221,7 @@ def generate_png_tables(cfg):
  
         # unpack dicom_overlay struct into 2 columns
         seg_df = seg_df.select(F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"),
-                                "metadata", "scan_annotation_record_uuid")
+                                "metadata", "scan_annotation_record_uuid", "label")
 
         # generate uuid
         spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
@@ -234,8 +234,6 @@ def generate_png_tables(cfg):
             .mode("overwrite") \
             .save(seg_png_table_path)
 
-        seg_df.printSchema()
-        
        
 if __name__ == "__main__":
     cli()

@@ -52,7 +52,7 @@ def binary_to_png(cfg):
     Load given table, unpack dicom, overlay images and save t.
     """
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='unpack')
-
+    spark.conf.set('spark.sql.execution.arrow.pyspark.enabled','false')
     table_path = os.path.join(cfg.get_value(path=const.DATA_CFG+'::MIND_DATA_PATH'),
                                 cfg.get_value(path=const.DATA_CFG+'::PROJECT_NAME'),
                                 const.TABLE_DIR,
@@ -70,11 +70,11 @@ def binary_to_png(cfg):
 
     # find edge cases with more than 1 annotations
     # (sometimes both L/R organs have tumor, and we end up with 2 annotations per accesion.)
-    multiple_annotations = df.groupby("accession_number") \
+    multiple_annotations = df.groupby("metadata.AccessionNumber") \
         .agg(countDistinct("scan_annotation_record_uuid").alias("count")) \
         .filter("count > 1").toPandas()
 
-    multiple_cases = multiple_annotations['accession_number'].to_list()
+    multiple_cases = multiple_annotations['AccessionNumber'].to_list()
 
     # unpack COLUMN_NAME
     for index, row in df.toPandas().iterrows():
@@ -86,16 +86,15 @@ def binary_to_png(cfg):
 
         image = Image.frombytes(mode, (IMAGE_WIDTH, IMAGE_HEIGHT), bytes(row[COLUMN_NAME]))
 
-        image_dir = os.path.join(DESTINATION_PATH, COLUMN_NAME, row.accession_number)
+        image_dir = os.path.join(DESTINATION_PATH, COLUMN_NAME, row["metadata"]["AccessionNumber"])
 
-        #TODO if there we have better metadata (L/R labels..), we can make this more user-friendly.
-        if row.accession_number in multiple_cases:
-            image_dir = os.path.join(DESTINATION_PATH, COLUMN_NAME, row.accession_number + "_" + row.scan_annotation_record_uuid)
+        if row["metadata"]["AccessionNumber"] in multiple_cases and row.label:
+            image_dir = os.path.join(DESTINATION_PATH, COLUMN_NAME, row["metadata"]["AccessionNumber"] + "_" + row.label)
 
         os.makedirs(image_dir, exist_ok=True)
 
         # save image to png
-        image.save(os.path.join(image_dir, str(row.instance_number)+".png"))
+        image.save(os.path.join(image_dir, str(row["metadata"]["InstanceNumber"])+".png"))
 
 if __name__ == "__main__":
     cli()
