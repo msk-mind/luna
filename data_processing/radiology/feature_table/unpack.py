@@ -10,6 +10,7 @@ import click
 import pandas as pd
 from PIL import Image 
 from io import BytesIO
+from pyspark.sql.functions import countDistinct
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
@@ -51,13 +52,13 @@ def binary_to_png(cfg):
     Load given table, unpack dicom, overlay images and save t.
     """
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='unpack')
-
+    spark.conf.set('spark.sql.execution.arrow.pyspark.enabled','false')
     table_path = os.path.join(cfg.get_value(path=const.DATA_CFG+'::MIND_DATA_PATH'),
                                 cfg.get_value(path=const.DATA_CFG+'::PROJECT_NAME'),
                                 const.TABLE_DIR,
                                 cfg.get_value(path=const.DATA_CFG+"::TABLE_NAME"))
 
-    df = spark.read.format("delta").load(table_path).toPandas()
+    df = spark.read.format("delta").load(table_path)
 
     DESTINATION_PATH = cfg.get_value(path=const.DATA_CFG+"::DESTINATION_PATH")
     COLUMN_NAME = cfg.get_value(path=const.DATA_CFG+"::COLUMN_NAME")
@@ -67,8 +68,16 @@ def binary_to_png(cfg):
     # create destination directory
     os.makedirs(DESTINATION_PATH, exist_ok=True)
 
+    # find edge cases with more than 1 annotations
+    # (sometimes both L/R organs have tumor, and we end up with 2 annotations per accesion.)
+    multiple_annotations = df.groupby("metadata.AccessionNumber") \
+        .agg(countDistinct("scan_annotation_record_uuid").alias("count")) \
+        .filter("count > 1").toPandas()
+
+    multiple_cases = multiple_annotations['AccessionNumber'].to_list()
+
     # unpack COLUMN_NAME
-    for index, row in df.iterrows():
+    for index, row in df.toPandas().iterrows():
         # mode set to L for b/w images, RGB for colored images.
         if "dicom" == COLUMN_NAME.lower():
             mode = "L"
@@ -77,11 +86,15 @@ def binary_to_png(cfg):
 
         image = Image.frombytes(mode, (IMAGE_WIDTH, IMAGE_HEIGHT), bytes(row[COLUMN_NAME]))
 
-        image_dir = os.path.join(DESTINATION_PATH, COLUMN_NAME, row.accession_number)
+        image_dir = os.path.join(DESTINATION_PATH, COLUMN_NAME, row["metadata"]["AccessionNumber"])
+
+        if row["metadata"]["AccessionNumber"] in multiple_cases and row.label:
+            image_dir = os.path.join(DESTINATION_PATH, COLUMN_NAME, row["metadata"]["AccessionNumber"] + "_" + row.label)
+
         os.makedirs(image_dir, exist_ok=True)
 
         # save image to png
-        image.save(os.path.join(image_dir, str(row.instance_number)+".png"))
+        image.save(os.path.join(image_dir, str(row["metadata"]["InstanceNumber"])+".png"))
 
 if __name__ == "__main__":
     cli()

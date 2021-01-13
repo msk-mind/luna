@@ -31,7 +31,7 @@ logger = init_logger()
 logger.info("Starting data_processing.radiology.refined_table.annotation.generate")
 
 
-def create_dicom_png(src_path, accession_number, width, height):
+def create_dicom_png(src_path, width, height):
     """
     Create a png from src_path image, and return image as bytes.
     """
@@ -56,14 +56,11 @@ def create_dicom_png(src_path, accession_number, width, height):
     return im.tobytes()
        
 
-def create_seg_png(src_path, accession_number, width, height):
+def create_seg_png(src_path, uuid, width, height):
     """
     Create pngs from src_path image.
     Returns an array of (instance_number, png binary) tuple.
     """
-    # Save png named as hash of dicom/seg
-    #png_dir = os.path.join(png_dir, accession_number)
-    #os.makedirs(png_dir, exist_ok=True)
 
     file_path = src_path.split(':')[-1]
     data, header = load(file_path)
@@ -94,19 +91,19 @@ def create_seg_png(src_path, accession_number, width, height):
             rgb.putdata(red_channel)
             png_binary = rgb.tobytes()
 
-            slices.append( (slice_num, png_binary) )
+            slices.append( (slice_num, uuid, png_binary) )
 
     return slices
 
  
-def overlay_pngs(instance_number, dicom_path, seg, accession_number, width, height):
+def overlay_pngs(instance_number, dicom_path, seg, width, height):
     """
     Create dicom png images.
     Blend dicom and segmentation images with 7:3 ratio. 
     Returns tuple of binaries to the combined image.
     """
     width, height = int(width), int(height)
-    dicom_binary = create_dicom_png(dicom_path, accession_number, width, height)
+    dicom_binary = create_dicom_png(dicom_path, width, height)
     
     # load dicom and seg images from bytes
     dcm_img = Image.frombytes("L", (width, height), bytes(dicom_binary))
@@ -192,22 +189,25 @@ def generate_png_tables(cfg):
         seg_png_table_path = os.path.join(project_path, const.TABLE_DIR, const.TABLE_NAME(cfg))
         
         # find images with tumor
-        create_seg_png_udf = F.udf(create_seg_png, ArrayType(StructType([StructField("instance_number", IntegerType()),
-									 StructField("seg_png", BinaryType())])))
+        create_seg_png_udf = F.udf(create_seg_png, ArrayType(StructType(
+                                    [StructField("instance_number", IntegerType()),
+                                     StructField("scan_annotation_record_uuid", StringType()),
+				     StructField("seg_png", BinaryType())])))
         
-        seg_df = seg_df.withColumn("slices_pngs", 
-            F.lit(create_seg_png_udf("path", "accession_number", F.lit(width), F.lit(height))))
+        seg_df = seg_df.withColumn("slices_uuid_pngs", 
+            F.lit(create_seg_png_udf("path", "scan_annotation_record_uuid", F.lit(width), F.lit(height))))
 
         logger.info("Created segmentation pngs")
 
-        seg_df = seg_df.withColumn("slices_pngs", F.explode("slices_pngs")) \
-                       .select(F.col("slices_pngs.instance_number").alias("instance_number"), F.col("slices_pngs.seg_png").alias("seg_png"),
-                               "accession_number", "path", "scan_annotation_record_uuid") 
+        seg_df = seg_df.withColumn("slices_uuid_pngs", F.explode("slices_uuid_pngs")) \
+                       .select(F.col("slices_uuid_pngs.instance_number").alias("instance_number"), F.col("slices_uuid_pngs.seg_png").alias("seg_png"),
+                                F.col("slices_uuid_pngs.scan_annotation_record_uuid").alias("scan_annotation_record_uuid"),
+                               "accession_number", "path", "label") 
 
         logger.info("Exploded rows")
 
         # create overlay images: blend seg and the dicom images
-        seg_df = seg_df.select("accession_number", seg_df.path.alias("seg_path"),
+        seg_df = seg_df.select("accession_number", seg_df.path.alias("seg_path"), "label",
                                "instance_number", "seg_png", "scan_annotation_record_uuid")
         
         cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number, dicom_df.metadata.InstanceNumber == seg_df.instance_number] 
@@ -217,11 +217,11 @@ def generate_png_tables(cfg):
         overlay_png_udf = F.udf(overlay_pngs, StructType([StructField("dicom", BinaryType()), StructField("overlay", BinaryType())]))
 
         seg_df = seg_df.withColumn("dicom_overlay",
-            F.lit(overlay_png_udf("instance_number", "path", "seg_png", "accession_number", F.lit(width), F.lit(height))))
+            F.lit(overlay_png_udf("instance_number", "path", "seg_png", F.lit(width), F.lit(height))))
  
         # unpack dicom_overlay struct into 2 columns
         seg_df = seg_df.select(F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"),
-                                "metadata", "scan_annotation_record_uuid")
+                                "metadata", "scan_annotation_record_uuid", "label")
 
         # generate uuid
         spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
@@ -234,8 +234,6 @@ def generate_png_tables(cfg):
             .mode("overwrite") \
             .save(seg_png_table_path)
 
-        seg_df.printSchema()
-        
        
 if __name__ == "__main__":
     cli()
