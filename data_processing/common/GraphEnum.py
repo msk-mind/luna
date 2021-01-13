@@ -1,4 +1,5 @@
 from enum import Enum
+from data_processing.common.utils import ToSqlField
 
 
 class Node(object):
@@ -24,7 +25,7 @@ class Node(object):
 				raise RuntimeError("Patients must have a PatientID and Namespace property!")
 			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["PatientID"])
 		
-		if self.type in ["dicom", "mha", "mhd", "radiomics"]: # TODO pull from a config/DB of sorts
+		if self.type in ["dicom", "mha", "mhd", "nrrd", "radiomics"]: # TODO pull from a config/DB of sorts
 			if not ("RecordID" in properties.keys() and "Namespace" in properties.keys() ):
 				raise RuntimeError("metadata must have a RecordID, Namespace!")
 			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["RecordID"])
@@ -49,7 +50,7 @@ class Node(object):
 		"""
 		fields = set(fields).intersection(set(row.keys()))
 
-		kv = [f" {x}: '{row[x]}'" for x in fields]
+		kv = [f" {ToSqlField(x)}: '{row[x]}'" for x in fields]
 		return ','.join(kv)
 	
 	@staticmethod
