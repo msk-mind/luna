@@ -7,8 +7,6 @@ DATASET_NAME: dsn
 
 DATA_TYPE: FEATURE
 
-SQL_STRING: metadata.SeriesNumber == '10'
-
 # num partition for delta table
 NUM_PARTITION: 1
 
