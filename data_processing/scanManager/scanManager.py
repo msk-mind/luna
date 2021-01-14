@@ -13,6 +13,8 @@ import pandas as pd
 import subprocess
 import threading
 from multiprocessing import Pool
+from filehash import FileHash
+
 
 
 app    = Flask(__name__)
@@ -36,11 +38,10 @@ model = api.model("Post Method",
         "file_ext": fields.String(description="File extension to save volumentric image", required=True, example="mhd")
     }
 )
-
-@api.route('/mind/api/v1/scans/<cohort_id>', methods=['GET'], doc=False)
-class getScans(Resource):
+@api.route('/mind/api/v1/scans/<cohort_id>', methods=['GET'])
+class getScansCohort(Resource):
     def get(self, cohort_id):
-        "Return list of scan container IDs"
+        "Return list of scan container IDs for a given cohort"
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -54,6 +55,81 @@ class getScans(Resource):
             """
         )
         return jsonify([rec.data()['id(sc)'] for rec in res])
+
+@api.route('/mind/api/v1/scans/<cohort_id>/<case_id>', methods=['GET'])
+class getScansCases(Resource):
+    def get(self, cohort_id, case_id):
+        "Return list of scan container IDs within a case for a given cohort"
+        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+
+        # Check for cohort existence
+        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1:
+            return make_response("No cohort namespace found", 300)
+
+        # Get relevant patients and cases
+        res = conn.query(f"""
+            MATCH (co:{n_cohort.match()})-[:INCLUDE]-(px:patient)-[:HAS_CASE]-(cases:accession)-[:HAS_SCAN]-(sc:scan)-[:INCLUDE]-(co) \
+            WHERE cases.AccessionNumber="{case_id}"
+            RETURN DISTINCT id(sc)
+            """
+        )
+        return jsonify([rec.data()['id(sc)'] for rec in res])
+
+
+@api.route('/mind/api/v1/container/<cohort_id>/<container_id>', methods=['GET','POST'])
+class manageContainer(Resource):
+    def get(self, cohort_id, container_id):
+        "Ping container"
+        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+
+        # Check for cohort existence
+        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1:
+            return make_response("No cohort namespace found", 300)
+
+        # Get relevant patients and cases
+        res = conn.query(f"""
+            MATCH (sc:scan) \
+            WHERE id(sc)={container_id}
+            RETURN DISTINCT id(sc)
+            """
+        )
+        return jsonify([rec.data()['id(sc)'] for rec in res])
+    def post(self, cohort_id, container_id):
+        "Add a record to a container"
+        
+        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+
+        # Check for cohort existence
+        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1:
+            return make_response("No cohort namespace found", 300)
+
+        properties = request.json
+
+        if not "path" in properties.keys():
+            return make_response("You must supply a path!", 400)
+
+        if not "type" in properties.keys():
+            return make_response("You must supply a type!", 400)  
+
+        if not os.path.exists(properties['path']):
+            return make_response("File does not exist!", 400)
+
+        properties['Namespace'] = cohort_id
+        properties['RecordID']  = "mha" + "-" + str(FileHash('sha256').hash_file(properties['path']))
+
+        try:
+            n_data = Node(properties["type"],  properties=properties)
+        except:
+            return make_response("Failed to configure node, bad type???", 401)
+
+        conn.query(f""" 
+            MATCH (sc:scan) WHERE id(sc)={container_id}
+            MERGE (da:{n_data.create()})
+            MERGE (sc)-[:HAS_DATA]->(da)"""
+        )
+        return make_response(f"Added {n_data.match()} to container {container_id}", 200)
+
+
 
 @api.route('/mind/api/v1/methods/<cohort_id>/<method_id>/run', 
     methods=['POST'],
