@@ -1,43 +1,37 @@
+from data_processing.common.utils import to_sql_field, does_not_contain
 
 class Node(object):
 	"""
 	Node object defines the type and attributes of a graph node.
 
 	:param: node_type: node type. e.g. scan
+	:param: name: node name. e.g. scan-123
 	:param: properties: dict of key, value pairs for the node.
 	"""
-	def __init__(self, node_type, node_id, properties={}):
+	def __init__(self, node_type, name, properties={}):
 
 		self.type = node_type
-		self.id = node_id
+		self.name = name
 		self.properties = properties
 
 		if self.type=="cohort":
-			if not "CohortID" in properties.keys():
-				raise RuntimeError("Cohorts must have a CohortID!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["CohortID"], properties["CohortID"])
+			self.properties["QualifiedPath"] = self.get_qualified_name(self.name, self.name)
 
-		if self.type=="patient":
-			if not ("PatientID" in properties.keys() and "Namespace" in properties.keys()):
-				raise RuntimeError("Patients must have a PatientID and Namespace property!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["PatientID"])
-		
-		if self.type in ["dicom", "mha", "mhd", "radiomics"]: # TODO pull from a config/DB of sorts
-			if not ("RecordID" in properties.keys() and "Namespace" in properties.keys() ):
-				raise RuntimeError("metadata must have a RecordID, Namespace!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["RecordID"])
-		
-		if self.type=="method":
-			if not ("MethodID" in properties.keys() and "Namespace" in properties.keys()):
-				raise RuntimeError("method must have a MethodID and Namespace")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["MethodID"])	
+		else:
+			if not "Namespace" in properties.keys():
+				raise RuntimeError("Missing required Namespace property!")
+			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], self.name)	
 
-	def create(self):
-		prop_string = self.prop_str(self.properties.keys(), self.properties)
+	def get_create_str(self):
+		kv = self.properties
+		kv["name"] = self.name
+		prop_string = self.prop_str(kv.keys(), kv)
 		return f"""{self.type}:globals{{ {prop_string} }}"""
 
-	def match(self):
-		prop_string = self.prop_str( ["QualifiedPath"], self.properties)
+	def get_match_str(self):
+		kv = self.properties
+		kv["name"] = self.name
+		prop_string = self.prop_str( ["QualifiedPath"], kv)
 		return f"""{self.type}{{ {prop_string} }}"""
 
 	@staticmethod
@@ -47,7 +41,7 @@ class Node(object):
 		"""
 		fields = set(fields).intersection(set(row.keys()))
 
-		kv = [f" {x}: '{row[x]}'" for x in fields]
+		kv = [f" {to_sql_field(x)}: '{row[x]}'" for x in fields]
 		return ','.join(kv)
 	
 	@staticmethod
@@ -55,6 +49,8 @@ class Node(object):
 		"""
 		Returns the full name given a namespace and patient ID
 		"""
-		if ":" in namespace or ":" in identifier: raise ValueError("Qualified path cannot be constructed, namespace or identifier cannot contain ':'")
+		does_not_contain(":", namespace)
+		does_not_contain(":", identifier)
+
 		return f"{namespace}::{identifier}"
 	

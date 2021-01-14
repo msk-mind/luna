@@ -1,54 +1,5 @@
 from enum import Enum
-from data_processing.common.utils import ToSqlField
-
-
-def does_not_contain(token, value):
-	"""
-	Validate that `token` is not a substring of `value`
-
-	:param: token: string e.g. : | .
-	:param: value: dictionary, list, or str
-	"""
-	if isinstance(value, str):
-		if token in value:
-			raise RuntimeError("{value} cannot contain {token}.")
-
-    if isinstance(value, list):
-    	if any([token in v for v in value]):
-    		raise RuntimeError(str(value) + " cannot contain {token}.")
-
-	if isinstance(value, dict):
-		if [token in k or token in v for k,v in value.items()]
-			raise RuntimeError(str(value) + " cannot contain {token}.")
-
-	return True
-
-
-def replace_token(token, token_replacement, value):
-	"""
-	Replace `token` with `token_replacement` in `value`
-
-	:param: token: string e.g. : | .
-	:param: token_replacement: string e.g. _ -
-	:param: value: dictionary, list, or str
-	"""
-	if isinstance(value, str):
-		return value.replace(token, token_replacement)
-
-    if isinstance(value, list):
-    	new_value = []
-    	for v in value:
-    		new_value.append(v.replace(token, token_replacement))
-    	return new_value
-
-	if isinstance(value, dict):
-		new_value = {}
-		for k,v in value.items():
-			new_value[k.replace(token, token_replacement)] = v.replace(token, token_replacement)
-
-		return new_value
-
-	return value
+from data_processing.common.utils import to_sql_field
 	
 
 class NodeType(object):
@@ -58,28 +9,10 @@ class NodeType(object):
 	:param: node_type: node type. e.g. scan
 	:param: schema: list of column names. e.g. slide_id
 	"""
-	def __init__(self, node_type, schema=[], properties={}):
+	def __init__(self, node_type, schema=[]):
 
 		self.type = node_type
-		self.fields = fields
-
-	def create(self):
-		prop_string = self.prop_str(self.properties.keys(), self.properties)
-		return f"""{self.type}:globals{{ {prop_string} }}"""
-
-	def match(self):
-		prop_string = self.prop_str( ["QualifiedPath"], self.properties)
-		return f"""{self.type}{{ {prop_string} }}"""
-
-	@staticmethod
-	def prop_str(fields, row):
-		"""
-		Returns a kv string like 'id: 123, ...' where prop values come from row.
-		"""
-		fields = set(fields).intersection(set(row.keys()))
-
-		kv = [f" {ToSqlField(x)}: '{row[x]}'" for x in fields]
-		return ','.join(kv)
+		self.schema = schema
 
 
 class Graph(object):

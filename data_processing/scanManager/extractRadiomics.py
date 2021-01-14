@@ -60,14 +60,14 @@ def cli(cohort_id, container_id, method_id):
 
     logger.info("Saving to " + output_dir)
 
-    properties['RecordID'] = "RAD" + "-" + str(FileHash('sha256').hash_file(output_dir))
+    record_name = "RAD" + "-" + str(FileHash('sha256').hash_file(output_dir))
     properties['path'] = output_dir
 
-    n_meta = Node("radiomics", properties=properties)
+    n_meta = Node("radiomics", record_name, properties=properties)
 
     conn.query(f""" 
         MATCH (sc:scan) WHERE id(sc)={container_id}
-        MERGE (da:{n_meta.create()})
+        MERGE (da:{n_meta.get_create_str()})
         MERGE (sc)-[:HAS_DATA]->(da)"""
     )
 

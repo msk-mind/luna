@@ -10,8 +10,6 @@ from data_processing.common import constants as const
 from data_processing.common.sparksession import SparkConfig
 from data_processing.services.graph_service import update_graph
 
-project_name = 'test-project'
-
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
     print('------setup------')
@@ -34,8 +32,6 @@ def test_cli_dicom_table(mocker, spark):
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-p', project_name,
-        '-t', 'dicom',
         '-d', 'tests/data_processing/services/config.yaml',
         '-f', 'tests/test_config.yaml'])
 
