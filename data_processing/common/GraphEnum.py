@@ -1,38 +1,66 @@
 from enum import Enum
 
 
-class Node(object):
+def does_not_contain(token, value):
 	"""
-	Node object defines the type and attributes of a graph node.
+	Validate that `token` is not a substring of `value`
+
+	:param: token: string e.g. : | .
+	:param: value: dictionary, list, or str
+	"""
+	if isinstance(value, str):
+		if token in value:
+			raise RuntimeError("{value} cannot contain {token}.")
+
+    if isinstance(value, list):
+    	if any([token in v for v in value]):
+    		raise RuntimeError(str(value) + " cannot contain {token}.")
+
+	if isinstance(value, dict):
+		if [token in k or token in v for k,v in value.items()]
+			raise RuntimeError(str(value) + " cannot contain {token}.")
+
+	return True
+
+
+def replace_token(token, token_replacement, value):
+	"""
+	Replace `token` with `token_replacement` in `value`
+
+	:param: token: string e.g. : | .
+	:param: token_replacement: string e.g. _ -
+	:param: value: dictionary, list, or str
+	"""
+	if isinstance(value, str):
+		return value.replace(token, token_replacement)
+
+    if isinstance(value, list):
+    	new_value = []
+    	for v in value:
+    		new_value.append(v.replace(token, token_replacement))
+    	return new_value
+
+	if isinstance(value, dict):
+		new_value = {}
+		for k,v in value.items():
+			new_value[k.replace(token, token_replacement)] = v.replace(token, token_replacement)
+
+		return new_value
+
+	return value
+	
+
+class NodeType(object):
+	"""
+	NodeType object defines the schema used to populate a graph node.
 
 	:param: node_type: node type. e.g. scan
-	:param: fields: list of column names. e.g. slide_id
+	:param: schema: list of column names. e.g. slide_id
 	"""
-	def __init__(self, node_type, fields=[], properties={}):
+	def __init__(self, node_type, schema=[], properties={}):
 
 		self.type = node_type
 		self.fields = fields
-		self.properties = properties
-
-		if self.type=="cohort":
-			if not "CohortID" in properties.keys():
-				raise RuntimeError("Cohorts must have a CohortID!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["CohortID"], properties["CohortID"])
-
-		if self.type=="patient":
-			if not ("PatientID" in properties.keys() and "Namespace" in properties.keys()):
-				raise RuntimeError("Patients must have a PatientID and Namespace property!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["PatientID"])
-		
-		if self.type in ["dicom", "mha", "mhd", "radiomics"]: # TODO pull from a config/DB of sorts
-			if not ("RecordID" in properties.keys() and "Namespace" in properties.keys() ):
-				raise RuntimeError("metadata must have a RecordID, Namespace!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["RecordID"])
-		
-		if self.type=="method":
-			if not ("MethodID" in properties.keys() and "Namespace" in properties.keys()):
-				raise RuntimeError("method must have a MethodID and Namespace")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["MethodID"])	
 
 	def create(self):
 		prop_string = self.prop_str(self.properties.keys(), self.properties)
@@ -51,15 +79,6 @@ class Node(object):
 
 		kv = [f" {x}: '{row[x]}'" for x in fields]
 		return ','.join(kv)
-	
-	@staticmethod
-	def get_qualified_name(namespace, identifier): 
-		"""
-		Returns the full name given a namespace and patient ID
-		"""
-		if ":" in namespace or ":" in identifier: raise ValueError("Qualified path cannot be constructed, namespace or identifier cannot contain ':'")
-		return f"{namespace}::{identifier}"
-	
 
 
 class Graph(object):
@@ -67,9 +86,9 @@ class Graph(object):
 	Graph object that stores src-[relationship]-target information.
 	This object is used get data from existing delta tables to populate the graph database.
 
-	:param: src: Node - source node
+	:param: src: NodeType - source node
 	:param: relationship: str - relationship name e.g. HAS_PX, HAS_RECORD etc
-	:param: target: Node - target node
+	:param: target: NodeType - target node
 	"""
 	def __init__(self, src, relationship, target):
 
@@ -89,7 +108,7 @@ class GraphEnum(Enum):
 	>>> GraphEnum['DICOM'].value[0].src.type
 	'xnat_patient'
 	"""
-	DICOM = [Graph(Node("xnat_patient", ["metadata.PatientName"]),
+	DICOM = [Graph(NodeType("xnat_patient", ["metadata.PatientID"]),
 			"HAS_SCAN", 
-			Node("scan", ["metadata.SeriesInstanceUID"]))]
+			NodeType("scan", ["metadata.SeriesInstanceUID"]))]
 	#PROJECT = Graph("project_name", "HAS_PX", "dmp_patient_id")
