@@ -252,7 +252,7 @@ def update_graph(config_file):
             .toPandas()
 
     with CodeTimer(logger, 'synchronize graph'):
-        dataset_name = cfg.get_value(path=DATA_CFG+'::DATASET_NAME')
+        dataset_name = cfg.get_value(path='DATA_CFG::DATASET_NAME')
 
         for index, row in tuple_to_add.iterrows():
             query ='''MATCH (das:dataset {{DATASET_NAME: "{0}"}}) 

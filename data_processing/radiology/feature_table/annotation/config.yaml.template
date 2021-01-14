@@ -8,9 +8,6 @@ DATASET_NAME: DMT_IRB_DATE
 # num partition for delta table
 NUM_PARTITION: 240
 
-# sql string to filter dicom metadata. To be removed once correct metadata to identify scan is around..
-SQL_STRING: metadata.SeriesDescription LIKE 'PH1%AX%'
-
 # crop image width, height
 CROP_WIDTH: 256
 

@@ -1,4 +1,5 @@
 from enum import Enum
+from data_processing.common.utils import ToSqlField
 
 
 def does_not_contain(token, value):
@@ -77,7 +78,7 @@ class NodeType(object):
 		"""
 		fields = set(fields).intersection(set(row.keys()))
 
-		kv = [f" {x}: '{row[x]}'" for x in fields]
+		kv = [f" {ToSqlField(x)}: '{row[x]}'" for x in fields]
 		return ','.join(kv)
 
 
