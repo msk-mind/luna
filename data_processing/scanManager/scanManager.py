@@ -168,7 +168,7 @@ class runMethods(Resource):
         for scan_id in scan_ids:
             args_list.append(["python3","-m",method_config["image"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
 
-        p = Pool(25)
+        p = Pool(20)
         p.map(subprocess.call, args_list)
 
         return "Done"
