@@ -17,6 +17,7 @@ import pandas as pd
 # From common
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.custom_logger   import init_logger
+import data_processing.common.constants as const
 
 # Specaialized libraries to make parquet table
 import pyarrow.parquet as pq
@@ -44,7 +45,7 @@ def cli(cohort_id, container_id, method_id):
         RETURN px.PatientID, case.AccessionNumber, scan.SeriesInstanceUID, results.path"""
     )
 
-    output_dir  = os.path.join("/gpfs/mskmind_ess/mind_public", method_config['output_dir'])
+    output_dir  = os.path.join(const.PUBLIC_DIR, method_config['output_dir'])
     output_file = os.path.join(output_dir, f"{container_id}.flatten.parquet")
 
     if not os.path.exists(output_dir): os.mkdir(output_dir)

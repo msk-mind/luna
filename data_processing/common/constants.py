@@ -30,6 +30,8 @@ APP_CFG				='APP_CFG'
 DATA_CFG			='DATA_CFG'
 SCHEMA_FILE			='data_ingestion_template_schema.yml'
 
+PUBLIC_DIR          ='/gpfs/mskmind_ess/mind_public'
+
 def TABLE_LOCATION(cfg): 
     return "{0}/tables/{1}".format(cfg.get_value(path=DATA_CFG+'::LANDING_PATH'), TABLE_NAME(cfg))
 
