@@ -10,7 +10,7 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, json
+import os, json, sys
 import click
 from checksumdir import dirhash
 
