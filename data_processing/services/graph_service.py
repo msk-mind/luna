@@ -67,14 +67,12 @@ def update_graph(data_config_file, app_config_file):
 		logger.info("Update graph with {0} - {1} - {2}".format(src_node_type, relationship, target_node_type))
 
 		# subset dataframe
-		fields = sorted(list(set(src_node_fields + target_node_fields)))
+		src_alias = [(field, clean_nested_colname(field)) for field in src_node_fields]
+		target_alias = [(field, clean_nested_colname(field)) for field in target_node_fields]
+		fields_alias = list(set(src_alias + target_alias))
 
-		src_alias = [clean_nested_colname(field) for field in src_node_fields]
-		target_alias = [clean_nested_colname(field) for field in target_node_fields]
-		fields_alias = sorted(list(set(src_alias + target_alias)))
-
-		pdf = df.select([F.col(c).alias(a) for c, a in zip(fields, fields_alias)]) \
-			.groupBy(fields_alias) \
+		pdf = df.select([F.col(c).alias(a) for c, a in fields_alias]) \
+			.groupBy([alias for field,alias in fields_alias]) \
 			.count() \
 			.toPandas()
 
@@ -82,13 +80,13 @@ def update_graph(data_config_file, app_config_file):
 		for index, row in pdf.iterrows():
 
 			src_props = {}
-			for sa in src_alias:
+			for _, sa in src_alias:
 				src_props[sa] = row[sa]	
 			src_props["Namespace"] = PROJECT_NAME
 			src_node = Node(src_node_type, src_props.pop(clean_nested_colname(graph.src.name)), src_props)
 
 			target_props = {}
-			for ta in target_alias:
+			for _, ta in target_alias:
 				target_props[ta] = row[ta]
 			target_props["Namespace"] = PROJECT_NAME
 			target_node = Node(target_node_type, target_props.pop(clean_nested_colname(graph.target.name)), target_props)
