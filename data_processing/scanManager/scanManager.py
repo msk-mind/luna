@@ -15,26 +15,40 @@ import subprocess
 from multiprocessing import Pool
 from filehash import FileHash
 
-app = Flask(__name__)
-api = Api(app, version='1.1', title='scanManager', description='Manages and exposes study scans and associated data', ordered=True)
-cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
+"""
+Required config:
+Environmental:
+    - HOSTNAME - Hostname of running process
+    - GRAPH_URI - URI for graph database
+Config.yaml:
+    - scanManager_port      - What port to publish API
+    - scanManager_processes - Number of concurrent jobs
+"""
 
+# Setup configurations
+cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
+VERSION = "branch:"+subprocess.check_output(["git","rev-parse" ,"--abbrev-ref", "HEAD"]).decode('ascii').strip()
 HOSTNAME     = os.environ["HOSTNAME"]
 PORT         = int(cfg.get_value("APP_CFG::scanManager_port"))
 NUM_ROCESSES = int(cfg.get_value("APP_CFG::scanManager_processes"))
 
+# Setup App/Api
+app = Flask(__name__)
+api = Api(app, version=VERSION, title='scanManager', description='Manages and exposes study scans and associated data', ordered=True)
+
+# Initialize some important classes
 logger = init_logger("flask-mind-server.log")
 spark  = SparkConfig().spark_session("APP_CFG", "data_processing.radiology.api.5003")
 conn   = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
-
-model = api.model("Post Method",
+# Method param model
+model = api.model("method",
     { 
-        "image":    fields.String(description="Transform function name", required=True, example="data_processing.scanManager.generateScan"),
-        "file_ext": fields.String(description="File extension to save volumentric image", required=True, example="mhd")
+        "image":    fields.String(description="Transform function name",   required=True, example="data_processing.scanManager.generateScan"),
+        "params":   fields.String(description="Json formatted parameters", required=True, example={"param1":"some_value"})
     }
 )
+
 @api.route('/mind/api/v1/scans/<cohort_id>', methods=['GET'])
 class getScansCohort(Resource):
     def get(self, cohort_id):
