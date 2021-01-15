@@ -6,42 +6,54 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.GraphEnum import Node
 from data_processing.common.config import ConfigSet
+
 from pyspark.sql.types import StringType, IntegerType, StructType, StructField
 
 import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests
 import pandas as pd
 import subprocess
-import threading
 from multiprocessing import Pool
 from filehash import FileHash
 
+"""
+Required config:
+Environmental:
+    - HOSTNAME - Hostname of running process
+    - GRAPH_URI - URI for graph database
+Config.yaml:
+    - scanManager_port      - What port to publish API
+    - scanManager_processes - Number of concurrent jobs
+"""
 
+# Setup configurations
+cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
+VERSION      = "branch:"+subprocess.check_output(["git","rev-parse" ,"--abbrev-ref", "HEAD"]).decode('ascii').strip()
+HOSTNAME     = os.environ["HOSTNAME"]
+PORT         = int(cfg.get_value("APP_CFG::scanManager_port"))
+NUM_ROCESSES = int(cfg.get_value("APP_CFG::scanManager_processes"))
 
-app    = Flask(__name__)
-api = Api(app, version='1.1', title='scanManager', description='Manages and exposes study scans and associated data', ordered=True)
+# Setup App/Api
+app = Flask(__name__)
+api = Api(app, version=VERSION, title='scanManager', description='Manages and exposes study scans and associated data', ordered=True)
 
+# Initialize some important classes
 logger = init_logger("flask-mind-server.log")
-cfg    = ConfigSet("APP_CFG",  config_file="config.yaml")
-#spark  = SparkConfig().spark_session("APP_CFG", "data_processing.radiology.api.5003")
+spark  = SparkConfig().spark_session("APP_CFG", "data_processing.radiology.api.5003")
 conn   = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-lock   = threading.Lock()
 
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
-
-STREAMS = {}
-METHODS = {}
-HOST = os.environ['HOSTNAME']
-
-model = api.model("Post Method",
+# Method param model
+model = api.model("method",
     { 
-        "image":    fields.String(description="Transform function name", required=True, example="data_processing.scanManager.generateScan"),
-        "file_ext": fields.String(description="File extension to save volumentric image", required=True, example="mhd")
+        "image":    fields.String(description="Transform function name",   required=True, example="data_processing.scanManager.generateScan"),
+        "params":   fields.String(description="Json formatted parameters", required=True, example={"param1":"some_value"})
     }
 )
+
 @api.route('/mind/api/v1/scans/<cohort_id>', methods=['GET'])
 class getScansCohort(Resource):
     def get(self, cohort_id):
-        "Return list of scan container IDs for a given cohort"
+        """ Return list of scan container IDs for a given cohort """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -59,7 +71,8 @@ class getScansCohort(Resource):
 @api.route('/mind/api/v1/scans/<cohort_id>/<case_id>', methods=['GET'])
 class getScansCases(Resource):
     def get(self, cohort_id, case_id):
-        "Return list of scan container IDs within a case for a given cohort"
+        """ Return list of scan container IDs within a case for a given cohort """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -79,7 +92,8 @@ class getScansCases(Resource):
 @api.route('/mind/api/v1/container/<cohort_id>/<container_id>', methods=['GET','POST'])
 class manageContainer(Resource):
     def get(self, cohort_id, container_id):
-        "Ping container"
+        """ Ping container data """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -88,14 +102,14 @@ class manageContainer(Resource):
 
         # Get relevant patients and cases
         res = conn.query(f"""
-            MATCH (sc:scan) \
+            MATCH (sc:scan)-[:HAS_DATA]-(data)
             WHERE id(sc)={container_id}
-            RETURN DISTINCT id(sc)
+            RETURN data
             """
         )
-        return jsonify([rec.data()['id(sc)'] for rec in res])
+        return jsonify([rec.data()['data'] for rec in res])
     def post(self, cohort_id, container_id):
-        "Add a record to a container"
+        """ Add a record to a container """
         
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
@@ -142,6 +156,7 @@ class manageContainer(Resource):
 class runMethods(Resource):
     def post(self, cohort_id, method_id):
         """ Run a method """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -159,7 +174,7 @@ class runMethods(Resource):
             return make_response("No method namespace found", 300)
 
         method_config = res[0].data()['me']
-        scan_ids = requests.get(f'http://{HOST}:5003/mind/api/v1/scans/{cohort_id}').json()
+        scan_ids = requests.get(f'http://{HOSTNAME}:{PORT}/mind/api/v1/scans/{cohort_id}').json()
 
         logger.info(method_config)
         logger.info(scan_ids)
@@ -168,7 +183,7 @@ class runMethods(Resource):
         for scan_id in scan_ids:
             args_list.append(["python3","-m",method_config["image"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
 
-        p = Pool(20)
+        p = Pool(NUM_ROCESSES)
         p.map(subprocess.call, args_list)
 
         return "Done"
@@ -186,6 +201,7 @@ class methods(Resource):
     @api.expect(model)
     def post(self, cohort_id, method_id):
         """ Create new method configuration """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -209,6 +225,7 @@ class methods(Resource):
 
     def get(self, cohort_id, method_id):
         """ Get configuration for a method """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -229,6 +246,7 @@ class methods(Resource):
 
     def delete(self, cohort_id, method_id):
         """ Delete configuration for a method """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -257,6 +275,7 @@ class methods(Resource):
 class initScans(Resource):
     def put(self, cohort_id, query):
         """ Add some scans to the cohort """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -278,6 +297,7 @@ class initScans(Resource):
         )
 
         logger.info("Length of dataset = {}".format(len(res_data)))
+        logger.info("Query = {}".format(query))
 
         cSchema = StructType([StructField("CohortID", StringType(), True), StructField("AccessionNumber", StringType(), True)])
         df_cohort = spark.createDataFrame(([(x.data()['co']['CohortID'], x.data()['cases']['AccessionNumber']) for x in res_tree]),schema=cSchema)
@@ -306,8 +326,7 @@ class initScans(Resource):
             properties = dict(row)
             properties['RecordID'] = "DCM-" + properties["SeriesInstanceUID"]
             properties['Namespace'] = cohort_id
-            properties['Type'] = "dcm"
-            n_meta = Node("metadata", properties=properties)
+            n_meta = Node("dicom",    properties=properties)
             n_scan = Node("scan",     properties={"QualifiedPath":properties["SeriesInstanceUID"]})
             query = f"""
                     MATCH  (sc:{n_scan.match()})
@@ -322,4 +341,4 @@ class initScans(Resource):
 
 
 if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'],port=5003, threaded=True, debug=True)
+    app.run(host=HOSTNAME,port=PORT, threaded=True, debug=False)
