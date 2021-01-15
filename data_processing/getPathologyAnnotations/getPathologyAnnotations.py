@@ -65,13 +65,13 @@ def getPathologyAnnotation(annotation_type, project,slide_hid,labelset):
 	ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, project, "annotations")
 
 	if annotation_type == "regional":
-		GEOJSON_TABLE_PATH = ANNOTATIONS_FOLDER + "/table/regional_geojson"
+		GEOJSON_TABLE_PATH = ANNOTATIONS_FOLDER + "/table/regional_concat_geojson"
 	elif annotation_type == "point":
 		GEOJSON_TABLE_PATH = ANNOTATIONS_FOLDER + "/table/point_refined_geojson"
 	else:
 		return None
 	
-	filepath = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset}' and latest=True").first()["geojson_filepath"]
+	filepath = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset}' and latest=True").first()["concat_geojson_filepath"]
 
 	print (filepath)
 
