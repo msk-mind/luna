@@ -27,7 +27,7 @@ Config.yaml:
 
 # Setup configurations
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
-VERSION = "branch:"+subprocess.check_output(["git","rev-parse" ,"--abbrev-ref", "HEAD"]).decode('ascii').strip()
+VERSION      = "branch:"+subprocess.check_output(["git","rev-parse" ,"--abbrev-ref", "HEAD"]).decode('ascii').strip()
 HOSTNAME     = os.environ["HOSTNAME"]
 PORT         = int(cfg.get_value("APP_CFG::scanManager_port"))
 NUM_ROCESSES = int(cfg.get_value("APP_CFG::scanManager_processes"))
@@ -52,7 +52,8 @@ model = api.model("method",
 @api.route('/mind/api/v1/scans/<cohort_id>', methods=['GET'])
 class getScansCohort(Resource):
     def get(self, cohort_id):
-        "Return list of scan container IDs for a given cohort"
+        """ Return list of scan container IDs for a given cohort """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -70,7 +71,8 @@ class getScansCohort(Resource):
 @api.route('/mind/api/v1/scans/<cohort_id>/<case_id>', methods=['GET'])
 class getScansCases(Resource):
     def get(self, cohort_id, case_id):
-        "Return list of scan container IDs within a case for a given cohort"
+        """ Return list of scan container IDs within a case for a given cohort """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -90,7 +92,8 @@ class getScansCases(Resource):
 @api.route('/mind/api/v1/container/<cohort_id>/<container_id>', methods=['GET','POST'])
 class manageContainer(Resource):
     def get(self, cohort_id, container_id):
-        "Ping container"
+        """ Ping container data """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -106,7 +109,7 @@ class manageContainer(Resource):
         )
         return jsonify([rec.data()['data'] for rec in res])
     def post(self, cohort_id, container_id):
-        "Add a record to a container"
+        """ Add a record to a container """
         
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
@@ -153,6 +156,7 @@ class manageContainer(Resource):
 class runMethods(Resource):
     def post(self, cohort_id, method_id):
         """ Run a method """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -197,6 +201,7 @@ class methods(Resource):
     @api.expect(model)
     def post(self, cohort_id, method_id):
         """ Create new method configuration """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -220,6 +225,7 @@ class methods(Resource):
 
     def get(self, cohort_id, method_id):
         """ Get configuration for a method """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -240,6 +246,7 @@ class methods(Resource):
 
     def delete(self, cohort_id, method_id):
         """ Delete configuration for a method """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
@@ -268,6 +275,7 @@ class methods(Resource):
 class initScans(Resource):
     def put(self, cohort_id, query):
         """ Add some scans to the cohort """
+
         n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
 
         # Check for cohort existence
