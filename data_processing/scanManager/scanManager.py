@@ -22,7 +22,7 @@ api = Api(app, version='1.1', title='scanManager', description='Manages and expo
 
 logger = init_logger("flask-mind-server.log")
 cfg    = ConfigSet("APP_CFG",  config_file="config.yaml")
-#spark  = SparkConfig().spark_session("APP_CFG", "data_processing.radiology.api.5003")
+spark  = SparkConfig().spark_session("APP_CFG", "data_processing.radiology.api.5003")
 conn   = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 lock   = threading.Lock()
 
@@ -88,12 +88,12 @@ class manageContainer(Resource):
 
         # Get relevant patients and cases
         res = conn.query(f"""
-            MATCH (sc:scan) \
+            MATCH (sc:scan)-[:HAS_DATA]-(data)
             WHERE id(sc)={container_id}
-            RETURN DISTINCT id(sc)
+            RETURN data
             """
         )
-        return jsonify([rec.data()['id(sc)'] for rec in res])
+        return jsonify([rec.data()['data'] for rec in res])
     def post(self, cohort_id, container_id):
         "Add a record to a container"
         
@@ -168,7 +168,7 @@ class runMethods(Resource):
         for scan_id in scan_ids:
             args_list.append(["python3","-m",method_config["image"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
 
-        p = Pool(20)
+        p = Pool(25)
         p.map(subprocess.call, args_list)
 
         return "Done"
@@ -278,6 +278,7 @@ class initScans(Resource):
         )
 
         logger.info("Length of dataset = {}".format(len(res_data)))
+        logger.info("Query = {}".format(query))
 
         cSchema = StructType([StructField("CohortID", StringType(), True), StructField("AccessionNumber", StringType(), True)])
         df_cohort = spark.createDataFrame(([(x.data()['co']['CohortID'], x.data()['cases']['AccessionNumber']) for x in res_tree]),schema=cSchema)
@@ -306,8 +307,7 @@ class initScans(Resource):
             properties = dict(row)
             properties['RecordID'] = "DCM-" + properties["SeriesInstanceUID"]
             properties['Namespace'] = cohort_id
-            properties['Type'] = "dcm"
-            n_meta = Node("metadata", properties=properties)
+            n_meta = Node("dicom",    properties=properties)
             n_scan = Node("scan",     properties={"QualifiedPath":properties["SeriesInstanceUID"]})
             query = f"""
                     MATCH  (sc:{n_scan.match()})
