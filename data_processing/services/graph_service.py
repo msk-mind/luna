@@ -46,12 +46,13 @@ def update_graph(data_config_file, app_config_file):
 
 	# load table
 	TABLE_NAME = cfg.get_value(path=const.DATA_CFG+'::TABLE_NAME')
+	DATA_TYPE = cfg.get_value(path=const.DATA_CFG+'::DATA_TYPE')
 	table_path = os.path.join(project_dir, const.TABLE_DIR, TABLE_NAME)
 	df = spark.read.format("delta").load(table_path)
 
 	# get graph info
-	table = TABLE_NAME.upper()
-	graphs = GraphEnum[table].value
+	data_type = DATA_TYPE.upper()
+	graphs = GraphEnum[data_type].value
 	# graph ~= relationship
 	for graph in graphs:
 
@@ -66,11 +67,11 @@ def update_graph(data_config_file, app_config_file):
 		logger.info("Update graph with {0} - {1} - {2}".format(src_node_type, relationship, target_node_type))
 
 		# subset dataframe
-		fields = src_node_fields + target_node_fields
+		fields = sorted(list(set(src_node_fields + target_node_fields)))
 
 		src_alias = [clean_nested_colname(field) for field in src_node_fields]
 		target_alias = [clean_nested_colname(field) for field in target_node_fields]
-		fields_alias = src_alias + target_alias
+		fields_alias = sorted(list(set(src_alias + target_alias)))
 
 		pdf = df.select([F.col(c).alias(a) for c, a in zip(fields, fields_alias)]) \
 			.groupBy(fields_alias) \
@@ -80,20 +81,25 @@ def update_graph(data_config_file, app_config_file):
 		# update graph
 		for index, row in pdf.iterrows():
 
-			src_vals = [row[col] for col in src_alias]
-			src_props = dict(zip(src_alias, src_vals))
+			src_props = {}
+			for sa in src_alias:
+				src_props[sa] = row[sa]	
 			src_props["Namespace"] = PROJECT_NAME
 			src_node = Node(src_node_type, src_props.pop(clean_nested_colname(graph.src.name)), src_props)
 
-			target_vals = [row[col] for col in target_alias]
-			target_props = dict(zip(target_alias, target_vals))
+			target_props = {}
+			for ta in target_alias:
+				target_props[ta] = row[ta]
 			target_props["Namespace"] = PROJECT_NAME
 			target_node = Node(target_node_type, target_props.pop(clean_nested_colname(graph.target.name)), target_props)
 
-			# fire query! # match on "ID" in case of update?
-			query = f'''MERGE (n:{src_node.get_match_str()}) MERGE (m:{target_node.get_match_str()}) MERGE (n)-[r:{relationship}]->(m)'''
+			try:
+				query = f'''MERGE (n:{src_node.get_create_str()}) MERGE (m:{target_node.get_create_str()}) MERGE (n)-[r:{relationship}]->(m)'''
+				conn.query(query)
+			except Exception as ex:
+				query = f'''MATCH (n:{src_node.get_match_str()}) MERGE (m:{target_node.get_match_str()}) MERGE (n)-[r:{relationship}]->(m)'''
+				conn.query(query)
 			logger.info(query)
-			conn.query(query)
 			
 	logger.info("Finished update-graph in %s seconds" % (time.time() - start_time))
 

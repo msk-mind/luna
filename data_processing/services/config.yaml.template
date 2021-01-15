@@ -5,6 +5,8 @@ PROJECT_NAME: project_name
 
 TABLE_NAME: table_name
 
+DATA_TYPE: mha
+
 # graph database
 GRAPH_URI: graph-ip:graph-port
 

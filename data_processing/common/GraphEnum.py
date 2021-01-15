@@ -52,26 +52,28 @@ class GraphEnum(Enum):
 	>>> GraphEnum['DICOM'].value[0].src.type
 	'patient'
 	"""
+	accession_radiology_dicom = NodeType("accession", "metadata.AccessionNumber")
+	accession_radiology = NodeType("accession", "accession_number")
+	scan = NodeType("scan", "metadata.SeriesInstanceUID")
+	png = NodeType("png", "png_record_uuid", ["metadata.SeriesInstanceUID", "label"])
+
 	DICOM = [Graph(NodeType("patient", "metadata.PatientID"),
 				"HAS_CASE", 
-				NodeType("accession", "metadata.AccessionNumber")),
-			Graph(NodeType("accession", "metadata.AccessionNumber"),
+				accession_radiology_dicom),
+			Graph(accession_radiology_dicom,
 				"HAS_SCAN", 
-				NodeType("scan", "metadata.SeriesInstanceUID"))]
+				scan)]
 
-	MHA = [Graph(NodeType("accession", "accession_number"),
+	MHA = [Graph(accession_radiology,
 				"HAS_DATA",
 				NodeType("mha", "scan_annotation_record_uuid", ["path", "label"]))]
 
-	MHD = [Graph(NodeType("accession", "accession_number"),
+	MHD = [Graph(accession_radiology,
 				"HAS_DATA",
 				NodeType("mhd", "scan_annotation_record_uuid", ["path", "label"]))]
 
-	PNG = [Graph(NodeType("accession", "accession_number"),
-				"HAS_DATA",
-				NodeType("png", "png_record_uuid", ["metadata.SeriesInstanceUID", "label"]))]
+	PNG = [Graph(scan, "HAS_DATA", png)]
 
-	FEATURE = [Graph(NodeType("accession", "accession_number"),
-			"HAS_DATA",
+	FEATURE = [Graph(png, "HAS_DATA",
 			NodeType("feature", "feature_record_uuid", ["metadata.SeriesInstanceUID", "label"]))]
 
