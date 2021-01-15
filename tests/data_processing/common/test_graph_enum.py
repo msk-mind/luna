@@ -56,6 +56,15 @@ def test_metadata_match():
     assert "dim"  not in match_string
 
 
+def test_get_all_properties():
+    properties = {}
+    properties['Namespace'] = "my_cohort"
+    properties['dim'] = 3
+
+    all_props = Node("mhd", "SCAN-001", properties=properties).get_all_props()
+    assert "name" in all_props
+    assert "SCAN-001" == all_props["name"]
+
 def test_cohort_wrong_properties():
     with pytest.raises(TypeError):
         Node("cohort", properties={"Description":"a cohort"})
