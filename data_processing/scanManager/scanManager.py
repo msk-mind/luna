@@ -15,19 +15,19 @@ import subprocess
 from multiprocessing import Pool
 from filehash import FileHash
 
-app    = Flask(__name__)
+app = Flask(__name__)
 api = Api(app, version='1.1', title='scanManager', description='Manages and exposes study scans and associated data', ordered=True)
+cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
+
+HOSTNAME     = os.environ["HOSTNAME"]
+PORT         = int(cfg.get_value("APP_CFG::scanManager_port"))
+NUM_ROCESSES = int(cfg.get_value("APP_CFG::scanManager_processes"))
 
 logger = init_logger("flask-mind-server.log")
-cfg    = ConfigSet("APP_CFG",  config_file="config.yaml")
 spark  = SparkConfig().spark_session("APP_CFG", "data_processing.radiology.api.5003")
 conn   = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
-
-STREAMS = {}
-METHODS = {}
-HOST = os.environ['HOSTNAME']
 
 model = api.model("Post Method",
     { 
@@ -156,7 +156,7 @@ class runMethods(Resource):
             return make_response("No method namespace found", 300)
 
         method_config = res[0].data()['me']
-        scan_ids = requests.get(f'http://{HOST}:5003/mind/api/v1/scans/{cohort_id}').json()
+        scan_ids = requests.get(f'http://{HOSTNAME}:{PORT}/mind/api/v1/scans/{cohort_id}').json()
 
         logger.info(method_config)
         logger.info(scan_ids)
@@ -165,7 +165,7 @@ class runMethods(Resource):
         for scan_id in scan_ids:
             args_list.append(["python3","-m",method_config["image"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
 
-        p = Pool(20)
+        p = Pool(NUM_ROCESSES)
         p.map(subprocess.call, args_list)
 
         return "Done"
@@ -319,4 +319,4 @@ class initScans(Resource):
 
 
 if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'],port=5003, threaded=True, debug=False)
+    app.run(host=HOSTNAME,port=PORT, threaded=True, debug=False)
