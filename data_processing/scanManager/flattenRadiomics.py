@@ -1,14 +1,26 @@
+'''
+Created: January 2021
+@author: aukermaa@mskcc.org
+
+Given a scan (container) ID
+1. resolve the path to radiomics results
+2. prepare a parquet table to save for this container
+3. export table to publically available path on ess
+
+'''
+
+# General imports
 import os, json, sys
-import itk
 import click
 import pandas as pd
 
+# From common
+from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.custom_logger   import init_logger
+
+# Specaialized libraries to make parquet table
 import pyarrow.parquet as pq
 import pyarrow as pa
-
-from data_processing.common.Neo4jConnection import Neo4jConnection
-from data_processing.common.GraphEnum import Node
-from data_processing.common.custom_logger import init_logger
 
 logger = init_logger("flattenRadiomics.log")
 
@@ -16,15 +28,10 @@ logger = init_logger("flattenRadiomics.log")
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
-    
 def cli(cohort_id, container_id, method_id):
     logger.info("Invocation: " + str(sys.argv))
 
-    properties = {}
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-
-    properties['Namespace'] = cohort_id
-    properties['MethodID']  = method_id
 
     with open(f'{method_id}.json', 'r') as json_file:
         method_config = json.load(json_file)['params']
@@ -33,8 +40,7 @@ def cli(cohort_id, container_id, method_id):
 
     input_nodes = conn.query(f"""
         MATCH (px:patient)-[:HAS_CASE]-(case)-[:HAS_SCAN]-(scan:scan)-[:HAS_DATA]-(results:radiomics)
-        WHERE id(scan)={container_id}
-        AND results.MethodID='{results_to_flatten}'
+        WHERE id(scan)={container_id} AND results.MethodID='{results_to_flatten}'
         RETURN px.PatientID, case.AccessionNumber, scan.SeriesInstanceUID, results.path"""
     )
 
@@ -67,8 +73,10 @@ def cli(cohort_id, container_id, method_id):
     # Cleanup unnamed columns
     df = df.loc[:, ~df.columns.str.contains('Unnamed')]
 
+    # Create table part
     table = pa.Table.from_pandas(df)
 
+    # Write!
     pq.write_table(table, output_file)
 
 if __name__ == "__main__":

@@ -6,16 +6,14 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.GraphEnum import Node
 from data_processing.common.config import ConfigSet
+
 from pyspark.sql.types import StringType, IntegerType, StructType, StructField
 
 import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests
 import pandas as pd
 import subprocess
-import threading
 from multiprocessing import Pool
 from filehash import FileHash
-
-
 
 app    = Flask(__name__)
 api = Api(app, version='1.1', title='scanManager', description='Manages and exposes study scans and associated data', ordered=True)
@@ -24,7 +22,6 @@ logger = init_logger("flask-mind-server.log")
 cfg    = ConfigSet("APP_CFG",  config_file="config.yaml")
 spark  = SparkConfig().spark_session("APP_CFG", "data_processing.radiology.api.5003")
 conn   = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-lock   = threading.Lock()
 
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
@@ -322,4 +319,4 @@ class initScans(Resource):
 
 
 if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'],port=5003, threaded=True, debug=True)
+    app.run(host=os.environ['HOSTNAME'],port=5003, threaded=True, debug=False)

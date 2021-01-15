@@ -1,11 +1,26 @@
+'''
+Created: January 2021
+@author: aukermaa@mskcc.org
+
+Given a scan (container) ID
+1. resolve the path to the dicom folder
+2. generate a volumentric image using ITK
+3. store results on HDFS and add metadata to the graph
+
+'''
+
+# General imports
 import os, json
-import itk
 import click
 from checksumdir import dirhash
 
+# From common
 from data_processing.common.Neo4jConnection import Neo4jConnection
-from data_processing.common.GraphEnum import Node
-from data_processing.common.custom_logger import init_logger
+from data_processing.common.custom_logger   import init_logger
+from data_processing.common.GraphEnum       import Node
+
+# Specialized library to generate volumentric images
+import itk
 
 logger = init_logger("generateScan.log")
 
@@ -14,7 +29,8 @@ logger = init_logger("generateScan.log")
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
-    properties = {}
+    logger.info("Invocation: " + str(sys.argv))
+
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
     properties = {}
@@ -32,9 +48,9 @@ def cli(cohort_id, container_id, method_id):
 
     input_data = input_nodes[0].data()['data']
 
-    path        = input_data['path']
+    logger.info (input_data)
 
-    input_dir, filename  = os.path.split(path)
+    input_dir, filename  = os.path.split(input_data['path'])
     input_dir = input_dir[input_dir.index("/"):]
 
     output_dir = os.path.join("/gpfs/mskmindhdp_emc/data/COHORTS", cohort_id, "scans", input_data['SeriesInstanceUID'])
@@ -89,7 +105,6 @@ def cli(cohort_id, container_id, method_id):
     properties['zdim'] = n_slices
 
     n_meta = Node(file_ext, properties=properties)
-
 
     conn.query(f""" 
         MATCH (sc:scan) WHERE id(sc)={container_id}

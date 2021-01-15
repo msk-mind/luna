@@ -1,13 +1,26 @@
+'''
+Created: January 2021
+@author: aukermaa@mskcc.org
+
+Given a scan (container) ID
+1. resolve the path to a volumentric image and annotation (label) files
+2. extract radiomics features into a vector (csv)
+3. store results on HDFS and add metadata to the graph
+
+'''
+
+# General imports
 import os, json, sys
-import itk
 import click
-from filehash import FileHash
 import pandas as pd
+from filehash import FileHash
 
+# From common
 from data_processing.common.Neo4jConnection import Neo4jConnection
-from data_processing.common.GraphEnum import Node
-from data_processing.common.custom_logger import init_logger
+from data_processing.common.custom_logger   import init_logger
+from data_processing.common.GraphEnum       import Node
 
+# Specialized library to extract radiomics
 from radiomics import featureextractor  # This module is used for interaction with pyradiomics
 
 logger = init_logger("extractRadiomics.log")
@@ -19,9 +32,9 @@ logger = init_logger("extractRadiomics.log")
 def cli(cohort_id, container_id, method_id):
     logger.info("Invocation: " + str(sys.argv))
 
-    properties = {}
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
+    properties = {}
     properties['Namespace'] = cohort_id
     properties['MethodID']  = method_id
 
@@ -42,7 +55,7 @@ def cli(cohort_id, container_id, method_id):
 
     input_data = input_nodes[0].data()
 
-    print (input_data)
+    logger.info (input_data)
 
     extractor = featureextractor.RadiomicsFeatureExtractor(**method_config)
 
