@@ -18,7 +18,7 @@ from filehash import FileHash
 # From common
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.GraphEnum       import Node
+from data_processing.common.Node       import Node
 
 # Specialized library to extract radiomics
 from radiomics import featureextractor  # This module is used for interaction with pyradiomics
@@ -73,14 +73,14 @@ def cli(cohort_id, container_id, method_id):
 
     logger.info("Saving to " + output_dir)
 
-    properties['RecordID'] = "RAD" + "-" + str(FileHash('sha256').hash_file(output_dir))
+    record_name = "RAD" + "-" + str(FileHash('sha256').hash_file(output_dir))
     properties['path'] = output_dir
 
-    n_meta = Node("radiomics", properties=properties)
+    n_meta = Node("radiomics", record_name, properties=properties)
 
     conn.query(f""" 
         MATCH (sc:scan) WHERE id(sc)={container_id}
-        MERGE (da:{n_meta.create()})
+        MERGE (da:{n_meta.get_create_str()})
         MERGE (sc)-[:HAS_DATA]->(da)"""
     )
 

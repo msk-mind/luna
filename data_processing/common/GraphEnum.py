@@ -1,66 +1,28 @@
 from enum import Enum
-from data_processing.common.utils import ToSqlField
+from data_processing.common.utils import to_sql_field
+	
 
-
-class Node(object):
+class NodeType(object):
 	"""
-	Node object defines the type and attributes of a graph node.
+	NodeType object defines the schema used to populate a graph node.
 
 	:param: node_type: node type. e.g. scan
-	:param: fields: list of column names. e.g. slide_id
+	:param: name: required node name. e.g. scan-123
+	:param: schema: list of column names. e.g. slide_id
 	"""
-	def __init__(self, node_type, fields=[], properties={}):
+	def __init__(self, node_type, name, schema=[]):
 
 		self.type = node_type
-		self.fields = fields
-		self.properties = properties
+		self.name = name
+		self.schema = schema
 
-		if self.type=="cohort":
-			if not "CohortID" in properties.keys():
-				raise RuntimeError("Cohorts must have a CohortID!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["CohortID"], properties["CohortID"])
 
-		if self.type=="patient":
-			if not ("PatientID" in properties.keys() and "Namespace" in properties.keys()):
-				raise RuntimeError("Patients must have a PatientID and Namespace property!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["PatientID"])
-		
-		if self.type in ["dicom", "mha", "mhd", "nrrd", "radiomics"]: # TODO pull from a config/DB of sorts
-			if not ("RecordID" in properties.keys() and "Namespace" in properties.keys() ):
-				raise RuntimeError("metadata must have a RecordID, Namespace!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["RecordID"])
-		
-		if self.type=="method":
-			if not ("MethodID" in properties.keys() and "Namespace" in properties.keys()):
-				raise RuntimeError("method must have a MethodID and Namespace")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], properties["MethodID"])	
-
-	def create(self):
-		prop_string = self.prop_str(self.properties.keys(), self.properties)
-		return f"""{self.type}:globals{{ {prop_string} }}"""
-
-	def match(self):
-		prop_string = self.prop_str( ["QualifiedPath"], self.properties)
-		return f"""{self.type}{{ {prop_string} }}"""
-
-	@staticmethod
-	def prop_str(fields, row):
+	def get_all_schema(self):
 		"""
-		Returns a kv string like 'id: 123, ...' where prop values come from row.
+		Name is a required field, but it's still a property of this node.
+		Return the properties including the name property!
 		"""
-		fields = set(fields).intersection(set(row.keys()))
-
-		kv = [f" {ToSqlField(x)}: '{row[x]}'" for x in fields]
-		return ','.join(kv)
-	
-	@staticmethod
-	def get_qualified_name(namespace, identifier): 
-		"""
-		Returns the full name given a namespace and patient ID
-		"""
-		if ":" in namespace or ":" in identifier: raise ValueError("Qualified path cannot be constructed, namespace or identifier cannot contain ':'")
-		return f"{namespace}::{identifier}"
-	
+		return self.schema + [self.name]
 
 
 class Graph(object):
@@ -68,9 +30,9 @@ class Graph(object):
 	Graph object that stores src-[relationship]-target information.
 	This object is used get data from existing delta tables to populate the graph database.
 
-	:param: src: Node - source node
+	:param: src: NodeType - source node
 	:param: relationship: str - relationship name e.g. HAS_PX, HAS_RECORD etc
-	:param: target: Node - target node
+	:param: target: NodeType - target node
 	"""
 	def __init__(self, src, relationship, target):
 
@@ -88,9 +50,30 @@ class GraphEnum(Enum):
 	value: list of Graphs - to accomodate multiple relationship update
 
 	>>> GraphEnum['DICOM'].value[0].src.type
-	'xnat_patient'
+	'patient'
 	"""
-	DICOM = [Graph(Node("xnat_patient", ["metadata.PatientName"]),
-			"HAS_SCAN", 
-			Node("scan", ["metadata.SeriesInstanceUID"]))]
-	#PROJECT = Graph("project_name", "HAS_PX", "dmp_patient_id")
+	accession_radiology_dicom = NodeType("accession", "metadata.AccessionNumber")
+	accession_radiology = NodeType("accession", "accession_number")
+	scan = NodeType("scan", "metadata.SeriesInstanceUID")
+	png = NodeType("png", "png_record_uuid", ["metadata.SeriesInstanceUID", "label"])
+
+	DICOM = [Graph(NodeType("patient", "metadata.PatientID"),
+				"HAS_CASE", 
+				accession_radiology_dicom),
+			Graph(accession_radiology_dicom,
+				"HAS_SCAN", 
+				scan)]
+
+	MHA = [Graph(accession_radiology,
+				"HAS_DATA",
+				NodeType("mha", "scan_annotation_record_uuid", ["path", "label"]))]
+
+	MHD = [Graph(accession_radiology,
+				"HAS_DATA",
+				NodeType("mhd", "scan_annotation_record_uuid", ["path", "label"]))]
+
+	PNG = [Graph(scan, "HAS_DATA", png)]
+
+	FEATURE = [Graph(png, "HAS_DATA",
+			NodeType("feature", "feature_record_uuid", ["metadata.SeriesInstanceUID", "label"]))]
+

@@ -5,6 +5,8 @@ import pandas as pd
 from pyspark.sql import functions as F
 
 from data_processing.common.GraphEnum import GraphEnum
+from data_processing.common.Node import Node
+from data_processing.common.utils import clean_nested_colname
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
@@ -12,22 +14,14 @@ from data_processing.common.config import ConfigSet
 import data_processing.common.constants as const
 
 
-def prop_str(fields, row):
-	"""
-	Returns a kv string like 'id: 123, ...' where prop values come from row.
-	"""
-	kv = [f" {x}: '{row[x]}'" for x in fields]
-	return ','.join(kv)
-
 @click.command()
-@click.option('-p', '--project', help="project name", required=True)
-@click.option('-t', '--table', help="table name", required=True)
 @click.option('-d', '--data_config_file', default = 'data_processing/services/config.yaml', required=True,
 		help="path to configuration related to package. See config.yaml.template in this package.")
 @click.option('-f', '--app_config_file', default = 'config.yaml', required=True,
               help="path to config file containing application configuration. See config.yaml.template")
-def update_graph(project, table, data_config_file, app_config_file):
+def update_graph(data_config_file, app_config_file):
 	"""
+	Updates graph with the data from the table, 
 	Usage:
 		python3 -m data_processing.services.graph_service -p TEST_PROJECT -t dicom -f config.yaml
 	"""
@@ -45,52 +39,65 @@ def update_graph(project, table, data_config_file, app_config_file):
 		pwd=cfg.get_value(path=const.DATA_CFG+'::GRAPH_PW'))
 
 	# get project / table path
+	PROJECT_NAME = cfg.get_value(path=const.DATA_CFG+'::PROJECT_NAME')
 	base_path = cfg.get_value(path=const.DATA_CFG+'::MIND_DATA_PATH')
-	project_dir = os.path.join(base_path, project)
+	project_dir = os.path.join(base_path, PROJECT_NAME)
 	logger.info("Got project path : " + project_dir)
 
 	# load table
-	table_path = os.path.join(project_dir, const.TABLE_DIR, table)
+	TABLE_NAME = cfg.get_value(path=const.DATA_CFG+'::TABLE_NAME')
+	DATA_TYPE = cfg.get_value(path=const.DATA_CFG+'::DATA_TYPE')
+	table_path = os.path.join(project_dir, const.TABLE_DIR, TABLE_NAME)
 	df = spark.read.format("delta").load(table_path)
 
 	# get graph info
-	table = table.upper()
-	graphs = GraphEnum[table].value
+	data_type = DATA_TYPE.upper()
+	graphs = GraphEnum[data_type].value
 	# graph ~= relationship
 	for graph in graphs:
 
 		src_node_type = graph.src.type
-		src_node_fields = graph.src.fields
+		src_node_fields = graph.src.get_all_schema()
 
 		relationship = graph.relationship
 
 		target_node_type = graph.target.type
-		target_node_fields = graph.target.fields
+		target_node_fields = graph.target.get_all_schema()
 
 		logger.info("Update graph with {0} - {1} - {2}".format(src_node_type, relationship, target_node_type))
 
 		# subset dataframe
-		fields = src_node_fields + target_node_fields
-		# alias removes top-level column name if '.' is part of the column name: i.e. metadata.PatientName -> PatientName
-		src_alias = [x[x.find('.')+1:] for x in src_node_fields]
-		target_alias = [x[x.find('.')+1:] for x in target_node_fields]
-		fields_alias = src_alias + target_alias
+		src_alias = [(field, clean_nested_colname(field)) for field in src_node_fields]
+		target_alias = [(field, clean_nested_colname(field)) for field in target_node_fields]
+		fields_alias = list(set(src_alias + target_alias))
 
-		pdf = df.select([F.col(c).alias(a) for c, a in zip(fields, fields_alias)]) \
-			.groupBy(fields_alias) \
+		pdf = df.select([F.col(c).alias(a) for c, a in fields_alias]) \
+			.groupBy([alias for field,alias in fields_alias]) \
 			.count() \
 			.toPandas()
 
 		# update graph
 		for index, row in pdf.iterrows():
 
-			src_props = prop_str(src_alias, row)
-			target_props = prop_str(target_alias, row)
+			src_props = {}
+			for _, sa in src_alias:
+				src_props[sa] = row[sa]	
+			src_props["Namespace"] = PROJECT_NAME
+			src_node = Node(src_node_type, src_props.pop(clean_nested_colname(graph.src.name)), src_props)
 
-			# fire query! # match on "ID" in case of update?
-			query = f'''MERGE (n:{src_node_type} {{{src_props}}}) MERGE (m:{target_node_type} {{{target_props}}}) MERGE (n)-[r:{relationship}]->(m)'''
+			target_props = {}
+			for _, ta in target_alias:
+				target_props[ta] = row[ta]
+			target_props["Namespace"] = PROJECT_NAME
+			target_node = Node(target_node_type, target_props.pop(clean_nested_colname(graph.target.name)), target_props)
+
+			try:
+				query = f'''MERGE (n:{src_node.get_create_str()}) MERGE (m:{target_node.get_create_str()}) MERGE (n)-[r:{relationship}]->(m)'''
+				conn.query(query)
+			except Exception as ex:
+				query = f'''MATCH (n:{src_node.get_match_str()}) MERGE (m:{target_node.get_match_str()}) MERGE (n)-[r:{relationship}]->(m)'''
+				conn.query(query)
 			logger.info(query)
-			conn.query(query)
 			
 	logger.info("Finished update-graph in %s seconds" % (time.time() - start_time))
 

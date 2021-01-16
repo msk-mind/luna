@@ -52,17 +52,17 @@ model = api.model("method",
 @api.route('/mind/api/v1/scans/<cohort_id>', methods=['GET'])
 class getScansCohort(Resource):
     def get(self, cohort_id):
-        """ Return list of scan container IDs for a given cohort """
+        """Return list of scan container IDs for a given cohort"""
 
-        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        n_cohort = Node("cohort", cohort_id)
 
         # Check for cohort existence
-        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1:
+        if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1:
             return make_response("No cohort namespace found", 300)
 
         # Get relevant patients and cases
         res = conn.query(f"""
-            MATCH (co:{n_cohort.match()})-[:INCLUDE]-(px:patient)-[:HAS_CASE]-(cases:accession)-[:HAS_SCAN]-(sc:scan)-[:INCLUDE]-(co) \
+            MATCH (co:{n_cohort.get_match_str()})-[:INCLUDE]-(px:patient)-[:HAS_CASE]-(cases:accession)-[:HAS_SCAN]-(sc:scan)-[:INCLUDE]-(co) \
             RETURN DISTINCT id(sc)
             """
         )
@@ -71,17 +71,17 @@ class getScansCohort(Resource):
 @api.route('/mind/api/v1/scans/<cohort_id>/<case_id>', methods=['GET'])
 class getScansCases(Resource):
     def get(self, cohort_id, case_id):
-        """ Return list of scan container IDs within a case for a given cohort """
+        """Return list of scan container IDs within a case for a given cohort"""
 
-        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        n_cohort = Node("cohort", cohort_id)
 
         # Check for cohort existence
-        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1:
+        if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1:
             return make_response("No cohort namespace found", 300)
 
         # Get relevant patients and cases
         res = conn.query(f"""
-            MATCH (co:{n_cohort.match()})-[:INCLUDE]-(px:patient)-[:HAS_CASE]-(cases:accession)-[:HAS_SCAN]-(sc:scan)-[:INCLUDE]-(co) \
+            MATCH (co:{n_cohort.get_match_str()})-[:INCLUDE]-(px:patient)-[:HAS_CASE]-(cases:accession)-[:HAS_SCAN]-(sc:scan)-[:INCLUDE]-(co) \
             WHERE cases.AccessionNumber="{case_id}"
             RETURN DISTINCT id(sc)
             """
@@ -92,12 +92,12 @@ class getScansCases(Resource):
 @api.route('/mind/api/v1/container/<cohort_id>/<container_id>', methods=['GET','POST'])
 class manageContainer(Resource):
     def get(self, cohort_id, container_id):
-        """ Ping container data """
 
-        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        """ Ping container data """
+        n_cohort = Node("cohort", cohort_id)
 
         # Check for cohort existence
-        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1:
+        if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1:
             return make_response("No cohort namespace found", 300)
 
         # Get relevant patients and cases
@@ -111,10 +111,10 @@ class manageContainer(Resource):
     def post(self, cohort_id, container_id):
         """ Add a record to a container """
         
-        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        n_cohort = Node("cohort", cohort_id)
 
         # Check for cohort existence
-        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1:
+        if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1:
             return make_response("No cohort namespace found", 300)
 
         properties = request.json
@@ -129,19 +129,19 @@ class manageContainer(Resource):
             return make_response("File does not exist!", 400)
 
         properties['Namespace'] = cohort_id
-        properties['RecordID']  = "mha" + "-" + str(FileHash('sha256').hash_file(properties['path']))
+        record_name = "mha" + "-" + str(FileHash('sha256').hash_file(properties['path']))
 
         try:
-            n_data = Node(properties["type"],  properties=properties)
+            n_data = Node(properties["type"], record_name, properties=properties)
         except:
             return make_response("Failed to configure node, bad type???", 401)
 
         conn.query(f""" 
             MATCH (sc:scan) WHERE id(sc)={container_id}
-            MERGE (da:{n_data.create()})
+            MERGE (da:{n_data.get_create_str()})
             MERGE (sc)-[:HAS_DATA]->(da)"""
         )
-        return make_response(f"Added {n_data.match()} to container {container_id}", 200)
+        return make_response(f"Added {n_data.get_match_str()} to container {container_id}", 200)
 
 
 
@@ -156,19 +156,17 @@ class manageContainer(Resource):
 class runMethods(Resource):
     def post(self, cohort_id, method_id):
         """ Run a method """
-
-        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        n_cohort = Node("cohort", cohort_id)
 
         # Check for cohort existence
-        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1: 
+        if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1: 
             return make_response("No cohort namespace found", 300)
 
         properties = {}
         properties['Namespace'] = cohort_id
-        properties['MethodID']  = method_id
-        n_method = Node("method",  properties=properties)
+        n_method = Node("method", method_id, properties=properties)
 
-        res = conn.query(f"""MATCH (me:{n_method.match()}) RETURN me""")
+        res = conn.query(f"""MATCH (me:{n_method.get_match_str()}) RETURN me""")
 
         if not len(res)==1:
             return make_response("No method namespace found", 300)
@@ -201,21 +199,19 @@ class methods(Resource):
     @api.expect(model)
     def post(self, cohort_id, method_id):
         """ Create new method configuration """
-
-        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        n_cohort = Node("cohort", cohort_id)
 
         # Check for cohort existence
-        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1: 
+        if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1: 
             return make_response("No cohort namespace found", 300)
 
         properties = {}
 
         properties['Namespace'] = cohort_id
-        properties['MethodID']  = method_id
         properties['image']     = request.json["image"]
-        n_method = Node("method",  properties=properties)
+        n_method = Node("method", method_id, properties=properties)
 
-        res = conn.query(f"""CREATE (me:{n_method.create()}) RETURN me""")
+        res = conn.query(f"""CREATE (me:{n_method.get_create_str()}) RETURN me""")
         if res is None: return make_response(f"Method at {cohort_id}::{method_id} already exists!", 400)
         
         with open(f'{method_id}.json', 'w') as outfile:
@@ -225,19 +221,17 @@ class methods(Resource):
 
     def get(self, cohort_id, method_id):
         """ Get configuration for a method """
-
-        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        n_cohort = Node("cohort", cohort_id)
 
         # Check for cohort existence
-        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1: 
+        if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1: 
             return make_response("No cohort namespace found", 300)
 
         properties = {}
         properties['Namespace'] = cohort_id
-        properties['MethodID']  = method_id
-        n_method = Node("method",  properties=properties)
+        n_method = Node("method", method_id, properties=properties)
 
-        res = conn.query(f"""MATCH (me:{n_method.match()}) RETURN me""")
+        res = conn.query(f"""MATCH (me:{n_method.get_match_str()}) RETURN me""")
 
         if not len(res)==1:
             return make_response("Method not found", 300)
@@ -246,19 +240,17 @@ class methods(Resource):
 
     def delete(self, cohort_id, method_id):
         """ Delete configuration for a method """
-
-        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        n_cohort = Node("cohort", cohort_id)
 
         # Check for cohort existence
-        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1: 
+        if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1: 
             return make_response("No cohort namespace found", 300)
 
         properties = {}
         properties['Namespace'] = cohort_id
-        properties['MethodID']  = method_id
-        n_method = Node("method",  properties=properties)
+        n_method = Node("method", method_id, properties=properties)
 
-        res = conn.query(f"""MATCH (me:{n_method.match()}) DETACH DELETE me RETURN me""")
+        res = conn.query(f"""MATCH (me:{n_method.get_match_str()}) DETACH DELETE me RETURN me""")
 
         return make_response("Deleted method")
 
@@ -275,23 +267,22 @@ class methods(Resource):
 class initScans(Resource):
     def put(self, cohort_id, query):
         """ Add some scans to the cohort """
-
-        n_cohort = Node("cohort",  properties={"CohortID":cohort_id})
+        n_cohort = Node("cohort", cohort_id)
 
         # Check for cohort existence
-        if not len(conn.query(f""" MATCH (co:{n_cohort.match()}) RETURN co """ ))==1: 
+        if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1: 
             return make_response("No cohort namespace found", 300)
 
         # Get relevant patients and cases
         res_tree = conn.query(f"""
-            MATCH (co:{n_cohort.match()})-[:INCLUDE]-(px:patient)-[:HAS_CASE]-(cases:accession)-[:HAS_SCAN]-(sc:scan)-[:HAS_DATA]-(das:dataset) WHERE das.DATA_TYPE="DCM" \
+            MATCH (co:{n_cohort.get_match_str()})-[:INCLUDE]-(px:patient)-[:HAS_CASE]-(cases:accession)-[:HAS_SCAN]-(sc:scan)-[:HAS_DATA]-(das:dataset) WHERE das.DATA_TYPE="DCM" \
             RETURN DISTINCT co, cases
             """
         )
 
         # Get the "Parquet Dataset"
         res_data = conn.query(f"""
-            MATCH (co:{n_cohort.match()})-[:INCLUDE]-(px:patient)-[:HAS_CASE]-(cases:accession)-[:HAS_SCAN]-(sc:scan)-[:HAS_DATA]-(das:dataset) WHERE das.DATA_TYPE="DCM" \
+            MATCH (co:{n_cohort.get_match_str()})-[:INCLUDE]-(px:patient)-[:HAS_CASE]-(cases:accession)-[:HAS_SCAN]-(sc:scan)-[:HAS_DATA]-(das:dataset) WHERE das.DATA_TYPE="DCM" \
             RETURN DISTINCT das
             """
         )
@@ -324,14 +315,16 @@ class initScans(Resource):
         for index, row in df.toPandas().iterrows():
             count += 1
             properties = dict(row)
-            properties['RecordID'] = "DCM-" + properties["SeriesInstanceUID"]
+            record_name = "DCM-" + properties["SeriesInstanceUID"]
             properties['Namespace'] = cohort_id
-            n_meta = Node("dicom",    properties=properties)
-            n_scan = Node("scan",     properties={"QualifiedPath":properties["SeriesInstanceUID"]})
+            properties['Type'] = "dcm"
+            n_meta = Node("dicom", record_name, properties=properties)
+            n_scan = Node("scan", properties["SeriesInstanceUID"], properties={"QualifiedPath":properties["SeriesInstanceUID"]})
+
             query = f"""
-                    MATCH  (sc:{n_scan.match()})
-                    MATCH  (co:{n_cohort.match()})
-                    CREATE (da:{n_meta.create()})
+                    MATCH  (sc:{n_scan.get_match_str()})
+                    MATCH  (co:{n_cohort.get_match_str()})
+                    CREATE (da:{n_meta.get_create_str()})
                     MERGE (sc)-[:HAS_DATA]->(da)
                     MERGE (co)-[:INCLUDE]->(sc) 
                     """

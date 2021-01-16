@@ -10,8 +10,6 @@ from data_processing.common import constants as const
 from data_processing.common.sparksession import SparkConfig
 from data_processing.services.graph_service import update_graph
 
-project_name = 'test-project'
-
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
     print('------setup------')
@@ -34,10 +32,59 @@ def test_cli_dicom_table(mocker, spark):
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-p', project_name,
-        '-t', 'dicom',
-        '-d', 'tests/data_processing/services/config.yaml',
+        '-d', 'tests/data_processing/services/dicom-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
 
+
+def test_cli_mha_table(mocker, spark):
+
+    # mock graph connection
+    mocker.patch.object(Neo4jConnection, 'query')
+
+    runner = CliRunner()
+    result = runner.invoke(update_graph, [
+        '-d', 'tests/data_processing/services/mha-config.yaml',
+        '-f', 'tests/test_config.yaml'])
+
+    assert result.exit_code == 0
+
+
+def test_cli_mhd_table(mocker, spark):
+
+    # mock graph connection
+    mocker.patch.object(Neo4jConnection, 'query')
+
+    runner = CliRunner()
+    result = runner.invoke(update_graph, [
+        '-d', 'tests/data_processing/services/mhd-config.yaml',
+        '-f', 'tests/test_config.yaml'])
+
+    assert result.exit_code == 0
+
+
+def test_cli_png_table(mocker, spark):
+
+    # mock graph connection
+    mocker.patch.object(Neo4jConnection, 'query')
+
+    runner = CliRunner()
+    result = runner.invoke(update_graph, [
+        '-d', 'tests/data_processing/services/png-config.yaml',
+        '-f', 'tests/test_config.yaml'])
+
+    assert result.exit_code == 0
+
+
+def test_cli_feature_table(mocker, spark):
+
+    # mock graph connection
+    mocker.patch.object(Neo4jConnection, 'query')
+
+    runner = CliRunner()
+    result = runner.invoke(update_graph, [
+        '-d', 'tests/data_processing/services/feature-config.yaml',
+        '-f', 'tests/test_config.yaml'])
+
+    assert result.exit_code == 0
