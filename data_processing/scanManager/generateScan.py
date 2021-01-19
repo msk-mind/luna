@@ -24,6 +24,30 @@ import itk
 
 logger = init_logger("generateScan.log")
 
+def get_container_data(container_id):
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+
+    input_nodes = conn.query(f""" MATCH (object:scan)-[:HAS_DATA]-(data:dicom) WHERE id(object)={container_id} RETURN data""")
+    
+    if not input_nodes or len (input_nodes)==0:
+        return [] 
+    else:
+        return input_nodes[0].data()['data']
+
+def get_method_data(method_id):
+    with open(f'{method_id}.json') as json_file:
+        method_config = json.load(json_file)['params']
+    return method_config
+
+def add_container_data(container_id, n_meta):
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+
+    res = conn.query(f""" 
+        MATCH (sc:scan) WHERE id(sc)={container_id}
+        MERGE (da:{n_meta.get_create_str()})
+        MERGE (sc)-[:HAS_DATA]->(da)"""
+    )
+
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--container_id', required=True)
@@ -31,29 +55,22 @@ logger = init_logger("generateScan.log")
 def cli(cohort_id, container_id, method_id):
     logger.info("Invocation: " + str(sys.argv))
 
-    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-
     properties = {}
     properties['Namespace'] = cohort_id
     properties['MethodID']  = method_id
 
-    with open(f'{method_id}.json') as json_file:
-        method_config = json.load(json_file)['params']
+    input_data  = get_container_data(container_id)
+    method_data = get_method_data(method_id) 
 
-    file_ext     = method_config['file_ext']
-
-    input_nodes = conn.query(f""" MATCH (object:scan)-[:HAS_DATA]-(data:dicom) WHERE id(object)={container_id} RETURN data""")
-    
-    if not input_nodes: return "Nothing there!"
-
-    input_data = input_nodes[0].data()['data']
+    file_ext     = method_data['file_ext']
 
     logger.info (input_data)
+    logger.info (method_data)
 
     input_dir, filename  = os.path.split(input_data['path'])
     input_dir = input_dir[input_dir.index("/"):]
 
-    output_dir = os.path.join("/gpfs/mskmindhdp_emc/data/COHORTS", cohort_id, "scans", input_data['SeriesInstanceUID'])
+    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, "scans", input_data['SeriesInstanceUID'])
     if not os.path.exists(output_dir): os.makedirs(output_dir)
 
     PixelType = itk.ctype('signed short')
@@ -72,7 +89,7 @@ def cli(cohort_id, container_id, method_id):
 
     if num_dicoms < 1:
         logger.warning('No DICOMs in: ' + input_dir)
-        return make_response("No DICOMs in: " + input_dir, 500)
+        exit(1)
 
     logger.info('The directory {} contains {} DICOM Series: '.format(input_dir, str(num_dicoms)))
 
@@ -106,13 +123,9 @@ def cli(cohort_id, container_id, method_id):
 
     n_meta = Node(file_ext, record_name, properties=properties)
 
-    conn.query(f""" 
-        MATCH (sc:scan) WHERE id(sc)={container_id}
-        MERGE (da:{n_meta.get_create_str()})
-        MERGE (sc)-[:HAS_DATA]->(da)"""
-    )
+    add_container_data(container_id, n_meta)
 
-    return "Done"
+    return 0 
 
 
 if __name__ == "__main__":

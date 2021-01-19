@@ -25,21 +25,8 @@ from radiomics import featureextractor  # This module is used for interaction wi
 
 logger = init_logger("extractRadiomics.log")
 
-@click.command()
-@click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--container_id', required=True)
-@click.option('-m', '--method_id',    required=True)
-def cli(cohort_id, container_id, method_id):
-    logger.info("Invocation: " + str(sys.argv))
-
+def get_container_data(container_id):
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-
-    properties = {}
-    properties['Namespace'] = cohort_id
-    properties['MethodID']  = method_id
-
-    with open(f'{method_id}.json') as json_file:
-        method_config = json.load(json_file)['params']
 
     input_nodes = conn.query(f"""
         MATCH (object:scan)-[:HAS_DATA]-(image:mhd)
@@ -50,14 +37,42 @@ def cli(cohort_id, container_id, method_id):
 
     if not input_nodes or len (input_nodes)==0:
         logger.error ("Scan is not ready for radiomics (missing annotation?)")
-        logger.info (f"""MATCH (object:scan)-[:HAS_DATA]-(image:mhd) MATCH (object:scan)-[:HAS_DATA]-(label:mha) WHERE id(object)={container_id} RETURN object.SeriesInstanceUID, image.path, label.path""")
-        return 
+        return [] 
+    else:
+        return input_nodes[0].data()
 
-    input_data = input_nodes[0].data()
+def get_method_data(method_id):
+    with open(f'{method_id}.json') as json_file:
+        method_config = json.load(json_file)['params']
+    return method_config
+
+def add_container_data(container_id, n_meta):
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+
+    res = conn.query(f""" 
+        MATCH (sc:scan) WHERE id(sc)={container_id}
+        MERGE (da:{n_meta.get_create_str()})
+        MERGE (sc)-[:HAS_DATA]->(da)"""
+    )
+
+@click.command()
+@click.option('-c', '--cohort_id',    required=True)
+@click.option('-s', '--container_id', required=True)
+@click.option('-m', '--method_id',    required=True)
+def cli(cohort_id, container_id, method_id):
+    logger.info("Invocation: " + str(sys.argv))
+
+    properties = {}
+    properties['Namespace'] = cohort_id
+    properties['MethodID']  = method_id
+
+    input_data = get_container_data(container_id) 
+    method_data = get_method_data(method_id) 
 
     logger.info (input_data)
+    logger.info (method_data)
 
-    extractor = featureextractor.RadiomicsFeatureExtractor(**method_config)
+    extractor = featureextractor.RadiomicsFeatureExtractor(**method_data)
 
     try:
         result = extractor.execute(input_data["image.path"].split(':')[-1], input_data["label.path"].split(':')[-1])
@@ -65,28 +80,27 @@ def cli(cohort_id, container_id, method_id):
         logger.error (str(e))
         return
 
-    output_dir = os.path.join("/gpfs/mskmindhdp_emc/data/COHORTS", cohort_id, "scans", input_data['object.SeriesInstanceUID'], method_id+".csv")
+    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, "scans", input_data['object.SeriesInstanceUID'])
+
+    if not os.path.exists(output_dir): os.makedirs(output_dir)
+
+    output_filename = os.path.join(output_dir, method_id+".csv")
 
     sers = pd.Series(result)
 
-    sers.to_frame().transpose().to_csv(output_dir)
+    logger.info("Saving to " + output_filename)
 
-    logger.info("Saving to " + output_dir)
+    sers.to_frame().transpose().to_csv(output_filename)
 
-    record_name = "RAD" + "-" + str(FileHash('sha256').hash_file(output_dir))
-    properties['path'] = output_dir
+    record_name = "RAD" + "-" + str(FileHash('sha256').hash_file(output_filename))
+
+    properties['path'] = output_filename 
 
     n_meta = Node("radiomics", record_name, properties=properties)
 
-    conn.query(f""" 
-        MATCH (sc:scan) WHERE id(sc)={container_id}
-        MERGE (da:{n_meta.get_create_str()})
-        MERGE (sc)-[:HAS_DATA]->(da)"""
-    )
+    add_container_data(container_id, n_meta)
 
     logger.info ("Successfully extracted radiomics for scan: " + input_data["object.SeriesInstanceUID"])
-
-
 
 if __name__ == "__main__":
     cli()

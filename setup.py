@@ -33,6 +33,7 @@ setup(
         'data_processing',
         'data_processing.common',
         'data_processing.services',
+        'data_processing.scanManager',
         'data_processing.pathology.proxy_table',
         'data_processing.radiology.proxy_table',
         'data_processing.radiology.proxy_table.annotation',
