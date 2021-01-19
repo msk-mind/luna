@@ -19,7 +19,7 @@ jobs:
       - checkout
       - run: cat /etc/os-release
       - run: sudo apt update
-      - run: sudo apt install default-jre
+      - run: sudo apt install openslide-tools python-openslide default-jre
       - run: java -version
       - run: which java
       - run: echo "export PATH=/home/circleci/.local/bin:$PATH" >> $BASH_ENV  # some python packages get installed  here
