@@ -14,6 +14,7 @@ pytest-runner
 scikit-image
 wheel>=0.22
 itk
+openslide-python
 paramiko
 scp
 checksumdir
