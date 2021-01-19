@@ -12,7 +12,7 @@ import data_processing.common.constants as const
 
 
 proxy_table_path = "tests/data_processing/testdata/data/test-project/tables/WSI_dsn"
-landing_path = "tests/data_processing/testdata/data/test-project/wsi"
+landing_path = "tests/data_processing/testdata/data/test-project/wsi-project"
 
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
