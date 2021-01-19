@@ -15,7 +15,7 @@ def test_cli_radiomics(mocker, monkeypatch):
     mocker.patch("data_processing.scanManager.extractRadiomics.get_container_data", return_value={'object.SeriesInstanceUID': "1.240.0.1", 'image.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd', 'label.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'})
     mocker.patch("data_processing.scanManager.extractRadiomics.get_method_data", return_value={'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 25, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001})
 
-    mock_db = mocker.patch("data_processing.common.Neo4jConnection.Neo4jConnection.query", return_value='DB')
+    mock_db = mocker.patch("data_processing.scanManager.extractRadiomics.add_container_data")
 
     runner = CliRunner()
     result = runner.invoke(cli_extractRadiomics, [
@@ -23,7 +23,7 @@ def test_cli_radiomics(mocker, monkeypatch):
         '-s', '1',
         '-m', 'test-method'])
     print (result.output)
-    assert "RAD-7dc6e11804d9b9cea0e3e1ab296822f0d4a5372de7dd9eb3a98c860042d8a049" in mock_db.call_args_list[0][0][0]
+    assert "RAD-7dc6e11804d9b9cea0e3e1ab296822f0d4a5372de7dd9eb3a98c860042d8a049" in mock_db.call_args_list[0][0][0].properties['QualifiedPath']
     assert result.exit_code == 0 
 
 def test_cli_radiomics_params(mocker, monkeypatch):
@@ -34,7 +34,7 @@ def test_cli_radiomics_params(mocker, monkeypatch):
     mocker.patch("data_processing.scanManager.extractRadiomics.get_container_data", return_value={'object.SeriesInstanceUID': "1.240.0.1", 'image.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd', 'label.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'})
     mocker.patch("data_processing.scanManager.extractRadiomics.get_method_data", return_value={'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 50, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001})
 
-    mock_db = mocker.patch("data_processing.common.Neo4jConnection.Neo4jConnection.query", return_value='DB')
+    mock_db = mocker.patch("data_processing.scanManager.extractRadiomics.add_container_data")
 
     runner = CliRunner()
     result = runner.invoke(cli_extractRadiomics, [
@@ -42,6 +42,6 @@ def test_cli_radiomics_params(mocker, monkeypatch):
         '-s', '1',
         '-m', 'test-method'])
     print (result.output)
-    assert "RAD-00c4f67b5618b12f02466c6dc75e969718b2e174e137f6c992606a17f2737725" in mock_db.call_args_list[0][0][0]
+    assert "RAD-00c4f67b5618b12f02466c6dc75e969718b2e174e137f6c992606a17f2737725" in mock_db.call_args_list[0][0][0].properties['QualifiedPath']
     assert result.exit_code == 0 
 

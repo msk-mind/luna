@@ -15,7 +15,7 @@ def test_cli_mhd(mocker, monkeypatch):
     mocker.patch("data_processing.scanManager.generateScan.get_container_data", return_value={'SeriesInstanceUID': "1.240.0.1", 'path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/'})
     mocker.patch("data_processing.scanManager.generateScan.get_method_data", return_value={'file_ext':'mhd'})
 
-    mock_db = mocker.patch("data_processing.common.Neo4jConnection.Neo4jConnection.query", return_value='DB')
+    mock_db = mocker.patch("data_processing.scanManager.generateScan.add_container_data")
 
     runner = CliRunner()
     result = runner.invoke(cli_generateScan, [
@@ -23,7 +23,7 @@ def test_cli_mhd(mocker, monkeypatch):
         '-s', '1',
         '-m', 'test-method'])
     print (result.output)
-    assert "mhd-e0c2c6182c51052cffc1c4ae4f0e6c1af9a666998f3a291107c060344cf16f64" in mock_db.call_args_list[0][0][0]
+    assert "mhd-e0c2c6182c51052cffc1c4ae4f0e6c1af9a666998f3a291107c060344cf16f64" in mock_db.call_args_list[0][0][0].properties['QualifiedPath']
     assert result.exit_code == 0 
 
 def test_cli_nrrd(mocker, monkeypatch):
@@ -34,7 +34,7 @@ def test_cli_nrrd(mocker, monkeypatch):
     mocker.patch("data_processing.scanManager.generateScan.get_container_data", return_value={'SeriesInstanceUID': "1.240.0.1", 'path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/'})
     mocker.patch("data_processing.scanManager.generateScan.get_method_data", return_value={'file_ext':'nrrd'})
 
-    mock_db = mocker.patch("data_processing.common.Neo4jConnection.Neo4jConnection.query", return_value='DB')
+    mock_db = mocker.patch("data_processing.scanManager.generateScan.add_container_data")
 
     runner = CliRunner()
     result = runner.invoke(cli_generateScan, [
@@ -42,6 +42,7 @@ def test_cli_nrrd(mocker, monkeypatch):
         '-s', '1',
         '-m', 'test-method'])
     print (result.output)
-    assert "nrrd-e0c2c6182c51052cffc1c4ae4f0e6c1af9a666998f3a291107c060344cf16f64" in mock_db.call_args_list[0][0][0]
+    print ( mock_db.call_args_list[0][0] )
+    assert "nrrd-e0c2c6182c51052cffc1c4ae4f0e6c1af9a666998f3a291107c060344cf16f64" in mock_db.call_args_list[0][0][0].properties['QualifiedPath']
     assert result.exit_code == 0 
 

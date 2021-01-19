@@ -24,7 +24,9 @@ import itk
 
 logger = init_logger("generateScan.log")
 
-def get_container_data(conn, container_id):
+def get_container_data(container_id):
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+
     input_nodes = conn.query(f""" MATCH (object:scan)-[:HAS_DATA]-(data:dicom) WHERE id(object)={container_id} RETURN data""")
     
     if not input_nodes or len (input_nodes)==0:
@@ -36,6 +38,15 @@ def get_method_data(method_id):
     with open(f'{method_id}.json') as json_file:
         method_config = json.load(json_file)['params']
     return method_config
+
+def add_container_data(n_meta):
+    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
+
+    res = conn.query(f""" 
+        MATCH (sc:scan) WHERE id(sc)={container_id}
+        MERGE (da:{n_meta.get_create_str()})
+        MERGE (sc)-[:HAS_DATA]->(da)"""
+    )
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
@@ -50,7 +61,7 @@ def cli(cohort_id, container_id, method_id):
     properties['Namespace'] = cohort_id
     properties['MethodID']  = method_id
 
-    input_data  = get_container_data(conn, container_id)
+    input_data  = get_container_data(container_id)
     method_data = get_method_data(method_id) 
 
     file_ext     = method_data['file_ext']
@@ -114,12 +125,8 @@ def cli(cohort_id, container_id, method_id):
 
     n_meta = Node(file_ext, record_name, properties=properties)
 
-    res = conn.query(f""" 
-        MATCH (sc:scan) WHERE id(sc)={container_id}
-        MERGE (da:{n_meta.get_create_str()})
-        MERGE (sc)-[:HAS_DATA]->(da)"""
-    )
-    print (res)
+    add_container_data(n_meta)
+
     return 0 
 
 
