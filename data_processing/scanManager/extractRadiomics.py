@@ -80,16 +80,21 @@ def cli(cohort_id, container_id, method_id):
         logger.error (str(e))
         return
 
-    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, "scans", input_data['object.SeriesInstanceUID'], method_id+".csv")
+    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, "scans", input_data['object.SeriesInstanceUID'])
+
+    if not os.path.exists(output_dir): os.makedirs(output_dir)
+
+    output_filename = os.path.join(output_dir, method_id+".csv")
 
     sers = pd.Series(result)
 
-    sers.to_frame().transpose().to_csv(output_dir)
+    print("Saving to " + output_filename)
 
-    print("Saving to " + output_dir)
+    sers.to_frame().transpose().to_csv(output_filename)
 
-    record_name = "RAD" + "-" + str(FileHash('sha256').hash_file(output_dir))
-    properties['path'] = output_dir
+    record_name = "RAD" + "-" + str(FileHash('sha256').hash_file(output_filename))
+
+    properties['path'] = output_filename 
 
     n_meta = Node("radiomics", record_name, properties=properties)
 
