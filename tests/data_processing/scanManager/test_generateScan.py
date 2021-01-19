@@ -9,6 +9,7 @@ cwd = os.getcwd()
 
 def test_cli_mhd(mocker, monkeypatch):
     monkeypatch.setenv("MIND_GPFS_DIR", cwd+"/tests/data_mock/")
+    monkeypatch.setenv("GRAPH_URI", "bolt:/localhost:0000")
 
     # mock graph connection
     mocker.patch("data_processing.scanManager.generateScan.get_container_data", return_value={'SeriesInstanceUID': "1.240.0.1", 'path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/'})
@@ -27,6 +28,7 @@ def test_cli_mhd(mocker, monkeypatch):
 
 def test_cli_nrrd(mocker, monkeypatch):
     monkeypatch.setenv("MIND_GPFS_DIR", cwd+"/tests/data_mock/")
+    monkeypatch.setenv("GRAPH_URI", "bolt:/localhost:0000")
 
     # mock graph connection
     mocker.patch("data_processing.scanManager.generateScan.get_container_data", return_value={'SeriesInstanceUID': "1.240.0.1", 'path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/'})
