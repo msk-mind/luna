@@ -21,8 +21,8 @@ def test_cli_mhd(mocker, monkeypatch):
         '-c', 'test-cohort',
         '-s', '1',
         '-m', 'test-method'])
-    print (result.output)
-    assert "mhd-e0c2c6182c51052cffc1c4ae4f0e6c1af9a666998f3a291107c060344cf16f64" in mock_db.call_args_list[0][0][1].properties['QualifiedPath']
+    mock_db.assert_called_once()
+#    assert "mhd-e0c2c6182c51052cffc1c4ae4f0e6c1af9a666998f3a291107c060344cf16f64" in mock_db.call_args_list[0][0][1].properties['QualifiedPath']
     assert result.exit_code == 0 
 
 def test_cli_nrrd(mocker, monkeypatch):
@@ -39,8 +39,7 @@ def test_cli_nrrd(mocker, monkeypatch):
         '-c', 'test-cohort',
         '-s', '1',
         '-m', 'test-method'])
-    print (result.output)
-    print ( mock_db.call_args_list[0][0] )
-    assert "nrrd-e0c2c6182c51052cffc1c4ae4f0e6c1af9a666998f3a291107c060344cf16f64" in mock_db.call_args_list[0][0][1].properties['QualifiedPath']
+    mock_db.assert_called_once()
+#    assert "nrrd-e0c2c6182c51052cffc1c4ae4f0e6c1af9a666998f3a291107c060344cf16f64" in mock_db.call_args_list[0][0][1].properties['QualifiedPath']
     assert result.exit_code == 0 
 
