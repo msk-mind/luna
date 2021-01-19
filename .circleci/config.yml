@@ -32,7 +32,7 @@ jobs:
       - run: sudo python setup.py install  # needed to run the cli unit tests
       - run: ls
       - run: pwd
-      - run: pytest -v --capture=tee-sys --show-capture=all --cov=data_processing tests/data_processing/scanManager/test_generateScan.py --cov-report=xml -o log_cli=true -o log_cli_level="INFO"
+      - run: pytest -v --capture=tee-sys --show-capture=all --cov=data_processing tests/data_processing/scanManager/ --cov-report=xml -o log_cli=true -o log_cli_level="INFO"
       - run: tail *.log
       - run: coverage report -m
       - store_artifacts:
