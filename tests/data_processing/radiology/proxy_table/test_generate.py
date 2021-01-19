@@ -1,6 +1,5 @@
 import os
 import shutil
-import subprocess
 
 import pytest
 from click.testing import CliRunner
