@@ -3,7 +3,7 @@ import pytest
 from pytest_mock import mocker
 from click.testing import CliRunner
 
-from data_processing.scanManager.extractRadiomics import cli as cli_generateScan
+from data_processing.scanManager.extractRadiomics import cli as cli_extractRadiomics
 
 cwd = os.getcwd()
 print (cwd)
@@ -18,7 +18,7 @@ def test_cli_radiomics(mocker, monkeypatch):
     mock_db = mocker.patch("data_processing.common.Neo4jConnection.Neo4jConnection.query", return_value='DB')
 
     runner = CliRunner()
-    result = runner.invoke(cli_generateScan, [
+    result = runner.invoke(cli_extractRadiomics, [
         '-c', 'test-cohort',
         '-s', '1',
         '-m', 'test-method'])
@@ -37,7 +37,7 @@ def test_cli_radiomics_params(mocker, monkeypatch):
     mock_db = mocker.patch("data_processing.common.Neo4jConnection.Neo4jConnection.query", return_value='DB')
 
     runner = CliRunner()
-    result = runner.invoke(cli_generateScan, [
+    result = runner.invoke(cli_extractRadiomics, [
         '-c', 'test-cohort',
         '-s', '1',
         '-m', 'test-method'])

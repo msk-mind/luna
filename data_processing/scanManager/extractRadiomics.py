@@ -84,12 +84,12 @@ def cli(cohort_id, container_id, method_id):
 
     n_meta = Node("radiomics", record_name, properties=properties)
 
-    conn.query(f""" 
+    res = conn.query(f""" 
         MATCH (sc:scan) WHERE id(sc)={container_id}
         MERGE (da:{n_meta.get_create_str()})
         MERGE (sc)-[:HAS_DATA]->(da)"""
     )
-
+    print (res)
     print ("Successfully extracted radiomics for scan: " + input_data["object.SeriesInstanceUID"])
 
 
