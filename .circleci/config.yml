@@ -17,8 +17,6 @@ jobs:
 
     steps:
       - checkout
-      - run: ls
-      - run: export PYTHONPATH=$PWD:$PYTHONPATH
       - run: cat /etc/os-release
       - run: sudo apt update
       - run: sudo apt install default-jre
