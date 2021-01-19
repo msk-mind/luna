@@ -11,7 +11,7 @@ def test_cli_mhd(mocker, monkeypatch):
     monkeypatch.setenv("MIND_GPFS_DIR", cwd+"/tests/data_mock/")
 
     # mock graph connection
-    mocker.patch("data_processing.scanManager.generateScan.get_container_data", return_value={'SeriesInstanceUID': "1.240.0.1", 'path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/'})
+    mocker.patch("data_processing.scanManager.generateScan.get_container_data", return_value={'SeriesInstanceUID': "1.240.0.0", 'path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/'})
     mocker.patch("data_processing.scanManager.generateScan.get_method_data", return_value={'file_ext':'mhd'})
 
     mock_db = mocker.patch("data_processing.scanManager.generateScan.add_container_data")
@@ -29,7 +29,7 @@ def test_cli_nrrd(mocker, monkeypatch):
     monkeypatch.setenv("MIND_GPFS_DIR", cwd+"/tests/data_mock/")
 
     # mock graph connection
-    mocker.patch("data_processing.scanManager.generateScan.get_container_data", return_value={'SeriesInstanceUID': "1.240.0.1", 'path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/'})
+    mocker.patch("data_processing.scanManager.generateScan.get_container_data", return_value={'SeriesInstanceUID': "1.240.0.0", 'path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/'})
     mocker.patch("data_processing.scanManager.generateScan.get_method_data", return_value={'file_ext':'nrrd'})
 
     mock_db = mocker.patch("data_processing.scanManager.generateScan.add_container_data")

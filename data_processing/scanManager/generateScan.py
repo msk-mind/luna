@@ -89,9 +89,9 @@ def cli(cohort_id, container_id, method_id):
     seriesUIDs = namesGenerator.GetSeriesUIDs()
     num_dicoms = len(seriesUIDs)
 
-    if num_dicoms < 1:
-        logger.warning('No DICOMs in: ' + input_dir)
-        exit(1)
+#    if num_dicoms < 1:
+#        logger.warning('No DICOMs in: ' + input_dir)
+#        exit(1)
 
     logger.info('The directory {} contains {} DICOM Series: '.format(input_dir, str(num_dicoms)))
 
