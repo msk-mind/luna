@@ -30,8 +30,7 @@ jobs:
       - run: pip install --use-feature=2020-resolver -r requirements.txt
       - run: pip list
       - run: sudo python setup.py install  # needed to run the cli unit tests
-      - run: pytest -v --capture=tee-sys --show-capture=all --cov=data_processing tests/data_processing/scanManager/ --cov-report=xml
-      - run: tail *.log
+      - run: pytest -v --capture=tee-sys --show-capture=all --cov=data_processing tests --cov-report=xml
       - run: coverage report -m
       - store_artifacts:
           path: htmlcov
