@@ -17,8 +17,8 @@ jobs:
 
     steps:
       - checkout
-      - run: pwd
       - run: ls
+      - run: export PYTHONPATH=$PWD:$PYTHONPATH
       - run: cat /etc/os-release
       - run: sudo apt update
       - run: sudo apt install default-jre
@@ -32,7 +32,7 @@ jobs:
       - run: pip install --use-feature=2020-resolver -r requirements.txt
       - run: pip list
       - run: sudo python setup.py install  # needed to run the cli unit tests
-      - run: pytest -s --cov=data_processing tests --cov-report=xml
+      - run: pytest -s --cov=data_processing tests/data_processing/scanManager --cov-report=xml
       - run: coverage report -m
       - store_artifacts:
           path: htmlcov
