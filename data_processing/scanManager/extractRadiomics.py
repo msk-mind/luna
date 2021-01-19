@@ -39,14 +39,14 @@ def get_container_data(container_id):
         logger.error ("Scan is not ready for radiomics (missing annotation?)")
         return [] 
     else:
-        return input_nodes[0].data()['data']
+        return input_nodes[0].data()
 
 def get_method_data(method_id):
     with open(f'{method_id}.json') as json_file:
         method_config = json.load(json_file)['params']
     return method_config
 
-def add_container_data(n_meta):
+def add_container_data(container_id, n_meta):
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
     res = conn.query(f""" 
@@ -98,7 +98,7 @@ def cli(cohort_id, container_id, method_id):
 
     n_meta = Node("radiomics", record_name, properties=properties)
 
-    add_container_data(n_meta)
+    add_container_data(container_id, n_meta)
 
     print ("Successfully extracted radiomics for scan: " + input_data["object.SeriesInstanceUID"])
 
