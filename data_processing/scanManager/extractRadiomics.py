@@ -60,7 +60,7 @@ def add_container_data(container_id, n_meta):
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
-    print("Invocation: " + str(sys.argv))
+    logger.info("Invocation: " + str(sys.argv))
 
     properties = {}
     properties['Namespace'] = cohort_id
@@ -69,8 +69,8 @@ def cli(cohort_id, container_id, method_id):
     input_data = get_container_data(container_id) 
     method_data = get_method_data(method_id) 
 
-    print (input_data)
-    print (method_data)
+    logger.info (input_data)
+    logger.info (method_data)
 
     extractor = featureextractor.RadiomicsFeatureExtractor(**method_data)
 
@@ -88,7 +88,7 @@ def cli(cohort_id, container_id, method_id):
 
     sers = pd.Series(result)
 
-    print("Saving to " + output_filename)
+    logger.info("Saving to " + output_filename)
 
     sers.to_frame().transpose().to_csv(output_filename)
 
@@ -100,7 +100,7 @@ def cli(cohort_id, container_id, method_id):
 
     add_container_data(container_id, n_meta)
 
-    print ("Successfully extracted radiomics for scan: " + input_data["object.SeriesInstanceUID"])
+    logger.info ("Successfully extracted radiomics for scan: " + input_data["object.SeriesInstanceUID"])
 
 if __name__ == "__main__":
     cli()
