@@ -42,7 +42,7 @@ def get_method_data(method_id):
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
-    logger.info("Invocation: " + str(sys.argv))
+    print("Invocation: " + str(sys.argv))
 
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
@@ -55,8 +55,8 @@ def cli(cohort_id, container_id, method_id):
 
     file_ext     = method_data['file_ext']
 
-    logger.info (input_data)
-    logger.info (method_data)
+    print (input_data)
+    print (method_data)
 
     input_dir, filename  = os.path.split(input_data['path'])
     input_dir = input_dir[input_dir.index("/"):]
@@ -82,12 +82,12 @@ def cli(cohort_id, container_id, method_id):
         logger.warning('No DICOMs in: ' + input_dir)
         exit(1)
 
-    logger.info('The directory {} contains {} DICOM Series: '.format(input_dir, str(num_dicoms)))
+    print('The directory {} contains {} DICOM Series: '.format(input_dir, str(num_dicoms)))
 
     n_slices = 0
 
     for uid in seriesUIDs:
-        logger.info('Reading: ' + uid)
+        print('Reading: ' + uid)
         fileNames = namesGenerator.GetFileNames(uid)
         if len(fileNames) < 1: continue
 
@@ -105,7 +105,7 @@ def cli(cohort_id, container_id, method_id):
         writer.SetFileName(outFileName)
         writer.UseCompressionOn()
         writer.SetInput(reader.GetOutput())
-        logger.info('Writing: ' + outFileName)
+        print('Writing: ' + outFileName)
         writer.Update()
 
     record_name = file_ext + "-" + dirhash(input_dir, "sha256")

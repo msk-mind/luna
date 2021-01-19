@@ -49,7 +49,7 @@ def get_method_data(method_id):
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
-    logger.info("Invocation: " + str(sys.argv))
+    print("Invocation: " + str(sys.argv))
 
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
@@ -60,8 +60,8 @@ def cli(cohort_id, container_id, method_id):
     input_data = get_container_data(conn, container_id) 
     method_data = get_method_data(method_id) 
 
-    logger.info (input_data)
-    logger.info (method_data)
+    print (input_data)
+    print (method_data)
 
     extractor = featureextractor.RadiomicsFeatureExtractor(**method_data)
 
@@ -77,7 +77,7 @@ def cli(cohort_id, container_id, method_id):
 
     sers.to_frame().transpose().to_csv(output_dir)
 
-    logger.info("Saving to " + output_dir)
+    print("Saving to " + output_dir)
 
     record_name = "RAD" + "-" + str(FileHash('sha256').hash_file(output_dir))
     properties['path'] = output_dir
@@ -90,7 +90,7 @@ def cli(cohort_id, container_id, method_id):
         MERGE (sc)-[:HAS_DATA]->(da)"""
     )
 
-    logger.info ("Successfully extracted radiomics for scan: " + input_data["object.SeriesInstanceUID"])
+    print ("Successfully extracted radiomics for scan: " + input_data["object.SeriesInstanceUID"])
 
 
 
