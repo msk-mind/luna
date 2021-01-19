@@ -39,7 +39,7 @@ def get_method_data(method_id):
         method_config = json.load(json_file)['params']
     return method_config
 
-def add_container_data(container_id, n_meta):
+def scan_add_container_data(container_id, n_meta):
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
     res = conn.query(f""" 
@@ -125,7 +125,7 @@ def cli(cohort_id, container_id, method_id):
 
     n_meta = Node(file_ext, record_name, properties=properties)
 
-    add_container_data(container_id, n_meta)
+    scan_add_container_data(container_id, n_meta)
 
     return 0 
 
