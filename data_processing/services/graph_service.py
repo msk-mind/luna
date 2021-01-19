@@ -39,15 +39,11 @@ def update_graph(data_config_file, app_config_file):
 		pwd=cfg.get_value(path=const.DATA_CFG+'::GRAPH_PW'))
 
 	# get project / table path
-	PROJECT_NAME = cfg.get_value(path=const.DATA_CFG+'::PROJECT_NAME')
-	base_path = cfg.get_value(path=const.DATA_CFG+'::MIND_DATA_PATH')
-	project_dir = os.path.join(base_path, PROJECT_NAME)
-	logger.info("Got project path : " + project_dir)
+	PROJECT = cfg.get_value(path=const.DATA_CFG+'::PROJECT')
 
 	# load table
-	TABLE_NAME = cfg.get_value(path=const.DATA_CFG+'::TABLE_NAME')
 	DATA_TYPE = cfg.get_value(path=const.DATA_CFG+'::DATA_TYPE')
-	table_path = os.path.join(project_dir, const.TABLE_DIR, TABLE_NAME)
+	table_path = const.TABLE_LOCATION(cfg)
 	df = spark.read.format("delta").load(table_path)
 
 	# get graph info
@@ -82,13 +78,13 @@ def update_graph(data_config_file, app_config_file):
 			src_props = {}
 			for _, sa in src_alias:
 				src_props[sa] = row[sa]	
-			src_props["Namespace"] = PROJECT_NAME
+			src_props["Namespace"] = PROJECT
 			src_node = Node(src_node_type, src_props.pop(clean_nested_colname(graph.src.name)), src_props)
 
 			target_props = {}
 			for _, ta in target_alias:
 				target_props[ta] = row[ta]
-			target_props["Namespace"] = PROJECT_NAME
+			target_props["Namespace"] = PROJECT
 			target_node = Node(target_node_type, target_props.pop(clean_nested_colname(graph.target.name)), target_props)
 
 			try:

@@ -1,7 +1,7 @@
 # mind data path
-MIND_DATA_PATH: /path/to/data/path
+ROOT_PATH: /path/to/data/path
 
-PROJECT_NAME: project_name
+PROJECT: project_name
 
 TABLE_NAME: table_name
 

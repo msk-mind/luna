@@ -1,10 +1,12 @@
 # path to mind data
 # hdfs:// or absolute or relative datapath
-MIND_DATA_PATH: tests/data_processing/testdata/data
+ROOT_PATH: tests/data_processing/testdata/data
 
-PROJECT_NAME: test-project
+PROJECT: test-project
 
-TABLE_NAME: FEATURE_unpack
+DATA_TYPE: FEATURE
+
+DATASET_NAME: unpack
 
 # local path to unpack pngs.
 DESTINATION_PATH: tests/data_processing/testdata/data/unpacked_pngs

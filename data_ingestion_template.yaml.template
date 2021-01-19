@@ -49,6 +49,9 @@ NUM_PARTITION: 10
 # ip or hostname of machine where source data file(s) reside, if applicable
 HOST:
 
+# mind root data path.
+ROOT_PATH: tests/data_processing/radiology/proxy_table/test_data
+
 # file path to the source data file(s). if host is specified, the source data location is determined
 # as host:source_path, else the source data location is determined simply as source_path.
 SOURCE_PATH: /data

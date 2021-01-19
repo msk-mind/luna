@@ -73,7 +73,7 @@ def parse_openslide(path):
 @click.command()
 @click.option('-t', '--template_file', default=None, type=click.Path(exists=True),
               help="path to yaml template file containing information required for pathology proxy data ingestion. "
-                   "See data_processing/pathology/proxy_table/data_ingestion_template.yaml.template")
+                   "See data_ingestion_template.yaml.template")
 @click.option('-f', '--config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to config file containing application configuration. See config.yaml.template")
 @click.option('-p', '--process_string', default='all',
@@ -108,7 +108,7 @@ def cli(template_file, config_file, process_string):
         if not os.path.exists(full_landing_path):
             os.makedirs(full_landing_path)
         shutil.copy(template_file, os.path.join(full_landing_path, "manifest.yaml"))
-        print("template file copied to", os.path.join(full_landing_path, "manifest.yaml"))
+        logger.info("template file copied to", os.path.join(full_landing_path, "manifest.yaml"))
 
         # subprocess - create proxy table
         if 'delta' in processes or 'all' in processes:
@@ -132,9 +132,9 @@ def create_proxy_table(config_file):
     with CodeTimer(logger, 'load wsi metadata'):
 
         search_path = os.path.join(cfg.get_value(path=DATA_CFG+'::SOURCE_PATH'), ("**" + cfg.get_value(path=DATA_CFG+'::FILE_TYPE')))
-        print (search_path)
+        logger.debug(search_path)
         for path in glob.glob(search_path, recursive=True):
-            print (path)
+            logger.debug(path)
 
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
         generate_uuid_udf   = udf(generate_uuid,   StringType())

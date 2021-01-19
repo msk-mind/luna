@@ -1,7 +1,7 @@
 # mind root data path
-MIND_DATA_PATH: /path/to/data/path
+ROOT_PATH: /path/to/data/path
 
-PROJECT_NAME: DMT_IRB
+PROJECT: DMT_IRB
 
 DATASET_NAME: DMT_IRB_DATE
 

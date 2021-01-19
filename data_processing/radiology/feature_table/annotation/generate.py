@@ -139,8 +139,7 @@ def generate_feature_table(cfg):
     Load PNG and MHA table, find the centroid of the 2d segmentation, and crop PNG images around the centroid.
     """
     # setup project path
-    project_path = os.path.join(cfg.get_value(path=const.DATA_CFG+'::MIND_DATA_PATH'),
-                                cfg.get_value(path=const.DATA_CFG+'::PROJECT_NAME'))
+    project_path = const.PROJECT_LOCATION(cfg)
 
     # load dicom and seg tables
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='crop_png')

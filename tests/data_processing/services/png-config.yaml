@@ -1,8 +1,8 @@
-MIND_DATA_PATH: tests/data_processing/testdata/data
+ROOT_PATH: tests/data_processing/testdata/data
 
-PROJECT_NAME: test-project
+PROJECT: test-project
 
-TABLE_NAME: PNG_dsn
+DATASET_NAME: dsn
 
 DATA_TYPE: png
 
