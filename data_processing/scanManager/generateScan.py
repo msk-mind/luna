@@ -55,8 +55,6 @@ def add_container_data(container_id, n_meta):
 def cli(cohort_id, container_id, method_id):
     logger.info("Invocation: " + str(sys.argv))
 
-    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-
     properties = {}
     properties['Namespace'] = cohort_id
     properties['MethodID']  = method_id
