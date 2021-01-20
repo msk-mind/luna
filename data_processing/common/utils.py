@@ -1,3 +1,6 @@
+from filehash import FileHash
+from io import BytesIO
+
 
 def to_sql_field(s):
 	filter1 = s.replace(".","_").replace(" ","_")
@@ -10,6 +13,35 @@ def clean_nested_colname(s):
 	e.g. metadata.SeriesInstanceUID -> SeriesInstanceUID
 	"""
 	return s[s.find('.')+1:]
+
+def generate_uuid(path, prefix):
+	"""
+	Returns hash of the file given path, preceded by the prefix.
+	:param path: file path e.g. file:/path/to/file
+	:param prefix: e.g. DICOM-
+	:return: string uuid
+	"""
+	posix_file_path = path.split(':')[-1]
+
+	rec_hash = FileHash('sha256').hash_file(posix_file_path)
+	return prefix + rec_hash
+
+
+def generate_uuid_binary(content, prefix):
+	"""
+	Returns hash of the binary, preceded by the prefix.
+	:param content: binary
+	:param prefix: e.g. FEATURE-
+	:return: string uuid
+	"""
+	content = BytesIO(content)
+
+	import EnsureByteContext
+	with EnsureByteContext.EnsureByteContext():
+		uuid = FileHash('sha256').hash_file(content)
+
+	return prefix + uuid
+
 
 def does_not_contain(token, value):
 	"""

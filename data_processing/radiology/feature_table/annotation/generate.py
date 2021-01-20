@@ -10,13 +10,12 @@ import click
 import numpy as np
 from PIL import Image 
 from medpy.io import load
-from filehash import FileHash
-from io import BytesIO
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
+from data_processing.common.utils import generate_uuid_binary
 import data_processing.common.constants as const
 
 from pyspark.sql import functions as F
@@ -25,16 +24,6 @@ from pyspark.sql.types import StringType, IntegerType, StructType, StructField, 
 logger = init_logger()
 logger.info("Starting data_processing.radiology.feature_table.annotation.generate")
 
-
-def generate_uuid(content):
-
-    content = BytesIO(content)
-
-    import EnsureByteContext
-    with EnsureByteContext.EnsureByteContext():
-        uuid = FileHash('sha256').hash_file(content)
- 
-    return "FEATURE-"+uuid
 
 def find_centroid(path, image_w, image_h):
     """
@@ -190,8 +179,8 @@ def generate_feature_table(cfg):
         logger.info("Cropped pngs")
 
         spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-        generate_uuid_udf = F.udf(generate_uuid, StringType())
-        df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf("overlay")))
+        generate_uuid_udf = F.udf(generate_uuid_binary, StringType())
+        df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf("overlay", F.lit("FEATURE-"))))
 
         df.coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')) \
             .write.format("delta") \

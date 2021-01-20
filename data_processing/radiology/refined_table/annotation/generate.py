@@ -18,7 +18,7 @@ from filehash import FileHash
 from io import BytesIO
 
 from data_processing.common.CodeTimer import CodeTimer
-from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.utils import generate_uuid_binary
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
@@ -114,17 +114,6 @@ def overlay_pngs(instance_number, dicom_path, seg, width, height):
     overlay = res.tobytes()
 
     return (dicom_binary, overlay)
-
-
-def generate_uuid(content):
-
-    content = BytesIO(content)
-
-    import EnsureByteContext
-    with EnsureByteContext.EnsureByteContext():
-        uuid = FileHash('sha256').hash_file(content)
-
-    return "PNG-"+uuid
 
 
 @click.command()
@@ -225,8 +214,8 @@ def generate_png_tables(cfg):
 
         # generate uuid
         spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-        generate_uuid_udf = F.udf(generate_uuid, StringType())
-        seg_df = seg_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf(seg_df.overlay)))
+        generate_uuid_udf = F.udf(generate_uuid_binary, StringType())
+        seg_df = seg_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf(seg_df.overlay, F.lit("PNG-"))))
        
         logger.info("Created overlay images")
         

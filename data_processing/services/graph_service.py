@@ -23,7 +23,7 @@ def update_graph(data_config_file, app_config_file):
 	"""
 	Updates graph with the data from the table, 
 	Usage:
-		python3 -m data_processing.services.graph_service -p TEST_PROJECT -t dicom -f config.yaml
+		python3 -m data_processing.services.graph_service -d data-config.yaml -f config.yaml
 	"""
 	logger = init_logger('update_graph.log')
 	start_time = time.time()

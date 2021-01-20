@@ -9,26 +9,16 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
+from data_processing.common.utils import generate_uuid
 import data_processing.common.constants as const
 
-from pyspark.sql.functions import udf
+from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType, MapType
-
-import shutil, sys, os, time
-from pathlib import Path
-from filehash import FileHash
 
 from medpy.io import load
 
 logger = init_logger()
 
-
-def generate_uuid(path):
-
-    posix_file_path = path.split(':')[-1]
-
-    rec_hash = FileHash('sha256').hash_file(posix_file_path)
-    return "SCAN_ANNOTATION-"+rec_hash 
 
 def parse_accession_number(path):
     # expected path: accession_number/some.mha
@@ -118,7 +108,7 @@ def create_proxy_table(template_file):
             .drop("content")
 
         df = df.withColumn("accession_number", parse_accession_number_udf(df.path)) \
-            .withColumn("scan_annotation_record_uuid", generate_uuid_udf(df.path)) \
+            .withColumn("scan_annotation_record_uuid", generate_uuid_udf(df.path, lit("SCAN_ANNOTATION-"))) \
             .withColumn("metadata", parse_metadata_udf(df.path))
 
     # parse all dicoms and save
