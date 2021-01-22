@@ -159,8 +159,7 @@ def generate_png_tables(cfg):
     Generate dicom_png and seg_png tables.
     """
     # setup project path
-    project_path = os.path.join(cfg.get_value(path=const.DATA_CFG+'::MIND_DATA_PATH'),
-                                cfg.get_value(path=const.DATA_CFG+'::PROJECT_NAME'))
+    project_path = const.PROJECT_LOCATION(cfg)
     logger.info("Got project path : " + project_path)
 
     # load dicom and seg tables
@@ -186,7 +185,7 @@ def generate_png_tables(cfg):
         width = cfg.get_value(path=const.DATA_CFG+'::IMAGE_WIDTH')
         height = cfg.get_value(path=const.DATA_CFG+'::IMAGE_HEIGHT')
 
-        seg_png_table_path = os.path.join(project_path, const.TABLE_DIR, const.TABLE_NAME(cfg))
+        seg_png_table_path = const.TABLE_LOCATION(cfg)
         
         # find images with tumor
         create_seg_png_udf = F.udf(create_seg_png, ArrayType(StructType(

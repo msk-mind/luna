@@ -1,7 +1,7 @@
 
-MIND_DATA_PATH: tests/data_processing/testdata/data
+ROOT_PATH: tests/data_processing/testdata/data
 
-PROJECT_NAME: test-project
+PROJECT: test-project
 
 DATASET_NAME: dsn
 

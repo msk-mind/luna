@@ -30,6 +30,8 @@ NUM_PARTITION: int(required=True, min=1)
 
 HOST: any(str(required=False))
 
+ROOT_PATH: any(str(required=True))
+
 SOURCE_PATH: any(str(required=True))
 
 LANDING_PATH: any(str(required=True))

@@ -53,11 +53,7 @@ def binary_to_png(cfg):
     """
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='unpack')
     spark.conf.set('spark.sql.execution.arrow.pyspark.enabled','false')
-    table_path = os.path.join(cfg.get_value(path=const.DATA_CFG+'::MIND_DATA_PATH'),
-                                cfg.get_value(path=const.DATA_CFG+'::PROJECT_NAME'),
-                                const.TABLE_DIR,
-                                cfg.get_value(path=const.DATA_CFG+"::TABLE_NAME"))
-
+    table_path = const.TABLE_LOCATION(cfg)
     df = spark.read.format("delta").load(table_path)
 
     DESTINATION_PATH = cfg.get_value(path=const.DATA_CFG+"::DESTINATION_PATH")

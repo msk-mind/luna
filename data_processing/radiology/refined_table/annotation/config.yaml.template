@@ -1,10 +1,10 @@
 # mind root data path
-MIND_DATA_PATH: /path/to/data/path
+ROOT_PATH: /path/to/data/path
 
 # dicom table path - remove once all tables follow the same convention.
 DICOM_TABLE_PATH: /path/to/dicom/table
 
-PROJECT_NAME: DMT_IRB
+PROJECT: DMT_IRB
 
 DATASET_NAME: DMT_IRB_DATE
 

@@ -45,6 +45,7 @@ NUM_PARTITION: 1
 # ip or hostname of machine where source data file(s) reside, if applicable
 HOST: localhost
 
+ROOT_PATH: tests/data_processing/testdata/data
 # file path to the source data file(s). if host is specified, the source data location is determined
 # as host:source_path
 SOURCE_PATH: tests/data_processing/testdata/data/test-project/scan_annotations
