@@ -181,15 +181,15 @@ class runMethods(Resource):
         a = request.args.get('id', None)
 
         if container_id==None:
-            scan_ids = requests.get(f'http://{HOSTNAME}:{PORT}/mind/api/v1/scans/{cohort_id}').json()
+            container_ids = requests.get(f'http://{HOSTNAME}:{PORT}/mind/api/v1/scans/{cohort_id}').json()
         else:
-            scan_ids = [container_id]
+            container_ids = [container_id]
 
         logger.info(method_config)
-        logger.info(scan_ids)
+        logger.info(container_ids)
 
         args_list = []
-        for scan_id in scan_ids:
+        for scan_id in container_ids:
             args_list.append(["python3","-m",method_config["image"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
 
         p = Pool(NUM_ROCESSES)
