@@ -18,12 +18,10 @@ Parameters:
 import glob, shutil, os, uuid, subprocess, sys, argparse, time
 
 import click
-import socket
 
 from checksumdir import dirhash
 
 from data_processing.common.CodeTimer import CodeTimer
-from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger

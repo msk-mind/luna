@@ -34,10 +34,10 @@ def test_cli(spark):
         '-f', 'tests/test_config.yaml',
         '-p', 'delta'])
 
-    print(result.exc_info)
     assert result.exit_code == 0
 
     df = spark.read.format("delta").load(landing_path + const.DICOM_TABLE)
+    df.show()
     assert df.count() == 1
     assert "dicom_record_uuid" in df.columns
     assert "metadata" in df.columns

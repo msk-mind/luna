@@ -7,105 +7,21 @@ This final preprocessing step
 """
 import os, time, glob
 import click
-import numpy as np
-from PIL import Image 
-from medpy.io import load
-from filehash import FileHash
-from io import BytesIO
+
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
+from data_processing.common.utils import generate_uuid_binary
 import data_processing.common.constants as const
+from data_processing.radiology.common.utils import find_centroid, crop_images
 
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, IntegerType, StructType, StructField, BinaryType
 
 logger = init_logger()
 logger.info("Starting data_processing.radiology.feature_table.annotation.generate")
-
-
-def generate_uuid(content):
-
-    content = BytesIO(content)
-
-    import EnsureByteContext
-    with EnsureByteContext.EnsureByteContext():
-        uuid = FileHash('sha256').hash_file(content)
- 
-    return "FEATURE-"+uuid
-
-def find_centroid(path, image_w, image_h):
-    """
-    Find the centroid of the 2d segmentation.
-    Return (x, y) center point.
-    """
-    # mha file path
-    file_path = path.split(':')[-1]
-    data, header = load(file_path)
-
-    h, w, num_images = data.shape
-
-    # Find the annotated slice
-    xcenter, ycenter = 0, 0
-    for i in range(num_images):
-        seg = data[:,:,i]
-        if np.any(seg):
-            seg = seg.astype(float)
-                    
-            # find centroid using mean
-            xcenter = np.argmax(np.mean(seg, axis=1))
-            ycenter = np.argmax(np.mean(seg, axis=0))
-            break
-
-    # Check if h,w matches IMAGE_WIDTH, IMAGE_HEIGHT. If not, this is due to png being rescaled. So scale centers.
-    image_w, image_h = int(image_w), int(image_h)
-    if not h == image_h:
-        xcenter = int(xcenter * image_w // w)
-    if not w == image_w:
-        ycenter = int(ycenter * image_h // h)
-
-    return (int(xcenter), int(ycenter))
-
-
-def crop_images(xcenter, ycenter, dicom, overlay, crop_w, crop_h, image_w, image_h):
-    """
-    Crop PNG images around the centroid.
-    Return (dicom, overlay) binaries.
-    """
-    crop_w, crop_h = int(crop_w), int(crop_h)
-    image_w, image_h = int(image_w), int(image_h)
-    # Find xmin, ymin, xmax, ymax based on CROP_SIZE
-    width_rad = crop_w // 2
-    height_rad = crop_h // 2
-   
-    xmin, ymin, xmax, ymax = (xcenter - width_rad), (ycenter - height_rad), (xcenter + width_rad), (ycenter + height_rad)
-
-    if xmin < 0:
-        xmin = 0
-        xmax = crop_w
-
-    if xmax > image_w:
-        xmin = image_w - crop_w
-        xmax = image_w
-
-    if ymin < 0:
-        ymin = 0
-        ymax = crop_h
-
-    if ymax > image_h:
-        ymin = image_h - crop_h
-        ymax = image_h
-
-    # Crop overlay, dicom pngs.
-    dicom_img = Image.frombytes("L", (image_w, image_h), bytes(dicom)) 
-    dicom_feature = dicom_img.crop((xmin, ymin, xmax, ymax)).tobytes()
-
-    overlay_img = Image.frombytes("RGB", (image_w, image_h), bytes(overlay)) 
-    overlay_feature = overlay_img.crop((xmin, ymin, xmax, ymax)).tobytes()
-    
-    return (dicom_feature, overlay_feature)
 
 
 @click.command()
@@ -189,8 +105,8 @@ def generate_feature_table(cfg):
         logger.info("Cropped pngs")
 
         spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-        generate_uuid_udf = F.udf(generate_uuid, StringType())
-        df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf("overlay")))
+        generate_uuid_udf = F.udf(generate_uuid_binary, StringType())
+        df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf("overlay", F.lit("FEATURE-"))))
 
         df.coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')) \
             .write.format("delta") \

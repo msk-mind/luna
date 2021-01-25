@@ -11,36 +11,23 @@ from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.utils import generate_uuid_binary
 import data_processing.common.constants as const
 
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType, MapType
 
 import pydicom
-import time
 from io import BytesIO
 import shutil, sys, importlib
 import yaml, os
 import subprocess
-from filehash import FileHash
 
 logger = init_logger()
 
 SCHEMA_FILE='data_ingestion_template_schema.yml'
 DATA_CFG = 'DATA_CFG'
 APP_CFG = 'APP_CFG'
-
-def generate_uuid(path, content):
-
-    file_path = path.split(':')[-1]
-    content = BytesIO(content)
-
-    import EnsureByteContext
-    with EnsureByteContext.EnsureByteContext():
-        dcm_hash = FileHash('sha256').hash_file(content)
-
-    dicom_record_uuid = f'DICOM-{dcm_hash}'
-    return dicom_record_uuid
 
 
 def parse_dicom_from_delta_record(path, content):
@@ -187,8 +174,8 @@ def create_proxy_table(config_file):
             option("recursiveFileLookup", "true"). \
             load(cfg.get_value(path=DATA_CFG+'::RAW_DATA_PATH'))
 
-        generate_uuid_udf = udf(generate_uuid, StringType())
-        df = df.withColumn("dicom_record_uuid", lit(generate_uuid_udf(df.path, df.content)))
+        generate_uuid_udf = udf(generate_uuid_binary, StringType())
+        df = df.withColumn("dicom_record_uuid", lit(generate_uuid_udf(df.content, lit("DICOM-"))))
 
     # parse all dicoms and save
     with CodeTimer(logger, 'parse and save dicom'):
