@@ -1,6 +1,37 @@
 from enum import Enum
 from data_processing.common.utils import to_sql_field
+from data_processing.common.Node import Node
 	
+class Container(object):
+	"""
+	Container: an abstraction with an id, name, namespace, type, and a list of associated data nodes
+
+	:param: conn: Neo4j Connection
+	:param: container_id: Container ID
+	"""
+	def __init__(self, conn, container_id):
+
+		container_metadata = conn.query(f"""
+			MATCH (container)-[:HAS_DATA]-(data) 
+			WHERE id(container) = {container_id} 
+			RETURN labels(container), container.type, container.name, container.Namespace, container.QualifiedPath"""
+		)
+		data_nodes = conn.query(f"""
+			MATCH (container)-[:HAS_DATA]-(data) 
+			WHERE id(container) = {container_id} 
+			RETURN data"""
+		)
+
+		self.id 			= container_id
+		self.name 			= container_metadata[0]["container.name"]
+		self.namespace 		= container_metadata[0]["container.Namespace"]
+		self.qualifiedpath 	= container_metadata[0]["container.QualifiedPath"]
+		self.type		 	= container_metadata[0]["container.type"]
+		self.labels		 	= container_metadata[0]["labels(container)"]
+		self.data			= [Node(rec['data']['type'], rec['data']['name'], dict(rec['data'].items())) for rec in data_nodes]
+		# TODO: testing
+		# TODO: error checking
+		# TODO: expand class
 
 class NodeType(object):
 	"""
