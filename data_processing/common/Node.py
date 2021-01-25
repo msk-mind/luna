@@ -21,6 +21,7 @@ class Node(object):
 			if not "Namespace" in properties.keys():
 				raise RuntimeError("Missing required Namespace property!")
 			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], self.name)
+                self.properties["type"] = self.type
 
 	def __repr__(self):
 		kv = self.get_all_props()
