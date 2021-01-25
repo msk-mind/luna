@@ -11,7 +11,7 @@ def test_cli_radiomics(mocker, monkeypatch):
     monkeypatch.setenv("MIND_GPFS_DIR", cwd+"/tests/data_mock/")
 
     # mock graph connection
-    mocker.patch("data_processing.scanManager.extractRadiomics.get_container_data", return_value={'object.QualifiedPath':'test-cohort::1.240.0.1', 'object.name': "1.240.0.1", 'image.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd', 'label.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'})
+    mocker.patch("data_processing.scanManager.extractRadiomics.get_container_data", return_value={'container.QualifiedPath':'test-cohort::1.240.0.1', 'container.name': "1.240.0.1", 'image.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd', 'label.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'})
     mocker.patch("data_processing.scanManager.extractRadiomics.get_method_data", return_value={'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 25, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001})
 
     mock_db = mocker.patch("data_processing.scanManager.extractRadiomics.add_container_data", return_value=None)
@@ -29,7 +29,7 @@ def test_cli_radiomics_params(mocker, monkeypatch):
     monkeypatch.setenv("MIND_GPFS_DIR", cwd+"/tests/data_mock/")
 
     # mock graph connection
-    mocker.patch("data_processing.scanManager.extractRadiomics.get_container_data", return_value={'object.QualifiedPath':'test-cohort::1.240.0.2','object.name': "1.240.0.2", 'image.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd', 'label.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'})
+    mocker.patch("data_processing.scanManager.extractRadiomics.get_container_data", return_value={'container.QualifiedPath':'test-cohort::1.240.0.2','container.name': "1.240.0.2", 'image.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd', 'label.path':f'file:{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'})
     mocker.patch("data_processing.scanManager.extractRadiomics.get_method_data", return_value={'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 50, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001})
 
     mock_db = mocker.patch("data_processing.scanManager.extractRadiomics.add_container_data", return_value=None)

@@ -29,10 +29,10 @@ def get_container_data(container_id):
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
     input_nodes = conn.query(f"""
-        MATCH (object)-[:HAS_DATA]-(image:mhd)
-        MATCH (object)-[:HAS_DATA]-(label:mha)
-        WHERE id(object)={container_id}
-        RETURN object.QualifiedPath, object.name, image.path, label.path"""
+        MATCH (container)-[:HAS_DATA]-(image:mhd)
+        MATCH (container)-[:HAS_DATA]-(label:mha)
+        WHERE id(container)={container_id}
+        RETURN container.QualifiedPath, container.name, image.path, label.path"""
     )
 
     if not input_nodes or len (input_nodes)==0:
@@ -50,9 +50,9 @@ def add_container_data(container_id, n_meta):
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
     res = conn.query(f""" 
-        MATCH (object) WHERE id(object)={container_id}
+        MATCH (container) WHERE id(container)={container_id}
         MERGE (da:{n_meta.get_create_str()})
-        MERGE (object)-[:HAS_DATA]->(da)"""
+        MERGE (container)-[:HAS_DATA]->(da)"""
     )
 
 @click.command()
@@ -82,7 +82,7 @@ def cli(cohort_id, container_id, method_id):
 
     # Data just goes under namespace/name
     # TODO: This path is really not great, but works for now
-    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, input_data['object.name'])
+    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, input_data['container.name'])
 
     if not os.path.exists(output_dir): os.makedirs(output_dir)
 
@@ -102,7 +102,7 @@ def cli(cohort_id, container_id, method_id):
 
     add_container_data(container_id, n_meta)
 
-    logger.info ("Successfully extracted radiomics for container: " + input_data["object.QualifiedPath"])
+    logger.info ("Successfully extracted radiomics for container: " + input_data["container.QualifiedPath"])
 
 if __name__ == "__main__":
     cli()
