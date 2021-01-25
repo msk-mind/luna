@@ -29,10 +29,10 @@ def get_container_data(container_id):
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
     input_nodes = conn.query(f"""
-        MATCH (object:scan)-[:HAS_DATA]-(image:mhd)
-        MATCH (object:scan)-[:HAS_DATA]-(label:mha)
+        MATCH (object)-[:HAS_DATA]-(image:mhd)
+        MATCH (object)-[:HAS_DATA]-(label:mha)
         WHERE id(object)={container_id}
-        RETURN object.SeriesInstanceUID, image.path, label.path"""
+        RETURN object.QualifiedPath, object.name, image.path, label.path"""
     )
 
     if not input_nodes or len (input_nodes)==0:
@@ -50,9 +50,9 @@ def add_container_data(container_id, n_meta):
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
     res = conn.query(f""" 
-        MATCH (sc:scan) WHERE id(sc)={container_id}
+        MATCH (object) WHERE id(object)={container_id}
         MERGE (da:{n_meta.get_create_str()})
-        MERGE (sc)-[:HAS_DATA]->(da)"""
+        MERGE (object)-[:HAS_DATA]->(da)"""
     )
 
 @click.command()
@@ -80,7 +80,9 @@ def cli(cohort_id, container_id, method_id):
         logger.error (str(e))
         return
 
-    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, "scans", input_data['object.SeriesInstanceUID'])
+    # Data just goes under namespace/name
+    # TODO: This path is really not great, but works for now
+    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, input_data['object.name'])
 
     if not os.path.exists(output_dir): os.makedirs(output_dir)
 
@@ -100,7 +102,7 @@ def cli(cohort_id, container_id, method_id):
 
     add_container_data(container_id, n_meta)
 
-    logger.info ("Successfully extracted radiomics for scan: " + input_data["object.SeriesInstanceUID"])
+    logger.info ("Successfully extracted radiomics for container: " + input_data["object.QualifiedPath"])
 
 if __name__ == "__main__":
     cli()
