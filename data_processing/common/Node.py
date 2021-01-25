@@ -20,7 +20,13 @@ class Node(object):
 		else:
 			if not "Namespace" in properties.keys():
 				raise RuntimeError("Missing required Namespace property!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], self.name)	
+			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], self.name)
+
+	def __repr__(self):
+		kv = self.get_all_props()
+		prop_string = self.prop_str_repr(kv.keys(), kv)
+		bigline = "-"*100
+		return f"{bigline}\nname: {self.name}\ntype: {self.type}\nproperties: \n{prop_string}\n{bigline}"
 
 	def get_all_props(self):
 		"""
@@ -55,6 +61,16 @@ class Node(object):
 
 		kv = [f" {to_sql_field(x)}: '{row[x]}'" for x in fields]
 		return ','.join(kv)
+	
+	@staticmethod
+	def prop_str_repr(fields, row):
+		"""
+		Returns a kv string like ' - id: 123 <newline> ...' where prop values come from row.
+		"""
+		fields = set(fields).intersection(set(row.keys()))
+
+		kv = [f" - {to_sql_field(x)}: '{row[x]}'" for x in fields]
+		return '\n'.join(kv)
 	
 	@staticmethod
 	def get_qualified_name(namespace, identifier): 
