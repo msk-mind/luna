@@ -29,6 +29,7 @@ class Container(object):
 		self.type		 	= container_metadata[0]["container.type"]
 		self.labels		 	= container_metadata[0]["labels(container)"]
 		self.data			= [Node(rec['data']['type'], rec['data']['name'], dict(rec['data'].items())) for rec in data_nodes]
+		# TODO: worried about schema issues? like making sure name, namespace, type and qualified path are present, neo4j offers schema enforcment. 
 		# TODO: testing
 		# TODO: error checking
 		# TODO: expand class
