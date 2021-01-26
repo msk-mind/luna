@@ -37,18 +37,13 @@ def cli(cohort_id, container_id, method_id):
     with open(f'{method_id}.json', 'r') as json_file:
         method_config = json.load(json_file)['params']
         
-    results_to_flatten = method_config['method_name']
+    results_to_flatten = method_config['input']
 
     input_nodes = conn.query(f"""
         MATCH (px:patient)-[:HAS_CASE]-(case)-[:HAS_SCAN]-(scan:scan)-[:HAS_DATA]-(results:radiomics)
         WHERE id(scan)={container_id} AND results.MethodID='{results_to_flatten}'
-        RETURN px.PatientID, case.AccessionNumber, scan.SeriesInstanceUID, results.path"""
+        RETURN px.PatientID, case.AccessionNumber, scan.SeriesInstanceUID, results.path, results.name"""
     )
-
-    output_dir  = os.path.join(const.PUBLIC_DIR, method_config['output_dir'])
-    output_file = os.path.join(output_dir, f"{container_id}.flatten.parquet")
-
-    if not os.path.exists(output_dir): os.mkdir(output_dir)
 
     if not input_nodes or len (input_nodes)==0:
         logger.error ("Query failed!!")
@@ -57,6 +52,12 @@ def cli(cohort_id, container_id, method_id):
     input_data = input_nodes[0].data()
 
     logger.info (input_data)
+
+    output_dir  = os.path.join(const.PUBLIC_DIR, method_config['output_dir'])
+    output_file = os.path.join(output_dir, input_data['results.name'] + ".flatten.parquet")
+
+    if not os.path.exists(output_dir): os.mkdir(output_dir)
+
 
     # Get Results package
     df = pd.read_csv(input_data['results.path'])
@@ -70,6 +71,7 @@ def cli(cohort_id, container_id, method_id):
     df['cohort_id'] = cohort_id
     df['container_id'] = container_id
     df['method_id'] = method_id
+    df['input'] = results_to_flatten
 
     # Cleanup unnamed columns
     df = df.loc[:, ~df.columns.str.contains('Unnamed')]
