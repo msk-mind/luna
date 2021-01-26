@@ -1,6 +1,6 @@
 from filehash import FileHash
 from io import BytesIO
-
+import os, json
 
 def to_sql_field(s):
 	filter1 = s.replace(".","_").replace(" ","_")
@@ -95,3 +95,18 @@ def replace_token(token, token_replacement, value):
 		return new_value
 
 	return value
+
+
+def get_method_data(cohort_id, method_id):
+    """
+    Return method dict
+
+    :param: cohort_id: string
+    :param: method_id: string
+    """
+
+    method_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, "methods")
+    with open(os.path.join(method_dir, f'{method_id}.json')) as json_file:
+        method_config = json.load(json_file)['params']
+    return method_config
+
