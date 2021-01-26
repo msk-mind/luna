@@ -7,6 +7,11 @@ Given a scan (container) ID
 2. prepare a parquet table to save for this container
 3. export table to publically available path on ess
 
+Job parameters:
+"params": {
+    "output_dir": <string> # Destination directory
+    "input":      <string> # Used to match a specific radiomics result
+}
 '''
 
 # General imports
@@ -39,6 +44,7 @@ def cli(cohort_id, container_id, method_id):
 
     input_method_id = method_data['input']
 
+     # Get relevant data, matching MethodID
     input_nodes = conn.query(f"""
         MATCH (px:patient)-[:HAS_CASE]-(case)-[:HAS_SCAN]-(scan:scan)-[:HAS_DATA]-(results:radiomics)
         WHERE id(scan)={container_id} AND results.MethodID='{input_method_id}'
@@ -55,9 +61,7 @@ def cli(cohort_id, container_id, method_id):
 
     output_dir  = os.path.join(const.PUBLIC_DIR, method_data['output_dir'])
     output_file = os.path.join(output_dir, input_data['results.name'] + ".flatten.parquet")
-
     if not os.path.exists(output_dir): os.mkdir(output_dir)
-
 
     # Get Results package
     df = pd.read_csv(input_data['results.path'])
