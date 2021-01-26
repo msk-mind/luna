@@ -7,6 +7,11 @@ Given a scan (container) ID
 2. prepare a parquet table to save for this container
 3. export table to publically available path on ess
 
+Job parameters:
+"params": {
+    "output_dir": <string> # Destination directory
+    "input":      <string> # Used to match a specific radiomics result
+}
 '''
 
 # General imports
@@ -17,13 +22,14 @@ import pandas as pd
 # From common
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.custom_logger   import init_logger
+from data_processing.common.utils import get_method_data
 import data_processing.common.constants as const
 
 # Specaialized libraries to make parquet table
 import pyarrow.parquet as pq
 import pyarrow as pa
 
-logger = init_logger("flattenRadiomics.log")
+logger = init_logger("saveRadiomics.log")
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
@@ -34,21 +40,16 @@ def cli(cohort_id, container_id, method_id):
 
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
-    with open(f'{method_id}.json', 'r') as json_file:
-        method_config = json.load(json_file)['params']
-        
-    results_to_flatten = method_config['method_name']
+    method_data = get_method_data(cohort_id, method_id)
 
+    input_method_id = method_data['input']
+
+     # Get relevant data, matching MethodID
     input_nodes = conn.query(f"""
         MATCH (px:patient)-[:HAS_CASE]-(case)-[:HAS_SCAN]-(scan:scan)-[:HAS_DATA]-(results:radiomics)
-        WHERE id(scan)={container_id} AND results.MethodID='{results_to_flatten}'
-        RETURN px.PatientID, case.AccessionNumber, scan.SeriesInstanceUID, results.path"""
+        WHERE id(scan)={container_id} AND results.MethodID='{input_method_id}'
+        RETURN px.PatientID, case.AccessionNumber, scan.SeriesInstanceUID, results.path, results.name"""
     )
-
-    output_dir  = os.path.join(const.PUBLIC_DIR, method_config['output_dir'])
-    output_file = os.path.join(output_dir, f"{container_id}.flatten.parquet")
-
-    if not os.path.exists(output_dir): os.mkdir(output_dir)
 
     if not input_nodes or len (input_nodes)==0:
         logger.error ("Query failed!!")
@@ -57,6 +58,10 @@ def cli(cohort_id, container_id, method_id):
     input_data = input_nodes[0].data()
 
     logger.info (input_data)
+
+    output_dir  = os.path.join(const.PUBLIC_DIR, method_data['output_dir'])
+    output_file = os.path.join(output_dir, input_data['results.name'] + ".flatten.parquet")
+    if not os.path.exists(output_dir): os.mkdir(output_dir)
 
     # Get Results package
     df = pd.read_csv(input_data['results.path'])
@@ -70,6 +75,7 @@ def cli(cohort_id, container_id, method_id):
     df['cohort_id'] = cohort_id
     df['container_id'] = container_id
     df['method_id'] = method_id
+    df['input'] = input_method_id
 
     # Cleanup unnamed columns
     df = df.loc[:, ~df.columns.str.contains('Unnamed')]

@@ -18,6 +18,7 @@ from checksumdir import dirhash
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.custom_logger   import init_logger
 from data_processing.common.Node       import Node
+from data_processing.common.utils import get_method_data
 
 # Specialized library to generate volumentric images
 import itk
@@ -33,11 +34,6 @@ def get_container_data(container_id):
         return [] 
     else:
         return input_nodes[0].data()['data']
-
-def get_method_data(method_id):
-    with open(f'{method_id}.json') as json_file:
-        method_config = json.load(json_file)['params']
-    return method_config
 
 def add_container_data(container_id, n_meta):
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
@@ -60,7 +56,7 @@ def cli(cohort_id, container_id, method_id):
     properties['MethodID']  = method_id
 
     input_data  = get_container_data(container_id)
-    method_data = get_method_data(method_id) 
+    method_data = get_method_data(cohort_id, method_id)
 
     file_ext     = method_data['file_ext']
 

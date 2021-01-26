@@ -224,8 +224,11 @@ class methods(Resource):
 
         res = conn.query(f"""CREATE (me:{n_method.get_create_str()}) RETURN me""")
         if res is None: return make_response(f"Method at {cohort_id}::{method_id} already exists!", 400)
-        
-        with open(f'{method_id}.json', 'w') as outfile:
+
+        method_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, "methods")
+        if not os.path.exists(method_dir): os.makedirs(method_dir)
+
+        with open(os.path.join(method_dir, f'{method_id}.json'), 'w') as outfile:
             json.dump(request.json, outfile, indent=4)
 
         return make_response(f"Created new method at {cohort_id}::{method_id}!", 200)
