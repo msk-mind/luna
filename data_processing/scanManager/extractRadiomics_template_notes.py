@@ -19,7 +19,6 @@ from filehash import FileHash
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.custom_logger   import init_logger
 from data_processing.common.Node       import Node
-from data_processing.common.utils      import get_method_data 
 
 # Specialized library to extract radiomics
 from radiomics import featureextractor  # This module is used for interaction with pyradiomics
@@ -42,6 +41,11 @@ def get_container_data(container_id):
     else:
         return input_nodes[0].data()
 
+def get_method_data(method_id):
+    with open(f'{method_id}.json') as json_file:
+        method_config = json.load(json_file)['params']
+    return method_config
+
 def add_container_data(container_id, n_meta):
     conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
@@ -56,22 +60,48 @@ def add_container_data(container_id, n_meta):
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
+    # =========================================================================================
+    # Setup/Initalize
     logger.info("Invocation: " + str(sys.argv))
 
     properties = {}
     properties['Namespace'] = cohort_id
     properties['MethodID']  = method_id
 
-    input_data = get_container_data(container_id) 
-    method_data = get_method_data(cohort_id, method_id) 
+    # New empty container - as anything that has data, manage things at the container level? 
+    # What we're managing, need to be more clear
+    # Container abstraction on a good track!
+    # Job vs. task, lifecycle
+    # Jobs are run on containers, but
+    # Containers as a way to locate data/metadata as it relates to the abstract
+    # Future: 
+->  container = Container().setNamespace(cohort).lookupAndAttach()
+
+    # Get
+    method_data = get_method_data(method_id) 
 
     logger.info (input_data)
     logger.info (method_data)
 
+    # TODO: down the road
+->  container.run("something")
+
+    # =========================================================================================
+    # Execute
+->  images = container.get(type="mhd", namespace="")
+        -> 1 query the node's metadata
+        -> 2. (optionally) if non-local file, also download into a tmp directory
+->  labels = container.get("mha")
+
+    if images is None or labels is None:
+        logger.error ("Cannot find a label and/or image")
+        return
+
+
     extractor = featureextractor.RadiomicsFeatureExtractor(**method_data)
 
     try:
-        result = extractor.execute(input_data["image.path"].split(':')[-1], input_data["label.path"].split(':')[-1])
+        result = extractor.execute(images["path"], labels["path"])
     except Exception as e:
         logger.error (str(e))
         return
@@ -79,24 +109,24 @@ def cli(cohort_id, container_id, method_id):
     # Data just goes under namespace/name
     # TODO: This path is really not great, but works for now
     output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, input_data['container.name'])
-
     if not os.path.exists(output_dir): os.makedirs(output_dir)
-
     output_filename = os.path.join(output_dir, method_id+".csv")
-
-    sers = pd.Series(result)
-
     logger.info("Saving to " + output_filename)
 
+    sers = pd.Series(result)
     sers.to_frame().transpose().to_csv(output_filename)
 
     record_name = "RAD" + "-" + str(FileHash('sha256').hash_file(output_filename))
-
     properties['path'] = output_filename 
 
-    n_meta = Node("radiomics", record_name, properties=properties)
-
-    add_container_data(container_id, n_meta)
+    # =========================================================================================
+    # Finalize/save
+    # Add a node to the container
+->  container.add(Node("radiomics", record_name, properties=properties))
+    # Commit results (run neccessary cypher queries)
+->  container.save()
+        -> 1 create query with node's metadata
+        -> 2. (optionally) if non-local file, also push/upload from tmp to some remote storage if it exists
 
     logger.info ("Successfully extracted radiomics for container: " + input_data["container.QualifiedPath"])
 
