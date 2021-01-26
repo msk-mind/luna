@@ -29,7 +29,7 @@ import data_processing.common.constants as const
 import pyarrow.parquet as pq
 import pyarrow as pa
 
-logger = init_logger("flattenRadiomics.log")
+logger = init_logger("saveRadiomics.log")
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
