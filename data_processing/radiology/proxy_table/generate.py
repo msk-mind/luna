@@ -14,7 +14,7 @@ from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.utils import generate_uuid_binary
 import data_processing.common.constants as const
 
-from pyspark.sql.functions import udf, lit
+from pyspark.sql.functions import udf, lit, array
 from pyspark.sql.types import StringType, MapType
 
 import pydicom
@@ -175,7 +175,7 @@ def create_proxy_table(config_file):
             load(cfg.get_value(path=DATA_CFG+'::RAW_DATA_PATH'))
 
         generate_uuid_udf = udf(generate_uuid_binary, StringType())
-        df = df.withColumn("dicom_record_uuid", lit(generate_uuid_udf(df.content, lit("DICOM-"))))
+        df = df.withColumn("dicom_record_uuid", lit(generate_uuid_udf(df.content, array([lit("DICOM")]))))
 
     # parse all dicoms and save
     with CodeTimer(logger, 'parse and save dicom'):

@@ -12,7 +12,7 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.utils import generate_uuid
 import data_processing.common.constants as const
 
-from pyspark.sql.functions import udf, lit
+from pyspark.sql.functions import udf, lit, array
 from pyspark.sql.types import StringType, MapType
 
 from medpy.io import load
@@ -108,7 +108,7 @@ def create_proxy_table(template_file):
             .drop("content")
 
         df = df.withColumn("accession_number", parse_accession_number_udf(df.path)) \
-            .withColumn("scan_annotation_record_uuid", generate_uuid_udf(df.path, lit("SCAN_ANNOTATION-"))) \
+            .withColumn("scan_annotation_record_uuid", generate_uuid_udf(df.path, array([lit("SCAN_ANNOTATION")]))) \
             .withColumn("metadata", parse_metadata_udf(df.path))
 
     # parse all dicoms and save

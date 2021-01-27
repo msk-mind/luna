@@ -1,0 +1,12 @@
+test-project:
+  project_id: 8
+  users:
+    - joe
+    - jill
+  label_sets:
+    default_labels:
+      1: tissue_1
+      2: tissue_2
+      3: tissue_3
+      4: tissue_4
+      5: tissue_5
