@@ -27,8 +27,8 @@ logger = init_logger()
 @click.option('-l', '--label_file', default='data_processing/pathology/config/regional_etl_configuration.yaml',
               type=click.Path(exists=True),
               help="path to label configuration file containing application configuration.")
-@click.option('-p', '--process_string', default='geojson,concat',
-              help='comma separated list of processes to run or replay: e.g. geojson OR concat OR geojson,concat')
+@click.option('-p', '--process_string', default='geojson',
+              help='comma separated list of processes to run or replay: e.g. geojson OR concat')
 def cli(template_file, config_file, label_file, process_string):
     """
     This module generates geojson table for pathology data based on information specified in the template file.
