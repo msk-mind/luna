@@ -105,7 +105,6 @@ def create_geojson_table(current_time, label_file):
 
     df["labelset"] = [labelsets] * len(df)
     df = df.explode('labelset')
-    logger.info(df)
 
     # provide various json_dirs and label mappings for apply in Pandas
     df["slide_json_dir"] = df.apply(lambda x: os.path.join(slide_geojson_dir, x.labelset), axis=1)

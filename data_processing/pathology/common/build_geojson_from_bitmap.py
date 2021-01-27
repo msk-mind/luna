@@ -22,10 +22,19 @@ geojson_base = {
     "features": []
 }
 
-# finds the contours for a label mask, builds a polygon, converts polygon to geoJSON feature dictionary (annotation_geojson)
 # adapted from: https://github.com/ijmbarr/image-processing-with-numpy/blob/master/image-processing-with-numpy.ipynb
-def add_contours_for_label(annotation_geojson, annotation,label_num, mappings, CONTOUR_LEVEL, POLYGON_TOLERANCE):
+def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, contour_level, polygon_tolerance):
+    """
+    Finds the contours for a label mask, builds a polygon, converts polygon to geoJSON feature dictionary
 
+    :param annotation_geojson: geojson result to populate
+    :param annotation: npy array of bitmap
+    :param label_num: int value represented in the npy array; corresponding to the annotation label set.
+    :param mappings: label map for the specified label set
+    :param contour_level: value along which to find contours in the array
+    :param polygon_tolerance: polygon resolution
+    :return: geojson result
+    """
     if label_num in annotation:
         print("Building contours for label " + str(label_num))
 
@@ -33,10 +42,10 @@ def add_contours_for_label(annotation_geojson, annotation,label_num, mappings, C
         print("num_pixels with label", num_pixels)
 
         mask = np.where(annotation==label_num,1,0)
-        contours = measure.find_contours(mask, level = CONTOUR_LEVEL)
+        contours = measure.find_contours(mask, level = contour_level)
         print("num contours", len(contours))
 
-        scaled_tolerance = POLYGON_TOLERANCE
+        scaled_tolerance = polygon_tolerance
         if num_pixels >= 10000000:
             scaled_tolerance = int(num_pixels / 10000000)
 
@@ -81,8 +90,8 @@ def build_geojson_from_bitmap_pandas(df: pd.DataFrame) -> pd.DataFrame:
     annotation_npy_filepath = df.npy_filepath.values[0]
     output_folder = df.slide_json_dir.values[0]
 
-    CONTOUR_LEVEL = df.contour_level.values[0]
-    POLYGON_TOLERANCE = df.polygon_tolerance.values[0]
+    contour_level = df.contour_level.values[0]
+    polygon_tolerance = df.polygon_tolerance.values[0]
 
 
     print("\nBuilding GeoJSON annotation from npy file:", annotation_npy_filepath)
@@ -95,7 +104,7 @@ def build_geojson_from_bitmap_pandas(df: pd.DataFrame) -> pd.DataFrame:
 
     try:
         for label_num in mappings:
-            annotation_geojson = add_contours_for_label(annotation_geojson, annotation, label_num, mappings, CONTOUR_LEVEL, POLYGON_TOLERANCE)
+            annotation_geojson = add_contours_for_label(annotation_geojson, annotation, label_num, mappings, contour_level, polygon_tolerance)
     except TimeoutError as err:
         print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
         df["geojson_filepath"] = np.nan
@@ -139,27 +148,23 @@ def concatenate_geojsons_from_list(geojson_list):
     :param geojson_list: list of geojson file paths
     :return: extended feature map in json
     """
-    if len(geojson_list) == 1:
-        return geojson_list[0]
-    else:
-        base_geojson_filename = geojson_list[0]
-        with open(base_geojson_filename) as base_geojson_file:
-            base_geojson = json.load(base_geojson_file)
+    base_geojson_filename = geojson_list[0]
+    with open(base_geojson_filename) as base_geojson_file:
+        base_geojson = json.load(base_geojson_file)
 
-        for geojson_filename in geojson_list[1:]:
-            with open(geojson_filename) as geojson_file:
-                json_dict = json.load(geojson_file)
-                base_geojson['features'].extend(json_dict['features'])
+    for geojson_filename in geojson_list[1:]:
+        with open(geojson_filename) as geojson_file:
+            json_dict = json.load(geojson_file)
+            base_geojson['features'].extend(json_dict['features'])
 
-        print(base_geojson)
     return base_geojson
 
 
 def concatenate_regional_geojsons_pandas(df: pd.DataFrame) -> pd.DataFrame:
 
     if len(df) == 1:
-        df["concat_geojson_filepath"] = df.geojson_filepath.item()
-        df["concat_geojson_record_uuid"] = df.geojson_record_uuid.item()
+        df["concat_geojson_filepath"] = df.geojson_filepath.values[0]
+        df["concat_geojson_record_uuid"] = df.geojson_record_uuid.values[0]
         return df
     else:
         labelset = df.labelset.values[0]
