@@ -25,8 +25,6 @@ SCANS				='scans'
 SCAN_ANNOTATIONS	='scan_annotations'
 PATHOLOGY_ANNOTATIONS	='pathology_annotations'
 FEATURES			='features'
-REGIONAL_GEOJSONS   ='regional_geojsons'
-REGIONAL_CONCAT_GEOJSONS   ='regional_concat_geojsons'
 
 # Configurations
 APP_CFG				='APP_CFG'
