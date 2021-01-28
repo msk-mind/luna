@@ -77,7 +77,11 @@ def handler(signum, frame):
 
 # pandas udf
 def build_geojson_from_bitmap_pandas(df: pd.DataFrame) -> pd.DataFrame:
-
+    """
+    Builds geojson for all annotation labels in the specified labelset.
+    :param df: dataframe
+    :return: dataframe populated with geojson_filepath, geojson_record_uuid
+    """
     CONFIGURATION_FILE = df.configuration_file.values[0]
     with open(CONFIGURATION_FILE) as configfile:
         config = yaml.safe_load(configfile)
@@ -161,7 +165,11 @@ def concatenate_geojsons_from_list(geojson_list):
 
 
 def concatenate_regional_geojsons_pandas(df: pd.DataFrame) -> pd.DataFrame:
-
+    """
+    Concatenates geojsons wif there are more than one annotations for the labelset.
+    :param df: dataframe
+    :return: dataframe populated with concat_geojson_filepath, concat_geojson_record_uuid
+    """
     if len(df) == 1:
         df["concat_geojson_filepath"] = df.geojson_filepath.values[0]
         df["concat_geojson_record_uuid"] = df.geojson_record_uuid.values[0]
