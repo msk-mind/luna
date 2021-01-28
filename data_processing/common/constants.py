@@ -23,7 +23,10 @@ FEATURE_TABLE		=TABLE_DIR + 'feature'
 DICOMS				='dicoms'
 SCANS				='scans'
 SCAN_ANNOTATIONS	='scan_annotations'
+PATHOLOGY_ANNOTATIONS	='pathology_annotations'
 FEATURES			='features'
+REGIONAL_GEOJSONS   ='regional_geojsons'
+REGIONAL_CONCAT_GEOJSONS   ='regional_concat_geojsons'
 
 # Configurations
 APP_CFG				='APP_CFG'
@@ -43,8 +46,11 @@ def PROJECT_LOCATION(cfg):
     return os.path.join(cfg.get_value(path=DATA_CFG+'::ROOT_PATH'), cfg.get_value(path=DATA_CFG+'::PROJECT'))
 
 
-def TABLE_LOCATION(cfg): 
-    return "{0}/tables/{1}".format(PROJECT_LOCATION(cfg), TABLE_NAME(cfg))
+def TABLE_LOCATION(cfg, is_source=False):
+    return "{0}/tables/{1}".format(PROJECT_LOCATION(cfg), TABLE_NAME(cfg, is_source))
 
-def TABLE_NAME(cfg):
+def TABLE_NAME(cfg, is_source=False):
+    if is_source:
+        return "{0}_{1}".format(cfg.get_value(path=DATA_CFG+'::SOURCE_DATA_TYPE').upper(), cfg.get_value(path=DATA_CFG+'::DATASET_NAME'))
+
     return "{0}_{1}".format(cfg.get_value(path=DATA_CFG+'::DATA_TYPE').upper(), cfg.get_value(path=DATA_CFG+'::DATASET_NAME'))

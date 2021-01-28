@@ -125,7 +125,7 @@ def generate_png_tables(cfg):
         # generate uuid
         spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
         generate_uuid_udf = F.udf(generate_uuid_binary, StringType())
-        seg_df = seg_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf(seg_df.overlay, F.lit("PNG-"))))
+        seg_df = seg_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf(seg_df.overlay, F.array([F.lit("PNG")]))))
        
         logger.info("Created overlay images")
         

@@ -1,0 +1,36 @@
+# root path to pathology data in the data lake
+ROOT_PATH: /path/to/mind/data
+
+PROJECT: OV_16-158
+
+# Expected (SOURCE_DATA_TYPE, DATA_TYPE) pairs:
+# (BITMASK, GEOJSON) or (GEOJSON, CONCAT)
+# table needed for process. BITMASK or GEOJSON
+SOURCE_DATA_TYPE: BITMASK
+
+# data type GEOJSON or CONCAT.
+DATA_TYPE: GEOJSON
+
+# dataset name
+DATASET_NAME: dataset_name
+
+# DMT found in etl config (msk_mind_ov, msk_mind_lung)
+DMT: msk_mind_ov
+
+# specify the name of a single labelset to use within the etl config.
+USE_LABELSET: default_labels
+
+# generate geojsons for all of the provided dmt's labelsets
+USE_ALL_LABELSETS: False
+
+CONTOUR_LEVEL: 0.5
+
+# this is scaled up dynamically (lower resolution) if the annotation is very large
+POLYGON_TOLERANCE: 1
+
+# graph db connection
+GRAPH_URI: host:ip
+
+GRAPH_USER: replace_with_user
+
+GRAPH_PW: replace_with_password

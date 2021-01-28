@@ -18,20 +18,21 @@ def generate_uuid(path, prefix):
 	"""
 	Returns hash of the file given path, preceded by the prefix.
 	:param path: file path e.g. file:/path/to/file
-	:param prefix: e.g. DICOM-
+	:param prefix: list e.g. ["SVGEOJSON","default-label"]
 	:return: string uuid
 	"""
 	posix_file_path = path.split(':')[-1]
 
 	rec_hash = FileHash('sha256').hash_file(posix_file_path)
-	return prefix + rec_hash
+	prefix.append(rec_hash)
+	return "-".join(prefix)
 
 
 def generate_uuid_binary(content, prefix):
 	"""
 	Returns hash of the binary, preceded by the prefix.
 	:param content: binary
-	:param prefix: e.g. FEATURE-
+	:param prefix: list e.g. ["FEATURE"]
 	:return: string uuid
 	"""
 	content = BytesIO(content)
@@ -40,7 +41,8 @@ def generate_uuid_binary(content, prefix):
 	with EnsureByteContext.EnsureByteContext():
 		uuid = FileHash('sha256').hash_file(content)
 
-	return prefix + uuid
+	prefix.append(uuid)
+	return "-".join(prefix)
 
 
 def does_not_contain(token, value):

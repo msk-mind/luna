@@ -106,7 +106,7 @@ def generate_feature_table(cfg):
 
         spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
         generate_uuid_udf = F.udf(generate_uuid_binary, StringType())
-        df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf("overlay", F.lit("FEATURE-"))))
+        df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf("overlay", F.array([F.lit("FEATURE")]))))
 
         df.coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')) \
             .write.format("delta") \

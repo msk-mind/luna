@@ -1,0 +1,67 @@
+LUNG_18-193:
+  project_id: 141
+  users:
+    - sauterj
+  label_sets:
+    default_labels:
+      1: lympho_rich_stroma
+      2: lympho_poor_stroma
+      3: lympho_rich_tumor
+      4: lympho_poor_tumor
+      5: stained_lympho
+      6: unstained_lympho
+      7: stained_tumor
+      8: unstained_tumor
+      9: necrotic_debris
+      10: glass
+      11: qc_out_of_focus
+      12: qc_tissue_fold
+      13: qc_air_bubbles
+      14: qc_pen
+      15: qc_other
+OV_16-158:
+  project_id: 134
+  users:
+    - ellensol
+    - soslowr
+    - boehmk
+  label_sets:
+    default_labels:
+      1: lympho_rich_stroma
+      2: lympho_poor_stroma
+      3: lympho_rich_tumor
+      4: lympho_poor_tumor
+      5: adipocytes
+      6: arteries
+      7: veins
+      8: psammoma_bodies
+      9: stic_lesions
+      10: necrosis
+      11: glass
+      12: qc_tissue_fold
+      13: qc_air_bubbles
+      14: qc_pen
+      15: qc_other
+    pixel_classifier_labels:
+      1: Stroma
+      2: Stroma
+      3: Tumor
+      4: Tumor
+      5: Adipocytes
+      6: Arteries
+      7: Veins
+      10: Necrosis
+      11: Glass
+    object_classifier_labels:
+      1: Lymphocyte
+      2: Other
+      3: Lymphocyte
+      4: Other
+    simplified_pixel_classifier_labels:
+      1: Stroma
+      2: Stroma
+      3: Tumor
+      4: Tumor
+      5: Adipocytes
+      10: Necrosis
+      11: Glass
