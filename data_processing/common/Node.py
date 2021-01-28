@@ -1,4 +1,5 @@
 from data_processing.common.utils import to_sql_field, does_not_contain
+import warnings
 
 class Node(object):
 	"""
@@ -15,13 +16,18 @@ class Node(object):
 		self.properties = properties
 
 		if self.type=="cohort":
-			self.properties["QualifiedPath"] = self.get_qualified_name(self.name, self.name)
-
+			self.namespace = name
+		elif not "Namespace" in properties.keys():
+			self.namespace = 'default'
+			warnings.warn("Missing Namespace property, using default namespace!")
 		else:
-			if not "Namespace" in properties.keys():
-				raise RuntimeError("Missing required Namespace property!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], self.name)
+			self.namespace = properties["Namespace"]
+		
+		self.properties["QualifiedPath"] = self.get_qualified_name(self.namespace, self.name)
 		self.properties["type"] = self.type
+
+		if "path" in self.properties.keys(): 
+			self.path = self.properties["path"]
 
 	def __repr__(self):
 		kv = self.get_all_props()

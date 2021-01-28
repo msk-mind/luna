@@ -1,6 +1,8 @@
 from enum import Enum
 from data_processing.common.utils import to_sql_field
 from data_processing.common.Node import Node
+from data_processing.common.Neo4jConnection import Neo4jConnection
+import os, socket
 	
 class Container(object):
 	"""
@@ -9,30 +11,68 @@ class Container(object):
 	:param: conn: Neo4j Connection
 	:param: container_id: Container ID
 	"""
-	def __init__(self, conn, container_id):
+	# TODO: worried about schema issues? like making sure name, namespace, type and qualified path are present, neo4j offers schema enforcment. 
+	# TODO: testing
+	# TODO: error checking
 
-		container_metadata = conn.query(f"""
-			MATCH (container)-[:HAS_DATA]-(data) 
-			WHERE id(container) = {container_id} 
+	def __init__(self, params):
+		self.params=params
+
+		print ("Connecting to:", params['GRAPH_URI'])
+		self._conn = Neo4jConnection(uri=params['GRAPH_URI'], user=params['GRAPH_USER'], pwd=params['GRAPH_PASSWORD'])
+		print ("Connection successfull:", self._conn.test_connection())
+		self._host = socket.gethostname() # portable to *docker* containers
+		print ("Running on:", self._host)
+	
+	def setNamespace(self, namespace_id):
+		self._namespace_id = namespace_id
+		return self
+	
+	def lookupAndAttach(self, container_id):
+		self._attached = False
+		if type(container_id) is str: container_id = rf"'{container_id}'"
+		print ("Lookup ID:", container_id)
+		self._match_clause = f"""WHERE id(container) = {container_id} OR container.QualifiedPath = {container_id}"""
+		print ("Match on:", self._match_clause)
+		res = self._conn.query(f"""
+			MATCH (container) {self._match_clause}
 			RETURN labels(container), container.type, container.name, container.Namespace, container.QualifiedPath"""
 		)
-		data_nodes = conn.query(f"""
-			MATCH (container)-[:HAS_DATA]-(data) 
-			WHERE id(container) = {container_id} 
+		if res is None or len(res) == 0: 
+			print ("Not found")
+			return self
+
+		print ("Found:", res)
+		self._container_id  = container_id
+		self._name 			= res[0]["container.name"]
+		self._namespace     = res[0]["container.Namespace"]
+		self._qualifiedpath = res[0]["container.QualifiedPath"]
+		self._type		 	= res[0]["container.type"]
+		self._labels		= res[0]["labels(container)"]
+
+		if self._qualifiedpath is None: 
+			print ("Found, however not valid container object, containers must have a name, namespace, and qualified path")
+			return self
+
+		print ("Successfully attached to:", self._type, self._qualifiedpath)
+		self._attached = True
+
+		return self
+	
+	def isAttached(self):
+		print ("Attached:", self._attached)
+
+	def get(self, type):
+		res = self._conn.query(f"""
+			MATCH (container)-[:HAS_DATA]-(data:{type}) 
+			{self._match_clause}
 			RETURN data"""
 		)
+		if res is None or len(res) == 0: 
+			return None
+		else:
+		    return [Node(rec['data']['type'], rec['data']['name'], dict(rec['data'].items())) for rec in res]
 
-		self.id 			= container_id
-		self.name 			= container_metadata[0]["container.name"]
-		self.namespace 		= container_metadata[0]["container.Namespace"]
-		self.qualifiedpath 	= container_metadata[0]["container.QualifiedPath"]
-		self.type		 	= container_metadata[0]["container.type"]
-		self.labels		 	= container_metadata[0]["labels(container)"]
-		self.data			= [Node(rec['data']['type'], rec['data']['name'], dict(rec['data'].items())) for rec in data_nodes]
-		# TODO: worried about schema issues? like making sure name, namespace, type and qualified path are present, neo4j offers schema enforcment. 
-		# TODO: testing
-		# TODO: error checking
-		# TODO: expand class
 
 class NodeType(object):
 	"""
