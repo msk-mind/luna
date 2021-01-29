@@ -18,15 +18,23 @@ class Node(object):
 		self.properties = properties
 
 		if self.type=="cohort":
-			self.namespace = node_name
-		elif not "Namespace" in properties.keys():
-			self.namespace = 'default'
+			self.properties['Namspace'] = node_name
+
+		if not "Namespace" in properties.keys():
+			self.properties['Namspace'] = 'default'
 			warnings.warn("Missing Namespace property, using default namespace!")
-		else:
-			self.namespace = properties["Namespace"]
-		
-		self.properties["QualifiedPath"] = self.get_qualified_name(self.namespace, self.name)
+
+		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namspace'], self.name)
 		self.properties["type"] = self.type
+
+	def setNamespace(self, namespace_id: str):
+		"""
+		Sets the namespace for this Node commits
+
+		:params: namespace_id - namespace value 
+		"""
+		self.properties['Namspace'] = namespace_id
+		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namspace'], self.name)
 
 	def __repr__(self):
 		kv = self.get_all_props()
