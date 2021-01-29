@@ -22,14 +22,32 @@ class Container(object):
 		> Match on: WHERE id(container) = 7091 
 		> Successfully attached to: scan 1.2.840...
 
-	$ node = Node("dicom", "DCM-0123", {"Modality":"CT"})
+	$ node = Node("dicom", "DCM-0123", {"Modality":"CT", "path":"file:/some/path/1.dcm"})
 
 	$ container.add(node)
 		> Adding: test-0000
-		> Container has 1 pending commits
+		  Container has 1 pending commits
 
-	container.saveAll()
-		> Committing dicom:globals{  name: 'DCM-0123', QualifiedPath: 'test::DCM-0123', Namespace: 'test', type: 'dicom' }
+	$ container.saveAll()
+		> Committing dicom:globals{  name: 'DCM-0123', QualifiedPath: 'test::DCM-0123', Namespace: 'test', type: 'dicom' , path: 'file:/some/path/1.dcm'}
+
+	$ node = container.ls("dicom")
+		> ----------------------------------------------------------------------------------------------------
+		  name: DCM-0123
+		  type: dicom
+		  properties: 
+		  - type: 'dicom'
+		  - QualifiedPath: 'test::DCM-0123'
+		  - path: 'file:/some/path/1.dcm'
+		  - Namespace: '3'
+		  - Modality: 'CT'
+		  - name: 'DCM-0123'
+		  ----------------------------------------------------------------------------------------------------
+	$ container.get("dicom", "data.Namespace='test'").path
+		> /some/path/1.dcm
+
+	$ container.get("dicom", "data.Namespace='test'").properties['Modality']
+		> 'CT'
 
 	
 	"""
