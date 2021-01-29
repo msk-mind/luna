@@ -70,7 +70,7 @@ def test_cohort_wrong_properties():
         Node("cohort", properties={"Description":"a cohort"})
 
 def test_patient_wrong_properties():
-    with pytest.raises(RuntimeError):
+    with pytest.warns(UserWarning):
         Node("patient", "pid", properties={})
 
 def test_patient_bad_id():
