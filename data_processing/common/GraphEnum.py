@@ -11,6 +11,12 @@ class Container(object):
 	Interfaces with a metadata store (graph DB) and raw file stores (gpfs, potentially others)
 
 	Handles the matching and creation of metadata
+
+	Example usage:
+	container = data_processing.common.GraphEnum.Container( params )\
+		.setNamespace("test")\
+		.lookupAndAttach("1.2.840...")
+	
 	"""
 	# TODO: worried about schema issues? like making sure name, namespace, type and qualified path are present, neo4j offers schema enforcment. 
 	# TODO: testing
@@ -101,6 +107,36 @@ class Container(object):
 		"""
 		print ("Attached:", self._attached)
 
+	def ls(self, type, view=""):
+		"""
+		Query graph DB container node for dependent data nodes, and list them  
+
+		:params: type - the type of data designed 
+			e.g. radiomics, mha, dicom, png, svs, geojson, etc.
+		:params: view - can be used to filter nodes
+			e.g. data.source='generateMHD'
+			e.g. data.label='Right'
+			e.g. data.namespace in ['default', 'my_cohort']
+
+		:example: ls("png") gets data nodes of type "png" and prints the repr of each node
+		"""
+		# Prepend AND since the query runs with a WHERE on the container ID by default
+		if view is not "": view = "AND " + view
+
+		# Run query, subject to SQL injection attacks (but right now, our entire system is)
+		res = self._conn.query(f"""
+			MATCH (container)-[:HAS_DATA]-(data:{type}) 
+			{self._match_clause}
+			{view}
+			RETURN data"""
+		)
+		# Catches bad queries
+		# If successfull query, reconstruct a Node object
+		if res is None or len(res) == 0: 
+			return None
+		else:
+			[print (Node(rec['data']['type'], rec['data']['name'], dict(rec['data'].items()))) for rec in res]
+
 	def get(self, type, view=""):
 		"""
 		Query graph DB container node for dependent data nodes.  
@@ -114,7 +150,7 @@ class Container(object):
 			e.g. data.label='Right'
 			e.g. data.namespace in ['default', 'my_cohort']
 
-		:example: get("mhd", "generate-mhd") gets data of type "mhd" generated from the source "generate-mhd"
+		:example: get("mhd", "data.MethodID = 'generate-mhd'") gets data of type "mhd" generated from the method "generate-mhd"
 		"""
 
 		# Prepend AND since the query runs with a WHERE on the container ID by default
@@ -167,7 +203,7 @@ class Container(object):
 		self._node_commits[node.name] = node
 		
 		# Decorate with the container namespace 
-		self._node_commits[node.name].properties['Namespace'] = self._namespace_id
+		self._node_commits[node.name].setNamespace( self._namespace_id )
 		print ("Container has {0} pending commits".format(len(self._node_commits)))
 
 	def saveAll(self):
@@ -176,6 +212,7 @@ class Container(object):
 		"""
 		# Loop through all nodes in commit dictonary, and run query
 		for n in self._node_commits.values():
+			print ("Committing", n.get_create_str())
 			self._conn.query(f""" 
 				MATCH (container) {self._match_clause}
 				MERGE (da:{n.get_create_str()})
