@@ -9,14 +9,16 @@ class Node(object):
 	:param: name: required node name. e.g. scan-123
 	:param: properties: dict of key, value pairs for the node.
 	"""
-	def __init__(self, node_type, name, properties={}):
+	def __init__(self, node_type, node_name, properties={}):
+
+		# Required schema: node_type, node_name
 
 		self.type = node_type
-		self.name = name
+		self.name = node_name
 		self.properties = properties
 
 		if self.type=="cohort":
-			self.namespace = name
+			self.namespace = node_name
 		elif not "Namespace" in properties.keys():
 			self.namespace = 'default'
 			warnings.warn("Missing Namespace property, using default namespace!")
@@ -25,9 +27,6 @@ class Node(object):
 		
 		self.properties["QualifiedPath"] = self.get_qualified_name(self.namespace, self.name)
 		self.properties["type"] = self.type
-
-		if "path" in self.properties.keys(): 
-			self.path = self.properties["path"]
 
 	def __repr__(self):
 		kv = self.get_all_props()

@@ -30,29 +30,39 @@ class Container(object):
 	
 	def lookupAndAttach(self, container_id):
 		self._attached = False
-		if type(container_id) is str: container_id = rf"'{container_id}'"
 		print ("Lookup ID:", container_id)
-		self._match_clause = f"""WHERE id(container) = {container_id} OR container.QualifiedPath = {container_id}"""
-		print ("Match on:", self._match_clause)
+
+		if type(container_id) is str: 
+			self._match_clause = f"""WHERE container.QualifiedPath = '{container_id}'"""
+		elif type(container_id) is int:
+			self._match_clause = f"""WHERE id(container) = {container_id} """
+		else:
+			raise RuntimeError("Invalid container_id type not (str, int)")
+
 		res = self._conn.query(f"""
 			MATCH (container) {self._match_clause}
-			RETURN labels(container), container.type, container.name, container.Namespace, container.QualifiedPath"""
+			RETURN id(container), labels(container), container.type, container.name, container.Namespace, container.QualifiedPath"""
 		)
 		if res is None or len(res) == 0: 
 			print ("Not found")
 			return self
 
 		print ("Found:", res)
-		self._container_id  = container_id
+		self._container_id  = res[0]["id(container)"]
 		self._name 			= res[0]["container.name"]
 		self._namespace     = res[0]["container.Namespace"]
 		self._qualifiedpath = res[0]["container.QualifiedPath"]
 		self._type		 	= res[0]["container.type"]
 		self._labels		= res[0]["labels(container)"]
+		self._node_commits	= {}
 
 		if self._qualifiedpath is None: 
 			print ("Found, however not valid container object, containers must have a name, namespace, and qualified path")
 			return self
+		
+		# Set match clause to id
+		self._match_clause = f"""WHERE id(container) = {self._container_id} """
+		print ("Match on:", self._match_clause)
 
 		print ("Successfully attached to:", self._type, self._qualifiedpath)
 		self._attached = True
@@ -62,16 +72,44 @@ class Container(object):
 	def isAttached(self):
 		print ("Attached:", self._attached)
 
-	def get(self, type):
+	def get(self, type, source):
 		res = self._conn.query(f"""
 			MATCH (container)-[:HAS_DATA]-(data:{type}) 
 			{self._match_clause}
+				AND data.source='{source}'
 			RETURN data"""
 		)
-		if res is None or len(res) == 0: 
+		if res is None or len(res) != 1: 
+			# Catches bad queries
 			return None
 		else:
-		    return [Node(rec['data']['type'], rec['data']['name'], dict(rec['data'].items())) for rec in res]
+			node = Node(res[0]['data']['type'], res[0]['data']['name'], dict(res[0]['data'].items()))
+		
+		if "path" in node.properties.keys(): 
+			# Parse filepath URI: more sophistic path logic to come (pulling from S3, external mounts, etc!!!!)
+			path = node.properties["path"]
+			if path.split(":")[0] == "file":
+				node.path = path.split(":")[-1]
+			else:
+				node.path = path
+
+		print ("Filepath is valid:", os.path.exists(node.path))
+		return node
+	
+	def add(self, node: Node):
+		print ("Adding:", node.name)
+		self._node_commits[node.name] = node
+		print ("Container has {0} pending commits".format(len(self._node_commits)))
+
+	def saveAll(self):
+		for n in self._node_commits.values():
+			print (n)
+			self._conn.query(f""" 
+				MATCH (container) {self._match_clause}
+				MERGE (da:{n.get_create_str()})
+				MERGE (container)-[:HAS_DATA]->(da)"""
+			)
+
 
 
 class NodeType(object):
