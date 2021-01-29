@@ -22,7 +22,6 @@ class Node(object):
 
 		if not "Namespace" in properties.keys():
 			self.properties['Namespace'] = 'default'
-			warnings.warn("Missing Namespace property, using default namespace!")
 
 		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namespace'], self.name)
 		self.properties["type"] = self.type
