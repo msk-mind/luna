@@ -18,13 +18,13 @@ class Node(object):
 		self.properties = properties
 
 		if self.type=="cohort":
-			self.properties['Namspace'] = node_name
+			self.properties['Namespace'] = node_name
 
 		if not "Namespace" in properties.keys():
-			self.properties['Namspace'] = 'default'
+			self.properties['Namespace'] = 'default'
 			warnings.warn("Missing Namespace property, using default namespace!")
 
-		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namspace'], self.name)
+		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namespace'], self.name)
 		self.properties["type"] = self.type
 
 	def setNamespace(self, namespace_id: str):
@@ -33,8 +33,8 @@ class Node(object):
 
 		:params: namespace_id - namespace value 
 		"""
-		self.properties['Namspace'] = namespace_id
-		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namspace'], self.name)
+		self.properties['Namespace'] = namespace_id
+		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namespace'], self.name)
 
 	def __repr__(self):
 		kv = self.get_all_props()

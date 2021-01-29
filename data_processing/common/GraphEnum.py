@@ -13,9 +13,24 @@ class Container(object):
 	Handles the matching and creation of metadata
 
 	Example usage:
-	container = data_processing.common.GraphEnum.Container( params )\
-		.setNamespace("test")\
-		.lookupAndAttach("1.2.840...")
+	$ container = data_processing.common.GraphEnum.Container( params ).setNamespace("test").lookupAndAttach("1.2.840...")
+		> Connecting to: neo4j://localhost:7687
+		> Connection successfull: True
+		> Running on: localhost
+		> Lookup ID: 1.2.840...
+		> Found: [<Record id(container)=7091 labels(container)=['scan'] container.type='scan' container.name='1.2.840...>]
+		> Match on: WHERE id(container) = 7091 
+		> Successfully attached to: scan 1.2.840...
+
+	$ node = Node("dicom", "DCM-0123", {"Modality":"CT"})
+
+	$ container.add(node)
+		> Adding: test-0000
+		> Container has 1 pending commits
+
+	container.saveAll()
+		> Committing dicom:globals{  name: 'DCM-0123', QualifiedPath: 'test::DCM-0123', Namespace: 'test', type: 'dicom' }
+
 	
 	"""
 	# TODO: worried about schema issues? like making sure name, namespace, type and qualified path are present, neo4j offers schema enforcment. 
@@ -213,7 +228,7 @@ class Container(object):
 		# Loop through all nodes in commit dictonary, and run query
 		for n in self._node_commits.values():
 			print ("Committing", n.get_create_str())
-			self._conn.query(f""" 
+			res = self._conn.query(f""" 
 				MATCH (container) {self._match_clause}
 				MERGE (da:{n.get_create_str()})
 				MERGE (container)-[:HAS_DATA]->(da)"""
