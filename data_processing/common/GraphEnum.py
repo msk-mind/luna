@@ -246,7 +246,7 @@ class Container(object):
 		# Loop through all nodes in commit dictonary, and run query
 		for n in self._node_commits.values():
 			print ("Committing", n.get_create_str())
-			res = self._conn.query(f""" 
+			self._conn.query(f""" 
 				MATCH (container) {self._match_clause}
 				MERGE (da:{n.get_create_str()})
 				MERGE (container)-[:HAS_DATA]->(da)"""
