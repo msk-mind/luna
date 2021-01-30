@@ -202,14 +202,12 @@ def create_concat_geojson_table():
     concatgeojson_df = concatgeojson_df.loc[(concatgeojson_df['latest'] == True)]
 
     concatgeojson_df = spark.createDataFrame(concatgeojson_df)
-    concatgeojson_df.show()
 
-    # make geojson string list
+    # make geojson string list for slide + labelset
     concatgeojson_df = concatgeojson_df \
         .select("sv_project_id", "slideviewer_path", "slide_id", "labelset", to_json("geojson").alias("geojson_str")) \
         .groupby(["sv_project_id", "slideviewer_path", "slide_id", "labelset"]) \
         .agg(collect_list("geojson_str").alias("geojson_list"))
-    concatgeojson_df.show(10, False)
 
     # set up udfs
     concatenate_regional_geojsons_udf = udf(concatenate_regional_geojsons, geojson_struct)
@@ -226,7 +224,6 @@ def create_concat_geojson_table():
     concatgeojson_df = concatgeojson_df.withColumn("latest", lit(True))   \
                             .withColumn("date_added", current_timestamp())    \
                             .withColumn("date_updated", current_timestamp())
-    concatgeojson_df.show()
 
     # create concatenation geojson delta table
     # update main table if exists, otherwise create main table
