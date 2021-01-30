@@ -72,12 +72,17 @@ def handler(signum, frame):
     raise TimeoutError("Geojson generation timed out.")
 
 
-# pandas udf
 def build_geojson_from_bitmap(configuration_file, dmt, annotation_npy_filepath, labelset, contour_level, polygon_tolerance):
     """
     Builds geojson for all annotation labels in the specified labelset.
-    :param df: dataframe
-    :return: dataframe populated with geojson_filepath, geojson_record_uuid
+
+    :param configuration_file: path to etl configuration file
+    :param dmt: dmt name
+    :param annotation_npy_filepath: path to annotaiton npy file
+    :param labelset: user specified labelset
+    :param contour_level: value along which to find contours in the array
+    :param polygon_tolerance: polygon resolution
+    :return:
     """
     with open(configuration_file) as configfile:
         config = yaml.safe_load(configfile)
@@ -98,10 +103,8 @@ def build_geojson_from_bitmap(configuration_file, dmt, annotation_npy_filepath, 
             annotation_geojson = add_contours_for_label(annotation_geojson, annotation, label_num, mappings, float(contour_level), float(polygon_tolerance))
     except TimeoutError as err:
         print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
-        df["geojson"] = np.nan
-        df["geojson_record_uuid"] = np.nan
 
-        return df
+        return np.nan
 
     # disables alarm
     signal.alarm(0)
@@ -133,16 +136,17 @@ def concatenate_geojsons_from_list(geojson_list):
 
 def concatenate_regional_geojsons(geojson_list):
     """
-    Concatenates geojsons wif there are more than one annotations for the labelset.
-    :param df: dataframe
-    :return: dataframe populated with concat_geojson_filepath, concat_geojson_record_uuid
+    Concatenates geojsons if there are more than one annotations for the labelset.
+    :param geojson_list: list of geojson strings
+    :return: concatenated geojson dict
     """
+    # create json from str representations
     geojson_list = [json.loads(geojson) for geojson in geojson_list]
 
     if len(geojson_list) == 1:
         return geojson_list[0]
-    else:
-        # create concatenated geojson
-        concat_geojson = concatenate_geojsons_from_list(geojson_list)
+
+    # create concatenated geojson
+    concat_geojson = concatenate_geojsons_from_list(geojson_list)
 
     return concat_geojson
