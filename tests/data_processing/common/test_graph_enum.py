@@ -65,13 +65,14 @@ def test_get_all_properties():
     assert "name" in all_props
     assert "SCAN-001" == all_props["name"]
 
+def test_patient_no_namespace():
+    node = Node("patient", "pid", properties={})
+    assert node.properties['Namespace'] == 'default'
+
 def test_cohort_wrong_properties():
     with pytest.raises(TypeError):
         Node("cohort", properties={"Description":"a cohort"})
 
-def test_patient_wrong_properties():
-    with pytest.raises(RuntimeError):
-        Node("patient", "pid", properties={})
 
 def test_patient_bad_id():
     with pytest.raises(ValueError):

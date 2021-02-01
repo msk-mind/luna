@@ -49,6 +49,14 @@ class Neo4jConnection:
                 session.close()
         return response
 
+    def test_connection(self):
+        try:
+            self.__driver.session().run("MATCH () RETURN 1 LIMIT 1")
+            return True
+        except Exception:
+            return False
+
+
     
     # ==========================================================================================================
     # Simple methods

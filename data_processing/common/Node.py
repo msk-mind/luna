@@ -1,4 +1,5 @@
 from data_processing.common.utils import to_sql_field, does_not_contain
+import warnings
 
 class Node(object):
 	"""
@@ -8,20 +9,31 @@ class Node(object):
 	:param: name: required node name. e.g. scan-123
 	:param: properties: dict of key, value pairs for the node.
 	"""
-	def __init__(self, node_type, name, properties={}):
+	def __init__(self, node_type, node_name, properties={}):
+
+		# Required schema: node_type, node_name
 
 		self.type = node_type
-		self.name = name
+		self.name = node_name
 		self.properties = properties
 
 		if self.type=="cohort":
-			self.properties["QualifiedPath"] = self.get_qualified_name(self.name, self.name)
+			self.properties['Namespace'] = node_name
 
-		else:
-			if not "Namespace" in properties.keys():
-				raise RuntimeError("Missing required Namespace property!")
-			self.properties["QualifiedPath"] = self.get_qualified_name(properties["Namespace"], self.name)
+		if not "Namespace" in properties.keys():
+			self.properties['Namespace'] = 'default'
+
+		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namespace'], self.name)
 		self.properties["type"] = self.type
+
+	def set_namespace(self, namespace_id: str):
+		"""
+		Sets the namespace for this Node commits
+
+		:params: namespace_id - namespace value 
+		"""
+		self.properties['Namespace'] = namespace_id
+		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namespace'], self.name)
 
 	def __repr__(self):
 		kv = self.get_all_props()
@@ -70,7 +82,7 @@ class Node(object):
 		"""
 		fields = set(fields).intersection(set(row.keys()))
 
-		kv = [f" - {to_sql_field(x)}: '{row[x]}'" for x in fields]
+		kv = [f"   {to_sql_field(x)}: '{row[x]}'" for x in fields]
 		return '\n'.join(kv)
 	
 	@staticmethod
