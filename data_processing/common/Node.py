@@ -63,7 +63,16 @@ class Node(object):
 		kv = self.get_all_props()
 
 		prop_string = self.prop_str( ["QualifiedPath"], kv)
-		return f"""{self.type}{{ {prop_string} }}"""
+		return f"""{self.type}:globals{{ {prop_string} }}"""
+	
+	def get_map_str(self):
+
+		kv = self.get_all_props()
+
+		prop_string = self.prop_str(kv.keys(), kv)
+		return f"""{{ {prop_string} }}"""
+
+
 
 	@staticmethod
 	def prop_str(fields, row):
