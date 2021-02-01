@@ -47,7 +47,7 @@ def test_cli(mocker, spark):
             '-d', 'file:///',
             '-c', generate_mhd_script_path,
             '-p', project_name,
-            '-e', 'mhd',
+            '-e', ext,
             '-t', 'scan.unittest',
             '-f', 'tests/test_config.yaml'])
 

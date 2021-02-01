@@ -4,7 +4,7 @@ from click.testing import CliRunner
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
-from data_processing.pathology.refined_table.annotation.generate import cli
+from data_processing.pathology.refined_table.annotation.generate_regional import cli
 import data_processing.common.constants as const
 from data_processing.common.Neo4jConnection import Neo4jConnection
 
