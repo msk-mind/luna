@@ -2,7 +2,7 @@ from data_processing.common.custom_logger import init_logger
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.Node import Node
 
-import os, socket
+import os, socket, pathlib
 
 
 class Container(object):
@@ -101,10 +101,10 @@ class Container(object):
         self.logger.info ("Lookup ID: %s", container_id)
 
         # Figure out how to match the node
-        if type(container_id) is str: 
+        if type(container_id) is str and not container_id.isdigit(): 
             if not "::" in container_id: self.logger.warning ("Qualified path %s doesn't look like one...", container_id)
             self._match_clause = f"""WHERE container.QualifiedPath = '{container_id}'"""
-        elif type(container_id) is int:
+        elif (type(container_id) is str and container_id.isdigit()) or (type(container_id) is int):
             self._match_clause = f"""WHERE id(container) = {container_id} """
         else:
             raise RuntimeError("Invalid container_id type not (str, int)")
@@ -245,9 +245,9 @@ class Container(object):
         if "path" in node.properties.keys(): 
             path = node.properties["path"]
             if path.split(":")[0] == "file":
-                node.path = path.split(":")[-1]
+                node.path = pathlib.Path(path.split(":")[-1])
             else:
-                node.path = path
+                node.path = pathlib.Path(path)
         
             # Output and check
             self.logger.info ("Resolved %s -> %s", node.properties["path"], node.path)
@@ -280,10 +280,14 @@ class Container(object):
         Tries to create nodes for all committed nodes
         """
         # Loop through all nodes in commit dictonary, and run query
+        # Will fully overwrite existing nodes, since we assume changes in the FS already occured
+         
         for n in self._node_commits.values():
             self.logger.info ("Committing %s", n.get_create_str())
             self._conn.query(f""" 
                 MATCH (container) {self._match_clause}
-                MERGE (da:{n.get_create_str()})
-                MERGE (container)-[:HAS_DATA]->(da)"""
+                MERGE (container)-[:HAS_DATA]->(da:{n.get_match_str()})
+                    ON MATCH  SET da = {n.get_map_str()}
+                    ON CREATE SET da = {n.get_map_str()}
+                """
             )
