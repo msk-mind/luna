@@ -49,6 +49,10 @@ class Container(object):
 
     $ container.get("dicom", "data.Namespace='test'").properties['Modality']
         > 'CT'
+    
+    The container includes a logging method:
+    $ container.logger.info("I am processing the CT")
+        > 'yyyy-mm-dd h:m:s,ms - Container [1] - INFO - I am processing the CT'
 
     
     """
@@ -226,6 +230,7 @@ class Container(object):
         # Catches bad queries
         # If successfull query, reconstruct a Node object
         if res is None or len(res) != 1: 
+            self.logger.error("get() can only return a single node, multiple nodes queried, returning None")
             return None
         else:
             node = Node(res[0]['data']['type'], res[0]['data']['name'], dict(res[0]['data'].items()))
