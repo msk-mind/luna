@@ -129,6 +129,7 @@ def concatenate_geojsons_from_list(geojson_list):
         return base_geojson
 
     for json_dict in geojson_list[1:]:
+        print(f"Concatenating {len(geojson_list)} geojsons")
         base_geojson['features'].extend(json_dict['features'])
 
     return base_geojson

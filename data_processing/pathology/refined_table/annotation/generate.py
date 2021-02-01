@@ -217,10 +217,9 @@ def create_concat_geojson_table():
     concatgeojson_df = concatgeojson_df.withColumn("concat_geojson", concatenate_regional_geojsons_udf("geojson_list")).cache()
 
     concatgeojson_df = concatgeojson_df \
-        .withColumn("concat_geojson_record_uuid", concat_geojson_record_uuid_udf(to_json("concat_geojson"), array(lit("SVCONCATGEOJSON"), "labelset"))) \
-        .withColumn("user", lit("CONCAT"))
-
-    concatgeojson_df = concatgeojson_df.select("sv_project_id", "slideviewer_path", "slide_id", "labelset", "concat_geojson", "user", "concat_geojson_record_uuid")
+        .drop("geojson_list") \
+        .withColumn("concat_geojson_record_uuid", concat_geojson_record_uuid_udf(to_json("concat_geojson"), array(lit("SVCONCATGEOJSON"), "labelset")))
+    
     concatgeojson_df = concatgeojson_df.withColumn("latest", lit(True))   \
                             .withColumn("date_added", current_timestamp())    \
                             .withColumn("date_updated", current_timestamp())

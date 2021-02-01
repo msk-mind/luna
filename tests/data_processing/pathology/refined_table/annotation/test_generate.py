@@ -10,9 +10,8 @@ import data_processing.common.constants as const
 from data_processing.common.Neo4jConnection import Neo4jConnection
 
 
-geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/GEOJSON_dsn"
-concat_geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/CONCAT_GEOJSON_ds"
-concat_geojson_data_path = "tests/data_processing/testdata/data/test-project/pathology_annotations/regional_concat_geojsons"
+geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/REGIONAL_GEOJSON_dsn"
+concat_geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/REGIONAL_CONCAT_GEOJSON_ds"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -23,7 +22,7 @@ def spark():
     yield spark
 
     print('------teardown------')
-    clean_up_paths = [geojson_table_path, concat_geojson_data_path, concat_geojson_table_path]
+    clean_up_paths = [geojson_table_path, concat_geojson_table_path]
     for path in clean_up_paths:
         if os.path.exists(path):
             shutil.rmtree(path)
