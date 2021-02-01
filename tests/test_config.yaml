@@ -13,11 +13,11 @@ spark_application_config:
   - spark.cores.max: 2
 
   # 5% total memory in cluster
-  - spark.executor.memory: 6g
+  - spark.executor.memory: 8g
   
   # 80% executor memory
-  - spark.executor.pyspark.memory: 6g
+  - spark.executor.pyspark.memory: 8g
 
-  - spark.sql.shuffle.partitions: 30
+  - spark.sql.shuffle.partitions: 60
 
-  - spark.driver.maxResultSize: 1g
+  - spark.driver.maxResultSize: 2g
