@@ -11,7 +11,7 @@ import data_processing.common.constants as const
 from data_processing.pathology.common.build_geojson_from_bitmap import build_geojson_from_bitmap, concatenate_regional_geojsons
 from data_processing.pathology.common.utils import get_add_triple_str
 
-from pyspark.sql.functions import udf, lit, col, first, last, desc, array, to_json, collect_list, current_timestamp, count
+from pyspark.sql.functions import udf, lit, col, first, last, desc, array, to_json, collect_list, current_timestamp
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType, IntegerType, ArrayType, MapType, StructType, StructField
 
