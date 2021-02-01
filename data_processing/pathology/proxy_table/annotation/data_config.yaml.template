@@ -16,6 +16,9 @@ REQUESTOR_EMAIL: jane@mskcc.org
 # project name decided by data coordination
 PROJECT: OV_16-158
 
+# project ID in SlideViewer
+PROJECT_ID: 141
+
 # source name of input data file
 SOURCE: slide_viewer
 
@@ -103,6 +106,9 @@ DATA_SIZE: 291337979
 BWLIMIT: 5G
 
 
+# slide viewer api url (must contain trailing slash)
+SLIDEVIEWER_API_URL = slideviewer_url
+
 # list of expert annotators
 USERS:
     - ellensol
@@ -152,10 +158,11 @@ LABEL_SETS:
       10: Necrosis
       11: Glass
 
-# an optional SlideViewer csv file to use that lists the names of the whole slide images and for which
-# the regional annotation proxy table generator should download regional annotations. If this field is left blank,
-# then the regional annotation proxy table generator will attempt to download this file from SlideViewer.
-USE_FILE: tests/data_processing/pathology/proxy_table/annotation/test_data/test_project.csv
+# an optional path to a SlideViewer csv file to use that lists the names of the whole slide images
+# and for which the regional annotation proxy table generator should download regional annotations.
+# If this field is left blank, then the regional annotation proxy table generator will attempt to
+# download this file from SlideViewer.
+SLIDEVIEWER_CSV_FILE: tests/data_processing/pathology/proxy_table/annotation/test_data/test_project.csv
 
-#
+# neo4j uri for populating graphs with ID maps from this dataset
 GRAPH_URI: bolt://localhost:7687

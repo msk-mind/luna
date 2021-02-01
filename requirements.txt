@@ -26,3 +26,4 @@ yamale==3.0.4
 pydicom==2.1.0
 pyradiomics==3.0.1
 flask_restx
+requests==2.25.1

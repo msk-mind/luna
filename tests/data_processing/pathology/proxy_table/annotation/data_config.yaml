@@ -16,6 +16,9 @@ REQUESTOR_EMAIL: jane@mskcc.org
 # project name decided by data coordination
 PROJECT: OV_16-158
 
+# project ID in SlideViewer
+PROJECT_ID: 141
+
 # source name of input data file
 SOURCE: slide_viewer
 
@@ -57,7 +60,7 @@ ROOT_PATH: tests/data_processing/pathology/proxy_table/annotation/test_data
 SOURCE_PATH: /data
 
 # root path for tables and file transfer
-LANDING_PATH: tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028
+LANDING_PATH: tests/data_processing/pathology/proxy_table/annotation/test_data
 
 # location where the data should be transferred on the destination machine.
 RAW_DATA_PATH: tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/raw_data
@@ -101,6 +104,9 @@ DATA_SIZE: 291337979
 # be nice and don't use all available bandwidth. Use up to 50% available bandwidth. The amount specified
 # here is the total bandwidth that will be used by all processes that are spawned for the data transfer.
 BWLIMIT: 5G
+
+# slide viewer api url (must contain trailing slash)
+SLIDEVIEWER_API_URL: slide_viewer_url
 
 
 # list of expert annotators
@@ -155,7 +161,7 @@ LABEL_SETS:
 # an optional SlideViewer csv file to use that lists the names of the whole slide images and for which
 # the regional annotation proxy table generator should download regional annotations. If this field is left blank,
 # then the regional annotation proxy table generator will attempt to download this file from SlideViewer.
-USE_FILE: tests/data_processing/pathology/proxy_table/annotation/test_data/test_project.csv
+SLIDEVIEWER_CSV_FILE:
 
 #
 GRAPH_URI: bolt://localhost:7687

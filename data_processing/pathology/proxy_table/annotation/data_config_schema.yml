@@ -8,6 +8,8 @@ REQUESTOR_EMAIL: any(str(required=True))
 
 PROJECT: any(str(required=True))
 
+PROJECT_ID: any(int(required=True))
+
 SOURCE: any(str(required=True))
 
 MODALITY: enum('clinical','radiology','pathology','genomics')
@@ -50,11 +52,13 @@ DATA_SIZE: int(required=True, min=0)
 #  (1024*1024), and "G" (or "GiB") is a gibibyte (1024*1024*1024)
 BWLIMIT: any(regex(r'^(\d+)(K|M|G)$'))
 
+SLIDEVIEWER_API_URL: any(str(required=True))
+
 USERS: list(str())
 
 GRAPH_URI: any(str(required=True))
 
-USE_FILE: any(str(required=False))
+SLIDEVIEWER_CSV_FILE: any(str(required=False))
 
 LABEL_SETS: include('DEFAULT_LABELS', 'PIXEL_CLASSIFIER_LABELS', 'OBJECT_CLASSIFIER_LABELS', 'SIMPLIFIED_PIXEL_CLASSIFIER_LABELS')
 ---
