@@ -26,7 +26,7 @@ class Node(object):
 		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namespace'], self.name)
 		self.properties["type"] = self.type
 
-	def setNamespace(self, namespace_id: str):
+	def set_namespace(self, namespace_id: str):
 		"""
 		Sets the namespace for this Node commits
 
@@ -82,7 +82,7 @@ class Node(object):
 		"""
 		fields = set(fields).intersection(set(row.keys()))
 
-		kv = [f" - {to_sql_field(x)}: '{row[x]}'" for x in fields]
+		kv = [f"   {to_sql_field(x)}: '{row[x]}'" for x in fields]
 		return '\n'.join(kv)
 	
 	@staticmethod

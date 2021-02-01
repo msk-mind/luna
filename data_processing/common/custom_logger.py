@@ -2,12 +2,24 @@ import logging
 import tempfile
 import os
 
+class MultilineFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord):
+        save_msg = str(record.msg)
+        output = ""
+        for line in save_msg.splitlines():
+            record.msg = line
+            output += super().format(record) + "\n"
+        output = output.rstrip()
+        record.msg     = save_msg
+        record.message = output
+        return output
 
-def init_logger(filename='data-processing.log'):
+
+def init_logger(filename='data-processing.log', logname='root'):
     # Logging configuration
     log_file = filename
 
-    logger = logging.getLogger()
+    logger = logging.getLogger(logname)
     if not logger.handlers:
         logger.setLevel(logging.INFO)
         # create file handler which logs even debug messages
@@ -17,7 +29,7 @@ def init_logger(filename='data-processing.log'):
         ch = logging.StreamHandler()
         ch.setLevel(logging.INFO)
         # create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = MultilineFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
         fh.setFormatter(formatter)
         # add the handlers to logger

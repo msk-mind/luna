@@ -108,7 +108,7 @@ def cli(template_file, config_file, process_string):
         if not os.path.exists(full_landing_path):
             os.makedirs(full_landing_path)
         shutil.copy(template_file, os.path.join(full_landing_path, "manifest.yaml"))
-        logger.info("template file copied to", os.path.join(full_landing_path, "manifest.yaml"))
+        logger.info("template file copied to %s", os.path.join(full_landing_path, "manifest.yaml"))
 
         # subprocess - create proxy table
         if 'delta' in processes or 'all' in processes:
