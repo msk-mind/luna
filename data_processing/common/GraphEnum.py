@@ -89,6 +89,7 @@ class GraphEnum(Enum):
 	scan = NodeType("scan", "metadata.SeriesInstanceUID")
 	png = NodeType("png", "png_record_uuid", ["metadata.SeriesInstanceUID", "label"])
 
+	# radiology
 	DICOM = [Graph(NodeType("patient", "metadata.PatientID"),
 				"HAS_CASE", 
 				accession_radiology_dicom),
@@ -109,3 +110,12 @@ class GraphEnum(Enum):
 	FEATURE = [Graph(png, "HAS_DATA",
 			NodeType("feature", "feature_record_uuid", ["metadata.SeriesInstanceUID", "label"]))]
 
+	# pathology
+	slide = NodeType("slide", "slide_id")
+	REGIONAL_BITMASK = [Graph(slide,
+					 "HAS_DATA",
+					 NodeType("regional_bitmask", "bmp_record_uuid", ["user","date_updated","latest"]))]
+
+	REGIONAL_CONCAT_GEOJSON = [Graph(slide,
+								 "HAS_DATA",
+								 NodeType("regional_geojson", "geojson_record_uuid", ["labelset","date_updated","latest"]))]
