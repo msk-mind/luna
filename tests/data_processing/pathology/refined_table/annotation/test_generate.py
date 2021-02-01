@@ -1,7 +1,6 @@
 import pytest
 import os, shutil
 from click.testing import CliRunner
-import os
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
