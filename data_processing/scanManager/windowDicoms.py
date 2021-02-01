@@ -52,10 +52,10 @@ def cli(cohort_id, container_id, method_id):
     for dcm in input_node.path.parent.glob("*dcm"):
         ds = dcmread(dcm)
         hu = ds.RescaleSlope * ds.pixel_array + ds.RescaleIntercept
-        ds.save_as (os.path.join( output_dir, dcm.stem + ".cthu.dcm"  ))
         if method_data['window']:
             hu = np.clip( hu, method_data['window.low_level'], method_data['window.high_level']   )
         ds.PixelData = hu.astype(ds.pixel_array.dtype).tobytes()
+        ds.save_as (os.path.join( output_dir, dcm.stem + ".cthu.dcm"  ))
 
     # Prepare metadata and commit
     record_type = "dicom"
