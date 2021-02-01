@@ -1,5 +1,7 @@
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.Neo4jConnection import Neo4jConnection
+from data_processing.common.Node import Node
+
 import os, socket
 
 
@@ -30,7 +32,7 @@ class Container(object):
     $ container.saveAll()
         > Committing dicom:globals{  name: 'DCM-0123', QualifiedPath: 'test::DCM-0123', Namespace: 'test', type: 'dicom' , path: 'file:/some/path/1.dcm'}
 
-    $ node = container.ls("dicom")
+    $ node = container.listData("dicom")
         > ----------------------------------------------------------------------------------------------------
           name: DCM-0123
           type: dicom
@@ -96,7 +98,7 @@ class Container(object):
 
         # Figure out how to match the node
         if type(container_id) is str: 
-            if not "::" in container_id: self.logger.warning ("Are you sure %s is a qualified path?", container_id)
+            if not "::" in container_id: self.logger.warning ("Qualified path %s doesn't look like one...", container_id)
             self._match_clause = f"""WHERE container.QualifiedPath = '{container_id}'"""
         elif type(container_id) is int:
             self._match_clause = f"""WHERE id(container) = {container_id} """
@@ -145,7 +147,26 @@ class Container(object):
         """
         self.logger.info ("Attached: %s", self._attached)
 
-    def ls(self, type, view=""):
+
+    def listTypes(self):
+        """
+        Query graph DB container node for dependent data nodes, and list them  
+
+        :example: listTypes()
+            > INFO - Available types: {'radiomics', 'dicom', 'mha', 'globals', 'dataset', 'nrrd', 'mhd'}
+        """
+
+        # Run query, subject to SQL injection attacks (but right now, our entire system is)
+        res = self._conn.query(f"""
+            MATCH (container)-[:HAS_DATA]-(data) 
+            {self._match_clause}
+            RETURN labels(data)"""
+        )
+        types = set()
+        [types.update(rec['labels(data)']) for rec in res ]
+        self.logger.info("Available types: %s", types)
+
+    def listData(self, type, view=""):
         """
         Query graph DB container node for dependent data nodes, and list them  
 
@@ -178,7 +199,7 @@ class Container(object):
 
     def get(self, type, view=""):
         """
-        Query graph DB container node for dependent data nodes.  
+        Query graph DB container node for dependent data nodes, and return one 
         Parses the path field URL for various cases, and sets the node.path attribute with a corrected path
         Note: namespace is not a default filter for get nodes, but is for adding them (i.e., one can write data under a different namespace)
 
