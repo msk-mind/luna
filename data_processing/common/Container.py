@@ -291,6 +291,3 @@ class Container(object):
                     ON CREATE SET da = {n.get_map_str()}
                 """
             )
-
-
-
