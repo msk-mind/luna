@@ -1,4 +1,5 @@
 import pytest
+import requests
 from pytest_mock import mocker
 import os, shutil
 from pyspark import SQLContext
@@ -9,10 +10,10 @@ from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.pathology.proxy_table.annotation.generate import cli
 import data_processing.common.constants as const
+from tests.data_processing.pathology.proxy_table.annotation.request_mock import MockResponse
 
-
-proxy_table_path = "tests/data_processing/testdata/data/test-project/tables/BITMASK"
-landing_path = "tests/data_processing/testdata/data/test-project/wsi-project"
+# proxy_table_path = "tests/data_processing/testdata/data/test-project/tables/BITMASK"
+# landing_path = "tests/data_processing/testdata/data/test-project/wsi-project"
 
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
@@ -22,13 +23,19 @@ def spark(monkeypatch):
     monkeypatch.setenv("MIND_GPFS_DIR", "")
     monkeypatch.setenv("HDFS_URI", "")
 
+    # mock request to slideviewer api
+    def mock_get(*args, **kwargs):
+        return MockResponse()
+
+    monkeypatch.setattr(requests, "get", mock_get)
+
     yield spark
 
     print('------teardown------')
-    if os.path.exists(proxy_table_path):
-        shutil.rmtree(proxy_table_path)
-    if os.path.exists(landing_path):
-        shutil.rmtree(landing_path)
+    # if os.path.exists(proxy_table_path):
+    #     shutil.rmtree(proxy_table_path)
+    # if os.path.exists(landing_path):
+    #     shutil.rmtree(landing_path)
         
 def test_cli(spark):
 

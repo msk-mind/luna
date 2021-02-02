@@ -11,7 +11,7 @@ import requests
 from data_processing.common.config import ConfigSet
 from data_processing.common.constants import DATA_CFG
 from data_processing.pathology.proxy_table.annotation.slideviewer_client import get_slide_id, fetch_slide_ids
-
+from tests.data_processing.pathology.proxy_table.annotation.request_mock import MockResponse
 
 SLIDEVIEWER_CSV_FILE = None
 
@@ -55,16 +55,6 @@ def test_fetch_slide_ids_with_csv(monkeypatch):
                       ['2013;HobS13-283072057511;145198.svs', '145198'],
                       ['2013;HobS13-283072057512;145199.svs', '145199']]
 
-
-class MockResponse:
-
-    content = b'Title: IRB #16-1144 Subset\n' \
-                    b'Description: Subset of cases from related master project #141\n' \
-                    b'Users: jane@mskcc.org, jo@mskcc.org\n' \
-                    b'CoPathTest: false\n' \
-                    b'2013;HobS13-283072057510;1435197.svs\n' \
-                    b'2013;HobS13-283072057511;1435198.svs\n' \
-                    b'2013;HobS13-283072057512;1435199.svs\n'
 
 # when optional field SLIDEVIEWER_CSV_FILE is not specified in the data config yaml
 def test_fetch_slide_ids_without_csv(monkeypatch):
