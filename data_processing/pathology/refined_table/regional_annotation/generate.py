@@ -8,10 +8,10 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.utils import generate_uuid_dict
 import data_processing.common.constants as const
-from data_processing.pathology.common.build_geojson_from_bitmap import build_geojson_from_bitmap, concatenate_regional_geojsons
+from data_processing.pathology.common.build_geojson_from_annotation import build_geojson_from_annotation, concatenate_regional_geojsons
 from data_processing.pathology.common.utils import get_add_triple_str
 
-from pyspark.sql.functions import udf, lit, col, first, last, desc, array, to_json, collect_list, current_timestamp
+from pyspark.sql.functions import udf, lit, col, first, last, desc, array, to_json, collect_list, current_timestamp, explode
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType, IntegerType, ArrayType, MapType, StructType, StructField
 
@@ -19,6 +19,12 @@ import yaml, os, json
 
 logger = init_logger()
 
+# geojson struct - example
+# {"type":"FeatureCollection",
+# "features":[{"type":"Feature",
+#               "properties":{"label_num":"1","label_name":"tissue_1"},
+#               "geometry":{"type":"Polygon",
+#                           "coordinates":[[1261,2140],[1236,2140],[1222,2134],[1222,2132],[1216,2125]]}}]}
 geojson_struct = StructType([
     StructField("type", StringType()),
     StructField("features",
@@ -43,12 +49,9 @@ geojson_struct = StructType([
                    "See data_ingestion_template.yaml.template")
 @click.option('-f', '--config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-l', '--label_file', default='data_processing/pathology/config/regional_etl_configuration.yaml',
-              type=click.Path(exists=True),
-              help="path to label configuration file containing application configuration.")
 @click.option('-p', '--process_string', default='geojson',
               help='comma separated list of processes to run or replay: e.g. geojson OR concat')
-def cli(template_file, config_file, label_file, process_string):
+def cli(template_file, config_file, process_string):
     """
     This module generates geojson table for pathology data based on information specified in the template file.
 
@@ -56,33 +59,31 @@ def cli(template_file, config_file, label_file, process_string):
         python -m data_processing.pathology.refined_table.annotation.generate \
         --template_file {PATH_TO_TEMPLATE_FILE} \
         --config_file {PATH_TO_CONFIG_FILE} \
-        --label-file {PATH_TO_LABEL_FILE} \
         --process_string geojson
 
     """
     with CodeTimer(logger, 'generate GEOJSON table'):
-        processes = process_string.lower().strip().split(",")
         logger.info('data template: ' + template_file)
         logger.info('config_file: ' + config_file)
-        logger.info('processes: ' + str(processes))
+        logger.info('process_string: ' + process_string)
 
         # load configs
         cfg = ConfigSet(name=const.DATA_CFG, config_file=template_file)
         cfg = ConfigSet(name=const.APP_CFG,  config_file=config_file)
 
-        if 'geojson' in processes:
-            exit_code = create_geojson_table(label_file)
+        if 'geojson' == process_string:
+            exit_code = create_geojson_table()
             if exit_code != 0:
                 logger.error("GEOJSON table creation had errors. Exiting.")
                 return
 
-        if 'concat' in processes:
+        if 'concat' == process_string:
             exit_code = create_concat_geojson_table()
             if exit_code != 0:
                 logger.error("CONCAT-GEOJSON table creation had errors. Exiting.")
                 return
 
-def create_geojson_table(label_file):
+def create_geojson_table():
     """
     Vectorizes npy array annotation file into polygons and builds GeoJson with the polygon features.
     Creates a geojson file per labelset.
@@ -101,39 +102,31 @@ def create_geojson_table(label_file):
 
     df = spark.read.format("delta").load(bitmask_table_path)
 
-    # need bitmask df if numpy generation not run, read in bitmask table currently available
-    df = df.toPandas()
-    logger.info(df)
-
     # explode table by labelsets
-    with open(label_file) as labelfile:
-        label_config = yaml.safe_load(labelfile)
-
-    label_config = label_config[cfg.get_value(path=const.DATA_CFG+'::PROJECT')]
+    label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
     labelsets = [cfg.get_value(path=const.DATA_CFG+'::USE_LABELSET')]
 
     if cfg.get_value(path=const.DATA_CFG+'::USE_ALL_LABELSETS'):
-        labelsets = list(label_config['label_sets'].keys())
+        labelsets = list(label_config.keys())
+    labelset_column = array([lit(key) for key in labelsets])
 
-    df["labelset"] = [labelsets] * len(df)
-    df = df.explode('labelset')
-
-    df = spark.createDataFrame(df)
+    df = df.withColumn("labelset_list", labelset_column)
+    # explode labelsets
+    df = df.select("slideviewer_path", "slide_id", "sv_project_id", "bmp_record_uuid", "user", "npy_filepath", explode("labelset_list").alias("labelset"))
+    df.show()
 
     # setup variables needed for build geojson UDF
     contour_level = cfg.get_value(path=const.DATA_CFG+'::CONTOUR_LEVEL')
     polygon_tolerance = cfg.get_value(path=const.DATA_CFG+'::POLYGON_TOLERANCE')
-    dmt = cfg.get_value(path=const.DATA_CFG+'::PROJECT')
-    configuration_file = os.path.join(os.getcwd(), label_file)
 
     # populate geojson and geojson_record_uuid
-    build_geojson_from_bitmap_udf = udf(build_geojson_from_bitmap, geojson_struct)
+    build_geojson_from_bitmap_udf = udf(build_geojson_from_annotation, geojson_struct)
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
 
     # cache to not have udf called multiple times
     df = df.withColumn("geojson",
-                       build_geojson_from_bitmap_udf(lit(configuration_file),lit(dmt),"npy_filepath","labelset",lit(contour_level),lit(polygon_tolerance))) \
+                       build_geojson_from_bitmap_udf(lit(str(label_config)), "npy_filepath","labelset",lit(contour_level),lit(polygon_tolerance))) \
             .cache()
     df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVGEOJSON"), "labelset")))
 
@@ -196,12 +189,8 @@ def create_concat_geojson_table():
     concat_geojson_table_path = const.TABLE_LOCATION(cfg)
 
     concatgeojson_df = spark.read.format("delta").load(geojson_table_path)
-    concatgeojson_df = concatgeojson_df.toPandas()
-
     # only use latest annotations for concatenating.
-    concatgeojson_df = concatgeojson_df.loc[(concatgeojson_df['latest'] == True)]
-
-    concatgeojson_df = spark.createDataFrame(concatgeojson_df)
+    concatgeojson_df = concatgeojson_df.filter("latest")
 
     # make geojson string list for slide + labelset
     concatgeojson_df = concatgeojson_df \
@@ -214,6 +203,7 @@ def create_concat_geojson_table():
     concat_geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
 
+    # cache to not have udf called multiple times
     concatgeojson_df = concatgeojson_df.withColumn("concat_geojson", concatenate_regional_geojsons_udf("geojson_list")).cache()
 
     concatgeojson_df = concatgeojson_df \

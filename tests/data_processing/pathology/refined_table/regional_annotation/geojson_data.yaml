@@ -16,7 +16,7 @@ DATA_TYPE: REGIONAL_GEOJSON
 DATASET_NAME: dsn
 
 # specify the name of a single labelset to use within the etl config.
-USE_LABELSET: default_labels
+USE_LABELSET: DEFAULT_LABELS
 
 # generate geojsons for all of the provided dmt's labelsets
 USE_ALL_LABELSETS: False
@@ -32,3 +32,16 @@ GRAPH_URI: localhost:7897
 GRAPH_USER: graphuser
 
 GRAPH_PW: graphpw
+
+# list of expert annotators
+USERS:
+  - joe
+  - jill
+
+LABEL_SETS:
+  DEFAULT_LABELS:
+    1: tissue_1
+    2: tissue_2
+    3: tissue_3
+    4: tissue_4
+    5: tissue_5

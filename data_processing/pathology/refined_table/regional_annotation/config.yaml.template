@@ -15,9 +15,6 @@ DATA_TYPE: REGIONAL_GEOJSON
 # dataset name
 DATASET_NAME: dataset_name
 
-# DMT found in etl config (msk_mind_ov, msk_mind_lung)
-DMT: msk_mind_ov
-
 # specify the name of a single labelset to use within the etl config.
 USE_LABELSET: default_labels
 
@@ -35,3 +32,22 @@ GRAPH_URI: host:ip
 GRAPH_USER: replace_with_user
 
 GRAPH_PW: replace_with_password
+
+# list of expert annotators
+USERS:
+    - bjoe
+    - bjill
+
+LABEL_SETS:
+    DEFAULT_LABELS:
+        1: lympho_rich_stroma
+        2: lympho_poor_stroma
+        3: lympho_rich_tumor
+        4: lympho_poor_tumor
+        5: adipocytes
+    PIXEL_CLASSIFIER_LABELS:
+        1: Stroma
+        2: Stroma
+        3: Tumor
+        4: Tumor
+        5: Adipocytes

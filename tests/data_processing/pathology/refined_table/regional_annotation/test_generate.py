@@ -4,7 +4,7 @@ from click.testing import CliRunner
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
-from data_processing.pathology.refined_table.annotation.generate_regional import cli
+from data_processing.pathology.refined_table.regional_annotation.generate import cli
 import data_processing.common.constants as const
 from data_processing.common.Neo4jConnection import Neo4jConnection
 
@@ -33,8 +33,7 @@ def test_cli_geojson(mocker, spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
-        ['-t', 'tests/data_processing/pathology/refined_table/annotation/geojson_data.yaml',
-         '-l', 'tests/data_processing/pathology/test_regional_etl_config.yaml',
+        ['-t', 'tests/data_processing/pathology/refined_table/regional_annotation/geojson_data.yaml',
          '-f', 'tests/test_config.yaml',
          '-p', 'geojson'])
 
@@ -53,8 +52,7 @@ def test_cli_concat(mocker, spark):
 
     runner = CliRunner()
     result = runner.invoke(cli,
-                           ['-t', 'tests/data_processing/pathology/refined_table/annotation/geojson_concat_data.yaml',
-                            '-l', 'tests/data_processing/pathology/test_regional_etl_config.yaml',
+                           ['-t', 'tests/data_processing/pathology/refined_table/regional_annotation/geojson_concat_data.yaml',
                             '-f', 'tests/test_config.yaml',
                             '-p', 'concat'])
 

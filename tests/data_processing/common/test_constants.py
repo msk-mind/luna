@@ -10,7 +10,7 @@ from data_processing.common.config import ConfigSet
 import data_processing.common.constants as const
 
 def test_source_table_name():
-    c1 = ConfigSet(name=const.DATA_CFG, config_file='tests/data_processing/pathology/refined_table/annotation/geojson_data.yaml')
+    c1 = ConfigSet(name=const.DATA_CFG, config_file='tests/data_processing/pathology/refined_table/regional_annotation/geojson_data.yaml')
 
     assert const.TABLE_NAME(c1, is_source=True) == "REGIONAL_BITMASK_dsn"
 
