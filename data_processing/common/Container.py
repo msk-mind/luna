@@ -104,7 +104,7 @@ class Container(object):
         if isinstance(container_id, str) and not container_id.isdigit(): 
             if not "::" in container_id: self.logger.warning ("Qualified path %s doesn't look like one...", container_id)
             self._match_clause = f"""WHERE container.QualifiedPath = '{container_id}'"""
-        elif isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
+        elif (isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
             self._match_clause = f"""WHERE id(container) = {container_id} """
         else:
             raise RuntimeError("Invalid container_id type not (str, int)")
@@ -291,3 +291,6 @@ class Container(object):
                     ON CREATE SET da = {n.get_map_str()}
                 """
             )
+
+
+
