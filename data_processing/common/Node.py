@@ -47,7 +47,7 @@ class Node(object):
 	def get_all_props(self):
 		"""
 		Name is a required field, but it's still a property of this node.
-		Return the properties as a duct including the name property!
+		Return the properties as a dict including the name property!
 		"""
 		kv = self.properties
 		kv["name"] = self.name
@@ -56,7 +56,7 @@ class Node(object):
 
 	def get_create_str(self):
 		"""
-		Returns a string representation of the node
+		Returns a string representation of the node with all properties
 		"""
 		kv = self.get_all_props()
 
@@ -65,7 +65,7 @@ class Node(object):
 
 	def get_match_str(self):
 		"""
-		Returns a string representation of the node
+		Returns a string representation of the node with only the QualifiedPath as a property
 		"""
 		kv = self.get_all_props()
 
