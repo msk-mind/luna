@@ -36,6 +36,9 @@ class Node(object):
 		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namespace'], self.name)
 
 	def __repr__(self):
+		"""
+		Returns a string representation of the node
+		"""
 		kv = self.get_all_props()
 		prop_string = self.prop_str_repr(kv.keys(), kv)
 		bigline = "-"*100
@@ -44,7 +47,7 @@ class Node(object):
 	def get_all_props(self):
 		"""
 		Name is a required field, but it's still a property of this node.
-		Return the properties including the name property!
+		Return the properties as a duct including the name property!
 		"""
 		kv = self.properties
 		kv["name"] = self.name
@@ -52,21 +55,27 @@ class Node(object):
 		return kv
 
 	def get_create_str(self):
-
+		"""
+		Returns a string representation of the node
+		"""
 		kv = self.get_all_props()
 
 		prop_string = self.prop_str(kv.keys(), kv)
 		return f"""{self.type}:globals{{ {prop_string} }}"""
 
 	def get_match_str(self):
-
+		"""
+		Returns a string representation of the node
+		"""
 		kv = self.get_all_props()
 
 		prop_string = self.prop_str( ["QualifiedPath"], kv)
 		return f"""{self.type}:globals{{ {prop_string} }}"""
 	
 	def get_map_str(self):
-
+		"""
+		Returns the properties as a cypher map
+		"""
 		kv = self.get_all_props()
 
 		prop_string = self.prop_str(kv.keys(), kv)
