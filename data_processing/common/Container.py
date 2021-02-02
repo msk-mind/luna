@@ -101,10 +101,10 @@ class Container(object):
         self.logger.info ("Lookup ID: %s", container_id)
 
         # Figure out how to match the node
-        if type(container_id) is str and not container_id.isdigit(): 
+        if isinstance(container_id, str) and not container_id.isdigit(): 
             if not "::" in container_id: self.logger.warning ("Qualified path %s doesn't look like one...", container_id)
             self._match_clause = f"""WHERE container.QualifiedPath = '{container_id}'"""
-        elif (type(container_id) is str and container_id.isdigit()) or (type(container_id) is int):
+        elif isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
             self._match_clause = f"""WHERE id(container) = {container_id} """
         else:
             raise RuntimeError("Invalid container_id type not (str, int)")
