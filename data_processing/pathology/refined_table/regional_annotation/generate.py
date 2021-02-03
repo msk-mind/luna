@@ -124,6 +124,8 @@ def create_geojson_table():
     df = df.withColumn("geojson",
                        build_geojson_from_bitmap_udf(lit(str(label_config)), "npy_filepath","labelset",lit(contour_level),lit(polygon_tolerance))) \
             .cache()
+    # drop empty geojsons that may have been created
+    df = df.dropna(subset=["geojson"])
 
     # populate uuid
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())

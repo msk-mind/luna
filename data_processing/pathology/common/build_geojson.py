@@ -134,7 +134,7 @@ def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, 
     except TimeoutError as err:
         print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
 
-        return np.nan
+        return None
 
     # disables alarm
     signal.alarm(0)

@@ -149,8 +149,9 @@ def create_proxy_table():
         MapType(StringType(), StringType())
     )
     download_point_annotation_udf = udf(download_point_annotation,  point_json_struct)
-    df = df.withColumn("sv_json", download_point_annotation_udf("slideviewer_path", "sv_project_id", "user")) \
-            .dropna(subset=["sv_json"])
+    df = df.withColumn("sv_json", download_point_annotation_udf("slideviewer_path", "sv_project_id", "user")).cache()
+    # drop empty jsons that may have been created
+    df = df.dropna(subset=["sv_json"])
 
     df.show(10, False)
 
