@@ -12,7 +12,7 @@ import requests
 from data_processing.common.config import ConfigSet
 from data_processing.common.constants import DATA_CFG
 from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import get_slide_id, fetch_slide_ids, \
-    download_zip
+    download_zip, unzip
 from tests.data_processing.pathology.proxy_table.regional_annotation.request_mock import CSVMockResponse, \
     ZIPMockResponse
 
@@ -20,6 +20,7 @@ SLIDEVIEWER_API_URL = None
 SLIDEVIEWER_CSV_FILE = None
 LANDING_PATH = None
 PROJECT_ID = None
+zipfile_path = None
 
 def setup_module(module):
     """ setup any state specific to the execution of the given module."""
@@ -31,6 +32,7 @@ def setup_module(module):
     module.LANDING_PATH = cfg.get_value(path=DATA_CFG + '::LANDING_PATH')
     module.PROJECT_ID = cfg.get_value(path=DATA_CFG + '::PROJECT_ID')
     module.SLIDEVIEWER_CSV_FILE = cfg.get_value(path=DATA_CFG + '::SLIDEVIEWER_CSV_FILE')
+    module.zipfile_path = os.path.join(LANDING_PATH, '24bpp-topdown-320x240.bmp.zip')
 
     if os.path.exists(LANDING_PATH):
         shutil.rmtree(LANDING_PATH)
@@ -88,8 +90,16 @@ def test_downlaod_zip(monkeypatch):
 
     monkeypatch.setattr(requests, "get", mock_get)
 
-    zip_filepath = os.path.join(LANDING_PATH, '24bpp-topdown-320x240.bmp.zip')
-    download_zip(SLIDEVIEWER_API_URL, zip_filepath, chunk_size=128)
+    download_zip(SLIDEVIEWER_API_URL, zipfile_path, chunk_size=128)
 
 
-    assert os.path.isfile(zip_filepath) == True
+    assert os.path.isfile(zipfile_path) == True
+
+def test_unzip(monkeypatch):
+    shutil.copyfile('tests/data_processing/pathology/proxy_table/'
+                            'regional_annotation/test_data/input/24bpp-topdown-320x240.bmp.zip',
+                    zipfile_path)
+
+    unzipped_file_descriptor = unzip(zipfile_path)
+
+    assert len(unzipped_file_descriptor.read('24bpp-topdown-320x240.bmp')) == 230454
