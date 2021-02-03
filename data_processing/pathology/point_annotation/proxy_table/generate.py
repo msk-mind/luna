@@ -29,11 +29,10 @@ def download_sv_point_annotation(url):
     :param url: slide viewer api to call
     :return: json response
     """
-    print(url)
     response = urlopen(url)
     data = json.load(response)
     print(data)
-    print(str(data) != "[]")
+
     if(str(data) != '[]'):
         return data
     else:
@@ -45,6 +44,7 @@ def download_point_annotation(slideviewer_path, project_id, user):
     print (f" >>>>>>> Processing [{slideviewer_path}] <<<<<<<<")
 
     url = "https://slides-res.mskcc.org/slides/" + str(user) + "@mskcc.org/projects;" + str(project_id) + ';' + slideviewer_path + "/getSVGLabels/nucleus"
+    print(url)
 
     return download_sv_point_annotation(url)
 

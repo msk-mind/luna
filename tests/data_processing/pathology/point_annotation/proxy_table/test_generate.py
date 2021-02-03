@@ -33,5 +33,5 @@ def test_cli(spark):
 
     df = spark.read.format("delta").load(point_json_table_path)
     df.show(10, False)
-    assert df.count() == 2
+    assert df.count() == 1
     df.unpersist()
