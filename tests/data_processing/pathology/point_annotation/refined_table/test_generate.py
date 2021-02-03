@@ -8,7 +8,7 @@ from data_processing.pathology.point_annotation.refined_table.generate import cl
 import data_processing.common.constants as const
 
 
-point_geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/POINT_GEOJSON_ds"
+point_geojson_table_path = "tests/data_processing/pathology/point_annotation/testdata/test-project/tables/POINT_GEOJSON_dsn"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -26,12 +26,12 @@ def test_cli(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
-        ['-t', 'tests/data_processing/pathology/point_annotation/testdata/point_geojson_config.yaml',
-         '-f', 'tests/test_config.yaml'])
+        ['-d', 'tests/data_processing/pathology/point_annotation/testdata/point_geojson_config.yaml',
+         '-a', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
 
     df = spark.read.format("delta").load(point_geojson_table_path)
     df.show(10, False)
-    assert df.count() == 2
+    assert df.count() == 1
     df.unpersist()

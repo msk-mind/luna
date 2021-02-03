@@ -11,7 +11,7 @@ DATA_TYPE: POINT_GEOJSON
 PROJECT: test-project
 
 # dataset name
-DATASET_NAME: ds
+DATASET_NAME: dsn
 
 # Annotation label sets defined for this project
 LABEL_SETS:

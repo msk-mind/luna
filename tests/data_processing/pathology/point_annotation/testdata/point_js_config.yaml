@@ -5,7 +5,7 @@ ROOT_PATH: tests/data_processing/pathology/point_annotation/testdata
 DATA_TYPE: POINT_RAW_JSON
 
 # MIND project name
-PROJECT: test_project
+PROJECT: test-project
 
 # dataset name
 DATASET_NAME: ds
@@ -15,7 +15,7 @@ PROJECT_ID: 8
 
 # Users that provide expert annotations for this project
 USERS:
-  - joe
+  - rosed2
   - jill
 
 # an optional path to a SlideViewer csv file to use that lists the names of the whole slide images

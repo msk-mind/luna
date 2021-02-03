@@ -15,8 +15,9 @@ from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.utils import generate_uuid_dict
-from data_processing.common.build_geojson 	import build_geojson_from_pointclick_json
 import data_processing.common.constants as const
+from data_processing.pathology.common.build_geojson import build_geojson_from_pointclick_json
+from data_processing.pathology.common.utils import get_labelset_keys
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
@@ -39,28 +40,8 @@ geojson_struct = ArrayType(
     ])
 )
 
-
-# todo: move to common module
-def get_labelset_mapping():
-    cfg = ConfigSet()
-    label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
-    labelset_mapping = label_config[cfg.get_value(path=const.DATA_CFG+'::USE_LABELSET')]
-    labelset_mapping_ret = labelset_mapping.copy()
-    return labelset_mapping_ret
-
-def get_labelset_keys():
-    cfg = ConfigSet()
-    label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
-    labelsets = [cfg.get_value(path=const.DATA_CFG+'::USE_LABELSET')]
-
-    if cfg.get_value(path=const.DATA_CFG+'::USE_ALL_LABELSETS'):
-        labelsets = list(label_config.keys())
-
-    return labelsets
-
-
 @click.command()
-@click.option('-t', '--data_config_file', default=None, type=click.Path(exists=True),
+@click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
               help="path to data yaml file containing information required to build pathology point annotation geojsons. "
                    "See data-config.yaml.template")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
@@ -113,6 +94,7 @@ def create_refined_table():
 
     # populate "date_added", "date_updated","latest", "sv_json_record_uuid"
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
+    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
     df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVPTGEOJSON"), "labelset"))) \
         .withColumn("latest", lit(True)) \
         .withColumn("date_added", current_timestamp()) \
@@ -139,3 +121,6 @@ def create_refined_table():
         .withColumn("latest", col("date_latest")==col("date_updated")) \
         .drop("date_latest") \
         .write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(geojson_table_path)
+
+if __name__ == "__main__":
+    cli()
