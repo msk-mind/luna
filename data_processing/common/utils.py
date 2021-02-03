@@ -45,6 +45,22 @@ def generate_uuid_binary(content, prefix):
 	return "-".join(prefix)
 
 
+def generate_uuid_dict(json_str, prefix):
+	"""
+	Returns hash of the json string, preceded by the prefix.
+	:param json_str: str representation of json
+	:param prefix: list e.g. ["SVGEOJSON","default-label"]
+	:return: v
+	"""
+	json_bytes = json.dumps(json_str).encode('utf-8')
+
+	import EnsureByteContext
+	with EnsureByteContext.EnsureByteContext():
+		uuid = FileHash('sha256').hash_file(BytesIO(json_bytes))
+
+	prefix.append(uuid)
+	return "-".join(prefix)
+
 def does_not_contain(token, value):
 	"""
 	Validate that `token` is not a substring of `value`

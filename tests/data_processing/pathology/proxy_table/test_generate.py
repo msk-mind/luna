@@ -1,7 +1,5 @@
 import pytest
-from pytest_mock import mocker
 import os, shutil
-from pyspark import SQLContext
 from click.testing import CliRunner
 import os
 

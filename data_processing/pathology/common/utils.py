@@ -8,4 +8,6 @@ def get_add_triple_str(slide_id, type, record_uuid):
     :param record_uuid: record_uuid value
     :return: query string
     """
-    return f'''MERGE (n:slide{{slide_id: "{slide_id}"}}) MERGE (m:{type}{{{type}: "{record_uuid}"}}) MERGE (n)-[r:HAS_RECORD]->(m)'''
+    add_str = f'''MERGE (n:slide{{slide_id: "{slide_id}"}}) MERGE (m:{type}{{{type}: "{record_uuid}"}}) MERGE (n)-[r:HAS_RECORD]->(m)'''
+    print(add_str)
+    return add_str
