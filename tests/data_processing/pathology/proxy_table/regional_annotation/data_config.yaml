@@ -53,14 +53,14 @@ NUM_PARTITION: 10
 HOST:
 
 # mind root data path.
-ROOT_PATH: tests/data_processing/pathology/proxy_table/annotation/test_data
+ROOT_PATH: tests/data_processing/pathology/proxy_table/regional_annotation/test_data
 
 # file path to the source data file(s). if host is specified, the source data location is determined
 # as host:source_path, else the source data location is determined simply as source_path.
 SOURCE_PATH: /data
 
 # root path for tables and file transfer
-LANDING_PATH: tests/data_processing/pathology/proxy_table/annotation/test_data/output
+LANDING_PATH: tests/data_processing/pathology/proxy_table/regional_annotation/test_data/output
 
 # location where the data should be transferred on the destination machine.
 RAW_DATA_PATH: tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/raw_data

@@ -29,7 +29,7 @@ import numpy as np
 
 import yaml, os
 
-from data_processing.pathology.proxy_table.annotation.slideviewer_client import fetch_slide_ids
+from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import fetch_slide_ids
 
 logger = init_logger()
 
@@ -43,14 +43,15 @@ Image.MAX_IMAGE_PIXELS = 5000000000
 
 def convert_bmp_to_npy(bmp_file, output_folder):
     """
-    Reads a bmp file and creates friendly numpy ndarray file in the uint8 format in the output directory specified, with extention .annot.npy
-    Usage:
-        convert_bmp_to_npy(/path/to/image.bmp, /path/to/output/folder)
+    Reads a bmp file and creates friendly numpy ndarray file in the uint8 format in the output
+    directory specified, with extention .annot.npy
+
+    :param bmp_file - /path/to/image.bmp
+    :param output_folder - /path/to/output/folder
 
 
     Troubleshooting:
         Make sure Pillow is upgraded to version 8.0.0 if getting an Unsupported BMP Size OS Error
-
     """
     if not '.bmp' in bmp_file:
         return ''
@@ -235,42 +236,45 @@ def create_proxy_table(app_config_file, data_config_file):
     df = df.drop(columns=['SLIDE_BMP_DIR', 'TMP_ZIP_DIR', 'SLIDEVIEWER_API_URL'])
 
     # get slides with non-empty annotations
-    # df = df.replace("", np.nan)
-    # df = df.dropna()
-
-    print(df)
+    df = df.replace("", np.nan)
+    df = df.dropna()
 
     # add to graph
     # df.apply(lambda x: add_bmp_triple(x.slide_id, x.bmp_record_uuid), axis=1)
 
-    # # convert annotation bitmaps to numpy arrays
-    # SLIDE_NPY_DIR = os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), 'regional_npys')
-    # if not os.path.exists(SLIDE_NPY_DIR):
-    #     os.makedirs(SLIDE_NPY_DIR)
-    #
+    # convert annotation bitmaps to numpy arrays
+    SLIDE_NPY_DIR = os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), 'regional_npys')
+    os.makedirs(SLIDE_NPY_DIR, exist_ok=True)
+
     # convert to numpy
-    # df["npy_filepath"] = df.apply(lambda x: convert_bmp_to_npy(x.bmp_filepath, SLIDE_NPY_DIR), axis=1)
-    # print("Table after adding bitmap to npy conversion:")
-    # print(df)
-    #
-    # spark_bitmask_df = spark.createDataFrame(df)
-    #
-    # # create proxy bitmask table
-    # # update main table if exists, otherwise create main table
-    # BITMASK_TABLE_PATH = os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH') , 'table/regional_bitmask')
-    # FS_BITMASK_TABLE_PATH = "file:///" + BITMASK_TABLE_PATH
-    # if not os.path.exists(BITMASK_TABLE_PATH):
-    #     os.makedirs(BITMASK_TABLE_PATH)
-    #     spark_bitmask_df.write.format("delta").save(FS_BITMASK_TABLE_PATH)
-    # else:
-    #     from delta.tables import DeltaTable
-    #     bitmask_table = DeltaTable.forPath(spark, FS_BITMASK_TABLE_PATH)
-    #     bitmask_table.alias("main_bitmask_table") \
-    #         .merge(spark_bitmask_df.alias("bmp_annotation_updates"),
-    #                "main_bitmask_table.bmp_record_uuid = bmp_annotation_updates.bmp_record_uuid") \
-    #         .whenMatchedUpdate(set={"date_updated": "bmp_annotation_updates.date_updated"}) \
-    #         .whenNotMatchedInsertAll() \
-    #         .execute()
+    df["npy_filepath"] = df.apply(lambda x: convert_bmp_to_npy(x.bmp_filepath, SLIDE_NPY_DIR), axis=1)
+
+    spark_bitmask_df = spark.createDataFrame(df)
+
+    print("Table after adding bitmap to npy conversion:")
+    print(spark_bitmask_df.show(truncate=False))
+
+    # create proxy bitmask table
+    # update main table if exists, otherwise create main table
+    BITMASK_TABLE_PATH = os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH') , 'table/regional_bitmask')
+    write_uri = os.environ["HDFS_URI"]
+    save_path = os.path.join(write_uri, BITMASK_TABLE_PATH)
+    if not os.path.exists(BITMASK_TABLE_PATH):
+        logger.info("creating new bitmask table")
+        os.makedirs(BITMASK_TABLE_PATH)
+        spark_bitmask_df.coalesce(48).write.format("delta").save(save_path)
+    else:
+        logger.info("updating existing bitmask table")
+        from delta.tables import DeltaTable
+        bitmask_table = DeltaTable.forPath(spark, save_path)
+        bitmask_table.alias("main_bitmask_table") \
+            .merge(spark_bitmask_df.alias("bmp_annotation_updates"),
+                   "main_bitmask_table.bmp_record_uuid = bmp_annotation_updates.bmp_record_uuid") \
+            .whenMatchedUpdate(set={"date_updated": "bmp_annotation_updates.date_updated"}) \
+            .whenNotMatchedInsertAll() \
+            .execute()
+
+    return exit_code
 
 
 @click.command()

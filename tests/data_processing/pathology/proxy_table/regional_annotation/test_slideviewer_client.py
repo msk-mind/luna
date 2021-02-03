@@ -10,8 +10,8 @@ from pytest_mock import mocker
 import requests
 from data_processing.common.config import ConfigSet
 from data_processing.common.constants import DATA_CFG
-from data_processing.pathology.proxy_table.annotation.slideviewer_client import get_slide_id, fetch_slide_ids
-from tests.data_processing.pathology.proxy_table.annotation.request_mock import MockResponse
+from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import get_slide_id, fetch_slide_ids
+from tests.data_processing.pathology.proxy_table.regional_annotation.request_mock import MockResponse
 
 SLIDEVIEWER_CSV_FILE = None
 

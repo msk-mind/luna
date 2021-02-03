@@ -8,9 +8,9 @@ import os
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
-from data_processing.pathology.proxy_table.annotation.generate import cli
+from data_processing.pathology.proxy_table.regional_annotation.generate import cli
 import data_processing.common.constants as const
-from tests.data_processing.pathology.proxy_table.annotation.request_mock import MockResponse
+from tests.data_processing.pathology.proxy_table.regional_annotation.request_mock import MockResponse
 
 # proxy_table_path = "tests/data_processing/testdata/data/test-project/tables/BITMASK"
 # landing_path = "tests/data_processing/testdata/data/test-project/wsi-project"
