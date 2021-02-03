@@ -38,12 +38,12 @@ def convert_bmp_to_npy(bmp_file, output_folder):
     Reads a bmp file and creates friendly numpy ndarray file in the uint8 format in the output
     directory specified, with extention .annot.npy
 
-    :param bmp_file - /path/to/image.bmp
-    :param output_folder - /path/to/output/folder
-
-
     Troubleshooting:
         Make sure Pillow is upgraded to version 8.0.0 if getting an Unsupported BMP Size OS Error
+
+    :param bmp_file - /path/to/image.bmp
+    :param output_folder - /path/to/output/folder
+    :return filepath to file containing numpy array
     """
     if not '.bmp' in bmp_file:
         return ''

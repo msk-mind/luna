@@ -95,7 +95,8 @@ def test_downlaod_zip(monkeypatch):
 
     assert os.path.isfile(zipfile_path) == True
 
-def test_unzip(monkeypatch):
+
+def test_unzip():
     shutil.copyfile('tests/data_processing/pathology/proxy_table/'
                             'regional_annotation/test_data/input/24bpp-topdown-320x240.bmp.zip',
                     zipfile_path)
