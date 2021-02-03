@@ -26,13 +26,6 @@ CONTOUR_LEVEL: 0.5
 # this is scaled up dynamically (lower resolution) if the annotation is very large
 POLYGON_TOLERANCE: 1
 
-# graph db connection
-GRAPH_URI: host:ip
-
-GRAPH_USER: replace_with_user
-
-GRAPH_PW: replace_with_password
-
 # list of expert annotators
 USERS:
     - bjoe
