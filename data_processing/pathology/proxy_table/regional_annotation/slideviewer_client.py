@@ -84,7 +84,7 @@ def download_zip(url, dest_path, chunk_size=128):
 
     :url - slideviewer url to download zip from
     :dest_path - file path where zipfile should be saved
-    :chunk_size - size of chunks to batch out during download
+    :chunk_size - size in bytes of chunks to batch out during download
     :return True if zipfile downloaded and saved successfully, else false
     '''
     response = requests.get(url, stream=True)

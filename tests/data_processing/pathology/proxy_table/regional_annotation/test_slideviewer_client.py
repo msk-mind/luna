@@ -4,14 +4,17 @@ Created on January 31, 2021
 @author: pashaa@mskcc.org
 '''
 import os
+import shutil
 
 import pytest
 from pytest_mock import mocker
 import requests
 from data_processing.common.config import ConfigSet
 from data_processing.common.constants import DATA_CFG
-from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import get_slide_id, fetch_slide_ids
-from tests.data_processing.pathology.proxy_table.regional_annotation.request_mock import MockResponse
+from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import get_slide_id, fetch_slide_ids, \
+    download_zip
+from tests.data_processing.pathology.proxy_table.regional_annotation.request_mock import CSVMockResponse, \
+    ZIPMockResponse
 
 SLIDEVIEWER_API_URL = None
 SLIDEVIEWER_CSV_FILE = None
@@ -29,13 +32,16 @@ def setup_module(module):
     module.PROJECT_ID = cfg.get_value(path=DATA_CFG + '::PROJECT_ID')
     module.SLIDEVIEWER_CSV_FILE = cfg.get_value(path=DATA_CFG + '::SLIDEVIEWER_CSV_FILE')
 
+    if os.path.exists(LANDING_PATH):
+        shutil.rmtree(LANDING_PATH)
+    os.makedirs(LANDING_PATH)
+
 
 def teardown_module(module):
     """ teardown any state that was previously setup with a setup_module
     method.
     """
-    if os.path.exists(module.SLIDEVIEWER_CSV_FILE):
-        os.remove(module.SLIDEVIEWER_CSV_FILE)
+    shutil.rmtree(LANDING_PATH)
 
 
 def test_get_slide_id():
@@ -64,7 +70,7 @@ def test_fetch_slide_ids_with_csv(monkeypatch):
 def test_fetch_slide_ids_without_csv(monkeypatch):
     # works for any url argument
     def mock_get(*args, **kwargs):
-        return MockResponse()
+        return CSVMockResponse()
 
     monkeypatch.setattr(requests, "get", mock_get)
 
@@ -74,6 +80,16 @@ def test_fetch_slide_ids_without_csv(monkeypatch):
                       ['2013;HobS13-283072057511;1435198.svs', '1435198'],
                       ['2013;HobS13-283072057512;1435199.svs', '1435199']]
 
-    assert os.path.isfile(SLIDEVIEWER_CSV_FILE) == True
+
+def test_downlaod_zip(monkeypatch):
+    # works for any url argument
+    def mock_get(*args, **kwargs):
+        return ZIPMockResponse()
+
+    monkeypatch.setattr(requests, "get", mock_get)
+
+    zip_filepath = os.path.join(LANDING_PATH, '24bpp-topdown-320x240.bmp.zip')
+    download_zip(SLIDEVIEWER_API_URL, zip_filepath, chunk_size=128)
 
 
+    assert os.path.isfile(zip_filepath) == True
