@@ -3,33 +3,25 @@ Created on January 30, 2021
 
 @author: pashaa@mskcc.org
 '''
-import glob
 import pathlib
 import shutil
-import sys
-import zipfile
 
 import click
-import requests
 from filehash import FileHash
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
-from data_processing.common.Neo4jConnection import Neo4jConnection
 import data_processing.common.constants as const
-from data_processing.pathology.common.build_geojson_from_bitmap import build_geojson_from_bitmap_pandas, concatenate_regional_geojsons_pandas
-from data_processing.pathology.common.utils import get_add_triple_str
 
-from pyspark.sql.functions import udf, lit, col, first, last, desc
-from pyspark.sql.window import Window
 import pandas as pd
 import numpy as np
 
-import yaml, os
+import os
 
-from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import fetch_slide_ids
+from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import fetch_slide_ids, download_zip, \
+    unzip
 
 logger = init_logger()
 
@@ -67,46 +59,6 @@ def convert_bmp_to_npy(bmp_file, output_folder):
 
     np.save(output_filepath, np.array(Image.open(bmp_file)))
     return output_filepath
-
-
-
-def download_zip(url, zipfile_path, chunk_size=128):
-    '''
-    # useful: https://stackoverflow.com/questions/9419162/download-returned-zip-file-from-url
-
-    Downloads zip from the specified URL and saves it to the specified file path.
-
-    :url - url to download zip from
-    :zipfile_path - file path where zipfile should be saved
-    :return True if zipfile downloaded and saved, else false
-    '''
-    response = requests.get(url, stream=True)
-    with open(zipfile_path, 'wb') as fd:
-        for chunk in response.iter_content(chunk_size=chunk_size):
-            if chunk == b'Label image not found.':  # message from slideviewer
-                return False
-            else:
-                fd.write(chunk)
-        return True
-
-    return False
-
-def unzip(zipfile_path):
-    '''
-
-    :param zipfile_path: path of zipfile to unzip
-    :return: readfile pointer to unzippped file if successfully unzippped, else None
-    '''
-    print(" +- UNZIP " + zipfile_path)
-    try:
-        return zipfile.ZipFile(zipfile_path)  # returns read file pointer
-    except zipfile.BadZipFile as err:
-        print(err)
-        print(' +- ERROR Dumping invalid Zipfile ' + zipfile_path + ':')
-        with open(zipfile_path, 'r') as zipf:
-            print(zipf.read())
-
-        return None
 
 
 def process_regional_annotation_slide_row_pandas(row: pd.DataFrame) -> pd.DataFrame:
@@ -335,7 +287,7 @@ def cli(data_config_file, app_config_file):
         logger.info("template file copied to" + os.path.join(full_landing_path, "manifest.yaml"))
 
         # create proxy table
-        exit_code = create_proxy_table(app_config_file, data_config_file)
+        exit_code = create_proxy_table()
         if exit_code != 0:
             logger.error("Delta table creation had errors. Exiting.")
             return

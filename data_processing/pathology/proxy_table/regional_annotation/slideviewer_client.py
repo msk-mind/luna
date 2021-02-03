@@ -6,6 +6,8 @@ Created on January 31, 2021
 Functions for downloading regional annotation bmps from SlideViewer
 '''
 import os
+import zipfile
+
 import requests
 from data_processing.common.config import ConfigSet
 from data_processing.common.constants import DATA_CFG
@@ -72,3 +74,44 @@ def fetch_slide_ids(url, project_id, dest_dir, csv_file=None):
             slides.append([full_filename, slidename])
 
     return slides
+
+
+def download_zip(url, dest_path, chunk_size=128):
+    '''
+    # useful: https://stackoverflow.com/questions/9419162/download-returned-zip-file-from-url
+
+    Downloads zip from the specified URL and saves it to the specified file path.
+
+    :url - slideviewer url to download zip from
+    :dest_path - file path where zipfile should be saved
+    :chunk_size - size of chunks to batch out during download
+    :return True if zipfile downloaded and saved successfully, else false
+    '''
+    response = requests.get(url, stream=True)
+    with open(dest_path, 'wb') as fd:
+        for chunk in response.iter_content(chunk_size=chunk_size):
+            if chunk == b'Label image not found.':  # message from slideviewer
+                return False
+            else:
+                fd.write(chunk)
+        return True
+
+    return False
+
+
+def unzip(zipfile_path):
+    '''
+
+    :param zipfile_path: path of zipfile to unzip
+    :return: readfile pointer to unzippped file if successfully unzippped, else None
+    '''
+    print(" +- UNZIP " + zipfile_path)
+    try:
+        return zipfile.ZipFile(zipfile_path)  # returns read file pointer
+    except zipfile.BadZipFile as err:
+        print(err)
+        print(' +- ERROR Dumping invalid Zipfile ' + zipfile_path + ':')
+        with open(zipfile_path, 'r') as zipf:
+            print(zipf.read())
+
+        return None
