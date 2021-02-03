@@ -1,4 +1,4 @@
-from data_processing.pathology.common.build_geojson_from_annotation import *
+from data_processing.pathology.common.build_geojson import *
 import os
 import numpy as np
 
@@ -53,3 +53,16 @@ def test_concatenate_regional_geojsons_one_geojson():
 
     assert isinstance(res, dict)
     assert 1 == len(res['features'])
+
+def test_build_geojson_from_pointclick_json():
+
+    res = build_geojson_from_pointclick_json("{'DEFAULT_LABELS': {0: 'tissue_1', 2: 'tissue_2', 3: 'tissue_3', 4: 'tissue_4', 5: 'tissue_5'}}",
+                                             "DEFAULT_LABELS",
+                                             [{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"tissue_1"},
+                                              {"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1040","y":"477","class":"3","classname":"tissue_3"}])
+
+    assert 2 == len(res)
+    assert "Feature" == res[0]['type']
+    assert "PathAnnotationObject" == res[0]['id']
+    assert isinstance(res[0]['properties'], dict)
+    assert 2 == len(res[0]['geometry']['coordinates'])

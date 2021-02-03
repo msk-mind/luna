@@ -8,7 +8,7 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.utils import generate_uuid_dict
 import data_processing.common.constants as const
-from data_processing.pathology.common.build_geojson_from_annotation import build_geojson_from_annotation, concatenate_regional_geojsons
+from data_processing.pathology.common.build_geojson import build_geojson_from_annotation, concatenate_regional_geojsons
 from data_processing.pathology.common.utils import get_add_triple_str
 
 from pyspark.sql.functions import udf, lit, col, first, last, desc, array, to_json, collect_list, current_timestamp, explode

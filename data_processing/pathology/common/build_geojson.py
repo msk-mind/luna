@@ -19,6 +19,40 @@ geojson_base = {
     "features": []
 }
 
+def build_geojson_from_pointclick_json(labelsets, labelset, sv_json):
+    """
+    Build geojson from slideviewer json.
+
+    :param labelsets: dictionary of labelset as string {labelset: {label number: label name}}
+    :param labelset: a labelset e.g. default_labels
+    :param sv_json: list of dictionaries, from slideviewer
+    :return: geojson list
+    """
+    print("Building geojson for labelset " + str(labelset))
+
+    labelsets = ast.literal_eval(labelsets)
+    mappings = labelsets[labelset]
+
+    output_geojson = []
+    for entry in sv_json:
+        point = {}
+        x = int(entry['x'])
+        y = int(entry['y'])
+        class_num = int(entry['class'])
+        if class_num not in mappings:
+            continue
+        class_name = mappings[class_num]
+        coordinates = [x,y]
+
+        point["type"] = "Feature"
+        point["id"] = "PathAnnotationObject"
+        point["geometry"] = {"type": "Point",  "coordinates": coordinates}
+        point["properties"] = {"classification": {"name": class_name}}
+        output_geojson.append(point)
+
+    return output_geojson
+
+
 # adapted from: https://github.com/ijmbarr/image-processing-with-numpy/blob/master/image-processing-with-numpy.ipynb
 def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, contour_level, polygon_tolerance):
     """
