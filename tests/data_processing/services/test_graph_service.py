@@ -25,7 +25,7 @@ def test_cli_dicom_table(mocker):
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/dicom-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/dicom-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
@@ -38,7 +38,7 @@ def test_cli_mha_table(mocker):
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/mha-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/mha-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
@@ -51,7 +51,7 @@ def test_cli_mhd_table(mocker):
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/mhd-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/mhd-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
@@ -64,7 +64,7 @@ def test_cli_png_table(mocker):
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/png-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/png-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
@@ -77,7 +77,7 @@ def test_cli_feature_table(mocker):
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/feature-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/feature-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
@@ -89,7 +89,7 @@ def test_cli_regional_bitmask_table(mocker):
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/regional_bitmask-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/regional_bitmask-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
@@ -101,7 +101,7 @@ def test_cli_regional_geojson_table(mocker):
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/regional_geojson-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/regional_geojson-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0

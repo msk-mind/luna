@@ -1,4 +1,4 @@
-ROOT_PATH: tests/data_processing/testdata/data
+ROOT_PATH: tests/data_processing/services/testdata
 
 PROJECT: test-project
 
