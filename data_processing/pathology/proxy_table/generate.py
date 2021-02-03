@@ -12,16 +12,13 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
-from data_processing.common.Neo4jConnection import Neo4jConnection
 import data_processing.common.constants as const
+from data_processing.common.utils import generate_uuid
 
-from pyspark.sql.functions import udf, lit, col
+from pyspark.sql.functions import udf, lit, col, array
 from pyspark.sql.types import StringType, MapType
-from pyspark import SparkFiles
 
-from io import BytesIO
 import shutil, sys, importlib, glob, yaml, os, subprocess, time
-from filehash import FileHash
 from pathlib import Path
 
 import openslide 
@@ -36,16 +33,6 @@ APP_CFG = 'APP_CFG'
 def sql_cleaner(s):
     return s.replace(".","_").replace(" ","_")
 
-def generate_uuid(path):
-    """ Add WSI hash record """
-    posix_file_path = path.split(':')[-1]
-
-    rec_hash = FileHash('sha256').hash_file(posix_file_path)
-
-    record_uuid = f'WSI-{rec_hash}'
-
-    return record_uuid
-
 def parse_slide_id(path):
     """ Slide stem is their slide id """
     posix_file_path = path.split(':')[-1]
@@ -59,8 +46,7 @@ def parse_openslide(path):
     """ Parse openslide header information """
 
     posix_file_path = path.split(':')[-1]
-    dirs, filename  = os.path.split(path)
- 
+
     with openslide.OpenSlide(posix_file_path) as slide_os_handle:
         kv = dict(slide_os_handle.properties) 
     
@@ -108,7 +94,7 @@ def cli(template_file, config_file, process_string):
         if not os.path.exists(full_landing_path):
             os.makedirs(full_landing_path)
         shutil.copy(template_file, os.path.join(full_landing_path, "manifest.yaml"))
-        logger.info("template file copied to", os.path.join(full_landing_path, "manifest.yaml"))
+        logger.info("template file copied to %s", os.path.join(full_landing_path, "manifest.yaml"))
 
         # subprocess - create proxy table
         if 'delta' in processes or 'all' in processes:
@@ -146,7 +132,7 @@ def create_proxy_table(config_file):
             option("recursiveFileLookup", "true"). \
             load(cfg.get_value(path=DATA_CFG+'::SOURCE_PATH')). \
             drop("content").\
-            withColumn("wsi_record_uuid", generate_uuid_udf  (col("path"))).\
+            withColumn("wsi_record_uuid", generate_uuid_udf  (col("path"), array(lit("WSI")))).\
             withColumn("slide_id",        parse_slide_id_udf (col("path"))).\
             withColumn("metadata",        parse_openslide_udf(col("path")))
 

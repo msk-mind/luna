@@ -1,18 +1,16 @@
 import pytest
 import os, shutil
 from click.testing import CliRunner
-import os
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
-from data_processing.pathology.refined_table.annotation.generate import cli
+from data_processing.pathology.refined_table.regional_annotation.generate import cli
 import data_processing.common.constants as const
 from data_processing.common.Neo4jConnection import Neo4jConnection
 
 
-geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/GEOJSON_dsn"
-concat_geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/CONCAT_GEOJSON_ds"
-concat_geojson_data_path = "tests/data_processing/testdata/data/test-project/pathology_annotations/regional_concat_geojsons"
+geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/REGIONAL_GEOJSON_dsn"
+concat_geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/REGIONAL_CONCAT_GEOJSON_ds"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -23,7 +21,7 @@ def spark():
     yield spark
 
     print('------teardown------')
-    clean_up_paths = [geojson_table_path, concat_geojson_data_path, concat_geojson_table_path]
+    clean_up_paths = [geojson_table_path, concat_geojson_table_path]
     for path in clean_up_paths:
         if os.path.exists(path):
             shutil.rmtree(path)
@@ -35,8 +33,7 @@ def test_cli_geojson(mocker, spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
-        ['-t', 'tests/data_processing/pathology/refined_table/annotation/geojson_data.yaml',
-         '-l', 'tests/data_processing/pathology/test_regional_etl_config.yaml',
+        ['-t', 'tests/data_processing/pathology/refined_table/regional_annotation/geojson_data.yaml',
          '-f', 'tests/test_config.yaml',
          '-p', 'geojson'])
 
@@ -55,8 +52,7 @@ def test_cli_concat(mocker, spark):
 
     runner = CliRunner()
     result = runner.invoke(cli,
-                           ['-t', 'tests/data_processing/pathology/refined_table/annotation/geojson_concat_data.yaml',
-                            '-l', 'tests/data_processing/pathology/test_regional_etl_config.yaml',
+                           ['-t', 'tests/data_processing/pathology/refined_table/regional_annotation/geojson_concat_data.yaml',
                             '-f', 'tests/test_config.yaml',
                             '-p', 'concat'])
 
