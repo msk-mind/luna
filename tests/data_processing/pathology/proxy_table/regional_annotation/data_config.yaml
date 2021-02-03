@@ -161,7 +161,7 @@ LABEL_SETS:
 # an optional SlideViewer csv file to use that lists the names of the whole slide images and for which
 # the regional annotation proxy table generator should download regional annotations. If this field is left blank,
 # then the regional annotation proxy table generator will attempt to download this file from SlideViewer.
-SLIDEVIEWER_CSV_FILE:
+SLIDEVIEWER_CSV_FILE: tests/data_processing/pathology/proxy_table/regional_annotation/test_data/input/slideviewer.csv
 
 #
 GRAPH_URI: bolt://localhost:7687

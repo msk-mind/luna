@@ -181,7 +181,7 @@ def process_regional_annotation_slide_row_pandas(row: pd.DataFrame) -> pd.DataFr
 
     return row
 
-def create_proxy_table(app_config_file, data_config_file):
+def create_proxy_table():
     '''
     Creates the pathology annotations proxy table with information contained in the specified data_config_file
 
@@ -197,7 +197,11 @@ def create_proxy_table(app_config_file, data_config_file):
                                  config_name=const.APP_CFG,
                                  app_name="data_processing.pathology.proxy_table.annotation.generate")
 
-    slides = fetch_slide_ids()
+    SLIDEVIEWER_API_URL = cfg.get_value(path=const.DATA_CFG + '::SLIDEVIEWER_API_URL')
+    SLIDEVIEWER_CSV_FILE = cfg.get_value(path=const.DATA_CFG + '::SLIDEVIEWER_CSV_FILE')
+    PROJECT_ID = cfg.get_value(path=const.DATA_CFG + '::PROJECT_ID')
+    LANDING_PATH = cfg.get_value(path=const.DATA_CFG + '::LANDING_PATH')
+    slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, LANDING_PATH, SLIDEVIEWER_CSV_FILE)
     df = pd.DataFrame(data=np.array(slides), columns=["slideviewer_path", "slide_id"])
 
     # initialize columns

@@ -25,37 +25,39 @@ def get_slide_id(full_filename):
     return full_filename.split(";")[-1].replace(".svs", "")
 
 
-def fetch_slide_ids():
+def fetch_slide_ids(url, project_id, dest_dir, csv_file=None):
     '''
-    Fetch the list of slide ids for the project from SlideViewer.
+    Fetch the list of slide ids from the slideviewer server for the project with the specified project id.
+
+    Alternately, a slideviewer csv file may be provided to override download from server.
+
+    :param url - slideviewer url. url may be None if csv_file is specified.
+    :param csv_file - an optional slideviewer csv file may be provided to override the need to download the file
+    :param project_id - slideviewer project id from which to fetch slide ids
+    :param dest_dir - directory where csv file should be downloaded
 
     :return: list of slide ids
     '''
-    cfg = ConfigSet()
-    SLIDEVIEWER_API_URL = cfg.get_value(path=DATA_CFG + '::SLIDEVIEWER_API_URL')
-    SLIDEVIEWER_CSV_FILE = cfg.get_value(path=DATA_CFG + '::SLIDEVIEWER_CSV_FILE')
-    PROJECT_ID = cfg.get_value(path=DATA_CFG + '::PROJECT_ID')
-    LANDING_PATH = cfg.get_value(path=DATA_CFG + '::LANDING_PATH')
 
     # run on all slides from specified SLIDEVIEWER_CSV file.
     # if file is not specified, then download file using slideviewer API
     # download entire slide set using project id
     # the file is then written to the landing directory
-    if SLIDEVIEWER_CSV_FILE == None or \
-            SLIDEVIEWER_CSV_FILE == '' or not \
-            os.path.exists(SLIDEVIEWER_CSV_FILE):
+    if csv_file == None or \
+            csv_file == '' or not \
+            os.path.exists(csv_file):
 
-        SLIDEVIEWER_CSV_FILE = os.path.join(LANDING_PATH,'project_'+str(PROJECT_ID)+'.csv')
+        csv_file = os.path.join(dest_dir, 'project_' + str(project_id) + '.csv')
 
-        url = SLIDEVIEWER_API_URL+'exportProjectCSV?pid={pid}'.format(pid=str(PROJECT_ID))
+        url = url + 'exportProjectCSV?pid={pid}'.format(pid=str(project_id))
         res = requests.get(url)
 
-        with open(SLIDEVIEWER_CSV_FILE, "wb") as slideoutfile:
+        with open(csv_file, "wb") as slideoutfile:
             slideoutfile.write(res.content)
 
     # read slide ids
     slides = []
-    with open(SLIDEVIEWER_CSV_FILE) as slideoutfile:
+    with open(csv_file) as slideoutfile:
         # skip first 4 lines
         count = 0
         for line in slideoutfile:

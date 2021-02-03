@@ -13,17 +13,21 @@ from data_processing.common.constants import DATA_CFG
 from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import get_slide_id, fetch_slide_ids
 from tests.data_processing.pathology.proxy_table.regional_annotation.request_mock import MockResponse
 
+SLIDEVIEWER_API_URL = None
 SLIDEVIEWER_CSV_FILE = None
+LANDING_PATH = None
+PROJECT_ID = None
 
 def setup_module(module):
     """ setup any state specific to the execution of the given module."""
     ConfigSet(
         name=DATA_CFG,
-        config_file='tests/data_processing/pathology/proxy_table/annotation/data_config.yaml')
+        config_file='tests/data_processing/pathology/proxy_table/regional_annotation/data_config.yaml')
     cfg = ConfigSet()
-    LANDING_PATH = cfg.get_value(path=DATA_CFG + '::LANDING_PATH')
-    PROJECT_ID = cfg.get_value(path=DATA_CFG + '::PROJECT_ID')
-    module.SLIDEVIEWER_CSV_FILE = os.path.join(LANDING_PATH, 'project_' + str(PROJECT_ID) + '.csv')
+    module.SLIDEVIEWER_API_URL = cfg.get_value(path=DATA_CFG + '::SLIDEVIEWER_API_URL')
+    module.LANDING_PATH = cfg.get_value(path=DATA_CFG + '::LANDING_PATH')
+    module.PROJECT_ID = cfg.get_value(path=DATA_CFG + '::PROJECT_ID')
+    module.SLIDEVIEWER_CSV_FILE = cfg.get_value(path=DATA_CFG + '::SLIDEVIEWER_CSV_FILE')
 
 
 def teardown_module(module):
@@ -49,7 +53,7 @@ def test_fetch_slide_ids_with_csv(monkeypatch):
 
     monkeypatch.setattr(ConfigSet, "get_value", mock_get_value)
 
-    slides = fetch_slide_ids()
+    slides = fetch_slide_ids(None, PROJECT_ID, LANDING_PATH, SLIDEVIEWER_CSV_FILE)
 
     assert slides == [['2013;HobS13-283072057510;145197.svs', '145197'],
                       ['2013;HobS13-283072057511;145198.svs', '145198'],
@@ -64,7 +68,7 @@ def test_fetch_slide_ids_without_csv(monkeypatch):
 
     monkeypatch.setattr(requests, "get", mock_get)
 
-    slides = fetch_slide_ids()
+    slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, LANDING_PATH)
 
     assert slides == [['2013;HobS13-283072057510;1435197.svs', '1435197'],
                       ['2013;HobS13-283072057511;1435198.svs', '1435198'],
