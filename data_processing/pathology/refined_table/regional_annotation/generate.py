@@ -5,19 +5,13 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
-from data_processing.common.utils import generate_uuid_dict
 import data_processing.common.constants as const
-
+from data_processing.pathology.common.build_geojson_from_annotation import build_geojson_from_annotation, concatenate_regional_geojsons
 from pyspark.sql.functions import udf, lit, col, first, last, desc, array, to_json, collect_list, current_timestamp, explode
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType, IntegerType, ArrayType, MapType, StructType, StructField
 
 import yaml, os, json
-import ast
-import numpy as np
-import copy
-import signal
-
 
 logger = init_logger()
 
@@ -54,69 +48,6 @@ geojson_base = {
 # max amount of time for a geojson to be generated. if generation surpasses this limit, it is likely the annotation file is
 # too large or they may be annotation artifacts present in the slide. currently set at 30 minute timeout
 TIMEOUT_SECONDS = 1800
-
-def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, contour_level, polygon_tolerance):
-    """
-    Builds geojson for all annotation labels in the specified labelset.
-
-    :param labelsets: dictionary of labelset as string {labelset: {label number: label name}}
-    :param annotation_npy_filepath: path to annotation npy file
-    :param labelset: a labelset e.g. default_labels
-    :param contour_level: value along which to find contours in the array
-    :param polygon_tolerance: polygon resolution
-    :return:
-    """
-    from build_geojson_from_annotation import add_contours_for_label, handler
-
-    labelsets = ast.literal_eval(labelsets)
-    mappings = labelsets[labelset]
-
-    print("\nBuilding GeoJSON annotation from npy file:", annotation_npy_filepath)
-
-    annotation = np.load(annotation_npy_filepath)
-    annotation_geojson = copy.deepcopy(geojson_base)
-
-    signal.signal(signal.SIGALRM, handler)
-    signal.alarm(TIMEOUT_SECONDS)
-
-    try:
-        for label_num in mappings:
-            annotation_geojson = add_contours_for_label(annotation_geojson, annotation, label_num, mappings, float(contour_level), float(polygon_tolerance))
-    except TimeoutError as err:
-        print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
-
-        return None
-
-    # disables alarm
-    signal.alarm(0)
-
-    # empty geojson created, return nan and delete from geojson table
-    if len(annotation_geojson['features']) == 0:
-        return np.nan
-
-    return annotation_geojson
-
-
-def concatenate_regional_geojsons(geojson_list):
-    """
-    Concatenates geojsons if there are more than one annotations for the labelset.
-
-    :param geojson_list: list of geojson strings
-    :return: concatenated geojson dict
-    """
-    # create json from str representations
-    geojson_list = [json.loads(geojson) for geojson in geojson_list]
-
-    concat_geojson = geojson_list[0]
-    if len(geojson_list) == 1:
-        return concat_geojson
-
-    # create concatenated geojson
-    for json_dict in geojson_list[1:]:
-        print(f"Concatenating {len(geojson_list)} geojsons")
-        concat_geojson['features'].extend(json_dict['features'])
-
-    return concat_geojson
 
 
 @click.command()

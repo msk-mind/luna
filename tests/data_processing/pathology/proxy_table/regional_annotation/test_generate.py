@@ -8,7 +8,7 @@ from pytest_mock import mocker
 import os, shutil
 from pyspark import SQLContext
 from click.testing import CliRunner
-import os
+import os, sys
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
@@ -58,6 +58,9 @@ def test_convert_bmp_to_npy():
 def test_process_regional_annotation_slide_row_pandas(monkeypatch):
     monkeypatch.setenv("MIND_GPFS_DIR", "")
     monkeypatch.setenv("HDFS_URI", "")
+
+    import data_processing
+    sys.modules['slideviewer_client'] = data_processing.pathology.proxy_table.regional_annotation.slideviewer_client
 
     # mock request to slideviewer api
     def mock_get(*args, **kwargs):

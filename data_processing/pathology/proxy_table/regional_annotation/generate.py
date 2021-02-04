@@ -23,8 +23,7 @@ import numpy as np
 
 import os
 
-from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import fetch_slide_ids, download_zip, \
-    unzip
+from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import fetch_slide_ids
 
 logger = init_logger()
 
@@ -171,8 +170,8 @@ def create_proxy_table():
         .withColumn('date_updated', current_timestamp()) \
         .withColumn('bmp_record_uuid', lit('')) \
         .withColumn('latest', lit(True)) \
-        .withColumn('SLIDE_BMP_DIR', lit(os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), 'regional_bmps'))) \
-        .withColumn('TMP_ZIP_DIR', lit(os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), TMP_ZIP_DIR))) \
+        .withColumn('SLIDE_BMP_DIR', lit(os.path.join(LANDING_PATH, 'regional_bmps'))) \
+        .withColumn('TMP_ZIP_DIR', lit(os.path.join(LANDING_PATH, TMP_ZIP_DIR))) \
         .withColumn('SLIDEVIEWER_API_URL', lit(cfg.get_value(const.DATA_CFG + '::SLIDEVIEWER_API_URL'))) \
 
     # explore by user list
@@ -202,11 +201,8 @@ def create_proxy_table():
     df = df.replace("n/a", np.nan)
     df = df.dropna()
 
-    # add to graph
-    # df.apply(lambda x: add_bmp_triple(x.slide_id, x.bmp_record_uuid), axis=1)
-
     # convert annotation bitmaps to numpy arrays
-    SLIDE_NPY_DIR = os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), 'regional_npys')
+    SLIDE_NPY_DIR = os.path.join(LANDING_PATH, 'regional_npys')
     os.makedirs(SLIDE_NPY_DIR, exist_ok=True)
 
     # convert to numpy
@@ -283,15 +279,12 @@ def cli(data_config_file, app_config_file):
 
         # write template file to manifest_yaml under LANDING_PATH
         # todo: write to hdfs without using local gpfs/
-        hdfs_path = os.environ['MIND_GPFS_DIR']
         landing_path = cfg.get_value(path=const.DATA_CFG + '::LANDING_PATH')
 
-        #full_landing_path = os.path.join(hdfs_path, landing_path)
-        full_landing_path = landing_path
-        if not os.path.exists(full_landing_path):
-            os.makedirs(full_landing_path)
-        shutil.copy(data_config_file, os.path.join(full_landing_path, "manifest.yaml"))
-        logger.info("template file copied to" + os.path.join(full_landing_path, "manifest.yaml"))
+        if not os.path.exists(landing_path):
+            os.makedirs(landing_path)
+        shutil.copy(data_config_file, os.path.join(landing_path, "manifest.yaml"))
+        logger.info("template file copied to" + os.path.join(landing_path, "manifest.yaml"))
 
         # create proxy table
         exit_code = create_proxy_table()
