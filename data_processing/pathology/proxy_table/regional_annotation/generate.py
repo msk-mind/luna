@@ -8,12 +8,15 @@ import shutil
 
 import click
 from filehash import FileHash
+from pyspark.sql.functions import array, current_timestamp, explode
+from pyspark.sql.types import StructType, StructField, StringType
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
+from pyspark.sql.functions import lit, col
 
 import pandas as pd
 import numpy as np
@@ -96,8 +99,8 @@ def process_regional_annotation_slide_row_pandas(row: pd.DataFrame) -> pd.DataFr
 
     success = download_zip(url, zipfile_path)
 
-    row["bmp_record_uuid"] = np.nan
-    row["bmp_filepath"] = np.nan
+    row["bmp_record_uuid"] = 'n/a'
+    row["bmp_filepath"] = 'n/a'
 
     if not success:
         os.remove(zipfile_path)
@@ -112,8 +115,8 @@ def process_regional_annotation_slide_row_pandas(row: pd.DataFrame) -> pd.DataFr
 
     # create bmp file from unzipped file
     os.makedirs(os.path.dirname(bmp_dest_path), exist_ok=True)
-    with open(bmp_dest_path, "wb") as f:
-        f.write(unzipped_file_descriptor.read("labels.bmp"))
+    with open(bmp_dest_path, "wb") as ff:
+        ff.write(unzipped_file_descriptor.read("labels.bmp"))  # all bmps from slideviewer are called labels.bmp
 
     print(" +- Added slide " + str(slide_id) + " to " + str(bmp_dest_path) + "  * * * * ")
 
@@ -151,46 +154,49 @@ def create_proxy_table():
     PROJECT_ID = cfg.get_value(path=const.DATA_CFG + '::PROJECT_ID')
     LANDING_PATH = cfg.get_value(path=const.DATA_CFG + '::LANDING_PATH')
     slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, LANDING_PATH, SLIDEVIEWER_CSV_FILE)
-    df = pd.DataFrame(data=np.array(slides), columns=["slideviewer_path", "slide_id"])
 
-    # initialize columns
-    df["sv_project_id"] = cfg.get_value(const.DATA_CFG+'::PROJECT_ID')
-    df["bmp_filepath"] = ''
-    df["user"] = [cfg.get_value(const.DATA_CFG+'::USERS')] * len(df)
-    current_time_utc = pd.to_datetime('now')
-    current_time = pd.Timestamp(current_time_utc, tz='UTC').tz_convert('US/Eastern')
-    df["date_added"] = current_time
-    df["date_updated"] = current_time
-    df["bmp_record_uuid"] = ''
-    df["latest"] = True
+    schema = StructType([
+        StructField('slideviewer_path', StringType()),
+        StructField('slide_id', StringType()),])
 
-    df = df.explode('user')
+    df = spark.createDataFrame(slides, schema)
 
-    df["bmp_filepath"] = ""
-    df["bmp_record_uuid"] = ""
-    # apply in pandas columns
-    SLIDE_BMP_DIR = os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), "regional_bmps")
+    # populate columns
+    TMP_ZIP_DIR = cfg.get_value(const.DATA_CFG + '::REQUESTOR_DEPARTMENT') + '_tmp_zips'
+    df = df.withColumn('sv_project_id', lit(cfg.get_value(const.DATA_CFG+'::PROJECT_ID'))) \
+        .withColumn('bmp_filepath', lit('')) \
+        .withColumn('users', array([lit(user) for user in cfg.get_value(const.DATA_CFG + '::USERS')])) \
+        .withColumn('date_added', current_timestamp()) \
+        .withColumn('date_updated', current_timestamp()) \
+        .withColumn('bmp_record_uuid', lit('')) \
+        .withColumn('latest', lit(True)) \
+        .withColumn('SLIDE_BMP_DIR', lit(os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), 'regional_bmps'))) \
+        .withColumn('TMP_ZIP_DIR', lit(os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), TMP_ZIP_DIR))) \
+        .withColumn('SLIDEVIEWER_API_URL', lit(cfg.get_value(const.DATA_CFG + '::SLIDEVIEWER_API_URL'))) \
 
-    df["SLIDE_BMP_DIR"] = SLIDE_BMP_DIR
-    TMP_ZIP_DIR = cfg.get_value(const.DATA_CFG+'::REQUESTOR_DEPARTMENT') + "_tmp_zips"
-    df["TMP_ZIP_DIR"] = os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), TMP_ZIP_DIR)
-    df["SLIDEVIEWER_API_URL"] = cfg.get_value(const.DATA_CFG + '::SLIDEVIEWER_API_URL')
+    # explore by user list
+    df = df.select('slideviewer_path',
+                   'slide_id',
+                   'sv_project_id',
+                   'bmp_filepath',
+                   explode('users').alias('user'),
+                   'date_added',
+                   'date_updated',
+                   'bmp_record_uuid',
+                   'latest',
+                   'SLIDE_BMP_DIR',
+                   'TMP_ZIP_DIR',
+                   'SLIDEVIEWER_API_URL'
+                   )
 
-    def cleanup_tmp_zip_dir():
-        if os.path.exists(df["TMP_ZIP_DIR"]):
-            shutil.rmtree(df["TMP_ZIP_DIR"])
-            logger.info("deleted tmp zip dir: "+ df["TMP_ZIP_DIR"])
-
-    df = spark.createDataFrame(df)
-
-    df = df.groupby(["slideviewer_path", "user"]) \
+    df = df.groupby(['slideviewer_path', 'user']) \
         .applyInPandas(process_regional_annotation_slide_row_pandas, schema=df.schema)
 
     df = df.toPandas()
     df = df.drop(columns=['SLIDE_BMP_DIR', 'TMP_ZIP_DIR', 'SLIDEVIEWER_API_URL'])
 
     # get slides with non-empty annotations
-    df = df.replace("", np.nan)
+    df = df.replace("n/a", np.nan)
     df = df.dropna()
 
     # add to graph

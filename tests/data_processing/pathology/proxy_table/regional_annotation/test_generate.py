@@ -78,7 +78,7 @@ def test_process_regional_annotation_slide_row_pandas(monkeypatch):
             'date_added': ['2021-02-02 10:07:55.802143'],
             'date_updated': ['2021-02-02 10:07:55.802143'],
             'bmp_record_uuid': [''],
-            'latest': ['true'],
+            'latest': [True],
             'SLIDE_BMP_DIR': ['tests/data_processing/pathology/proxy_table/regional_annotation/test_data/output/regional_bmps'],
             'TMP_ZIP_DIR': ['tests/data_processing/pathology/proxy_table/regional_annotation/test_data/output/gynocology_tmp_zips'],
             'SLIDEVIEWER_API_URL':['https://fakeslides-res.mskcc.org/']}
