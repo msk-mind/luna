@@ -7,13 +7,17 @@ from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.utils import generate_uuid_dict
 import data_processing.common.constants as const
-from data_processing.pathology.common.build_geojson_from_annotation import build_geojson_from_annotation, concatenate_regional_geojsons
 
 from pyspark.sql.functions import udf, lit, col, first, last, desc, array, to_json, collect_list, current_timestamp, explode
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType, IntegerType, ArrayType, MapType, StructType, StructField
 
 import yaml, os, json
+import ast
+import numpy as np
+import copy
+import signal
+
 
 logger = init_logger()
 
@@ -41,6 +45,80 @@ geojson_struct = StructType([
                 )
 ])
 
+# Base template for geoJSON file
+geojson_base = {
+    "type": "FeatureCollection",
+    "features": []
+}
+
+# max amount of time for a geojson to be generated. if generation surpasses this limit, it is likely the annotation file is
+# too large or they may be annotation artifacts present in the slide. currently set at 30 minute timeout
+TIMEOUT_SECONDS = 1800
+
+def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, contour_level, polygon_tolerance):
+    """
+    Builds geojson for all annotation labels in the specified labelset.
+
+    :param labelsets: dictionary of labelset as string {labelset: {label number: label name}}
+    :param annotation_npy_filepath: path to annotation npy file
+    :param labelset: a labelset e.g. default_labels
+    :param contour_level: value along which to find contours in the array
+    :param polygon_tolerance: polygon resolution
+    :return:
+    """
+    from build_geojson_from_annotation import add_contours_for_label, handler
+
+    labelsets = ast.literal_eval(labelsets)
+    mappings = labelsets[labelset]
+
+    print("\nBuilding GeoJSON annotation from npy file:", annotation_npy_filepath)
+
+    annotation = np.load(annotation_npy_filepath)
+    annotation_geojson = copy.deepcopy(geojson_base)
+
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(TIMEOUT_SECONDS)
+
+    try:
+        for label_num in mappings:
+            annotation_geojson = add_contours_for_label(annotation_geojson, annotation, label_num, mappings, float(contour_level), float(polygon_tolerance))
+    except TimeoutError as err:
+        print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
+
+        return None
+
+    # disables alarm
+    signal.alarm(0)
+
+    # empty geojson created, return nan and delete from geojson table
+    if len(annotation_geojson['features']) == 0:
+        return np.nan
+
+    return annotation_geojson
+
+
+def concatenate_regional_geojsons(geojson_list):
+    """
+    Concatenates geojsons if there are more than one annotations for the labelset.
+
+    :param geojson_list: list of geojson strings
+    :return: concatenated geojson dict
+    """
+    # create json from str representations
+    geojson_list = [json.loads(geojson) for geojson in geojson_list]
+
+    concat_geojson = geojson_list[0]
+    if len(geojson_list) == 1:
+        return concat_geojson
+
+    # create concatenated geojson
+    for json_dict in geojson_list[1:]:
+        print(f"Concatenating {len(geojson_list)} geojsons")
+        concat_geojson['features'].extend(json_dict['features'])
+
+    return concat_geojson
+
+
 @click.command()
 @click.option('-t', '--template_file', default=None, type=click.Path(exists=True),
               help="path to yaml template file containing information required for pathology proxy data ingestion. "
@@ -60,10 +138,9 @@ def cli(template_file, config_file, process_string):
         --process_string geojson
 
     """
-    with CodeTimer(logger, 'generate GEOJSON table'):
+    with CodeTimer(logger, f"generate {process_string} table"):
         logger.info('data template: ' + template_file)
         logger.info('config_file: ' + config_file)
-        logger.info('process_string: ' + process_string)
 
         # load configs
         cfg = ConfigSet(name=const.DATA_CFG, config_file=template_file)
@@ -108,17 +185,19 @@ def create_geojson_table():
     df = df.withColumn("labelset_list", labelset_column)
     # explode labelsets
     df = df.select("slideviewer_path", "slide_id", "sv_project_id", "bmp_record_uuid", "user", "npy_filepath", explode("labelset_list").alias("labelset"))
-    df.show()
 
     # setup variables needed for build geojson UDF
     contour_level = cfg.get_value(path=const.DATA_CFG+'::CONTOUR_LEVEL')
     polygon_tolerance = cfg.get_value(path=const.DATA_CFG+'::POLYGON_TOLERANCE')
 
     # populate geojson and geojson_record_uuid
-    build_geojson_from_bitmap_udf = udf(build_geojson_from_annotation, geojson_struct)
-    geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-
+    spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+    spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson_from_annotation.py")
+    build_geojson_from_bitmap_udf = udf(build_geojson_from_annotation, geojson_struct)
+    from utils import generate_uuid_dict
+    geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
+    
     # cache to not have udf called multiple times
     df = df.withColumn("geojson",
                        build_geojson_from_bitmap_udf(lit(str(label_config)), "npy_filepath","labelset",lit(contour_level),lit(polygon_tolerance))) \
@@ -186,9 +265,12 @@ def create_concat_geojson_table():
         .agg(collect_list("geojson_str").alias("geojson_list"))
 
     # set up udfs
+    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
+    spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+    spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson_from_annotation.py")
+    from utils import generate_uuid_dict
     concatenate_regional_geojsons_udf = udf(concatenate_regional_geojsons, geojson_struct)
     concat_geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
-    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
 
     # cache to not have udf called multiple times
     concatgeojson_df = concatgeojson_df.withColumn("concat_geojson", concatenate_regional_geojsons_udf("geojson_list")).cache()

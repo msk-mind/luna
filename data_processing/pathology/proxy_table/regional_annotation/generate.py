@@ -70,6 +70,7 @@ def process_regional_annotation_slide_row_pandas(row: pd.DataFrame) -> pd.DataFr
 
     :return updated dataframe with bmp metadata
     '''
+    from slideviewer_client import download_zip, unzip
 
     full_filename = row.slideviewer_path.item()
     user = row.user.item()
@@ -189,8 +190,10 @@ def create_proxy_table():
                    'SLIDEVIEWER_API_URL'
                    )
 
+    spark.sparkContext.addPyFile("./data_processing/pathology/proxy_table/regional_annotation/slideviewer_client.py")
     df = df.groupby(['slideviewer_path', 'user']) \
         .applyInPandas(process_regional_annotation_slide_row_pandas, schema=df.schema)
+    df.show()
 
     df = df.toPandas()
     df = df.drop(columns=['SLIDE_BMP_DIR', 'TMP_ZIP_DIR', 'SLIDEVIEWER_API_URL'])
@@ -210,12 +213,14 @@ def create_proxy_table():
     df["npy_filepath"] = df.apply(lambda x: convert_bmp_to_npy(x.bmp_filepath, SLIDE_NPY_DIR), axis=1)
 
     spark_bitmask_df = spark.createDataFrame(df)
+    spark_bitmask_df.show()
 
     # create proxy bitmask table
     # update main table if exists, otherwise create main table
-    BITMASK_TABLE_PATH = os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH') , 'table/regional_bitmask')
-    write_uri = os.environ["HDFS_URI"]
-    save_path = os.path.join(write_uri, BITMASK_TABLE_PATH)
+    BITMASK_TABLE_PATH = const.TABLE_LOCATION(cfg)
+    save_path = BITMASK_TABLE_PATH
+    #write_uri = os.environ["HDFS_URI"]
+    #save_path = os.path.join(write_uri, BITMASK_TABLE_PATH)
     if not os.path.exists(BITMASK_TABLE_PATH):
         logger.info("creating new bitmask table")
         os.makedirs(BITMASK_TABLE_PATH)
@@ -281,7 +286,8 @@ def cli(data_config_file, app_config_file):
         hdfs_path = os.environ['MIND_GPFS_DIR']
         landing_path = cfg.get_value(path=const.DATA_CFG + '::LANDING_PATH')
 
-        full_landing_path = os.path.join(hdfs_path, landing_path)
+        #full_landing_path = os.path.join(hdfs_path, landing_path)
+        full_landing_path = landing_path
         if not os.path.exists(full_landing_path):
             os.makedirs(full_landing_path)
         shutil.copy(data_config_file, os.path.join(full_landing_path, "manifest.yaml"))
