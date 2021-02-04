@@ -106,14 +106,11 @@ DATA_SIZE: 291337979
 BWLIMIT: 5G
 
 # slide viewer api url (must contain trailing slash)
-SLIDEVIEWER_API_URL: https://slides-res.mskcc.org/
+SLIDEVIEWER_API_URL: https://fake-slides-res.mskcc.org/
 
 # list of expert annotators
-# - ellensol
-#    - soslowr
-#    - boehmk
 USERS:
-    - pashaa
+    - someuser
 
 # sets of annotation labels mapped to integer ids. Multiple label sets may be specified, but only specify label sets
 # that are used for the proxy table generation.
