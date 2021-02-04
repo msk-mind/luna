@@ -94,6 +94,8 @@ def test_process_regional_annotation_slide_row_pandas(monkeypatch):
 
 
 def test_create_proxy_table(monkeypatch):
+    monkeypatch.setenv("MIND_GPFS_DIR", "")
+    monkeypatch.setenv("HDFS_URI", "")
 
     def mock_process(row:  pandas.DataFrame)-> pandas.DataFrame:
         data = {'slideviewer_path': ['CMU-1.svs'],

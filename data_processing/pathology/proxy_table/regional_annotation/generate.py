@@ -211,9 +211,6 @@ def create_proxy_table():
 
     spark_bitmask_df = spark.createDataFrame(df)
 
-    print("Table after adding bitmap to npy conversion:")
-    print(spark_bitmask_df.show(truncate=False))
-
     # create proxy bitmask table
     # update main table if exists, otherwise create main table
     BITMASK_TABLE_PATH = os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH') , 'table/regional_bitmask')
