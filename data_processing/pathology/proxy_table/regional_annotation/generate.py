@@ -8,22 +8,21 @@ import shutil
 
 import click
 from filehash import FileHash
-from pyspark.sql.functions import array, current_timestamp, explode
-from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql.functions import array, current_timestamp, explode, lit
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
-from pyspark.sql.functions import lit, col
 
 import pandas as pd
 import numpy as np
 
 import os
 
-from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import fetch_slide_ids, download_zip, \
+from data_processing.pathology.common.slideviewer_client import fetch_slide_ids, download_zip, \
     unzip
 
 logger = init_logger()
@@ -157,14 +156,15 @@ def create_proxy_table():
 
     schema = StructType([
         StructField('slideviewer_path', StringType()),
-        StructField('slide_id', StringType()),])
+        StructField('slide_id', StringType()),
+        StructField('sv_project_id', IntegerType())
+    ])
 
     df = spark.createDataFrame(slides, schema)
 
     # populate columns
     TMP_ZIP_DIR = cfg.get_value(const.DATA_CFG + '::REQUESTOR_DEPARTMENT') + '_tmp_zips'
-    df = df.withColumn('sv_project_id', lit(cfg.get_value(const.DATA_CFG+'::PROJECT_ID'))) \
-        .withColumn('bmp_filepath', lit('')) \
+    df = df.withColumn('bmp_filepath', lit('')) \
         .withColumn('users', array([lit(user) for user in cfg.get_value(const.DATA_CFG + '::USERS')])) \
         .withColumn('date_added', current_timestamp()) \
         .withColumn('date_updated', current_timestamp()) \

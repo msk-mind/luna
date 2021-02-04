@@ -3,9 +3,8 @@ import datetime
 import pandas
 import pytest
 import requests
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DateType, BooleanType, TimestampType
 from pytest_mock import mocker
-import os, shutil
+import shutil
 from pyspark import SQLContext
 from click.testing import CliRunner
 import os
@@ -16,7 +15,7 @@ from data_processing.pathology.proxy_table.regional_annotation import generate
 from data_processing.pathology.proxy_table.regional_annotation.generate import cli, convert_bmp_to_npy, \
     create_proxy_table, process_regional_annotation_slide_row_pandas
 import data_processing.common.constants as const
-from tests.data_processing.pathology.proxy_table.regional_annotation.request_mock import CSVMockResponse, \
+from tests.data_processing.pathology.common.request_mock import CSVMockResponse, \
     ZIPMockResponse
 
 

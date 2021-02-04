@@ -24,3 +24,8 @@ class ZIPMockResponse:
                             'regional_annotation/test_data/input/CMU-1.zip').read_bytes()]
 
 
+class PointJsonResponse:
+
+    def __init__(self):
+        return [{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"Tissue 1"},
+               {"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1424","y":"774","class":"3","classname":"Tissue 4"}]

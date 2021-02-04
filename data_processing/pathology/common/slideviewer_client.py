@@ -3,11 +3,11 @@ Created on January 31, 2021
 
 @author: pashaa@mskcc.org
 
-Functions for downloading regional annotation bmps from SlideViewer
+Functions for downloading annotations from SlideViewer
 '''
 import os
 import zipfile
-
+from urllib.request import urlopen
 import requests
 from data_processing.common.config import ConfigSet
 from data_processing.common.constants import DATA_CFG
@@ -38,7 +38,7 @@ def fetch_slide_ids(url, project_id, dest_dir, csv_file=None):
     :param project_id - slideviewer project id from which to fetch slide ids
     :param dest_dir - directory where csv file should be downloaded
 
-    :return: list of slide ids
+    :return: list of (slideviewer_path, slide_id, sv_project_id)
     '''
 
     # run on all slides from specified SLIDEVIEWER_CSV file.
@@ -71,7 +71,7 @@ def fetch_slide_ids(url, project_id, dest_dir, csv_file=None):
         for line in slideoutfile:
             full_filename = line.strip()
             slidename = get_slide_id(full_filename)
-            slides.append([full_filename, slidename])
+            slides.append([full_filename, slidename, project_id])
 
     return slides
 
@@ -115,3 +115,37 @@ def unzip(zipfile_path):
             print(zipf.read())
 
         return None
+
+def download_sv_point_annotation(url):
+    """
+    Call slideviewer API with the givne url
+
+    :param url: slide viewer api to call
+    :return: json response
+    """
+    response = urlopen(url)
+    data = json.load(response)
+    print(data)
+
+    if(str(data) != '[]'):
+        return data
+    else:
+        print(" +- Label annotation file does not exist for slide and user.")
+        return None
+
+def download_point_annotation(slideviewer_path, project_id, user):
+    """
+    Return json response from slide viewer call
+
+    :param slideviewer_path: slide path in slideviewer
+    :param project_id: slideviewer project id
+    :param user: username
+    :return: json response from slideviewer API
+    """
+
+    print (f" >>>>>>> Processing [{slideviewer_path}] <<<<<<<<")
+
+    url = "https://slides-res.mskcc.org/slides/" + str(user) + "@mskcc.org/projects;" + str(project_id) + ';' + slideviewer_path + "/getSVGLabels/nucleus"
+    print(url)
+
+    return download_sv_point_annotation(url)
