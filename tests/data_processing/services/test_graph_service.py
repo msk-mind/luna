@@ -1,13 +1,8 @@
 import pytest
-from pytest_mock import mocker
 import os, shutil
 from click.testing import CliRunner
-from neo4j import Record
 
-from data_processing.common.config import ConfigSet
 from data_processing.common.Neo4jConnection import Neo4jConnection
-from data_processing.common import constants as const
-from data_processing.common.sparksession import SparkConfig
 from data_processing.services.graph_service import update_graph
 
 @pytest.fixture(autouse=True)
@@ -18,73 +13,95 @@ def spark(monkeypatch):
     pypath = stream.read().rstrip()
     monkeypatch.setenv("PYSPARK_PYTHON", pypath)
 
-    ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yaml')
-    spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-graph-service')
-    yield spark
+    yield
 
     print('------teardown------')
 
 
-def test_cli_dicom_table(mocker, spark):
+def test_cli_dicom_table(mocker):
 
     # mock graph connection
     mocker.patch.object(Neo4jConnection, 'query')
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/dicom-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/dicom-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
 
 
-def test_cli_mha_table(mocker, spark):
+def test_cli_mha_table(mocker):
 
     # mock graph connection
     mocker.patch.object(Neo4jConnection, 'query')
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/mha-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/mha-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
 
 
-def test_cli_mhd_table(mocker, spark):
+def test_cli_mhd_table(mocker):
 
     # mock graph connection
     mocker.patch.object(Neo4jConnection, 'query')
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/mhd-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/mhd-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
 
 
-def test_cli_png_table(mocker, spark):
+def test_cli_png_table(mocker):
 
     # mock graph connection
     mocker.patch.object(Neo4jConnection, 'query')
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/png-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/png-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
 
 
-def test_cli_feature_table(mocker, spark):
+def test_cli_feature_table(mocker):
 
     # mock graph connection
     mocker.patch.object(Neo4jConnection, 'query')
 
     runner = CliRunner()
     result = runner.invoke(update_graph, [
-        '-d', 'tests/data_processing/services/feature-config.yaml',
+        '-d', 'tests/data_processing/services/testdata/feature-config.yaml',
+        '-f', 'tests/test_config.yaml'])
+
+    assert result.exit_code == 0
+
+def test_cli_regional_bitmask_table(mocker):
+
+    # mock graph connection
+    mocker.patch.object(Neo4jConnection, 'query')
+
+    runner = CliRunner()
+    result = runner.invoke(update_graph, [
+        '-d', 'tests/data_processing/services/testdata/regional_bitmask-config.yaml',
+        '-f', 'tests/test_config.yaml'])
+
+    assert result.exit_code == 0
+
+def test_cli_regional_geojson_table(mocker):
+
+    # mock graph connection
+    mocker.patch.object(Neo4jConnection, 'query')
+
+    runner = CliRunner()
+    result = runner.invoke(update_graph, [
+        '-d', 'tests/data_processing/services/testdata/regional_geojson-config.yaml',
         '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0

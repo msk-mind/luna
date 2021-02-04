@@ -6,8 +6,6 @@ from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.pathology.refined_table.regional_annotation.generate import cli
 import data_processing.common.constants as const
-from data_processing.common.Neo4jConnection import Neo4jConnection
-
 
 geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/REGIONAL_GEOJSON_dsn"
 concat_geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/REGIONAL_CONCAT_GEOJSON_ds"
@@ -26,10 +24,7 @@ def spark():
         if os.path.exists(path):
             shutil.rmtree(path)
         
-def test_cli_geojson(mocker, spark):
-
-    # mock graph connection
-    mocker.patch.object(Neo4jConnection, 'query')
+def test_cli_geojson(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
@@ -45,10 +40,7 @@ def test_cli_geojson(mocker, spark):
     df.unpersist()
 
 
-def test_cli_concat(mocker, spark):
-
-    # mock graph connection
-    mocker.patch.object(Neo4jConnection, 'query')
+def test_cli_concat(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli,
