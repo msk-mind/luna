@@ -21,6 +21,6 @@ class ZIPMockResponse:
 
     def iter_content(self, chunk_size=128):
         return [Path('tests/data_processing/pathology/proxy_table/'
-                            'regional_annotation/test_data/input/24bpp-topdown-320x240.bmp.zip').read_bytes()]
+                            'regional_annotation/test_data/input/CMU-1.zip').read_bytes()]
 
 

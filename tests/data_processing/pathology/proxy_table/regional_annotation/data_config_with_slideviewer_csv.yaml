@@ -106,7 +106,7 @@ DATA_SIZE: 291337979
 BWLIMIT: 5G
 
 # slide viewer api url (must contain trailing slash)
-SLIDEVIEWER_API_URL: https://slides-res.mskcc.org/
+SLIDEVIEWER_API_URL: https://fakeslides-res.mskcc.org/
 
 # list of expert annotators
 # - ellensol

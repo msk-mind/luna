@@ -91,10 +91,6 @@ def process_regional_annotation_slide_row_pandas(row: pd.DataFrame) -> pd.DataFr
 
     url = row.SLIDEVIEWER_API_URL.item() +'slides/'+ str(user) + '@mskcc.org/projects;' + str(row.sv_project_id.item()) + ';' + full_filename + '/getLabelFileBMP'
 
-    #url = "https://slides-res.mskcc.org/slides/" + str(user) + "@mskcc.org/projects;" + str(
-    #    PROJECT_ID) + ';' + query + "/getLabelFileBMP"
-
-
     print("Pulling   ", url)
     print(" +- TO    ", bmp_dest_path)
 
@@ -141,7 +137,8 @@ def create_proxy_table():
     :param app_config_file: app configuration
     :return: exit_code = 0 if successful, > 0 if unsuccessful
     '''
-    pd.set_option("display.max_rows", None, "display.max_columns", None)
+    # pd.set_option("display.max_rows", None, "display.max_columns", None)
+    # pd.set_option('display.max_colwidth', -1)
 
     exit_code = 0
     cfg = ConfigSet()
@@ -188,6 +185,7 @@ def create_proxy_table():
 
     df = df.groupby(["slideviewer_path", "user"]) \
         .applyInPandas(process_regional_annotation_slide_row_pandas, schema=df.schema)
+
     df = df.toPandas()
     df = df.drop(columns=['SLIDE_BMP_DIR', 'TMP_ZIP_DIR', 'SLIDEVIEWER_API_URL'])
 

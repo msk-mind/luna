@@ -26,7 +26,7 @@ def setup_module(module):
     """ setup any state specific to the execution of the given module."""
     ConfigSet(
         name=DATA_CFG,
-        config_file='tests/data_processing/pathology/proxy_table/regional_annotation/data_config.yaml')
+        config_file='tests/data_processing/pathology/proxy_table/regional_annotation/data_config_with_slideviewer_csv.yaml')
     cfg = ConfigSet()
     module.SLIDEVIEWER_API_URL = cfg.get_value(path=DATA_CFG + '::SLIDEVIEWER_API_URL')
     module.LANDING_PATH = cfg.get_value(path=DATA_CFG + '::LANDING_PATH')
@@ -98,9 +98,9 @@ def test_downlaod_zip(monkeypatch):
 
 def test_unzip():
     shutil.copyfile('tests/data_processing/pathology/proxy_table/'
-                            'regional_annotation/test_data/input/24bpp-topdown-320x240.bmp.zip',
+                            'regional_annotation/test_data/input/CMU-1.zip',
                     zipfile_path)
 
     unzipped_file_descriptor = unzip(zipfile_path)
 
-    assert len(unzipped_file_descriptor.read('24bpp-topdown-320x240.bmp')) == 230454
+    assert len(unzipped_file_descriptor.read('labels.bmp')) == 230454
