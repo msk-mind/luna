@@ -1,7 +1,5 @@
-import os
 import click
 import time
-import pandas as pd
 from pyspark.sql import functions as F
 
 from data_processing.common.GraphEnum import GraphEnum

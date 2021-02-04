@@ -2,38 +2,6 @@ from enum import Enum
 from data_processing.common.utils import to_sql_field
 from data_processing.common.Node import Node
 	
-class Container(object):
-	"""
-	Container: an abstraction with an id, name, namespace, type, and a list of associated data nodes
-
-	:param: conn: Neo4j Connection
-	:param: container_id: Container ID
-	"""
-	def __init__(self, conn, container_id):
-
-		container_metadata = conn.query(f"""
-			MATCH (container)-[:HAS_DATA]-(data) 
-			WHERE id(container) = {container_id} 
-			RETURN labels(container), container.type, container.name, container.Namespace, container.QualifiedPath"""
-		)
-		data_nodes = conn.query(f"""
-			MATCH (container)-[:HAS_DATA]-(data) 
-			WHERE id(container) = {container_id} 
-			RETURN data"""
-		)
-
-		self.id 			= container_id
-		self.name 			= container_metadata[0]["container.name"]
-		self.namespace 		= container_metadata[0]["container.Namespace"]
-		self.qualifiedpath 	= container_metadata[0]["container.QualifiedPath"]
-		self.type		 	= container_metadata[0]["container.type"]
-		self.labels		 	= container_metadata[0]["labels(container)"]
-		self.data			= [Node(rec['data']['type'], rec['data']['name'], dict(rec['data'].items())) for rec in data_nodes]
-		# TODO: worried about schema issues? like making sure name, namespace, type and qualified path are present, neo4j offers schema enforcment. 
-		# TODO: testing
-		# TODO: error checking
-		# TODO: expand class
-
 class NodeType(object):
 	"""
 	NodeType object defines the schema used to populate a graph node.
@@ -89,6 +57,7 @@ class GraphEnum(Enum):
 	scan = NodeType("scan", "metadata.SeriesInstanceUID")
 	png = NodeType("png", "png_record_uuid", ["metadata.SeriesInstanceUID", "label"])
 
+	# radiology
 	DICOM = [Graph(NodeType("patient", "metadata.PatientID"),
 				"HAS_CASE", 
 				accession_radiology_dicom),
@@ -109,3 +78,13 @@ class GraphEnum(Enum):
 	FEATURE = [Graph(png, "HAS_DATA",
 			NodeType("feature", "feature_record_uuid", ["metadata.SeriesInstanceUID", "label"]))]
 
+	# pathology
+	slide = NodeType("slide", "slide_id")
+	REGIONAL_BITMASK = [Graph(slide,
+					 "HAS_DATA",
+					 NodeType("regional_bitmask", "bmp_record_uuid", ["user","date_updated","latest"]))]
+
+	# regional concat geojson table contains regional geojson table + concatenated jsons
+	REGIONAL_CONCAT_GEOJSON = [Graph(slide,
+								 "HAS_DATA",
+								 NodeType("regional_concat_geojson", "concat_geojson_record_uuid", ["labelset","date_updated","latest"]))]
