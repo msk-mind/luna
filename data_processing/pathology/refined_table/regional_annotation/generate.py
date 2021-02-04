@@ -167,6 +167,8 @@ def create_geojson_table():
 
     cfg = ConfigSet()
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="data_processing.pathology.refined_table.annotation.generate")
+    # disable broadcast join to avoid timeout
+    spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")
 
     # load paths from configs
     bitmask_table_path = const.TABLE_LOCATION(cfg, is_source=True)
@@ -297,7 +299,7 @@ def create_concat_geojson_table():
             .execute()
 
         # add latest flag
-        windowSpec = Window.partitionBy("user", "slide_id", "labelset").orderBy(desc("date_updated"))
+        windowSpec = Window.partitionBy("slide_id", "labelset").orderBy(desc("date_updated"))
         # Note that last != opposite of first! Have to use desc ordering with first...
         spark.read.format("delta").load(concat_geojson_table_path) \
             .withColumn("date_latest", first("date_updated").over(windowSpec)) \
