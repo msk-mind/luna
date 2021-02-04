@@ -1,10 +1,10 @@
-ROOT_PATH: tests/data_processing/testdata/data
+ROOT_PATH: tests/data_processing/services/testdata
 
 PROJECT: test-project
 
 DATASET_NAME: ds
 
-DATA_TYPE: mhd
+DATA_TYPE: regional_concat_geojson
 
 # mock graph configs
 GRAPH_URI: localhost:7897

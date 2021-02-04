@@ -5,11 +5,9 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
-from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.utils import generate_uuid_dict
 import data_processing.common.constants as const
 from data_processing.pathology.common.build_geojson_from_annotation import build_geojson_from_annotation, concatenate_regional_geojsons
-from data_processing.pathology.common.utils import get_add_triple_str
 
 from pyspark.sql.functions import udf, lit, col, first, last, desc, array, to_json, collect_list, current_timestamp, explode
 from pyspark.sql.window import Window
@@ -92,9 +90,6 @@ def create_geojson_table():
 
     cfg = ConfigSet()
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="data_processing.pathology.refined_table.annotation.generate")
-    conn = Neo4jConnection(uri=cfg.get_value(path=const.DATA_CFG+'::GRAPH_URI'),
-                           user=cfg.get_value(path=const.DATA_CFG+'::GRAPH_USER'),
-                           pwd=cfg.get_value(path=const.DATA_CFG+'::GRAPH_PW'))
 
     # load paths from configs
     bitmask_table_path = const.TABLE_LOCATION(cfg, is_source=True)
@@ -163,11 +158,6 @@ def create_geojson_table():
 
     logger.info("Finished building Geojson table.")
 
-    # Add relationships to graph
-    geojson_table = spark.read.format("delta").load(geojson_table_path).select("slide_id","geojson_record_uuid").toPandas()
-    geojson_table.apply(lambda x: conn.query(get_add_triple_str(x.slide_id, "geojson_record_uuid", x.geojson_record_uuid)), axis=1)
-    logger.info("Updated graph with new geojson records.")
-
     return exit_code
 
 
@@ -180,9 +170,6 @@ def create_concat_geojson_table():
     cfg = ConfigSet()
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="data_processing.pathology.refined_table.annotation.generate")
     spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "false")
-    conn = Neo4jConnection(uri=cfg.get_value(path=const.DATA_CFG+'::GRAPH_URI'),
-                           user=cfg.get_value(path=const.DATA_CFG+'::GRAPH_USER'),
-                           pwd=cfg.get_value(path=const.DATA_CFG+'::GRAPH_PW'))
 
     # load paths from config
     geojson_table_path = const.TABLE_LOCATION(cfg, is_source=True)
@@ -237,11 +224,6 @@ def create_concat_geojson_table():
             .write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(concat_geojson_table_path)
 
     logger.info("Finished building Concatenation table.")
-
-    # Add relationships to graph
-    concat_geojson_table = spark.read.format("delta").load(concat_geojson_table_path).select("slide_id","concat_geojson_record_uuid").toPandas()
-    concat_geojson_table.apply(lambda x: conn.query(get_add_triple_str(x.slide_id, "concat_geojson_record_uuid", x.concat_geojson_record_uuid)), axis=1)
-    logger.info("Updated graph with new concat geojson records.")
 
     return exit_code
 
