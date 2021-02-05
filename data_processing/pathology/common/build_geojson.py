@@ -19,6 +19,40 @@ geojson_base = {
     "features": []
 }
 
+def build_geojson_from_pointclick_json(labelsets, labelset, sv_json):
+    """
+    Build geojson from slideviewer json.
+
+    :param labelsets: dictionary of labelset as string {labelset: {label number: label name}}
+    :param labelset: a labelset e.g. default_labels
+    :param sv_json: list of dictionaries, from slideviewer
+    :return: geojson list
+    """
+    print("Building geojson for labelset " + str(labelset))
+
+    labelsets = ast.literal_eval(labelsets)
+    mappings = labelsets[labelset]
+
+    output_geojson = []
+    for entry in sv_json:
+        point = {}
+        x = int(entry['x'])
+        y = int(entry['y'])
+        class_num = int(entry['class'])
+        if class_num not in mappings:
+            continue
+        class_name = mappings[class_num]
+        coordinates = [x,y]
+
+        point["type"] = "Feature"
+        point["id"] = "PathAnnotationObject"
+        point["geometry"] = {"type": "Point",  "coordinates": coordinates}
+        point["properties"] = {"classification": {"name": class_name}}
+        output_geojson.append(point)
+
+    return output_geojson
+
+
 # adapted from: https://github.com/ijmbarr/image-processing-with-numpy/blob/master/image-processing-with-numpy.ipynb
 def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, contour_level, polygon_tolerance):
     """
@@ -83,7 +117,7 @@ def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, 
     :param polygon_tolerance: polygon resolution
     :return:
     """
-    from build_geojson_from_annotation import add_contours_for_label, handler
+    from build_geojson import add_contours_for_label, handler
     
     labelsets = ast.literal_eval(labelsets)
     mappings = labelsets[labelset]
@@ -102,7 +136,7 @@ def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, 
     except TimeoutError as err:
         print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
 
-        return np.nan
+        return None
 
     # disables alarm
     signal.alarm(0)

@@ -5,7 +5,6 @@ Created on February 01, 2021
 '''
 from pathlib import Path
 
-
 class CSVMockResponse:
 
     content = b'Title: IRB #16-1144 Subset\n' \
@@ -24,3 +23,13 @@ class ZIPMockResponse:
                             'regional_annotation/test_data/input/CMU-1.zip').read_bytes()]
 
 
+class PointJsonResponse:
+
+    content = b'[{"project_id":"8","image_id":"123.svs",' \
+              b'"label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"Tissue 1"},' \
+              b'{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1424","y":"774",' \
+              b'"class":"3","classname":"Tissue 4"}]'
+
+    def json(self):
+        return [{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"Tissue 1"},
+                {"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1424","y":"774","class":"3","classname":"Tissue 4"}]

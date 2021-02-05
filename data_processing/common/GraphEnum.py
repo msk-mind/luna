@@ -88,3 +88,12 @@ class GraphEnum(Enum):
 	REGIONAL_CONCAT_GEOJSON = [Graph(slide,
 								 "HAS_DATA",
 								 NodeType("regional_concat_geojson", "concat_geojson_record_uuid", ["labelset","date_updated","latest"]))]
+
+
+	POINT_RAW_JSON = [Graph(slide,
+					"HAS_DATA",
+					NodeType("point_json", "sv_json_record_uuid", ["user","date_updated","latest"]))]
+
+	POINT_GEOJSON = [Graph(slide,
+							"HAS_DATA",
+							NodeType("point_geojson", "geojson_record_uuid", ["labelset","date_updated","latest"]))]

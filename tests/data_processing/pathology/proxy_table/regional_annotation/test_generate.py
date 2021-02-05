@@ -3,9 +3,8 @@ import datetime
 import pandas
 import pytest
 import requests
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DateType, BooleanType, TimestampType
 from pytest_mock import mocker
-import os, shutil
+import shutil
 from pyspark import SQLContext
 from click.testing import CliRunner
 import os, sys
@@ -16,7 +15,7 @@ from data_processing.pathology.proxy_table.regional_annotation import generate
 from data_processing.pathology.proxy_table.regional_annotation.generate import cli, convert_bmp_to_npy, \
     create_proxy_table, process_regional_annotation_slide_row_pandas
 import data_processing.common.constants as const
-from tests.data_processing.pathology.proxy_table.regional_annotation.request_mock import CSVMockResponse, \
+from tests.data_processing.pathology.common.request_mock import CSVMockResponse, \
     ZIPMockResponse
 
 
@@ -27,7 +26,7 @@ def setup_module(module):
     """ setup any state specific to the execution of the given module."""
     ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yaml')
     ConfigSet(name=const.DATA_CFG,
-              config_file='tests/data_processing/pathology/proxy_table/regional_annotation/data_config_with_slideviewer_csv.yaml')
+              config_file='tests/data_processing/pathology/common/testdata/data_config_with_slideviewer_csv.yaml')
     module.spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-pathology-annotation-proxy')
 
     cfg = ConfigSet()
@@ -60,7 +59,7 @@ def test_process_regional_annotation_slide_row_pandas(monkeypatch):
     monkeypatch.setenv("HDFS_URI", "")
 
     import data_processing
-    sys.modules['slideviewer_client'] = data_processing.pathology.proxy_table.regional_annotation.slideviewer_client
+    sys.modules['slideviewer_client'] = data_processing.pathology.common.slideviewer_client
 
     # mock request to slideviewer api
     def mock_get(*args, **kwargs):

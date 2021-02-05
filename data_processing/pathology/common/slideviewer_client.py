@@ -3,13 +3,11 @@ Created on January 31, 2021
 
 @author: pashaa@mskcc.org
 
-Functions for downloading regional annotation bmps from SlideViewer
+Functions for downloading annotations from SlideViewer
 '''
 import os
 import zipfile
-
 import requests
-
 
 def get_slide_id(full_filename):
     '''
@@ -36,7 +34,7 @@ def fetch_slide_ids(url, project_id, dest_dir, csv_file=None):
     :param project_id - slideviewer project id from which to fetch slide ids
     :param dest_dir - directory where csv file should be downloaded
 
-    :return: list of slide ids
+    :return: list of (slideviewer_path, slide_id, sv_project_id)
     '''
 
     # run on all slides from specified SLIDEVIEWER_CSV file.
@@ -69,7 +67,7 @@ def fetch_slide_ids(url, project_id, dest_dir, csv_file=None):
         for line in slideoutfile:
             full_filename = line.strip()
             slidename = get_slide_id(full_filename)
-            slides.append([full_filename, slidename])
+            slides.append([full_filename, slidename, project_id])
 
     return slides
 
@@ -112,4 +110,26 @@ def unzip(zipfile_path):
         with open(zipfile_path, 'r') as zipf:
             print(zipf.read())
 
+        return None
+
+
+def download_sv_point_annotation(url):
+    """
+    Call slideviewer API with the given url
+
+    :param url: slide viewer api to call
+    :return: json response
+    """
+    try:
+        response = requests.get(url)
+        data = response.json()
+    except Exception as err:
+        print(err)
+        return None
+
+    print(data)
+    if(str(data) != '[]'):
+        return data
+    else:
+        print(" +- Label annotation file does not exist for slide and user.")
         return None
