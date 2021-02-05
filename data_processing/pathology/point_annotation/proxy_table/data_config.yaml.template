@@ -15,9 +15,8 @@ PROJECT_ID: 134
 
 # Users that provide expert annotations for this project
 USERS:
-    - pateld6
-    - boehmk
-    - vazquezi
+    - user1
+    - user2
 
 # an optional path to a SlideViewer csv file to use that lists the names of the whole slide images
 # and for which the regional annotation proxy table generator should download point annotations.

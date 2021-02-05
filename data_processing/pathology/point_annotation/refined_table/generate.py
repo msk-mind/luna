@@ -14,9 +14,7 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
-from data_processing.common.utils import generate_uuid_dict
 import data_processing.common.constants as const
-from data_processing.pathology.common.build_geojson import build_geojson_from_pointclick_json
 from data_processing.pathology.common.utils import get_labelset_keys
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -43,7 +41,7 @@ geojson_struct = ArrayType(
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
               help="path to data yaml file containing information required to build pathology point annotation geojsons. "
-                   "See data-config.yaml.template")
+                   "See data_config.yaml.template")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to config file containing application configuration. See config.yaml.template")
 def cli(data_config_file, app_config_file):
@@ -89,12 +87,17 @@ def create_refined_table():
     # build geojsons
     label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
 
+    spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson.py")
+    from build_geojson import build_geojson_from_pointclick_json
     build_geojson_from_pointclick_json_udf = udf(build_geojson_from_pointclick_json,  geojson_struct)
     df = df.withColumn("geojson", build_geojson_from_pointclick_json_udf(lit(str(label_config)), "labelset", "sv_json")).cache()
 
     # populate "date_added", "date_updated","latest", "sv_json_record_uuid"
-    geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
+    spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+    from utils import generate_uuid_dict
+    geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
+
     df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVPTGEOJSON"), "labelset"))) \
         .withColumn("latest", lit(True)) \
         .withColumn("date_added", current_timestamp()) \

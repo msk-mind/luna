@@ -46,7 +46,7 @@ def download_point_annotation(slideviewer_url, slideviewer_path, project_id, use
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
               help="path to data yaml file containing information required for pathology point annotation data ingestion. "
-                   "See data-config.yaml.template")
+                   "See data_config.yaml.template")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to config file containing application configuration. See config.yaml.template")
 def cli(data_config_file, app_config_file):
@@ -80,9 +80,10 @@ def create_proxy_table():
     point_table_path = const.TABLE_LOCATION(cfg)
 
     PROJECT_ID = cfg.get_value(path=const.DATA_CFG+'::PROJECT_ID')
+    SLIDEVIEWER_URL = cfg.get_value(path=const.DATA_CFG+'::SLIDEVIEWER_URL')
 
     # Get slide list to use
-    slides = fetch_slide_ids(None, PROJECT_ID, '.', cfg.get_value(path=const.DATA_CFG+'::SLIDEVIEWER_CSV_FILE'))
+    slides = fetch_slide_ids(SLIDEVIEWER_URL, PROJECT_ID, '.', cfg.get_value(path=const.DATA_CFG+'::SLIDEVIEWER_CSV_FILE'))
     logger.info(slides)
 
     schema = StructType([StructField("slideviewer_path", StringType()),
@@ -103,9 +104,8 @@ def create_proxy_table():
     spark.sparkContext.addPyFile("./data_processing/pathology/common/slideviewer_client.py")
     download_point_annotation_udf = udf(download_point_annotation,  point_json_struct)
 
-    slideviewer_url = cfg.get_value(path=const.DATA_CFG+'::SLIDEVIEWER_URL')
     df = df.withColumn("sv_json",
-                       download_point_annotation_udf(lit(slideviewer_url), "slideviewer_path", "sv_project_id", "user"))\
+                       download_point_annotation_udf(lit(SLIDEVIEWER_URL), "slideviewer_path", "sv_project_id", "user"))\
         .cache()
     # drop empty jsons that may have been created
     df = df.dropna(subset=["sv_json"])

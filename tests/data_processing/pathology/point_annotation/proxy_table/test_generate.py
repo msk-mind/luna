@@ -47,24 +47,17 @@ def test_download_point_annotation(monkeypatch):
 
 def test_create_proxy_table(monkeypatch):
 
-    def mock_download():
-
+    def mock_download(*args, **kwargs):
         return [{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"Tissue 1"},
                 {"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1424","y":"774","class":"3","classname":"Tissue 4"}]
 
-    def mock_udf(f, s):
-
-        return mock_download
-
-    #monkeypatch.setattr(generate, "download_point_annotation", mock_udf)
-    from pyspark.sql import functions
-    monkeypatch.setattr(functions, "udf", mock_udf)
+    monkeypatch.setattr(generate, "download_point_annotation", mock_download)
 
     create_proxy_table()
 
     df = spark.read.format("delta").load(point_json_table_path)
 
-    assert 1 == df.count()
+    assert 2 == df.count()
     assert set(["slideviewer_path","slide_id","sv_project_id","user",
                 "sv_json", "sv_json_record_uuid", "latest", "date_added", "date_updated"]) == set(df.columns)
 
