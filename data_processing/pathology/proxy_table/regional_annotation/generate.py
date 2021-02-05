@@ -214,17 +214,15 @@ def create_proxy_table():
     # create proxy bitmask table
     # update main table if exists, otherwise create main table
     BITMASK_TABLE_PATH = const.TABLE_LOCATION(cfg)
-    save_path = BITMASK_TABLE_PATH
-    #write_uri = os.environ["HDFS_URI"]
-    #save_path = os.path.join(write_uri, BITMASK_TABLE_PATH)
+
     if not os.path.exists(BITMASK_TABLE_PATH):
         logger.info("creating new bitmask table")
         os.makedirs(BITMASK_TABLE_PATH)
-        spark_bitmask_df.coalesce(48).write.format("delta").save(save_path)
+        spark_bitmask_df.coalesce(48).write.format("delta").save(BITMASK_TABLE_PATH)
     else:
         logger.info("updating existing bitmask table")
         from delta.tables import DeltaTable
-        bitmask_table = DeltaTable.forPath(spark, save_path)
+        bitmask_table = DeltaTable.forPath(spark, BITMASK_TABLE_PATH)
         bitmask_table.alias("main_bitmask_table") \
             .merge(spark_bitmask_df.alias("bmp_annotation_updates"),
                    "main_bitmask_table.bmp_record_uuid = bmp_annotation_updates.bmp_record_uuid") \
@@ -265,7 +263,7 @@ def cli(data_config_file, app_config_file):
     npy_filepath - file path to generated npy annotation file
 
     Usage:
-    python3 -m data_processing.pathology.proxy_table.annotation.generate \
+    python3 -m data_processing.pathology.proxy_table.regional_annotation.generate \
         -d {data_config_yaml} \
         -a {app_config_yaml}
     '''

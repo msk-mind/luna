@@ -51,31 +51,31 @@ TIMEOUT_SECONDS = 1800
 
 
 @click.command()
-@click.option('-t', '--template_file', default=None, type=click.Path(exists=True),
-              help="path to yaml template file containing information required for pathology proxy data ingestion. "
-                   "See data_ingestion_template.yaml.template")
-@click.option('-f', '--config_file', default='config.yaml', type=click.Path(exists=True),
+@click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
+              help="path to yaml template file containing information required for pathology regional annotation data creation. "
+                   "See config.yaml.template in the package")
+@click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to config file containing application configuration. See config.yaml.template")
 @click.option('-p', '--process_string', default='geojson',
-              help='comma separated list of processes to run or replay: e.g. geojson OR concat')
-def cli(template_file, config_file, process_string):
+              help='process to run or replay: e.g. geojson OR concat')
+def cli(data_config_file, app_config_file, process_string):
     """
     This module generates geojson table for pathology data based on information specified in the template file.
 
     Example:
-        python -m data_processing.pathology.refined_table.annotation.generate \
-        --template_file {PATH_TO_TEMPLATE_FILE} \
-        --config_file {PATH_TO_CONFIG_FILE} \
+        python -m data_processing.pathology.refined_table.regional_annotation.generate \
+        --data_config_file {PATH_TO_TEMPLATE_FILE} \
+        --app_config_file {PATH_TO_CONFIG_FILE} \
         --process_string geojson
 
     """
     with CodeTimer(logger, f"generate {process_string} table"):
-        logger.info('data template: ' + template_file)
-        logger.info('config_file: ' + config_file)
+        logger.info('data template: ' + data_config_file)
+        logger.info('config_file: ' + app_config_file)
 
         # load configs
-        cfg = ConfigSet(name=const.DATA_CFG, config_file=template_file)
-        cfg = ConfigSet(name=const.APP_CFG,  config_file=config_file)
+        cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
+        cfg = ConfigSet(name=const.APP_CFG,  config_file=app_config_file)
 
         if 'geojson' == process_string:
             exit_code = create_geojson_table()
@@ -97,7 +97,8 @@ def create_geojson_table():
     exit_code = 0
 
     cfg = ConfigSet()
-    spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="data_processing.pathology.refined_table.annotation.generate")
+    spark = SparkConfig().spark_session(config_name=const.APP_CFG,
+                                        app_name="data_processing.pathology.refined_table.annotation.generate")
     # disable broadcast join to avoid timeout
     spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")
 
