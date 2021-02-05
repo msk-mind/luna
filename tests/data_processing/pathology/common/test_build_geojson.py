@@ -1,5 +1,5 @@
 from data_processing.pathology.common.build_geojson import *
-import os
+import os, sys
 import numpy as np
 
 npy_data_path = 'tests/data_processing/testdata/data/test-project/pathology_annotations/regional_npys/2021_HobS21_8_123'
@@ -26,6 +26,9 @@ def test_add_contours_for_label_non_matching_label():
 
 
 def test_build_geojson_from_bitmap():
+
+    import data_processing
+    sys.modules['build_geojson'] = data_processing.pathology.common.build_geojson
 
     res = build_geojson_from_annotation("{'DEFAULT_LABELS': {1: 'tissue_1', 2: 'tissue_2', 3: 'tissue_3', 4: 'tissue_4', 5: 'tissue_5'}}",
                                         os.path.join(npy_data_path, '123_joe_SVBMP-123asd_annot.npy'),

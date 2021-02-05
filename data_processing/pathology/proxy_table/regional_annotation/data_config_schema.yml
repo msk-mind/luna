@@ -14,7 +14,7 @@ SOURCE: any(str(required=True))
 
 MODALITY: enum('clinical','radiology','pathology','genomics')
 
-DATA_TYPE: enum('H&E', 'IMF')
+DATA_TYPE: enum('H&E', 'IMF','REGIONAL_BITMASK')
 
 COMMENTS: any(str(required=False))
 
@@ -55,8 +55,6 @@ BWLIMIT: any(regex(r'^(\d+)(K|M|G)$'))
 SLIDEVIEWER_API_URL: any(str(required=True))
 
 USERS: list(str())
-
-GRAPH_URI: any(str(required=True))
 
 SLIDEVIEWER_CSV_FILE: any(str(required=False))
 

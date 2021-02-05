@@ -112,6 +112,7 @@ def unzip(zipfile_path):
 
         return None
 
+
 def download_sv_point_annotation(url):
     """
     Call slideviewer API with the given url

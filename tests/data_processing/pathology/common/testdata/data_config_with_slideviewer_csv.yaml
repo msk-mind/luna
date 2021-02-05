@@ -53,7 +53,7 @@ NUM_PARTITION: 10
 HOST:
 
 # mind root data path.
-ROOT_PATH: tests/data_processing/pathology/proxy_table/regional_annotation/test_data
+ROOT_PATH: tests/data_processing/pathology/proxy_table/regional_annotation/test_data/output
 
 # file path to the source data file(s). if host is specified, the source data location is determined
 # as host:source_path, else the source data location is determined simply as source_path.

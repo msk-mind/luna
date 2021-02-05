@@ -5,9 +5,7 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
-from data_processing.common.utils import generate_uuid_dict
 import data_processing.common.constants as const
-from data_processing.pathology.common.build_geojson import build_geojson_from_annotation, concatenate_regional_geojsons
 from data_processing.pathology.common.utils import get_labelset_keys
 
 from pyspark.sql.functions import udf, lit, col, first, last, desc, array, to_json, collect_list, current_timestamp, explode
@@ -42,33 +40,43 @@ geojson_struct = StructType([
                 )
 ])
 
+# Base template for geoJSON file
+geojson_base = {
+    "type": "FeatureCollection",
+    "features": []
+}
+
+# max amount of time for a geojson to be generated. if generation surpasses this limit, it is likely the annotation file is
+# too large or they may be annotation artifacts present in the slide. currently set at 30 minute timeout
+TIMEOUT_SECONDS = 1800
+
+
 @click.command()
-@click.option('-t', '--template_file', default=None, type=click.Path(exists=True),
-              help="path to yaml template file containing information required for pathology proxy data ingestion. "
-                   "See data_ingestion_template.yaml.template")
-@click.option('-f', '--config_file', default='config.yaml', type=click.Path(exists=True),
+@click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
+              help="path to yaml template file containing information required for pathology regional annotation data creation. "
+                   "See data_config.yaml.template in the package")
+@click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to config file containing application configuration. See config.yaml.template")
 @click.option('-p', '--process_string', default='geojson',
-              help='comma separated list of processes to run or replay: e.g. geojson OR concat')
-def cli(template_file, config_file, process_string):
+              help='process to run or replay: e.g. geojson OR concat')
+def cli(data_config_file, app_config_file, process_string):
     """
     This module generates geojson table for pathology data based on information specified in the template file.
 
     Example:
-        python -m data_processing.pathology.refined_table.annotation.generate \
-        --template_file {PATH_TO_TEMPLATE_FILE} \
-        --config_file {PATH_TO_CONFIG_FILE} \
+        python -m data_processing.pathology.refined_table.regional_annotation.generate \
+        --data_config_file {PATH_TO_TEMPLATE_FILE} \
+        --app_config_file {PATH_TO_CONFIG_FILE} \
         --process_string geojson
 
     """
-    with CodeTimer(logger, 'generate GEOJSON table'):
-        logger.info('data template: ' + template_file)
-        logger.info('config_file: ' + config_file)
-        logger.info('process_string: ' + process_string)
+    with CodeTimer(logger, f"generate {process_string} table"):
+        logger.info('data template: ' + data_config_file)
+        logger.info('config_file: ' + app_config_file)
 
         # load configs
-        cfg = ConfigSet(name=const.DATA_CFG, config_file=template_file)
-        cfg = ConfigSet(name=const.APP_CFG,  config_file=config_file)
+        cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
+        cfg = ConfigSet(name=const.APP_CFG,  config_file=app_config_file)
 
         if 'geojson' == process_string:
             exit_code = create_geojson_table()
@@ -90,7 +98,10 @@ def create_geojson_table():
     exit_code = 0
 
     cfg = ConfigSet()
-    spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="data_processing.pathology.refined_table.annotation.generate")
+    spark = SparkConfig().spark_session(config_name=const.APP_CFG,
+                                        app_name="data_processing.pathology.refined_table.annotation.generate")
+    # disable broadcast join to avoid timeout
+    spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")
 
     # load paths from configs
     bitmask_table_path = const.TABLE_LOCATION(cfg, is_source=True)
@@ -105,13 +116,16 @@ def create_geojson_table():
     df = df.withColumn("labelset_list", labelset_column)
     # explode labelsets
     df = df.select("slideviewer_path", "slide_id", "sv_project_id", "bmp_record_uuid", "user", "npy_filepath", explode("labelset_list").alias("labelset"))
-    df.show()
 
     # setup variables needed for build geojson UDF
     contour_level = cfg.get_value(path=const.DATA_CFG+'::CONTOUR_LEVEL')
     polygon_tolerance = cfg.get_value(path=const.DATA_CFG+'::POLYGON_TOLERANCE')
 
     # populate geojson and geojson_record_uuid
+    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
+    spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+    spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson.py")
+    from build_geojson import build_geojson_from_annotation
     build_geojson_from_bitmap_udf = udf(build_geojson_from_annotation, geojson_struct)
     label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
 
@@ -123,6 +137,7 @@ def create_geojson_table():
     df = df.dropna(subset=["geojson"])
 
     # populate uuid
+    from utils import generate_uuid_dict
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
     df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVGEOJSON"), "labelset")))
@@ -185,9 +200,13 @@ def create_concat_geojson_table():
         .agg(collect_list("geojson_str").alias("geojson_list"))
 
     # set up udfs
+    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
+    spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+    spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson.py")
+    from utils import generate_uuid_dict
+    from build_geojson import concatenate_regional_geojsons
     concatenate_regional_geojsons_udf = udf(concatenate_regional_geojsons, geojson_struct)
     concat_geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
-    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
 
     # cache to not have udf called multiple times
     concatgeojson_df = concatgeojson_df.withColumn("concat_geojson", concatenate_regional_geojsons_udf("geojson_list")).cache()
@@ -214,7 +233,7 @@ def create_concat_geojson_table():
             .execute()
 
         # add latest flag
-        windowSpec = Window.partitionBy("user", "slide_id", "labelset").orderBy(desc("date_updated"))
+        windowSpec = Window.partitionBy("slide_id", "labelset").orderBy(desc("date_updated"))
         # Note that last != opposite of first! Have to use desc ordering with first...
         spark.read.format("delta").load(concat_geojson_table_path) \
             .withColumn("date_latest", first("date_updated").over(windowSpec)) \

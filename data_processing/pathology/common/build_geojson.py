@@ -117,6 +117,8 @@ def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, 
     :param polygon_tolerance: polygon resolution
     :return:
     """
+    from build_geojson import add_contours_for_label, handler
+    
     labelsets = ast.literal_eval(labelsets)
     mappings = labelsets[labelset]
 
@@ -166,3 +168,4 @@ def concatenate_regional_geojsons(geojson_list):
         concat_geojson['features'].extend(json_dict['features'])
 
     return concat_geojson
+
