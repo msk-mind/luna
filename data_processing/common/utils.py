@@ -4,7 +4,7 @@ import os, json
 
 def to_sql_field(s):
 	filter1 = s.replace(".","_").replace(" ","_")
-	filter2 = ''.join(e for e in filter1 if e.isalnum())
+	filter2 = ''.join(e for e in filter1 if e.isalnum() or e=='_')
 	return filter2
 
 def clean_nested_colname(s):
