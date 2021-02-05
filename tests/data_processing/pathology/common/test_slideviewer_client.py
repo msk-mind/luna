@@ -3,10 +3,8 @@ Created on January 31, 2021
 
 @author: pashaa@mskcc.org
 '''
-import os
+import os, sys
 import shutil
-import urllib.request
-from urllib.request import urlopen
 import requests
 from data_processing.common.config import ConfigSet
 from data_processing.common.constants import DATA_CFG
@@ -110,7 +108,13 @@ def test_download_sv_point_annotation(monkeypatch):
     def mock_get(*args, **kwargs):
         return PointJsonResponse()
 
-    monkeypatch.setattr(urllib.request, urlopen, mock_get)
+    monkeypatch.setattr(requests, "get", mock_get)
 
-    res = download_sv_point_annotation('test')
-    print(res)
+    import data_processing
+    sys.modules['slideviewer_client'] = data_processing.pathology.common.slideviewer_client
+
+    res = download_sv_point_annotation("http://test/user@8;123.svs/get")
+
+    assert res == [{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"Tissue 1"},
+                   {"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1424","y":"774","class":"3","classname":"Tissue 4"}]
+

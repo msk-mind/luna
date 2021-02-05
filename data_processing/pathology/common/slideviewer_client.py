@@ -7,11 +7,7 @@ Functions for downloading annotations from SlideViewer
 '''
 import os
 import zipfile
-from urllib.request import urlopen
 import requests
-from data_processing.common.config import ConfigSet
-from data_processing.common.constants import DATA_CFG
-
 
 def get_slide_id(full_filename):
     '''
@@ -118,34 +114,21 @@ def unzip(zipfile_path):
 
 def download_sv_point_annotation(url):
     """
-    Call slideviewer API with the givne url
+    Call slideviewer API with the given url
 
     :param url: slide viewer api to call
     :return: json response
     """
-    response = urlopen(url)
-    data = json.load(response)
-    print(data)
+    try:
+        response = requests.get(url)
+        data = response.json()
+    except Exception as err:
+        print(err)
+        return None
 
+    print(data)
     if(str(data) != '[]'):
         return data
     else:
         print(" +- Label annotation file does not exist for slide and user.")
         return None
-
-def download_point_annotation(slideviewer_path, project_id, user):
-    """
-    Return json response from slide viewer call
-
-    :param slideviewer_path: slide path in slideviewer
-    :param project_id: slideviewer project id
-    :param user: username
-    :return: json response from slideviewer API
-    """
-
-    print (f" >>>>>>> Processing [{slideviewer_path}] <<<<<<<<")
-
-    url = "https://slides-res.mskcc.org/slides/" + str(user) + "@mskcc.org/projects;" + str(project_id) + ';' + slideviewer_path + "/getSVGLabels/nucleus"
-    print(url)
-
-    return download_sv_point_annotation(url)

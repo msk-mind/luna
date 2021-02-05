@@ -24,3 +24,6 @@ USERS:
 # If this field is left blank, then the regional annotation proxy table generator will attempt to
 # download this file from SlideViewer.
 SLIDEVIEWER_CSV_FILE: ov-slides.csv
+
+# slideviewer base url
+SLIDEVIEWER_URL: https://slideviewer-url.com
