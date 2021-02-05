@@ -28,8 +28,8 @@ def test_cli_geojson(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
-        ['-t', 'tests/data_processing/pathology/refined_table/regional_annotation/geojson_data.yaml',
-         '-f', 'tests/test_config.yaml',
+        ['-d', 'tests/data_processing/pathology/refined_table/regional_annotation/geojson_data.yaml',
+         '-a', 'tests/test_config.yaml',
          '-p', 'geojson'])
 
     assert result.exit_code == 0
@@ -44,8 +44,8 @@ def test_cli_concat(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli,
-                           ['-t', 'tests/data_processing/pathology/refined_table/regional_annotation/geojson_concat_data.yaml',
-                            '-f', 'tests/test_config.yaml',
+                           ['-d', 'tests/data_processing/pathology/refined_table/regional_annotation/geojson_concat_data.yaml',
+                            '-a', 'tests/test_config.yaml',
                             '-p', 'concat'])
 
     assert result.exit_code == 0

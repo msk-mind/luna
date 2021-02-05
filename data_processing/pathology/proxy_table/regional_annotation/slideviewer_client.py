@@ -9,8 +9,6 @@ import os
 import zipfile
 
 import requests
-from data_processing.common.config import ConfigSet
-from data_processing.common.constants import DATA_CFG
 
 
 def get_slide_id(full_filename):

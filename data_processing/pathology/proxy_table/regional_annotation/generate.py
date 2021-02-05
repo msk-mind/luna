@@ -23,8 +23,7 @@ import numpy as np
 
 import os
 
-from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import fetch_slide_ids, download_zip, \
-    unzip
+from data_processing.pathology.proxy_table.regional_annotation.slideviewer_client import fetch_slide_ids
 
 logger = init_logger()
 
@@ -70,6 +69,7 @@ def process_regional_annotation_slide_row_pandas(row: pd.DataFrame) -> pd.DataFr
 
     :return updated dataframe with bmp metadata
     '''
+    from slideviewer_client import download_zip, unzip
 
     full_filename = row.slideviewer_path.item()
     user = row.user.item()
@@ -170,8 +170,8 @@ def create_proxy_table():
         .withColumn('date_updated', current_timestamp()) \
         .withColumn('bmp_record_uuid', lit('')) \
         .withColumn('latest', lit(True)) \
-        .withColumn('SLIDE_BMP_DIR', lit(os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), 'regional_bmps'))) \
-        .withColumn('TMP_ZIP_DIR', lit(os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), TMP_ZIP_DIR))) \
+        .withColumn('SLIDE_BMP_DIR', lit(os.path.join(LANDING_PATH, 'regional_bmps'))) \
+        .withColumn('TMP_ZIP_DIR', lit(os.path.join(LANDING_PATH, TMP_ZIP_DIR))) \
         .withColumn('SLIDEVIEWER_API_URL', lit(cfg.get_value(const.DATA_CFG + '::SLIDEVIEWER_API_URL'))) \
 
     # explore by user list
@@ -189,8 +189,10 @@ def create_proxy_table():
                    'SLIDEVIEWER_API_URL'
                    )
 
+    spark.sparkContext.addPyFile("./data_processing/pathology/proxy_table/regional_annotation/slideviewer_client.py")
     df = df.groupby(['slideviewer_path', 'user']) \
         .applyInPandas(process_regional_annotation_slide_row_pandas, schema=df.schema)
+    df.show()
 
     df = df.toPandas()
     df = df.drop(columns=['SLIDE_BMP_DIR', 'TMP_ZIP_DIR', 'SLIDEVIEWER_API_URL'])
@@ -199,31 +201,28 @@ def create_proxy_table():
     df = df.replace("n/a", np.nan)
     df = df.dropna()
 
-    # add to graph
-    # df.apply(lambda x: add_bmp_triple(x.slide_id, x.bmp_record_uuid), axis=1)
-
     # convert annotation bitmaps to numpy arrays
-    SLIDE_NPY_DIR = os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH'), 'regional_npys')
+    SLIDE_NPY_DIR = os.path.join(LANDING_PATH, 'regional_npys')
     os.makedirs(SLIDE_NPY_DIR, exist_ok=True)
 
     # convert to numpy
     df["npy_filepath"] = df.apply(lambda x: convert_bmp_to_npy(x.bmp_filepath, SLIDE_NPY_DIR), axis=1)
 
     spark_bitmask_df = spark.createDataFrame(df)
+    spark_bitmask_df.show()
 
     # create proxy bitmask table
     # update main table if exists, otherwise create main table
-    BITMASK_TABLE_PATH = os.path.join(cfg.get_value(const.DATA_CFG+'::LANDING_PATH') , 'table/regional_bitmask')
-    write_uri = os.environ["HDFS_URI"]
-    save_path = os.path.join(write_uri, BITMASK_TABLE_PATH)
+    BITMASK_TABLE_PATH = const.TABLE_LOCATION(cfg)
+
     if not os.path.exists(BITMASK_TABLE_PATH):
         logger.info("creating new bitmask table")
         os.makedirs(BITMASK_TABLE_PATH)
-        spark_bitmask_df.coalesce(48).write.format("delta").save(save_path)
+        spark_bitmask_df.coalesce(48).write.format("delta").save(BITMASK_TABLE_PATH)
     else:
         logger.info("updating existing bitmask table")
         from delta.tables import DeltaTable
-        bitmask_table = DeltaTable.forPath(spark, save_path)
+        bitmask_table = DeltaTable.forPath(spark, BITMASK_TABLE_PATH)
         bitmask_table.alias("main_bitmask_table") \
             .merge(spark_bitmask_df.alias("bmp_annotation_updates"),
                    "main_bitmask_table.bmp_record_uuid = bmp_annotation_updates.bmp_record_uuid") \
@@ -264,7 +263,7 @@ def cli(data_config_file, app_config_file):
     npy_filepath - file path to generated npy annotation file
 
     Usage:
-    python3 -m data_processing.pathology.proxy_table.annotation.generate \
+    python3 -m data_processing.pathology.proxy_table.regional_annotation.generate \
         -d {data_config_yaml} \
         -a {app_config_yaml}
     '''
@@ -278,14 +277,12 @@ def cli(data_config_file, app_config_file):
 
         # write template file to manifest_yaml under LANDING_PATH
         # todo: write to hdfs without using local gpfs/
-        hdfs_path = os.environ['MIND_GPFS_DIR']
         landing_path = cfg.get_value(path=const.DATA_CFG + '::LANDING_PATH')
 
-        full_landing_path = os.path.join(hdfs_path, landing_path)
-        if not os.path.exists(full_landing_path):
-            os.makedirs(full_landing_path)
-        shutil.copy(data_config_file, os.path.join(full_landing_path, "manifest.yaml"))
-        logger.info("template file copied to" + os.path.join(full_landing_path, "manifest.yaml"))
+        if not os.path.exists(landing_path):
+            os.makedirs(landing_path)
+        shutil.copy(data_config_file, os.path.join(landing_path, "manifest.yaml"))
+        logger.info("template file copied to" + os.path.join(landing_path, "manifest.yaml"))
 
         # create proxy table
         exit_code = create_proxy_table()
