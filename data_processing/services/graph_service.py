@@ -14,8 +14,8 @@ import data_processing.common.constants as const
 
 @click.command()
 @click.option('-d', '--data_config_file', default = 'data_processing/services/config.yaml', required=True,
-		help="path to configuration related to package. See config.yaml.template in this package.")
-@click.option('-f', '--app_config_file', default = 'config.yaml', required=True,
+		help="path to data configuration related to package. See data_config.yaml.template in this package.")
+@click.option('-a', '--app_config_file', default = 'config.yaml', required=True,
               help="path to config file containing application configuration. See config.yaml.template")
 def update_graph(data_config_file, app_config_file):
 	"""

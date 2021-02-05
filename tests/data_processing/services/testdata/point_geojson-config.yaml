@@ -1,0 +1,14 @@
+ROOT_PATH: tests/data_processing/services/testdata
+
+PROJECT: test-project
+
+DATASET_NAME: dsn
+
+DATA_TYPE: point_geojson
+
+# mock graph configs
+GRAPH_URI: localhost:7897
+
+GRAPH_USER: graphuser
+
+GRAPH_PW: graphpw
