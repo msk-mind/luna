@@ -1,6 +1,9 @@
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.Node import Node
 
+from minio import Minio
+from concurrent.futures import ThreadPoolExecutor
+
 import os, socket, pathlib, logging
 
 
@@ -78,6 +81,8 @@ class Container(object):
         self._conn = Neo4jConnection(uri=params['GRAPH_URI'], user=params['GRAPH_USER'], pwd=params['GRAPH_PASSWORD'])
         self.logger.info ("Connection test: %s", self._conn.test_connection())
         self._host = socket.gethostname() # portable to *docker* containers
+        self.logger.info ("COnnecting to: %s", params['MINIO_URI'])
+        self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
         self.logger.info ("Running on: %s", self._host)
     
     def setNamespace(self, namespace_id: str):
@@ -88,6 +93,8 @@ class Container(object):
         """
         self._namespace_id = namespace_id
         self.logger.info ("Container namespace: %s", self._namespace_id)
+        if not self._client.bucket_exists(self._namespace_id):
+            self._client.make_bucket(self._namespace_id)
 
         return self
     
@@ -279,8 +286,18 @@ class Container(object):
         self._node_commits[node.name] = node
         
         # Decorate with the container namespace 
-        self._node_commits[node.name].set_namespace( self._namespace_id, self._name )
-        self.logger.info ("Container has %s pending commits",  len(self._node_commits))
+        self._node_commits[node.name].set_namespace( self._namespace_id )
+        self.logger.info ("Container has %s pending node commits",  len(self._node_commits))
+
+        # Set node objects
+        if "path" in node.properties.keys():
+            node.objects = []
+            node.properties['state'] = 'PENDING'
+            node.properties['object_uri'] = f"s3://{self._namespace_id}/{node.name}"
+            for path in pathlib.Path(node.properties['path']).glob("*"): node.objects.append(path)        
+
+        self.logger.info ("Node has %s pending object commits",  len(node.objects))
+
 
     def saveAll(self):
         """
@@ -298,3 +315,18 @@ class Container(object):
                     ON CREATE SET da = {n.get_map_str()}
                 """
             )
+
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                self.logger.info("Started object upload with 8 threads...")
+                futures = []
+                for p in n.objects:
+                    futures.append(executor.submit(self._client.fput_object, self._namespace_id, f"{n.name}/{p.name}", p))
+            
+            self._conn.query(f""" 
+                MATCH (container) {self._match_clause}
+                MATCH (container)-[:HAS_DATA]->(da:{n.get_match_str()})
+                SET da.state = 'VALID'
+                """
+            )
+            self.logger.info("Done.")
+           
