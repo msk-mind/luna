@@ -9,12 +9,14 @@ import data_processing.common.constants as const
 
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType, MapType
+from pyspark.sql.functions import  to_json
 
 import pydicom
 import os, shutil, sys, importlib, json, yaml, subprocess, time, click
 from io import BytesIO
 from filehash import FileHash
 from distutils.util import strtobool
+import re
 
 
 app = Flask(__name__)
@@ -27,6 +29,12 @@ cfg = ConfigSet(name=APP_CFG, config_file=config_file)
 spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.mind.api")	
 pathology_root_path = cfg.get_value(path=APP_CFG+'::$.pathology[:1]["root_path"]')
 
+PROJECT_MAPPING = const.PROJECT_MAPPING
+ANNOTATION_TABLE_MAPPINGS = const.ANNOTATION_TABLE_MAPPINGS
+
+## regex for HobI and slide ids
+slide_id_regex = re.compile("\d{6,}")
+slide_hid_regex = re.compile("HobI\d{2}-\d{12,}")
 
 
 # ==================================================================================================
@@ -58,29 +66,29 @@ def getSlideIDs_case(input_id):
 curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
 """
 
-@app.route('/mind/api/v1/getPathologyAnnotation/<string:project>/<string:slide_hid>/<string:annotation_type>/<labelset>', methods=['GET'])
-def getPathologyAnnotation(annotation_type, project,slide_hid,labelset):
-	slide_id = get_slide_id(slide_hid, "slide_hid")
-
-	ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, project, "annotations")
-
-	if annotation_type == "regional":
-		GEOJSON_TABLE_PATH = ANNOTATIONS_FOLDER + "/table/regional_concat_geojson"
-		filepath_col = "concat_geojson_filepath"
-	elif annotation_type == "point":
-		GEOJSON_TABLE_PATH = ANNOTATIONS_FOLDER + "/table/point_refined_geojson"
-		filepath_col = "geojson_filepath"
+# accepts both HobI and ImageIDs
+@app.route('/mind/api/v1/getPathologyAnnotation/<string:project>/<string:id>/<string:annotation_type>/<labelset>', methods=['GET'])
+def getPathologyAnnotation(annotation_type, project,id,labelset):
+	
+	if slide_hid_regex.match(id):
+		slide_id = get_slide_id(id, "slide_hid")
+	elif slide_id_regex.match(id):
+		slide_id = id
 	else:
 		return None
-	
-	filepath = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset}' and latest=True").first()[filepath_col]
 
-	print (filepath)
+	if annotation_type not in ANNOTATION_TABLE_MAPPINGS:
+		return "Illegal Annotation Type. This API supports \"regional\" or \"point\" annotations only"
 
-	with open(filepath) as f:
-		geojson = f.read()
+	DATA_TYPE = ANNOTATION_TABLE_MAPPINGS[annotation_type]["DATA_TYPE"]
+	GEOJSON_COLUMN = ANNOTATION_TABLE_MAPPINGS[annotation_type]["GEOJSON_COLUMN_NAME"]
+
+	ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, PROJECT_MAPPING[project])
+	GEOJSON_TABLE_PATH = os.path.join(ANNOTATIONS_FOLDER , "tables", DATA_TYPE)
+
+	row = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset.upper()}' and latest=True")
+	geojson = row.select(to_json(GEOJSON_COLUMN).alias("val")).head()['val']
 	return geojson
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port=5002, debug=True)
