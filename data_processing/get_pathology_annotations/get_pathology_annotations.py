@@ -21,21 +21,14 @@ import re
 
 app = Flask(__name__)
 logger = init_logger("flask-mind-server.log")
-config_file = "data_processing/getPathologyAnnotations/config.yaml"
 APP_CFG = "getPathologyAnnotations"
 
 
-cfg = ConfigSet(name=APP_CFG, config_file=config_file)
-spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.mind.api")	
-pathology_root_path = cfg.get_value(path=APP_CFG+'::$.pathology[:1]["root_path"]')
 
-PROJECT_MAPPING = const.PROJECT_MAPPING
-ANNOTATION_TABLE_MAPPINGS = const.ANNOTATION_TABLE_MAPPINGS
 
 ## regex for HobI and slide ids
 slide_id_regex = re.compile("\d{6,}")
 slide_hid_regex = re.compile("HobI\d{2}-\d{12,}")
-
 
 # ==================================================================================================
 # Service functions
@@ -68,8 +61,17 @@ curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
 
 # accepts both HobI and ImageIDs
 @app.route('/mind/api/v1/getPathologyAnnotation/<string:project>/<string:id>/<string:annotation_type>/<labelset>', methods=['GET'])
-def getPathologyAnnotation(annotation_type, project,id,labelset):
+def getPathologyAnnotation(annotation_type, project,id, labelset):
 	
+	pathology_root_path = app.config.get('pathology_root_path')
+	cfg = app.config.get('cfg')
+	spark = app.config.get('spark')
+
+
+	PROJECT_MAPPING = const.PROJECT_MAPPING
+	ANNOTATION_TABLE_MAPPINGS = const.ANNOTATION_TABLE_MAPPINGS
+
+
 	if slide_hid_regex.match(id):
 		slide_id = get_slide_id(id, "slide_hid")
 	elif slide_id_regex.match(id):
@@ -90,5 +92,33 @@ def getPathologyAnnotation(annotation_type, project,id,labelset):
 	geojson = row.select(to_json(GEOJSON_COLUMN).alias("val")).head()['val']
 	return geojson
 
+
+@click.command()
+@click.option('-c',
+              '--config_file',
+              default="data_processing/get_pathology_annotations/config.yaml",
+              type=click.Path(exists=True),
+              help="path to config file for annotation API"
+                   "See data_processing/get_pathology_annotations/config.yaml.template")
+def cli(config_file):
+	cfg = ConfigSet(name=APP_CFG, config_file=config_file)
+	spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.mind.api")	
+	pathology_root_path = cfg.get_value(path=APP_CFG+'::$.pathology[:1]["root_path"]')
+
+
+	app.config['cfg'] = cfg
+	app.config['spark'] = spark
+	app.config['pathology_root_path'] = pathology_root_path
+
+
+
+
+	app.run(host='0.0.0.0',port=5002, debug=True)
+
+
+
+	
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',port=5002, debug=True)
+	cli()
+	
