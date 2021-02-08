@@ -6,7 +6,8 @@ from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
-from data_processing.pathology.common.build_geojson_from_annotation import build_geojson_from_annotation, concatenate_regional_geojsons
+from data_processing.pathology.common.utils import get_labelset_keys
+
 from pyspark.sql.functions import udf, lit, col, first, last, desc, array, to_json, collect_list, current_timestamp, explode
 from pyspark.sql.window import Window
 from pyspark.sql.types import StringType, IntegerType, ArrayType, MapType, StructType, StructField
@@ -109,11 +110,7 @@ def create_geojson_table():
     df = spark.read.format("delta").load(bitmask_table_path)
 
     # explode table by labelsets
-    label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
-    labelsets = [cfg.get_value(path=const.DATA_CFG+'::USE_LABELSET')]
-
-    if cfg.get_value(path=const.DATA_CFG+'::USE_ALL_LABELSETS'):
-        labelsets = list(label_config.keys())
+    labelsets = get_labelset_keys()
     labelset_column = array([lit(key) for key in labelsets])
 
     df = df.withColumn("labelset_list", labelset_column)
@@ -127,19 +124,25 @@ def create_geojson_table():
     # populate geojson and geojson_record_uuid
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
     spark.sparkContext.addPyFile("./data_processing/common/utils.py")
-    spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson_from_annotation.py")
-    build_geojson_from_bitmap_udf = udf(build_geojson_from_annotation, geojson_struct)
-    from utils import generate_uuid_dict
-    geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
-    
-    # cache to not have udf called multiple times
-    df = df.withColumn("geojson",
-                       build_geojson_from_bitmap_udf(lit(str(label_config)), "npy_filepath","labelset",lit(contour_level),lit(polygon_tolerance))) \
-            .cache()
-    df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVGEOJSON"), "labelset")))
+    spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson.py")
+    from build_geojson import build_geojson_from_annotation
+    label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
+
+    df = df.withColumn("label_config", lit(str(label_config))) \
+            .withColumn("contour_level", lit(contour_level)) \
+            .withColumn("polygon_tolerance", lit(polygon_tolerance)) \
+            .withColumn("geojson", lit(""))
+
+    df = df.groupby(["bmp_record_uuid", "labelset"]).applyInPandas(build_geojson_from_annotation, schema = df.schema)
 
     # drop empty geojsons that may have been created
-    df = df.dropna()
+    df = df.filter("geojson != ''")
+
+    # populate uuid
+    from utils import generate_uuid_dict
+    geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
+    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
+    df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf("geojson", array(lit("SVGEOJSON"), "labelset")))
 
     # build refined table by selecting columns from output table
     geojson_df = df.select("sv_project_id", "slideviewer_path", "slide_id", "bmp_record_uuid", "user", "labelset", "geojson", "geojson_record_uuid")
@@ -194,15 +197,16 @@ def create_concat_geojson_table():
 
     # make geojson string list for slide + labelset
     concatgeojson_df = concatgeojson_df \
-        .select("sv_project_id", "slideviewer_path", "slide_id", "labelset", to_json("geojson").alias("geojson_str")) \
+        .select("sv_project_id", "slideviewer_path", "slide_id", "labelset", "geojson") \
         .groupby(["sv_project_id", "slideviewer_path", "slide_id", "labelset"]) \
-        .agg(collect_list("geojson_str").alias("geojson_list"))
+        .agg(collect_list("geojson").alias("geojson_list"))
 
     # set up udfs
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
     spark.sparkContext.addPyFile("./data_processing/common/utils.py")
-    spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson_from_annotation.py")
+    spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson.py")
     from utils import generate_uuid_dict
+    from build_geojson import concatenate_regional_geojsons
     concatenate_regional_geojsons_udf = udf(concatenate_regional_geojsons, geojson_struct)
     concat_geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
 

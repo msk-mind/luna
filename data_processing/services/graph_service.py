@@ -14,8 +14,8 @@ import data_processing.common.constants as const
 
 @click.command()
 @click.option('-d', '--data_config_file', default = 'data_processing/services/config.yaml', required=True,
-		help="path to configuration related to package. See config.yaml.template in this package.")
-@click.option('-f', '--app_config_file', default = 'config.yaml', required=True,
+		help="path to data configuration related to package. See data_config.yaml.template in this package.")
+@click.option('-a', '--app_config_file', default = 'config.yaml', required=True,
               help="path to config file containing application configuration. See config.yaml.template")
 def update_graph(data_config_file, app_config_file):
 	"""
@@ -69,7 +69,8 @@ def update_graph(data_config_file, app_config_file):
 			.groupBy([alias for field,alias in fields_alias]) \
 			.count() \
 			.toPandas()
-
+			
+		count = 0			
 		# update graph
 		for index, row in pdf.iterrows():
 
@@ -92,7 +93,8 @@ def update_graph(data_config_file, app_config_file):
 				query = f'''MATCH (n:{src_node.get_match_str()}) MERGE (m:{target_node.get_match_str()}) MERGE (n)-[r:{relationship}]->(m)'''
 				conn.query(query)
 			logger.info(query)
-			
+			count = index
+		logger.info(f"Updated {count+1} nodes")
 	logger.info("Finished update-graph in %s seconds" % (time.time() - start_time))
 
 if __name__ == "__main__":

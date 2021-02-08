@@ -1,0 +1,28 @@
+# root path to pathology data in the data lake
+ROOT_PATH: /path/to/mind/data
+
+# data type
+DATA_TYPE: POINT_RAW_JSON
+
+# MIND project name
+PROJECT: OV_16-158
+
+# dataset name
+DATASET_NAME: 20210203
+
+# Slideviewer project id
+PROJECT_ID: 134
+
+# Users that provide expert annotations for this project
+USERS:
+    - user1
+    - user2
+
+# an optional path to a SlideViewer csv file to use that lists the names of the whole slide images
+# and for which the regional annotation proxy table generator should download point annotations.
+# If this field is left blank, then the regional annotation proxy table generator will attempt to
+# download this file from SlideViewer.
+SLIDEVIEWER_CSV_FILE: ov-slides.csv
+
+# slideviewer base url
+SLIDEVIEWER_URL: https://slideviewer-url.com
