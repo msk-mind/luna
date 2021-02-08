@@ -106,7 +106,8 @@ def handler(signum, frame):
     raise TimeoutError("Geojson generation timed out.")
 
 
-def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, contour_level, polygon_tolerance):
+#def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, contour_level, polygon_tolerance):
+def build_geojson_from_annotation(df):
     """
     Builds geojson for all annotation labels in the specified labelset.
 
@@ -118,7 +119,13 @@ def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, 
     :return:
     """
     from build_geojson import add_contours_for_label, handler
-    
+
+    labelsets = df.label_config.values[0]
+    annotation_npy_filepath = df.npy_filepath.values[0]
+    labelset = df.labelset.values[0]
+    contour_level = df.contour_level.values[0]
+    polygon_tolerance = df.polygon_tolerance.values[0]
+
     labelsets = ast.literal_eval(labelsets)
     mappings = labelsets[labelset]
 
@@ -145,7 +152,8 @@ def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, 
     if len(annotation_geojson['features']) == 0:
         return None
 
-    return annotation_geojson
+    df["geojson"] = json.dumps(annotation_geojson)
+    return df
 
 
 def concatenate_regional_geojsons(geojson_list):

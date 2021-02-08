@@ -129,10 +129,18 @@ def create_geojson_table():
     build_geojson_from_bitmap_udf = udf(build_geojson_from_annotation, geojson_struct)
     label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
 
+    df = df.withColumn("label_config", lit(str(label_config))) \
+            .withColumn("contour_level", lit(contour_level)) \
+            .withColumn("polygon_tolerance", lit(polygon_tolerance)) \
+            .withColumn("geojson", lit(""))
+
+    df = df.groupby(["bmp_record_uuid", "labelset"]).applyInPandas(build_geojson_from_annotation, schema = df.schema)
+
     # cache to not have udf called multiple times
-    df = df.withColumn("geojson",
+    """df = df.withColumn("geojson",
                        build_geojson_from_bitmap_udf(lit(str(label_config)), "npy_filepath","labelset",lit(contour_level),lit(polygon_tolerance))) \
-            .cache()
+            .cache()"""
+
     # drop empty geojsons that may have been created
     df = df.dropna(subset=["geojson"])
 
@@ -140,7 +148,8 @@ def create_geojson_table():
     from utils import generate_uuid_dict
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-    df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVGEOJSON"), "labelset")))
+    #df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVGEOJSON"), "labelset")))
+    df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf("geojson", array(lit("SVGEOJSON"), "labelset")))
 
     # build refined table by selecting columns from output table
     geojson_df = df.select("sv_project_id", "slideviewer_path", "slide_id", "bmp_record_uuid", "user", "labelset", "geojson", "geojson_record_uuid")
