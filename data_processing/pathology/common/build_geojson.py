@@ -72,7 +72,7 @@ def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, 
         num_pixels = np.count_nonzero(annotation == label_num)
         print("num_pixels with label", num_pixels)
 
-        mask = np.where(annotation==label_num,1,0)
+        mask = np.where(annotation==label_num,1,0).astype(np.int8)
         contours = measure.find_contours(mask, level = contour_level)
         print("num contours", len(contours))
 
@@ -143,7 +143,7 @@ def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, 
 
     # empty geojson created, return nan and delete from geojson table
     if len(annotation_geojson['features']) == 0:
-        return np.nan
+        return None
 
     return annotation_geojson
 
