@@ -96,10 +96,10 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
 @click.command()
 @click.option('-c',
               '--config_file',
-              default="data_processing/get_pathology_annotations/config.yaml",
+              default="data_processing/get_pathology_annotations/app_config.yaml",
               type=click.Path(exists=True),
               help="path to config file for annotation API"
-                   "See data_processing/get_pathology_annotations/config.yaml.template")
+                   "See data_processing/get_pathology_annotations/app_config.yaml.template")
 def cli(config_file):
 	cfg = ConfigSet(name=APP_CFG, config_file=config_file)
 	spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.mind.api")	
