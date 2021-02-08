@@ -82,7 +82,7 @@ class GraphEnum(Enum):
 	slide = NodeType("slide", "slide_id")
 	REGIONAL_BITMASK = [Graph(slide,
 					 "HAS_DATA",
-					 NodeType("regional_bitmask", "bmp_record_uuid", ["user","date_updated","latest"]))]
+					 NodeType("regional_bitmask", "bmp_record_uuid", ["slideviewer_path","user","date_updated","latest"]))]
 
 	# regional concat geojson table contains regional geojson table + concatenated jsons
 	REGIONAL_CONCAT_GEOJSON = [Graph(slide,
@@ -92,7 +92,7 @@ class GraphEnum(Enum):
 
 	POINT_RAW_JSON = [Graph(slide,
 					"HAS_DATA",
-					NodeType("point_json", "sv_json_record_uuid", ["user","date_updated","latest"]))]
+					NodeType("point_json", "sv_json_record_uuid", ["slideviewer_path","user","date_updated","latest"]))]
 
 	POINT_GEOJSON = [Graph(slide,
 							"HAS_DATA",
