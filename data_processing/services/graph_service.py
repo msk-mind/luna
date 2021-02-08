@@ -69,7 +69,8 @@ def update_graph(data_config_file, app_config_file):
 			.groupBy([alias for field,alias in fields_alias]) \
 			.count() \
 			.toPandas()
-
+			
+		count = 0			
 		# update graph
 		for index, row in pdf.iterrows():
 
@@ -92,7 +93,8 @@ def update_graph(data_config_file, app_config_file):
 				query = f'''MATCH (n:{src_node.get_match_str()}) MERGE (m:{target_node.get_match_str()}) MERGE (n)-[r:{relationship}]->(m)'''
 				conn.query(query)
 			logger.info(query)
-			
+			count = index
+		logger.info(f"Updated {count+1} nodes")
 	logger.info("Finished update-graph in %s seconds" % (time.time() - start_time))
 
 if __name__ == "__main__":

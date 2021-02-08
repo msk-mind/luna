@@ -230,6 +230,11 @@ def create_proxy_table():
             .whenNotMatchedInsertAll() \
             .execute()
 
+    # clean up TMP_ZIP_DIR
+    tmp_zip_dir = os.path.join(LANDING_PATH, TMP_ZIP_DIR)
+    if os.path.exists(tmp_zip_dir):
+        shutil.rmtree(tmp_zip_dir)
+
     return exit_code
 
 
