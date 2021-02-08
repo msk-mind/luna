@@ -126,7 +126,6 @@ def create_geojson_table():
     spark.sparkContext.addPyFile("./data_processing/common/utils.py")
     spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson.py")
     from build_geojson import build_geojson_from_annotation
-    build_geojson_from_bitmap_udf = udf(build_geojson_from_annotation, geojson_struct)
     label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
 
     df = df.withColumn("label_config", lit(str(label_config))) \
@@ -142,7 +141,7 @@ def create_geojson_table():
             .cache()"""
 
     # drop empty geojsons that may have been created
-    df = df.dropna(subset=["geojson"])
+    df = df.filter("geojson != ''")
 
     # populate uuid
     from utils import generate_uuid_dict
@@ -204,9 +203,9 @@ def create_concat_geojson_table():
 
     # make geojson string list for slide + labelset
     concatgeojson_df = concatgeojson_df \
-        .select("sv_project_id", "slideviewer_path", "slide_id", "labelset", to_json("geojson").alias("geojson_str")) \
+        .select("sv_project_id", "slideviewer_path", "slide_id", "labelset", "geojson") \
         .groupby(["sv_project_id", "slideviewer_path", "slide_id", "labelset"]) \
-        .agg(collect_list("geojson_str").alias("geojson_list"))
+        .agg(collect_list("geojson").alias("geojson_list"))
 
     # set up udfs
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")

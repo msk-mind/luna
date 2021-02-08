@@ -111,12 +111,8 @@ def build_geojson_from_annotation(df):
     """
     Builds geojson for all annotation labels in the specified labelset.
 
-    :param labelsets: dictionary of labelset as string {labelset: {label number: label name}}
-    :param annotation_npy_filepath: path to annotation npy file
-    :param labelset: a labelset e.g. default_labels
-    :param contour_level: value along which to find contours in the array
-    :param polygon_tolerance: polygon resolution
-    :return:
+    :param df: Pandas dataframe
+    :return: Pandas dataframe with geojson field populated
     """
     from build_geojson import add_contours_for_label, handler
 
@@ -143,14 +139,14 @@ def build_geojson_from_annotation(df):
     except TimeoutError as err:
         print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
 
-        return None
+        return df
 
     # disables alarm
     signal.alarm(0)
 
     # empty geojson created, return nan and delete from geojson table
     if len(annotation_geojson['features']) == 0:
-        return None
+        return df
 
     df["geojson"] = json.dumps(annotation_geojson)
     return df
