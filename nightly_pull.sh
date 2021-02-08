@@ -36,6 +36,6 @@ echo "_____Running annotation-point-refined ETLs_____"
 echo "Running annotation-point-refined-ov ETL"
 /gpfs/mskmindhdp_emc/sw/env/bin/python3 -m data_processing.pathology.point_annotation.refined_table.generate -d point_geojson_ov.yaml -a config.yaml
 
-echo "DONE with nightly annotation pulls.""
+echo "DONE with nightly annotation pulls."
 
 
