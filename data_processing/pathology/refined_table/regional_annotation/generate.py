@@ -135,11 +135,6 @@ def create_geojson_table():
 
     df = df.groupby(["bmp_record_uuid", "labelset"]).applyInPandas(build_geojson_from_annotation, schema = df.schema)
 
-    # cache to not have udf called multiple times
-    """df = df.withColumn("geojson",
-                       build_geojson_from_bitmap_udf(lit(str(label_config)), "npy_filepath","labelset",lit(contour_level),lit(polygon_tolerance))) \
-            .cache()"""
-
     # drop empty geojsons that may have been created
     df = df.filter("geojson != ''")
 
@@ -147,7 +142,6 @@ def create_geojson_table():
     from utils import generate_uuid_dict
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-    #df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVGEOJSON"), "labelset")))
     df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf("geojson", array(lit("SVGEOJSON"), "labelset")))
 
     # build refined table by selecting columns from output table

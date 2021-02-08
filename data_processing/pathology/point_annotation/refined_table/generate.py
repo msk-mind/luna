@@ -68,7 +68,7 @@ def cli(data_config_file, app_config_file):
 def create_refined_table():
 
     cfg = ConfigSet()
-    spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="data_processing.pathology.point_annotation.proxy_table.generate")
+    spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="data_processing.pathology.point_annotation.refined_table.generate")
 
     # load paths from configs
     point_table_path = const.TABLE_LOCATION(cfg, is_source=True)
