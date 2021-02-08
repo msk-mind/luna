@@ -1,3 +1,14 @@
+'''
+This stands up the endpoints for getSlideIDs, getSlideIDS_case, and getPathologyAnnotation
+
+How to run:
+- start at the top level data_processing directory
+- run: python3 -m data_processing.get_pathology_annotations.get_pathology_annotations -c {path to app config}
+
+Example:
+	python3 -m data_processing.get_pathology_annotations.get_pathology_annotations -c data_processing/get_pathology_annotations/app_config.yaml
+'''
+
 from flask import Flask, request, jsonify
 
 from data_processing.common.CodeTimer import CodeTimer
@@ -22,8 +33,6 @@ import re
 app = Flask(__name__)
 logger = init_logger("flask-mind-server.log")
 APP_CFG = "getPathologyAnnotations"
-
-
 
 
 ## regex for HobI and slide ids
