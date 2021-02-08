@@ -1,6 +1,0 @@
-pathology:
-
-  # root path to pathology data in the data lake
-  - root_path: /path/to/path/data
-
-
