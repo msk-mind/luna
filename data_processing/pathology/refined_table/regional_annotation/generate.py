@@ -126,21 +126,23 @@ def create_geojson_table():
     spark.sparkContext.addPyFile("./data_processing/common/utils.py")
     spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson.py")
     from build_geojson import build_geojson_from_annotation
-    build_geojson_from_bitmap_udf = udf(build_geojson_from_annotation, geojson_struct)
     label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
 
-    # cache to not have udf called multiple times
-    df = df.withColumn("geojson",
-                       build_geojson_from_bitmap_udf(lit(str(label_config)), "npy_filepath","labelset",lit(contour_level),lit(polygon_tolerance))) \
-            .cache()
+    df = df.withColumn("label_config", lit(str(label_config))) \
+            .withColumn("contour_level", lit(contour_level)) \
+            .withColumn("polygon_tolerance", lit(polygon_tolerance)) \
+            .withColumn("geojson", lit(""))
+
+    df = df.groupby(["bmp_record_uuid", "labelset"]).applyInPandas(build_geojson_from_annotation, schema = df.schema)
+
     # drop empty geojsons that may have been created
-    df = df.dropna(subset=["geojson"])
+    df = df.filter("geojson != ''")
 
     # populate uuid
     from utils import generate_uuid_dict
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-    df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVGEOJSON"), "labelset")))
+    df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf("geojson", array(lit("SVGEOJSON"), "labelset")))
 
     # build refined table by selecting columns from output table
     geojson_df = df.select("sv_project_id", "slideviewer_path", "slide_id", "bmp_record_uuid", "user", "labelset", "geojson", "geojson_record_uuid")
@@ -195,9 +197,9 @@ def create_concat_geojson_table():
 
     # make geojson string list for slide + labelset
     concatgeojson_df = concatgeojson_df \
-        .select("sv_project_id", "slideviewer_path", "slide_id", "labelset", to_json("geojson").alias("geojson_str")) \
+        .select("sv_project_id", "slideviewer_path", "slide_id", "labelset", "geojson") \
         .groupby(["sv_project_id", "slideviewer_path", "slide_id", "labelset"]) \
-        .agg(collect_list("geojson_str").alias("geojson_list"))
+        .agg(collect_list("geojson").alias("geojson_list"))
 
     # set up udfs
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")

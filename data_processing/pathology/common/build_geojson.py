@@ -106,19 +106,22 @@ def handler(signum, frame):
     raise TimeoutError("Geojson generation timed out.")
 
 
-def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, contour_level, polygon_tolerance):
+#def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, contour_level, polygon_tolerance):
+def build_geojson_from_annotation(df):
     """
     Builds geojson for all annotation labels in the specified labelset.
 
-    :param labelsets: dictionary of labelset as string {labelset: {label number: label name}}
-    :param annotation_npy_filepath: path to annotation npy file
-    :param labelset: a labelset e.g. default_labels
-    :param contour_level: value along which to find contours in the array
-    :param polygon_tolerance: polygon resolution
-    :return:
+    :param df: Pandas dataframe
+    :return: Pandas dataframe with geojson field populated
     """
     from build_geojson import add_contours_for_label, handler
-    
+
+    labelsets = df.label_config.values[0]
+    annotation_npy_filepath = df.npy_filepath.values[0]
+    labelset = df.labelset.values[0]
+    contour_level = df.contour_level.values[0]
+    polygon_tolerance = df.polygon_tolerance.values[0]
+
     labelsets = ast.literal_eval(labelsets)
     mappings = labelsets[labelset]
 
@@ -136,16 +139,17 @@ def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, 
     except TimeoutError as err:
         print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
 
-        return None
+        return df
 
     # disables alarm
     signal.alarm(0)
 
     # empty geojson created, return nan and delete from geojson table
     if len(annotation_geojson['features']) == 0:
-        return None
+        return df
 
-    return annotation_geojson
+    df["geojson"] = json.dumps(annotation_geojson)
+    return df
 
 
 def concatenate_regional_geojsons(geojson_list):
