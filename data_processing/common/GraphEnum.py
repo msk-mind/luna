@@ -79,7 +79,7 @@ class GraphEnum(Enum):
 			NodeType("feature", "feature_record_uuid", ["metadata.SeriesInstanceUID", "label"]))]
 
 	# pathology
-	slide = NodeType("slide", "slide_id")
+	slide = NodeType("slide", "slide_id", ["sv_project_id"])
 	REGIONAL_BITMASK = [Graph(slide,
 					 "HAS_DATA",
 					 NodeType("regional_bitmask", "bmp_record_uuid", ["slideviewer_path","user","date_updated","latest"]))]
