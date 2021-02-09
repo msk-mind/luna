@@ -36,6 +36,13 @@ echo "_____Running annotation-point-refined ETLs_____"
 echo "Running annotation-point-refined-ov ETL"
 /gpfs/mskmindhdp_emc/sw/env/bin/python3 -m data_processing.pathology.point_annotation.refined_table.generate -d point_geojson_ov.yaml -a config.yaml
 
-echo "DONE with nightly annotation pulls."
+echo "Update Graph"
+for filename in graph-config-*; do
+    echo "Update graph with $filename"
+    /gpfs/mskmindhdp_emc/sw/env/bin/python3 -m data_processing.services.graph_service -d $filename -a config.yaml
+done
+
+echo "DONE with nightly annotation pulls and graph updates."
+
 
 
