@@ -39,6 +39,9 @@ APP_CFG = "getPathologyAnnotations"
 slide_id_regex = re.compile("\d{6,}")
 slide_hid_regex = re.compile("HobI\d{2}-\d{12,}")
 
+PROJECT_MAPPING = const.PROJECT_MAPPING
+ANNOTATION_TABLE_MAPPINGS = const.ANNOTATION_TABLE_MAPPINGS
+
 # ==================================================================================================
 # Service functions
 # ==================================================================================================
@@ -73,31 +76,27 @@ curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
 def getPathologyAnnotation(annotation_type, project,id, labelset):
 	
 	pathology_root_path = app.config.get('pathology_root_path')
-	cfg = app.config.get('cfg')
+
 	spark = app.config.get('spark')
-
-
-	PROJECT_MAPPING = const.PROJECT_MAPPING
-	ANNOTATION_TABLE_MAPPINGS = const.ANNOTATION_TABLE_MAPPINGS
-
 
 	if slide_hid_regex.match(id):
 		slide_id = get_slide_id(id, "slide_hid")
 	elif slide_id_regex.match(id):
 		slide_id = id
 	else:
-		return None
+		return "Invalid ID"
 
 	if annotation_type not in ANNOTATION_TABLE_MAPPINGS:
 		return "Illegal Annotation Type. This API supports \"regional\" or \"point\" annotations only"
 
 	DATA_TYPE = ANNOTATION_TABLE_MAPPINGS[annotation_type]["DATA_TYPE"]
 	GEOJSON_COLUMN = ANNOTATION_TABLE_MAPPINGS[annotation_type]["GEOJSON_COLUMN_NAME"]
-
 	ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, PROJECT_MAPPING[project])
 	GEOJSON_TABLE_PATH = os.path.join(ANNOTATIONS_FOLDER , "tables", DATA_TYPE)
 
 	row = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset.upper()}' and latest=True")
+	if row.count() == 0:
+		return "No annotations match the provided query."
 	geojson = row.select(to_json(GEOJSON_COLUMN).alias("val")).head()['val']
 	return geojson
 
