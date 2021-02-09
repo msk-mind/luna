@@ -25,8 +25,19 @@ def test_table_location():
 
     assert const.TABLE_LOCATION(c1) == "tests/data_processing/radiology/proxy_table/test_data/OV_16-158/tables/CT_OV_16-158_CT_20201028"
 
-def test_project_location():
 
+def test_table_location_emptystring():
+    c1 = ConfigSet(name=const.DATA_CFG, config_file='tests/data_processing/data_ingestion_template_valid_empty_dataset.yml')
+    
+    assert const.TABLE_LOCATION(c1) == "tests/data_processing/radiology/proxy_table/test_data/OV_16-158/tables/CT"
+
+
+def test_table_location_none():
+    c1 = ConfigSet(name=const.DATA_CFG, config_file='tests/data_processing/data_ingestion_template_valid_empty_dataset_2.yml')
+
+    assert const.TABLE_LOCATION(c1) == "tests/data_processing/radiology/proxy_table/test_data/OV_16-158/tables/CT"
+
+def test_project_location():
     c1 = ConfigSet(name=const.DATA_CFG, config_file='tests/data_processing/data_ingestion_template_valid.yml')
 
     assert const.PROJECT_LOCATION(c1) == "tests/data_processing/radiology/proxy_table/test_data/OV_16-158"
