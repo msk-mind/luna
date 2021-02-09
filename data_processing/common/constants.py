@@ -62,7 +62,8 @@ def TABLE_NAME(cfg, is_source=False):
         table_name = cfg.get_value(path=DATA_CFG+'::DATA_TYPE').upper()
 
     dataset_name = cfg.get_value(path=DATA_CFG+'::DATASET_NAME')
-    if dataset_name != "":
+    
+    if dataset_name != "" and dataset_name is not None:
         table_name += "_{0}".format(dataset_name)
 
     return table_name
