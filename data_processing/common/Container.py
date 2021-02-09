@@ -1,12 +1,14 @@
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.Node import Node
+from data_processing.common.CodeTimer import CodeTimer 
 
 from minio import Minio
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import os, socket, pathlib
 
+from tqdm import tqdm
 
 class Container(object):
     """
@@ -81,7 +83,7 @@ class Container(object):
         self._conn = Neo4jConnection(uri=params['GRAPH_URI'], user=params['GRAPH_USER'], pwd=params['GRAPH_PASSWORD'])
         self.logger.info ("Connection test: %s", self._conn.test_connection())
         self._host = socket.gethostname() # portable to *docker* containers
-        self.logger.info ("COnnecting to: %s", params['MINIO_URI'])
+        self.logger.info ("Connecting to: %s", params['MINIO_URI'])
         self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
         self.logger.info ("Running on: %s", self._host)
     
@@ -301,25 +303,27 @@ class Container(object):
          
         for n in self._node_commits.values():
             self.logger.info ("Committing %s", n.get_create_str())
-            self._conn.query(f""" 
-                MATCH (container) {self._match_clause}
-                MERGE (container)-[:HAS_DATA]->(da:{n.get_match_str()})
-                    ON MATCH  SET da = {n.get_map_str()}
-                    ON CREATE SET da = {n.get_map_str()}
-                """
-            )
-
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                self.logger.info("Started object upload with 8 threads...")
-                futures = []
-                for p in n.objects:
-                    futures.append(executor.submit(self._client.fput_object, self._namespace_id, f"{n.name}/{p.name}", p))
-            
-            self._conn.query(f""" 
-                MATCH (container) {self._match_clause}
-                MATCH (container)-[:HAS_DATA]->(da:{n.get_match_str()})
-                SET da.state = 'VALID'
-                """
-            )
+            with CodeTimer (self.logger, "Commit " + n.name):
+    
+                self._conn.query(f""" 
+                    MATCH (container) {self._match_clause}
+                    MERGE (container)-[:HAS_DATA]->(da:{n.get_match_str()})
+                        ON MATCH  SET da = {n.get_map_str()}
+                        ON CREATE SET da = {n.get_map_str()}
+                    """
+                )
+    
+                with ThreadPoolExecutor(max_workers=4) as executor:
+                    self.logger.info("Started object upload with 4 threads...")
+                    futures = []
+                    for p in n.objects:
+                        futures.append(executor.submit(self._client.fput_object, self._namespace_id, f"{n.name}/{p.name}", p))
+    
+                self._conn.query(f""" 
+                    MATCH (container) {self._match_clause}
+                    MATCH (container)-[:HAS_DATA]->(da:{n.get_match_str()})
+                    SET da.state = 'VALID'
+                    """
+                )
             self.logger.info("Done.")
            
