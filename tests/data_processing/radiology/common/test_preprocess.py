@@ -1,5 +1,5 @@
 import pytest
-from data_processing.radiology.common.utils import *
+from data_processing.radiology.common.preprocess import *
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.config import ConfigSet
 import data_processing.common.constants as const

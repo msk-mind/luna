@@ -115,6 +115,8 @@ def dicom_to_bytes(dicom_path, width, height):
     :param height: height of the image
     :return: image in bytes
     """
+    from preprocess import normalize
+
     file_path = dicom_path.split(':')[-1]
 
     data, header = load(file_path)
@@ -146,6 +148,7 @@ def create_seg_images(src_path, uuid, width, height):
     :param height: height of the image
     :return: an array of (instance_number, uuid, png binary) tuples
     """
+    from preprocess import normalize
 
     file_path = src_path.split(':')[-1]
     data, header = load(file_path)
@@ -163,7 +166,7 @@ def create_seg_images(src_path, uuid, width, height):
             # double check that subtracting is needed for all.
             slice_num = num_images - (i+1)
 
-            image_2d_scaled = (np.maximum(image_2d, 0) / image_2d.max()) * 255.0
+            image_2d_scaled = normalize(image_2d)
             image_2d_scaled = np.uint8(image_2d_scaled)
 
             im = Image.fromarray(image_2d_scaled)
