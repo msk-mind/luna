@@ -23,11 +23,7 @@
 import requests
 
 param = {
-  "paths": ['/Users/rosed2/Downloads/Vittorio_Louise_E_19600825_32210602/PreContrast/IM-0013-0135.dcm',
-'/Users/rosed2/Downloads/Vittorio_Louise_E_19600825_32210602/PreContrast/IM-0013-0136.dcm',
-'/Users/rosed2/Downloads/Vittorio_Louise_E_19600825_32210602/PreContrast/IM-0013-0137.dcm',
-'/Users/rosed2/Downloads/Vittorio_Louise_E_19600825_32210602/PreContrast/IM-0013-0138.dcm',
-'/Users/rosed2/Downloads/Vittorio_Louise_E_19600825_32210602/PreContrast/IM-0013-0139.dcm'],
+  "paths": ['1.dcm', '2.dcm', '3.dcm', '4.dcm', '5.dcm'],
   "width": 512,
   "height": 512
 }

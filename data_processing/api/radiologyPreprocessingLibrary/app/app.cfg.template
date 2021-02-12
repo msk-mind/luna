@@ -1,0 +1,11 @@
+# config names should be UPPERCASE
+
+GRAPH_URI="http://graphhost:port"
+# in the future part of some user auth/ or kube. secret config
+GRAPH_USER="graphuser"
+GRAPH_PASSWORD="graphpassword"
+
+OBJECT_URI="objecthost:port"
+OBJECT_USER="objectuser"
+OBJECT_PASSWORD="objectpassword"
+
