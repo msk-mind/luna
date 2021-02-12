@@ -1,5 +1,5 @@
 aiohttp
-dask[complete]
+boto3
 filehash
 flask_restx
 Pillow

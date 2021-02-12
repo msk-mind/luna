@@ -8,7 +8,6 @@ import pandas as pd
 from minio import Minio
 import os
 
-from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.api.radiologyPreprocessingLibrary.app.service import dicom_to_binary
 
 # Setup configurations
@@ -37,13 +36,13 @@ image_params = api.model("DicomToImage",
 
 # FUTURE: a subsetting function that selects instance # list before this?
 @api.route('/radiology/images/<project_id>/<scan_id>',
-           methods=['POST', 'GET'],
+           methods=['POST'],
            doc={"description": "Dicoms in given scan to Image files."}
 )
 @api.route('/radiology/images/<project_id>/<scan_id>/<download_path>',
-           methods=['POST', 'GET'],
+           methods=['GET'],
            doc={"description": "Dicoms in given scan to Image files."}
-           )
+)
 class DicomToImage(Resource):
 
     @api.doc(
@@ -100,7 +99,10 @@ class DicomToImage(Resource):
         uri = os.path.join(project_id, "radiology-images", scan_id + ".parquet")
         # some minimal parquet schema. save request.json also!
         df = pd.DataFrame({"content": binaries})
-        df["request"] = str(request.json)
+
+        # add post request params
+        for key, val in request.json.items():
+            df[key] = val
 
         minio = pa.fs.S3FileSystem(scheme="http",
                                    endpoint_override=app.config.get("OBJECT_URI"),
@@ -129,6 +131,8 @@ class DicomToImage(Resource):
                400: "Nodes already exist"}
 )
 class UpdateGraph(Resource):
+
+    from data_processing.common.Neo4jConnection import Neo4jConnection
 
     def __init__(self):
         self.conn = Neo4jConnection(app.config.get('GRAPH_URI'),
@@ -173,12 +177,13 @@ class UpdateGraph(Resource):
 
 to unpack parquet with pyarrow/pandas
 
-# check downloaded parquet
+# 1. Load downloaded parquet to pandas df
 table = pq.read_table('test-download.parquet')
 df = table.to_pandas()
 
-# TODO read directly from minio
-from pyarrow import fs
+# 2. Get the parquet directly from minio, and convert to pandas df
+import pyarrow as pa
+import pyarrow.dataset as ds
 
 minio = pa.fs.S3FileSystem(scheme="http",
                            endpoint_override=app.config.get("OBJECT_URI"),
@@ -186,18 +191,12 @@ minio = pa.fs.S3FileSystem(scheme="http",
                            secret_key=app.config.get("OBJECT_PASSWORD"))
                            
 dataset = ds.dataset("breast-mri/radiology-images/some-scan-id.parquet", filesystem=minio)
+df = dataset.to_table().to_pandas()
 
+... show how we can load binary with Image
+# 3. Minio Select API
 
 """
 
-
-"""
-Steps:
-1. initScan https://github.com/msk-mind/data-processing/blob/af2f13b78f8629f011bf13a843cf884a96f8cd6a/data_processing/scanManager/scanManager.py#L281
-
-# Get a list of dicom paths -> table path, query, 
-# call DicomToImage(list of dicom paths)
-# 
-"""
 if __name__ == '__main__':
-    app.run(threaded=True, debug=True)
+    app.run(threaded=True, debug=False)
