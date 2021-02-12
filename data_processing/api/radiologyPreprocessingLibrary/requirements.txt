@@ -8,7 +8,7 @@ minio
 neo4j
 opencv-python
 pandas
-pyarrow
+pyarrow==3.0.0
 pyspark
 pytest
 requests

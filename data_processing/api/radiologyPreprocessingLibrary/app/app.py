@@ -92,7 +92,7 @@ class DicomToImage(Resource):
 
         print(len(binaries))
 
-        # TODO save in parquet
+        # save in parquet
         if not object_client.bucket_exists(project_id):
             object_client.make_bucket(project_id)
 
@@ -111,92 +111,6 @@ class DicomToImage(Resource):
 
         table = pa.Table.from_pandas(df, preserve_index=False)
         pq.write_table(table, uri, filesystem=minio)
-
-"""
-# This should be part of a different microservice.
-# TODO service that gets image URI and updates the graph
-@api.route('/graphs/<node_type>/<context>/<node_name>',
-           methods=['GET', 'DELETE'],
-           doc={"description": "Retrieve data from graph."}
-)
-@api.route('/graphs/<node_type>/<context>/<node_name>/<uri>',
-           methods=['POST'],
-           doc={"description": "Update graph."}
-)
-@api.doc(
-    params={'node_type': 'node type',
-            'context': 'node context',
-            'node_name': 'node name or id'},
-    responses={200: "Success",
-               400: "Nodes already exist"}
-)
-class UpdateGraph(Resource):
-
-    from data_processing.common.Neo4jConnection import Neo4jConnection
-
-    def __init__(self):
-        self.conn = Neo4jConnection(app.config.get('GRAPH_URI'),
-                               app.config.get('GRAPH_USER'),
-                               app.config.get('GRAPH_PASSWORD'))
-
-    # ex) "scan", "BR_16-512", "scan_id"
-    def get(self, node_type, context, node_name):
-
-        try:
-            response = self.conn.query(
-                f"MATCH (n:{node_type}:globals{{QualifiedPath: '{context}::{node_name}' }}) RETURN n")
-            if response:
-                return make_response(response, "200")
-        except Exception as ex:
-            return make_response(ex, 500)
-
-    def post(self, node_type, context, node_name, uri):
-        # TODO update graph with parquet metadata and object store URI
-        # read parquet metadata and add to node???
-        df = dd.read_parquet(uri)
-        request_details = df.request.item()
-
-        try:
-            self.conn.query(f" 
-                MATCH (container:{node_type}) WHERE {node_type}.QualifiedPath={context}::{node_name} 
-                MERGE (data:{node_type}_derived_data:globals{{QualifiedPath: '{context}::{Path(uri).stem}', uri: {uri}, {request_details} ) 
-                MERGE (container)-[:HAS_DATA]->(data)"
-            )
-            return make_response("Success", 200)
-        except Exception as ex:
-            return make_response(ex, 500)
-        return
-"""
-"""
- df = dd.from_pandas(pd.DataFrame(data=d), npartitions=2)
->>> dd.to_parquet(df=df,
-...               path='abfs://CONTAINER/FILE.parquet'
-...               storage_options={'account_name': 'ACCOUNT_NAME',
-...                                'account_key': 'ACCOUNT_KEY'}
-
-
-to unpack parquet with pyarrow/pandas
-
-# 1. Load downloaded parquet to pandas df
-table = pq.read_table('test-download.parquet')
-df = table.to_pandas()
-
-# 2. Get the parquet directly from minio, and convert to pandas df
-import pyarrow as pa
-import pyarrow.dataset as ds
-
-minio = pa.fs.S3FileSystem(scheme="http",
-                           endpoint_override=app.config.get("OBJECT_URI"),
-                           access_key=app.config.get("OBJECT_USER"),
-                           secret_key=app.config.get("OBJECT_PASSWORD"))
-                           
-dataset = ds.dataset("breast-mri/radiology-images/some-scan-id.parquet", filesystem=minio)
-df = dataset.to_table().to_pandas()
-
-... show how we can load binary with Image
-# 3. Minio Select API
-
-"""
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5005, threaded=True, debug=False)
