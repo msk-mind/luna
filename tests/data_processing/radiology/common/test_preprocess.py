@@ -1,4 +1,5 @@
 import pytest
+import sys
 from data_processing.radiology.common.preprocess import *
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.config import ConfigSet
@@ -16,12 +17,18 @@ def test_find_centroid():
 
 def test_dicom_to_bytes():
 
+    import data_processing
+    sys.modules['preprocess'] = data_processing.radiology.common.preprocess
+
     image = dicom_to_bytes(dicom_path, 512, 512)
 
     assert bytes == type(image)
     assert 512*512 == len(image)
 
 def test_create_seg_images():
+
+    import data_processing
+    sys.modules['preprocess'] = data_processing.radiology.common.preprocess
 
     arr = create_seg_images(mhd_path, "uuid", 512, 512)
 
