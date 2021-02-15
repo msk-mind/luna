@@ -29,7 +29,7 @@ class Container(object):
           Container has 1 pending commits
 
     $ container.saveAll()
-        > Committing dicom:globals{  name: 'DCM-0123', QualifiedPath: 'test::DCM-0123', Namespace: 'test', type: 'dicom' , path: 'file:/some/path/1.dcm'}
+        > Committing dicom:globals{ hash: 'abc123' name: 'my-dicom', qualified_address: 'test::1.2.840::my-dicom', namespace: 'test', type: 'dicom' , path: 'file:/some/path/1.dcm'}
 
     $ node = container.listData("dicom")
         > ----------------------------------------------------------------------------------------------------
@@ -37,16 +37,16 @@ class Container(object):
           type: dicom
           properties: 
           - type: 'dicom'
-          - QualifiedPath: 'test::DCM-0123'
+          - qualified_address: 'est::1.2.840::my-dicom'
           - path: 'file:/some/path/1.dcm'
-          - Namespace: '3'
+          - namespace: '3'
           - Modality: 'CT'
-          - name: 'DCM-0123'
+          - name: 'my-dicom'
           ----------------------------------------------------------------------------------------------------
-    $ container.get("dicom", "data.Namespace='test'").path
+    $ container.get("dicom", "my-dicom").path
         > /some/path/1.dcm
 
-    $ container.get("dicom", "data.Namespace='test'").properties['Modality']
+    $ container.get("dicom", "my-dicom").properties['Modality']
         > 'CT'
     
     The container includes a logging method:
@@ -103,7 +103,7 @@ class Container(object):
         # Figure out how to match the node
         if isinstance(container_id, str) and not container_id.isdigit(): 
             if not "::" in container_id: self.logger.warning ("Qualified path %s doesn't look like one...", container_id)
-            self._match_clause = f"""WHERE container.QualifiedPath = '{container_id}'"""
+            self._match_clause = f"""WHERE container.qualified_address = '{container_id}'"""
         elif (isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
             self._match_clause = f"""WHERE id(container) = {container_id} """
         else:
@@ -112,7 +112,7 @@ class Container(object):
         # Run query
         res = self._conn.query(f"""
             MATCH (container) {self._match_clause}
-            RETURN id(container), labels(container), container.type, container.name, container.Namespace, container.QualifiedPath"""
+            RETURN id(container), labels(container), container.type, container.name, container.namespace, container.qualified_address"""
         )
         
         # Check if the results are singleton (they should be... since we only query unique IDs!!!) 
@@ -124,7 +124,7 @@ class Container(object):
         self.logger.info ("Found: %s", res)
         self._container_id  = res[0]["id(container)"]
         self._name          = res[0]["container.name"]
-        self._qualifiedpath = res[0]["container.QualifiedPath"]
+        self._qualifiedpath = res[0]["container.qualified_address"]
         self._type          = res[0]["container.type"]
         self._labels        = res[0]["labels(container)"]
         self._node_commits    = {}
