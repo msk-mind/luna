@@ -1,0 +1,3 @@
+OBJECT_URI: objecthost:port
+OBJECT_USER: objectuser
+OBJECT_PASSWORD: objectpassword

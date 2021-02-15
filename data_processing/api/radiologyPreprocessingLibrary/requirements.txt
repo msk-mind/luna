@@ -1,0 +1,15 @@
+aiohttp
+boto3
+click
+filehash
+flask_restx
+Pillow
+medpy
+minio
+neo4j
+opencv-python
+pandas
+pyarrow==3.0.0
+pyspark
+pytest
+requests
