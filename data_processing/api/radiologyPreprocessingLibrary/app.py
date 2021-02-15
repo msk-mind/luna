@@ -1,15 +1,13 @@
-from flask import Flask, request, jsonify, render_template, make_response
+from flask import Flask, request, jsonify, make_response
 from flask_restx import Api, Resource, fields
-from datetime import timedelta
 import subprocess
 import pyarrow as pa
 import pyarrow.parquet as pq
-import pyarrow.dataset as ds
 import pandas as pd
 from minio import Minio
 import os
 
-from data_processing.api.radiologyPreprocessingLibrary.app.service import dicom_to_binary
+from data_processing.api.radiologyPreprocessingLibrary.service import dicom_to_binary
 
 # Setup configurations
 VERSION      = "branch:"+subprocess.check_output(["git","rev-parse" ,"--abbrev-ref", "HEAD"]).decode('ascii').strip()
@@ -42,8 +40,7 @@ path_params = api.model("DownloadImage",
 
 # FUTURE: a subsetting function that selects instance # list before this?
 @api.route('/radiology/images/<project_id>/<scan_id>',
-           methods=['GET', 'POST', 'DELETE'],
-           doc={"description": "CRUD dicoms in given scan to Image files."}
+           methods=['GET', 'POST', 'DELETE']
 )
 class DicomToImage(Resource):
 
@@ -56,6 +53,11 @@ class DicomToImage(Resource):
     @api.expect(path_params)
     def get(self, project_id, scan_id):
         # TODO could be a generic function
+
+        if not request.json or "output_location" not in request.json:
+            response = {"message": "Missing expected params."}
+            return make_response(jsonify(response), 400)
+
         output_path = request.json["output_location"]
         print(project_id)
         print(scan_id)
@@ -87,6 +89,10 @@ class DicomToImage(Resource):
     @api.expect(image_params)
     def post(self, project_id, scan_id):
 
+        if not request.json or \
+                ("paths" not in request.json or "width" not in request.json or "height" not in request.json):
+            response = {"message": "Missing expected params."}
+            return make_response(jsonify(response), 400)
         # get request params
         paths = request.json["paths"]
         width = request.json["width"]
