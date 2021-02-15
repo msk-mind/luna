@@ -45,7 +45,7 @@ def cli(cohort_id, container_id, method_id):
     method_data = get_method_data(cohort_id, method_id) 
     input_node  = container.get("dicom", method_data['input_name']) # Only get origional dicoms from
 
-    input_dir = str(input_node.path.parent)
+    input_dir = str(input_node.path)
 
     file_ext     = method_data['file_ext']
 
@@ -96,7 +96,7 @@ def cli(cohort_id, container_id, method_id):
 
     # Prepare metadata and commit
     record_type = file_ext
-    record_name = method_data['output_name']
+    record_name = method_id
     record_properties = {
         'path' : output_dir,
         'zdim' : n_slices,

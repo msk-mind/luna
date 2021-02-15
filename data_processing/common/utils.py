@@ -123,7 +123,7 @@ def get_method_data(cohort_id, method_id):
     :param: method_id: string
     """
 
-    method_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, "methods")
+    method_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", cohort_id, "methods")
     with open(os.path.join(method_dir, f'{method_id}.json')) as json_file:
         method_config = json.load(json_file)['params']
     return method_config

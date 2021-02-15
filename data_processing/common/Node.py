@@ -86,10 +86,20 @@ class Node(object):
 
 
 	def get_object(self, glob_string):
+		"""
+		Return a singular object for the data node given glob string
+		"""
+		return str(next(self.path.glob(glob_string)))
+	
+
+	def get_objects(self, glob_string):
+		"""
+		Return all objects for the data node given glob string
+		"""
 		if os.path.isdir(self.path):
-			return str(next(self.path.glob(glob_string)))
+			return self.path.glob(glob_string)
 		else:
-			return str(next(self.path.parent.glob(glob_string)))
+			return self.path.parent.glob(glob_string)
 
 	@staticmethod
 	def prop_str(fields, row):

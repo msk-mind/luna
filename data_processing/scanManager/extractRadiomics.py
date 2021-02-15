@@ -45,12 +45,12 @@ def cli(cohort_id, container_id, method_id):
     method_data = get_method_data(cohort_id, method_id) 
 
     image_node  = container.get("mhd", method_data['image_input_name']) 
-    label_node  = container.get("mha", method_data['image_output_name'])
+    label_node  = container.get("mha", method_data['label_input_name'])
 
-    extractor = featureextractor.RadiomicsFeatureExtractor(**method_data)
+    extractor = featureextractor.RadiomicsFeatureExtractor(**method_data['RadiomicsFeatureExtractor'])
 
     try:
-        result = extractor.execute(image_node.get_object("*.mhd"), label_node.get_object("*.mha"))
+        result = extractor.execute(image_node.get_object("*.mhd"), str(label_node.path))
     except Exception as e:
         container.logger.error ("Extraction failed!!!")
         container.logger.error (str(e))
@@ -69,7 +69,7 @@ def cli(cohort_id, container_id, method_id):
 
     # Prepare metadata and commit
     record_type = "radiomics"
-    record_name = method_data['output_name']
+    record_name = method_id
     record_properties = {
         "path":output_dir, 
         "hash":dirhash(output_dir, "sha256")

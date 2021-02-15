@@ -138,6 +138,12 @@ class Container(object):
         self._match_clause = f"""WHERE id(container) = {self._container_id} """
         self.logger.debug ("Match on: %s", self._match_clause)
 
+        # Attach
+        cohort = Node("cohort", self._namespace_id)
+        if not len(self._conn.query(f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) {self._match_clause} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """ ))==1: 
+            self.logger.warning ( "Cannot attach")
+            return self
+
         # Let us know attaching was a success! :)
         self.logger = logging.getLogger(f'Container [{self._container_id}]')
         self.logger.info ("Successfully attached to: %s %s", self._type, self._qualifiedpath)
@@ -213,7 +219,7 @@ class Container(object):
             e.g. name of the node in the subspace of the container (e.g. generate-mhd)
         :example: get("mhd", "generate-mhd") gets data of type "mhd" generated from the method "generate-mhd" in this container's context/subspace
         """
-        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type})  {self._match_clause} AND data.name='{name}' RETURN data"""
+        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type})  {self._match_clause} AND data.name='{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
 
         self.logger.info(query)
         res = self._conn.query(query)

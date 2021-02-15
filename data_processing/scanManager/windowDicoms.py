@@ -17,6 +17,7 @@ from checksumdir import dirhash
 # From common
 from data_processing.common.Node       import Node
 from data_processing.common.Container  import Container
+from data_processing.common.custom_logger   import init_logger
 from data_processing.common.utils      import get_method_data 
 
 logger = init_logger("windowDicoms.log")
@@ -24,7 +25,6 @@ logger = init_logger("windowDicoms.log")
 # Special libraries
 from pydicom import dcmread
 import numpy as np
-
 
 
 @click.command()
@@ -51,8 +51,8 @@ def cli(cohort_id, container_id, method_id):
     if not os.path.exists(output_dir): os.makedirs(output_dir)
 
     # Scale and clip each dicom, and save in new directory
-    container.logger.info("Processing %s dicoms!", len(list(input_node.path.parent.glob("*dcm"))))
-    for dcm in input_node.path.parent.glob("*dcm"):
+    container.logger.info("Processing %s dicoms!", len(list(input_node.get_objects("*dcm"))))
+    for dcm in input_node.get_objects("*dcm"):
         ds = dcmread(dcm)
         hu = ds.RescaleSlope * ds.pixel_array + ds.RescaleIntercept
         if method_data['window']:
@@ -62,7 +62,7 @@ def cli(cohort_id, container_id, method_id):
 
     # Prepare metadata and commit
     record_type = "dicom"
-    record_name = method_data['output_name']
+    record_name = method_id
     record_properties = {
         "RescaleSlope":ds.RescaleSlope, 
         "RescaleIntercept":ds.RescaleIntercept, 

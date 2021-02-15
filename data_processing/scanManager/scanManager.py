@@ -6,6 +6,8 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.Node import Node
 from data_processing.common.config import ConfigSet
+from data_processing.common.Container  import Container
+
 
 from pyspark.sql.types import StringType, IntegerType, StructType, StructField
 
@@ -24,6 +26,11 @@ Config.yaml:
     - scanManager_port      - What port to publish API
     - scanManager_processes - Number of concurrent jobs
 """
+container_params = {
+        'GRAPH_URI':  os.environ['GRAPH_URI'],
+        'GRAPH_USER': "neo4j",
+        'GRAPH_PASSWORD': "password"
+    }
 
 # Setup configurations
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
@@ -110,39 +117,19 @@ class manageContainer(Resource):
         return jsonify([rec.data()['data'] for rec in res])
     def post(self, cohort_id, container_id):
         """ Add a record to a container """
-        
-        n_cohort = Node("cohort", cohort_id)
-
-        # Check for cohort existence
-        if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1:
-            return make_response("No cohort namespace found", 300)
-
         properties = request.json
-
-        if not "path" in properties.keys():
-            return make_response("You must supply a path!", 400)
-
-        if not "type" in properties.keys():
-            return make_response("You must supply a type!", 400)  
-
-        if not os.path.exists(properties['path']):
-            return make_response("File does not exist!", 400)
-
-        properties['Namespace'] = cohort_id
-        record_name = "mha" + "-" + str(FileHash('sha256').hash_file(properties['path']))
-
+        
         try:
-            n_data = Node(properties["type"], record_name, properties=properties)
+            n_data = Node(properties['type'], properties['name'], properties=properties)
         except:
             return make_response("Failed to configure node, bad type???", 401)
 
-        conn.query(f""" 
-            MATCH (sc:scan) WHERE id(sc)={container_id}
-            MERGE (da:{n_data.get_create_str()})
-            MERGE (sc)-[:HAS_DATA]->(da)"""
-        )
-        return make_response(f"Added {n_data.get_match_str()} to container {container_id}", 200)
+        container = Container( container_params ).setNamespace(cohort_id).lookupAndAttach(container_id)
+        container.add(n_data)
+        container.saveAll()
 
+     
+        return make_response(f"Added {n_data.get_match_str()} to container {container_id}", 200)
 
 
 @api.route('/mind/api/v1/methods/<cohort_id>/<method_id>/run', 
@@ -168,7 +155,7 @@ class runMethods(Resource):
             return make_response("No cohort namespace found", 300)
 
         properties = {}
-        properties['Namespace'] = cohort_id
+        properties['namespace'] = cohort_id
         n_method = Node("method", method_id, properties=properties)
 
         res = conn.query(f"""MATCH (me:{n_method.get_match_str()}) RETURN me""")
@@ -190,7 +177,7 @@ class runMethods(Resource):
 
         args_list = []
         for scan_id in container_ids:
-            args_list.append(["python3","-m",method_config["image"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
+            args_list.append(["python3","-m",method_config["function"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
 
         p = Pool(NUM_ROCESSES)
         p.map(subprocess.call, args_list)
@@ -218,14 +205,14 @@ class methods(Resource):
 
         properties = {}
 
-        properties['Namespace'] = cohort_id
-        properties['image']     = request.json["image"]
+        properties['namespace']    = cohort_id
+        properties['function']     = request.json["function"]
         n_method = Node("method", method_id, properties=properties)
 
         res = conn.query(f"""CREATE (me:{n_method.get_create_str()}) RETURN me""")
-        if res is None: return make_response(f"Method at {cohort_id}::{method_id} already exists!", 400)
+        #if res is None: return make_response(f"Method at {cohort_id}::{method_id} already exists!", 400)
 
-        method_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, "methods")
+        method_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", cohort_id, "methods")
         if not os.path.exists(method_dir): os.makedirs(method_dir)
 
         with open(os.path.join(method_dir, f'{method_id}.json'), 'w') as outfile:
@@ -242,7 +229,7 @@ class methods(Resource):
             return make_response("No cohort namespace found", 300)
 
         properties = {}
-        properties['Namespace'] = cohort_id
+        properties['namespace'] = cohort_id
         n_method = Node("method", method_id, properties=properties)
 
         res = conn.query(f"""MATCH (me:{n_method.get_match_str()}) RETURN me""")
@@ -261,7 +248,7 @@ class methods(Resource):
             return make_response("No cohort namespace found", 300)
 
         properties = {}
-        properties['Namespace'] = cohort_id
+        properties['namespace'] = cohort_id
         n_method = Node("method", method_id, properties=properties)
 
         res = conn.query(f"""MATCH (me:{n_method.get_match_str()}) DETACH DELETE me RETURN me""")
@@ -305,7 +292,9 @@ class initScans(Resource):
         logger.info("Query = {}".format(query))
 
         cSchema = StructType([StructField("CohortID", StringType(), True), StructField("AccessionNumber", StringType(), True)])
-        df_cohort = spark.createDataFrame(([(x.data()['co']['CohortID'], x.data()['cases']['AccessionNumber']) for x in res_tree]),schema=cSchema)
+        df_cohort = spark.createDataFrame(([(x.data()['co']['name'], x.data()['cases']['AccessionNumber']) for x in res_tree]),schema=cSchema)
+
+        df_cohort.show()
 
         if not len(res_data)==1: return make_response(("Operations only support singleton datasets right now", 500))
 
@@ -328,21 +317,15 @@ class initScans(Resource):
         count = 0
         for index, row in df.toPandas().iterrows():
             count += 1
-            properties = dict(row)
-            record_name = "DCM-" + properties["SeriesInstanceUID"]
-            properties['Namespace'] = cohort_id
-            properties['Type'] = "dcm"
-            n_meta = Node("dicom", record_name, properties=properties)
-            n_scan = Node("scan", properties["SeriesInstanceUID"], properties={"QualifiedPath":properties["SeriesInstanceUID"]})
 
-            query = f"""
-                    MATCH  (sc:{n_scan.get_match_str()})
-                    MATCH  (co:{n_cohort.get_match_str()})
-                    CREATE (da:{n_meta.get_create_str()})
-                    MERGE (sc)-[:HAS_DATA]->(da)
-                    MERGE (co)-[:INCLUDE]->(sc) 
-                    """
-            conn.query(query)
+            properties = dict(row)
+            properties['path'] = os.path.split(properties['path'])[0]
+
+            n_meta = Node("dicom", 'init-scans', properties=properties)
+            
+            container = Container( container_params ).setNamespace(cohort_id).lookupAndAttach(row['SeriesInstanceUID'])
+            container.add(n_meta)
+            container.saveAll()
 
         return make_response(f"Done, added {count} nodes", 200)
 
