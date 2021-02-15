@@ -15,11 +15,11 @@ class MultilineFormatter(logging.Formatter):
         return output
 
 
-def init_logger(filename='data-processing.log', log_name='root'):
+def init_logger(filename='data-processing.log'):
     # Logging configuration
     log_file = filename
 
-    logger = logging.getLogger(log_name)
+    logger = logging.getLogger()
     if not logger.handlers:
         logger.setLevel(logging.INFO)
         # create file handler which logs even debug messages
@@ -36,6 +36,6 @@ def init_logger(filename='data-processing.log', log_name='root'):
         logger.addHandler(ch)
         logger.addHandler(fh)
 
-    print(">>>>>>>> log file at: " + log_file + " with name " + log_name)
+    print(">>>>>>>> log file at: " + log_file )
     return logger
 

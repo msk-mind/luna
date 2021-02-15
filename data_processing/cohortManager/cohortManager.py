@@ -71,7 +71,7 @@ class createOrGetCohort(Resource):
             cohort_summary['Patients'] = []
             for rec in px_res:
                 px_dict     = rec.data()['px']
-                patient_id  = px_dict['PatientID']
+                patient_id  = px_dict['name']
                 px_dict['Patient Accessions'] = requests.get(f'http://{HOST}:5004/mind/api/v1/patient/{cohort_id}/{patient_id}').json()
                 cohort_summary['Patients'].append(px_dict)
             return jsonify(cohort_summary)
@@ -93,7 +93,7 @@ class modifyPatientInCohort(Resource):
     def put(self, cohort_id, patient_id):
         """ (Re)-include patient with cohort"""
         cohort  = Node("cohort", cohort_id)
-        patient = Node("patient", patient_id, properties={"Namespace":cohort_id})
+        patient = Node("patient", patient_id, properties={"namespace":cohort_id})
 
         res = conn.query(f"""MATCH (co:{cohort.get_match_str()}) MATCH (px:{patient.get_match_str()}) MERGE (co)-[r:INCLUDE]-(px) RETURN r""")
         return ("Added {} patients to cohort".format(len(res)))
@@ -102,7 +102,7 @@ class modifyPatientInCohort(Resource):
     def delete(self, cohort_id, patient_id):
         """ Exclude patient from cohort"""
         cohort  = Node("cohort", cohort_id)
-        patient = Node("patient", patient_id, properties={"Namespace":cohort_id})
+        patient = Node("patient", patient_id, properties={"namespace":cohort_id})
         print ((f"""MATCH (co:{cohort.get_match_str()})-[r:INCLUDE]-(px:{patient.get_match_str()}) DELETE r RETURN r"""))
 
         res = conn.query(f"""MATCH (co:{cohort.get_match_str()})-[r:INCLUDE]-(px:{patient.get_match_str()}) DELETE r RETURN r""")
@@ -121,7 +121,7 @@ class createOrGetPatient(Resource):
         """ Retrieve case listing for patient"""
         
         # Matches (cohort <include> patients <has_case> cases)
-        patient = Node("patient", patient_id, properties={"Namespace":cohort_id})
+        patient = Node("patient", patient_id, properties={"namespace":cohort_id})
         res = conn.query(f""" MATCH (px:{patient.get_match_str()})-[:HAS_CASE]-(cases:accession) RETURN cases """)
 
         all_case = []
@@ -133,7 +133,7 @@ class createOrGetPatient(Resource):
     def put(self, cohort_id, patient_id):
             """ Create new patient """
             cohort  = Node("cohort", cohort_id)
-            patient = Node("patient", patient_id, properties={"Namespace":cohort_id})
+            patient = Node("patient", patient_id, properties={"namespace":cohort_id})
 
             if ":" in patient_id: 
                 return make_response("Invalid patient name, only use alphanumeric characters", 400)
@@ -174,7 +174,7 @@ class addOrRemoveCases(Resource):
         if not len(conn.query(f""" MATCH (co:{cohort.get_match_str()}) RETURN co """ ))==1: 
             return make_response("No cohort namespace found", 300)
 
-        patient = Node("patient", patient_id, properties={"Namespace":cohort_id})
+        patient = Node("patient", patient_id, properties={"namespace":cohort_id})
         res = conn.query(f"""
             MATCH (px:{patient.get_match_str()})
             -[:HAS_CASE]->(cases:accession) 
@@ -200,7 +200,7 @@ class addOrRemoveCases(Resource):
         if not len(conn.query(f""" MATCH (co:{cohort.get_match_str()}) RETURN co """ ))==1: 
             return make_response("No cohort namespace found", 300)
 
-        patient = Node("patient", patient_id, properties={"Namespace":cohort_id})
+        patient = Node("patient", patient_id, properties={"namespace":cohort_id})
         res = conn.query(f"""
             MATCH (px:{patient.get_match_str()})
             MATCH (cases:accession) 
@@ -222,7 +222,7 @@ class addOrRemoveCases(Resource):
         if not len(conn.query(f""" MATCH (co:{cohort.get_match_str()}) RETURN co """ ))==1: 
             return make_response("No cohort namespace found", 300)
 
-        patient = Node("patient", patient_id, properties={"Namespace":cohort_id})
+        patient = Node("patient", patient_id, properties={"namespace":cohort_id})
         res = conn.query(f"""
             MATCH (px:{patient.get_match_str()})-[r:HAS_CASE]->(cases:accession)
             WHERE cases.AccessionNumber IN [{case_list}] 
