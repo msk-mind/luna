@@ -16,6 +16,7 @@ pytest-runner
 scikit-image
 wheel>=0.22
 itk
+opencv-python
 openslide-python
 paramiko
 scp
