@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template, make_response
 from flask_restx import Api, Resource, fields
+from datetime import timedelta
 import subprocess
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -33,38 +34,49 @@ image_params = api.model("DicomToImage",
         "height": fields.String(description="Output image height", required=True, example=512)
     }
 )
+path_params = api.model("DownloadImage",
+    {
+        "output_location": fields.String(description="Local path to download file", required=True, example="/path/to/output.parquet")
+    }
+)
 
 # FUTURE: a subsetting function that selects instance # list before this?
 @api.route('/radiology/images/<project_id>/<scan_id>',
-           methods=['POST'],
-           doc={"description": "Dicoms in given scan to Image files."}
-)
-@api.route('/radiology/images/<project_id>/<scan_id>/<download_path>',
-           methods=['GET'],
-           doc={"description": "Dicoms in given scan to Image files."}
+           methods=['GET', 'POST', 'DELETE'],
+           doc={"description": "CRUD dicoms in given scan to Image files."}
 )
 class DicomToImage(Resource):
 
     @api.doc(
         params={'project_id': 'Project Id',
-                'scan_id': 'Scan Identifier',
-                'download_path': 'Download Path'},
+                'scan_id': 'Scan Identifier'},
         responses={200: "Success",
                    400: "Images not found"}
     )
-    def get(self, project_id, scan_id, download_path):
+    @api.expect(path_params)
+    def get(self, project_id, scan_id):
         # TODO could be a generic function
+        output_path = request.json["output_location"]
         print(project_id)
         print(scan_id)
-        print(download_path)
+        print(output_path)
 
         try:
             object_name = "radiology-images/" + scan_id + ".parquet"
-            response = object_client.fget_object(project_id, object_name, download_path)
-            print(response.metadata)
-            return make_response(f"Downloaded object {project_id}/{object_name} at {download_path}", 200)
+            response = object_client.fget_object(project_id, object_name, output_path)
+            print(dict(response.metadata))
+            # populate response
+            metadata = response.metadata
+            metadata['message'] = f"Downloaded object {project_id}/{object_name} at {output_path}"
+
+            # alternatively, get downloadable url with object_client.get_presigned_url() -> request.get(url)
+            # this doesn't work well with binary field..
+            return make_response(jsonify(dict(response.metadata)), 200)
+
         except Exception as ex:
-            return make_response(ex, 400)
+            response = {'payload': ex}
+            return make_response(jsonify(response), 400)
+
 
     @api.doc(
         params={'project_id': 'Project Id',
@@ -110,7 +122,36 @@ class DicomToImage(Resource):
                                    secret_key=app.config.get("OBJECT_PASSWORD"))
 
         table = pa.Table.from_pandas(df, preserve_index=False)
+
+        # alternatively, write_to_dataset can write partitioned parquets, along with write_metadata
         pq.write_table(table, uri, filesystem=minio)
+        response = {'message': f"Parquet created at {uri}"}
+        return make_response(jsonify(response), 200)
+
+
+    @api.doc(
+        params={'project_id': 'Project Id',
+                'scan_id': 'Scan Identifier'},
+        responses={200: "Success",
+                   400: "Images not found"}
+    )
+    def delete(self, project_id, scan_id):
+        # TODO could be a generic function
+        print(project_id)
+        print(scan_id)
+
+        try:
+            object_name = "radiology-images/" + scan_id + ".parquet"
+            object_client.remove_object(project_id, object_name)
+
+            response = {'message': f"Removed object {project_id}/{object_name}"}
+
+            return make_response(jsonify(dict(response)), 200)
+
+        except Exception as ex:
+            response = {'payload': ex}
+            return make_response(jsonify(response), 400)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5005, threaded=True, debug=False)

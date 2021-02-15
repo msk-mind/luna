@@ -43,3 +43,8 @@ import pyarrow.parquet as pq
 table = pq.read_table('test-download.parquet')
 df = table.to_pandas()
 ```
+
+### Notes
+
+- Embedding binaries in parquet format, didn't work well with Minio select API, 
+as the payload is binary, and the 'content' field of the parquet is also binary.
