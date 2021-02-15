@@ -110,7 +110,7 @@ class manageContainer(Resource):
         # Get relevant patients and cases
         res = conn.query(f"""
             MATCH (container)-[:HAS_DATA]-(data)
-            WHERE id(container)={container_id}
+            WHERE id(container)={container_id} AND data.namespace='{cohort_id}'
             RETURN data
             """
         )
