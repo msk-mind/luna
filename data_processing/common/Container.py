@@ -1,8 +1,7 @@
-from data_processing.common.custom_logger import init_logger
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.Node import Node
 
-import os, socket, pathlib
+import os, socket, pathlib, logging
 
 
 class Container(object):
@@ -69,7 +68,8 @@ class Container(object):
         :params: params - dictonary of important configuration, right now, only the graph URI connection parameters are needed.
         """
 
-        self.logger = init_logger("common-container.log", "Container [empty]")
+        #self.logger = init_logger("common-container.log", "Container [empty]")
+        self.logger = logging.getLogger(__name__)
 
         self.params=params
 
@@ -123,10 +123,10 @@ class Container(object):
         # Set some potentially import parameters
         self.logger.info ("Found: %s", res)
         self._container_id  = res[0]["id(container)"]
-        self._name            = res[0]["container.name"]
+        self._name          = res[0]["container.name"]
         self._qualifiedpath = res[0]["container.QualifiedPath"]
-        self._type            = res[0]["container.type"]
-        self._labels      = res[0]["labels(container)"]
+        self._type          = res[0]["container.type"]
+        self._labels        = res[0]["labels(container)"]
         self._node_commits    = {}
 
         # Containers need to have a qualified path
@@ -139,7 +139,7 @@ class Container(object):
         self.logger.debug ("Match on: %s", self._match_clause)
 
         # Let us know attaching was a success! :)
-        self.logger = init_logger("common-container.log", f"Container [{self._container_id}]")
+        self.logger = logging.getLogger(f'Container [{self._container_id}]')
         self.logger.info ("Successfully attached to: %s %s", self._type, self._qualifiedpath)
         self._attached = True
 
@@ -201,7 +201,7 @@ class Container(object):
             [self.logger.info(Node(rec['data']['type'], rec['data']['name'], dict(rec['data'].items()))) for rec in res]
 
 
-    def get(self, type, view=""):
+    def get(self, type, name):
         """
         Query graph DB container node for dependent data nodes, and return one 
         Parses the path field URL for various cases, and sets the node.path attribute with a corrected path
@@ -209,31 +209,31 @@ class Container(object):
 
         :params: type - the type of data designed 
             e.g. radiomics, mha, dicom, png, svs, geojson, etc.
-        :params: view - can be used to filter nodes
-            e.g. data.source='generateMHD'
-            e.g. data.label='Right'
-            e.g. data.namespace in ['default', 'my_cohort']
-
-        :example: get("mhd", "data.MethodID = 'generate-mhd'") gets data of type "mhd" generated from the method "generate-mhd"
+        :params: name - can be used to filter nodes
+            e.g. name of the node in the subspace of the container (e.g. generate-mhd)
+        :example: get("mhd", "generate-mhd") gets data of type "mhd" generated from the method "generate-mhd" in this container's context/subspace
         """
+        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type})  {self._match_clause} AND data.name='{name}' RETURN data"""
 
-        # Prepend AND since the query runs with a WHERE on the container ID by default
-        if view is not "": view = "AND " + view
+        self.logger.info(query)
+        res = self._conn.query(query)
 
-        # Run query, subject to SQL injection attacks (but right now, our entire system is)
-        res = self._conn.query(f"""
-            MATCH (container)-[:HAS_DATA]-(data:{type}) 
-            {self._match_clause}
-            {view}
-            RETURN data"""
-        )
         # Catches bad queries
         # If successfull query, reconstruct a Node object
-        if res is None or len(res) != 1: 
-            self.logger.error("get() can only return a single node, multiple nodes queried, returning None")
+        if res is None:
+            self.logger.error("get() query failed, returning None")
+            return None
+        elif len(res) == 0: 
+            self.logger.error("get() found no nodes, returning None")
+            return None
+        elif len(res) > 1: 
+            self.logger.error("get() found many nodes (?) returning None")
             return None
         else:
             node = Node(res[0]['data']['type'], res[0]['data']['name'], dict(res[0]['data'].items()))
+            self.logger.info ("Query Successful:")
+            self.logger.info (node)
+
         
         # Parse path (filepath) URI: more sophistic path logic to come (pulling from S3, external mounts, etc!!!!)
         # For instance, if it was like s3://bucket/test.dcm, this should pull the dicom to a temporary directory and set .path to that dir
@@ -242,6 +242,7 @@ class Container(object):
             # If like file:/path/to.dcm, strip file:
             # Else, just return path
         # TODO: change 'path' field to 'filepath_uri"?
+        
         if "path" in node.properties.keys(): 
             path = node.properties["path"]
             if path.split(":")[0] == "file":
@@ -272,7 +273,7 @@ class Container(object):
         self._node_commits[node.name] = node
         
         # Decorate with the container namespace 
-        self._node_commits[node.name].set_namespace( self._namespace_id )
+        self._node_commits[node.name].set_namespace( self._namespace_id, self._name )
         self.logger.info ("Container has %s pending commits",  len(self._node_commits))
 
     def saveAll(self):
