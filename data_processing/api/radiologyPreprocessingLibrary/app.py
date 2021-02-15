@@ -6,7 +6,10 @@ import pyarrow.parquet as pq
 import pandas as pd
 from minio import Minio
 import os
+import click
 
+from data_processing.common.config import ConfigSet
+import data_processing.common.constants as const
 from data_processing.api.radiologyPreprocessingLibrary.service import dicom_to_binary
 
 # Setup configurations
@@ -14,16 +17,12 @@ VERSION      = "branch:"+subprocess.check_output(["git","rev-parse" ,"--abbrev-r
 
 # Setup App and Api
 app = Flask(__name__)
-app.config.from_pyfile('app.cfg', silent=False)
 
 api = Api(app, version=VERSION,
           title='radiologyPreprocessingLibrary',
           description='Preprocessing utility functions for radiology data',
           ordered=True)
 
-object_client = Minio(app.config.get('OBJECT_URI'),
-                      access_key=app.config.get('OBJECT_USER'),
-                      secret_key=app.config.get('OBJECT_PASSWORD'), secure=False)
 # param models
 image_params = api.model("DicomToImage",
     {
@@ -37,6 +36,12 @@ path_params = api.model("DownloadImage",
         "output_location": fields.String(description="Local path to download file", required=True, example="/path/to/output.parquet")
     }
 )
+
+def get_object_client():
+
+    return Minio(app.config.get('OBJECT_URI'),
+                      access_key=app.config.get('OBJECT_USER'),
+                      secret_key=app.config.get('OBJECT_PASSWORD'), secure=False)
 
 # FUTURE: a subsetting function that selects instance # list before this?
 @api.route('/radiology/images/<project_id>/<scan_id>',
@@ -64,6 +69,7 @@ class DicomToImage(Resource):
         print(output_path)
 
         try:
+            object_client = get_object_client()
             object_name = "radiology-images/" + scan_id + ".parquet"
             response = object_client.fget_object(project_id, object_name, output_path)
             print(dict(response.metadata))
@@ -76,7 +82,7 @@ class DicomToImage(Resource):
             return make_response(jsonify(dict(response.metadata)), 200)
 
         except Exception as ex:
-            response = {'payload': ex}
+            response = {'message': ex}
             return make_response(jsonify(response), 400)
 
 
@@ -110,29 +116,37 @@ class DicomToImage(Resource):
 
         print(len(binaries))
 
-        # save in parquet
-        if not object_client.bucket_exists(project_id):
-            object_client.make_bucket(project_id)
+        # upload results
+        try:
+            object_client = get_object_client()
 
-        uri = os.path.join(project_id, "radiology-images", scan_id + ".parquet")
-        # some minimal parquet schema. save request.json also!
-        df = pd.DataFrame({"content": binaries})
+            # save in parquet
+            if not object_client.bucket_exists(project_id):
+                object_client.make_bucket(project_id)
 
-        # add post request params
-        for key, val in request.json.items():
-            df[key] = val
+            uri = os.path.join(project_id, "radiology-images", scan_id + ".parquet")
+            # some minimal parquet schema. save request.json also!
+            df = pd.DataFrame({"content": binaries})
 
-        minio = pa.fs.S3FileSystem(scheme="http",
-                                   endpoint_override=app.config.get("OBJECT_URI"),
-                                   access_key=app.config.get("OBJECT_USER"),
-                                   secret_key=app.config.get("OBJECT_PASSWORD"))
+            # add post request params
+            for key, val in request.json.items():
+                df[key] = val
 
-        table = pa.Table.from_pandas(df, preserve_index=False)
+            minio = pa.fs.S3FileSystem(scheme="http",
+                                       endpoint_override=app.config.get("OBJECT_URI"),
+                                       access_key=app.config.get("OBJECT_USER"),
+                                       secret_key=app.config.get("OBJECT_PASSWORD"))
 
-        # alternatively, write_to_dataset can write partitioned parquets, along with write_metadata
-        pq.write_table(table, uri, filesystem=minio)
-        response = {'message': f"Parquet created at {uri}"}
-        return make_response(jsonify(response), 200)
+            table = pa.Table.from_pandas(df, preserve_index=False)
+
+            # alternatively, write_to_dataset can write partitioned parquets, along with write_metadata
+            pq.write_table(table, uri, filesystem=minio)
+            response = {'message': f"Parquet created at {uri}"}
+            return make_response(jsonify(response), 200)
+
+        except Exception as ex:
+            response = {'message': ex}
+            return make_response(jsonify(response), 400)
 
 
     @api.doc(
@@ -147,6 +161,8 @@ class DicomToImage(Resource):
         print(scan_id)
 
         try:
+            object_client = get_object_client()
+
             object_name = "radiology-images/" + scan_id + ".parquet"
             object_client.remove_object(project_id, object_name)
 
@@ -155,9 +171,27 @@ class DicomToImage(Resource):
             return make_response(jsonify(dict(response)), 200)
 
         except Exception as ex:
-            response = {'payload': ex}
+            response = {'message': ex}
             return make_response(jsonify(response), 400)
 
 
-if __name__ == '__main__':
+@click.command()
+@click.option('-c',
+              '--config_file',
+              default="data_processing/api/radiologyPreprocessingLibrary/app_config.yaml",
+              type=click.Path(exists=True),
+              help="path to config file for annotation API"
+                   "See data_processing/api/radiologyPreprocessingLibrary/app_config.yaml.template")
+def cli(config_file):
+    cfg = ConfigSet(name=const.APP_CFG, config_file=config_file)
+
+    app.config['OBJECT_URI'] = cfg.get_value(path=const.APP_CFG+'::OBJECT_URI')
+    app.config['OBJECT_USER'] = cfg.get_value(path=const.APP_CFG+'::OBJECT_USER')
+    app.config['OBJECT_PASSWORD'] = cfg.get_value(path=const.APP_CFG+'::OBJECT_PASSWORD')
+
+    print(app.config.get("OBJECT_URI"))
     app.run(host='0.0.0.0', port=5005, threaded=True, debug=False)
+
+
+if __name__ == '__main__':
+    cli()

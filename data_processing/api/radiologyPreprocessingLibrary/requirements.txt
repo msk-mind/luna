@@ -1,5 +1,6 @@
 aiohttp
 boto3
+click
 filehash
 flask_restx
 Pillow
