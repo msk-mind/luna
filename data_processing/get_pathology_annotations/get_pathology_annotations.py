@@ -22,10 +22,8 @@ from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType, MapType
 from pyspark.sql.functions import  to_json
 
-import pydicom
 import os, shutil, sys, importlib, json, yaml, subprocess, time, click
 from io import BytesIO
-from filehash import FileHash
 from distutils.util import strtobool
 import re
 
@@ -121,7 +119,7 @@ def cli(config_file):
 
 
 
-	app.run(host='0.0.0.0',port=5002, debug=True)
+	app.run(host='0.0.0.0',port=5002, debug=False)
 
 
 
