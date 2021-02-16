@@ -1,5 +1,5 @@
 import os, logging
-from checksumdir import dirhash
+from dirhash import dirhash
 
 import numpy as np
 import pandas as pd
