@@ -57,7 +57,7 @@ def test_extract_radiomics_1(tmp_path):
         params     = {"RadiomicsFeatureExtractor": {'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 25, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001}}
     )
 
-    assert output_node.properties['hash'] == 'ae5665617279299e1d4bc8a3e2434f4a4616c4a096ba4ab47d41f74cecea2103'
+    assert "3227.840849331449,0.09075042902243616,2.7507247368947003\n" in open(str(output_node.properties['path']) + '/radiomics-out.csv').read() # Check the last
     assert output_node.properties['qualified_address'] == 'default::test_radiomics_1'
     assert output_node.name == 'test_radiomics_1'
     assert output_node.type == 'radiomics'
@@ -71,8 +71,9 @@ def test_extract_radiomics_2(tmp_path):
         output_dir = tmp_path,
         params     = {"RadiomicsFeatureExtractor": {'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 50, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001}}
     )
+    print (str(output_node.properties['path']) + '/radiomics-out.csv')
 
-    assert output_node.properties['hash'] == 'b1cf9121d8ed9d8c788a10d837f0c7799124cef08223093c135034ff3370f8a7'
+    assert "0.001316830812757558,447.00957648375726,0.04525463261369965,0.7069386976494938\n" in open(str(output_node.properties['path']) + '/radiomics-out.csv').read()
     assert output_node.properties['qualified_address'] == 'default::test_radiomics_2'
     assert output_node.name == 'test_radiomics_2'
     assert output_node.type == 'radiomics'
