@@ -77,13 +77,13 @@ def update_graph(data_config_file, app_config_file):
 			src_props = {}
 			for _, sa in src_alias:
 				src_props[sa] = row[sa]	
-			src_props["Namespace"] = PROJECT
+			src_props["namespace"] = PROJECT
 			src_node = Node(src_node_type, src_props.pop(clean_nested_colname(graph.src.name)), src_props)
 
 			target_props = {}
 			for _, ta in target_alias:
 				target_props[ta] = row[ta]
-			target_props["Namespace"] = PROJECT
+			target_props["namespace"] = PROJECT
 			target_node = Node(target_node_type, target_props.pop(clean_nested_colname(graph.target.name)), target_props)
 
 			try:

@@ -1,5 +1,5 @@
 from data_processing.common.utils import to_sql_field, does_not_contain
-import warnings
+import warnings, os
 
 class Node(object):
 	"""
@@ -18,22 +18,29 @@ class Node(object):
 		self.properties = properties
 
 		if self.type=="cohort":
-			self.properties['Namespace'] = node_name
+			self.properties['namespace'] = node_name
 
-		if not "Namespace" in properties.keys():
-			self.properties['Namespace'] = 'default'
+		if not "namespace" in properties.keys():
+			self.properties['namespace'] = 'default'
 
-		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namespace'], self.name)
+		self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
 		self.properties["type"] = self.type
 
-	def set_namespace(self, namespace_id: str):
+	def set_namespace(self, namespace_id: str, subspace_id=None):
 		"""
 		Sets the namespace for this Node commits
 
 		:params: namespace_id - namespace value 
+		:params: subspace_id  - subspace value, optional
 		"""
-		self.properties['Namespace'] = namespace_id
-		self.properties["QualifiedPath"] = self.get_qualified_name(self.properties['Namespace'], self.name)
+		self.properties['namespace'] = namespace_id
+
+		if subspace_id is None:
+			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
+		else:
+			self.properties['subspace']  = subspace_id
+			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
+
 
 	def __repr__(self):
 		"""
@@ -65,11 +72,11 @@ class Node(object):
 
 	def get_match_str(self):
 		"""
-		Returns a string representation of the node with only the QualifiedPath as a property
+		Returns a string representation of the node with only the qualified_address as a property
 		"""
 		kv = self.get_all_props()
 
-		prop_string = self.prop_str( ["QualifiedPath"], kv)
+		prop_string = self.prop_str( ["qualified_address"], kv)
 		return f"""{self.type}:globals{{ {prop_string} }}"""
 	
 	def get_map_str(self):
@@ -82,6 +89,21 @@ class Node(object):
 		return f"""{{ {prop_string} }}"""
 
 
+	def get_object(self, glob_string):
+		"""
+		Return a singular object for the data node given glob string
+		"""
+		return str(next(self.path.glob(glob_string)))
+	
+
+	def get_objects(self, glob_string):
+		"""
+		Return all objects for the data node given glob string
+		"""
+		if os.path.isdir(self.path):
+			return self.path.glob(glob_string)
+		else:
+			return self.path.parent.glob(glob_string)
 
 	@staticmethod
 	def prop_str(fields, row):
@@ -104,12 +126,11 @@ class Node(object):
 		return '\n'.join(kv)
 	
 	@staticmethod
-	def get_qualified_name(namespace, identifier): 
+	def get_qualified_name(*args): 
 		"""
 		Returns the full name given a namespace and patient ID
 		"""
-		does_not_contain(":", namespace)
-		does_not_contain(":", identifier)
+		for name in args: does_not_contain(":", name)
 
-		return f"{namespace}::{identifier}"
+		return "::".join(args)
 	

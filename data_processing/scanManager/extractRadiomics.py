@@ -10,95 +10,56 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, json, sys
+import os, sys
 import click
-import pandas as pd
-from filehash import FileHash
 
 # From common
-from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.Node       import Node
-from data_processing.common.utils      import get_method_data 
-
-# Specialized library to extract radiomics
-from radiomics import featureextractor  # This module is used for interaction with pyradiomics
+from data_processing.common.Container  import Container
+from data_processing.common.utils      import get_method_data
+from data_processing.radiology.common.utils   import extract_radiomics
 
 logger = init_logger("extractRadiomics.log")
-
-def get_container_data(container_id):
-    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-
-    input_nodes = conn.query(f"""
-        MATCH (container)-[:HAS_DATA]-(image:mhd)
-        MATCH (container)-[:HAS_DATA]-(label:mha)
-        WHERE id(container)={container_id}
-        RETURN container.QualifiedPath, container.name, image.path, label.path"""
-    )
-
-    if not input_nodes or len (input_nodes)==0:
-        logger.error ("Scan is not ready for radiomics (missing annotation?)")
-        return [] 
-    else:
-        return input_nodes[0].data()
-
-def add_container_data(container_id, n_meta):
-    conn = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-
-    res = conn.query(f""" 
-        MATCH (container) WHERE id(container)={container_id}
-        MERGE (da:{n_meta.get_create_str()})
-        MERGE (container)-[:HAS_DATA]->(da)"""
-    )
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
-    logger.info("Invocation: " + str(sys.argv))
 
-    properties = {}
-    properties['Namespace'] = cohort_id
-    properties['MethodID']  = method_id
+    # Eventually these will come from a cfg file, or somewhere else
+    container_params = {
+        'GRAPH_URI':  os.environ['GRAPH_URI'],
+        'GRAPH_USER': "neo4j",
+        'GRAPH_PASSWORD': "password"
+    }
 
-    input_data = get_container_data(container_id) 
+    # Do some setup
+    container   = Container( container_params ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_data = get_method_data(cohort_id, method_id) 
 
-    logger.info (input_data)
-    logger.info (method_data)
-
-    extractor = featureextractor.RadiomicsFeatureExtractor(**method_data)
-
-    try:
-        result = extractor.execute(input_data["image.path"].split(':')[-1], input_data["label.path"].split(':')[-1])
-    except Exception as e:
-        logger.error (str(e))
-        return
+    image_node  = container.get("mhd", method_data['image_input_name']) 
+    label_node  = container.get("mha", method_data['label_input_name'])
 
     # Data just goes under namespace/name
     # TODO: This path is really not great, but works for now
-    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data/COHORTS", cohort_id, input_data['container.name'])
-
+    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
     if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-    output_filename = os.path.join(output_dir, method_id+".csv")
+    output_node = extract_radiomics(
+        name = method_id,
+        image_path = str(next(image_node.path.glob("*.mhd"))),
+        label_path = str(label_node.path),
+        output_dir = output_dir,
+        params     = method_data
+    )
 
-    sers = pd.Series(result)
+    if output_node is None: return
 
-    logger.info("Saving to " + output_filename)
+    container.add(output_node)
+    container.saveAll()
 
-    sers.to_frame().transpose().to_csv(output_filename)
 
-    record_name = "RAD" + "-" + str(FileHash('sha256').hash_file(output_filename))
-
-    properties['path'] = output_filename 
-
-    n_meta = Node("radiomics", record_name, properties=properties)
-
-    add_container_data(container_id, n_meta)
-
-    logger.info ("Successfully extracted radiomics for container: " + input_data["container.QualifiedPath"])
 
 if __name__ == "__main__":
     cli()

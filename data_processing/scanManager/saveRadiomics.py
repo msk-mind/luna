@@ -42,13 +42,13 @@ def cli(cohort_id, container_id, method_id):
 
     method_data = get_method_data(cohort_id, method_id)
 
-    input_method_id = method_data['input']
+    input_method_id = method_data['input_name']
 
      # Get relevant data, matching MethodID
     input_nodes = conn.query(f"""
         MATCH (px:patient)-[:HAS_CASE]-(case)-[:HAS_SCAN]-(scan:scan)-[:HAS_DATA]-(results:radiomics)
-        WHERE id(scan)={container_id} AND results.MethodID='{input_method_id}'
-        RETURN px.PatientID, case.AccessionNumber, scan.SeriesInstanceUID, results.path, results.name"""
+        WHERE id(scan)={container_id} AND results.name='{input_method_id}'
+        RETURN px.name, case.AccessionNumber, scan.SeriesInstanceUID, results.path, results.hash"""
     )
 
     if not input_nodes or len (input_nodes)==0:
@@ -60,14 +60,14 @@ def cli(cohort_id, container_id, method_id):
     logger.info (input_data)
 
     output_dir  = os.path.join(const.PUBLIC_DIR, method_data['output_dir'])
-    output_file = os.path.join(output_dir, input_data['results.name'] + ".flatten.parquet")
+    output_file = os.path.join(output_dir, input_data['results.hash'] + ".flatten.parquet")
     if not os.path.exists(output_dir): os.mkdir(output_dir)
 
     # Get Results package
-    df = pd.read_csv(input_data['results.path'])
+    df = pd.read_csv(input_data['results.path'] + '/' + method_data['input_name'] + ".csv")
 
     # Add ID hierachy information
-    df['PatientID']         = input_data['px.PatientID']
+    df['PatientID']         = input_data['px.name']
     df['AccessionNumber']   = input_data['case.AccessionNumber']
     df['SeriesInstanceUID'] = input_data['scan.SeriesInstanceUID']
 
