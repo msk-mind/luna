@@ -16,7 +16,7 @@ import click
 from data_processing.common.custom_logger   import init_logger
 from data_processing.common.Container  import Container
 from data_processing.common.utils      import get_method_data
-from data_processing.radiology.common.utils   import window_dicoms
+from data_processing.radiology.common.preprocess   import window_dicoms
 
 logger = init_logger("windowDicoms.log")
 
