@@ -10,22 +10,16 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, json, sys
+import os, sys
 import click
-from checksumdir import dirhash
 
 # From common
-from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.Node       import Node
 from data_processing.common.Container  import Container
-from data_processing.common.utils      import get_method_data 
+from data_processing.common.utils      import get_method_data
+from data_processing.radiology.common.utils   import extract_radiomics
 
 logger = init_logger("extractRadiomics.log")
-
-# Specialized library to extract radiomics
-from radiomics import featureextractor  # This module is used for interaction with pyradiomics
-import pandas as pd
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
@@ -47,38 +41,25 @@ def cli(cohort_id, container_id, method_id):
     image_node  = container.get("mhd", method_data['image_input_name']) 
     label_node  = container.get("mha", method_data['label_input_name'])
 
-    extractor = featureextractor.RadiomicsFeatureExtractor(**method_data['RadiomicsFeatureExtractor'])
-
-    try:
-        result = extractor.execute(image_node.get_object("*.mhd"), str(label_node.path))
-    except Exception as e:
-        container.logger.error ("Extraction failed!!!")
-        container.logger.error (str(e))
-        return
-
     # Data just goes under namespace/name
     # TODO: This path is really not great, but works for now
     output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
     if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-    output_filename = os.path.join(output_dir, method_id+".csv")
+    output_node = extract_radiomics(
+        name = method_id,
+        image_path = str(next(image_node.path.glob("*.mhd"))),
+        label_path = str(label_node.path),
+        output_dir = output_dir,
+        params     = method_data
+    )
 
-    container.logger.info("Saving to " + output_filename)
-    sers = pd.Series(result)
-    sers.to_frame().transpose().to_csv(output_filename)
-
-    # Prepare metadata and commit
-    record_type = "radiomics"
-    record_name = method_id
-    record_properties = {
-        "path":output_dir, 
-        "hash":dirhash(output_dir, "sha256")
-    }
-
-    output_node = Node(record_type, record_name, record_properties)
+    if output_node is None: return
 
     container.add(output_node)
     container.saveAll()
+
+
 
 if __name__ == "__main__":
     cli()

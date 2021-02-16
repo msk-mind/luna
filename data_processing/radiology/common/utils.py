@@ -1,6 +1,16 @@
+import os, logging
+from dirhash import dirhash
+
 import numpy as np
+import pandas as pd
+
 from PIL import Image
 from medpy.io import load
+from radiomics import featureextractor  # This module is used for interaction with pyradiomics
+from pydicom import dcmread
+import itk
+
+from data_processing.common.Node  import Node
 
 def find_centroid(path, image_w, image_h):
     """
@@ -187,3 +197,157 @@ def overlay_images(dicom_path, seg, width, height):
     overlay = res.tobytes()
 
     return (dicom_binary, overlay)
+
+
+def generate_scan(name: str, dicom_path: str, output_dir: str, params: dict) -> Node:
+    """
+    Extract radiomics given and image, label to and output_dir, parameterized by params
+
+    :param name: name of function call, output node
+    :param dicom_path: filepath to folder of dicom images
+    :param output_dir: destination directory
+    :param params {
+        file_ext str: file extention for scan generation
+    }
+
+    :return: Node, None if function fails
+    """
+    logger = logging.getLogger(__name__)
+
+    PixelType = itk.ctype('signed short')
+    ImageType = itk.Image[PixelType, 3]
+
+    namesGenerator = itk.GDCMSeriesFileNames.New()
+    namesGenerator.SetUseSeriesDetails(True)
+    namesGenerator.AddSeriesRestriction("0008|0021")
+    namesGenerator.SetGlobalWarningDisplay(False)
+    namesGenerator.SetDirectory(dicom_path)
+
+    seriesUIDs = namesGenerator.GetSeriesUIDs()
+    num_dicoms = len(seriesUIDs)
+
+    if num_dicoms < 1:
+        logger.warning('No DICOMs in: ' + dicom_path)
+        return
+
+    logger.info('The directory {} contains {} DICOM Series'.format(dicom_path, str(num_dicoms)))
+
+    n_slices = 0
+
+    for uid in seriesUIDs:
+        logger.info('Reading: ' + uid)
+        fileNames = namesGenerator.GetFileNames(uid)
+        if len(fileNames) < 1: continue
+
+        n_slices = len(fileNames)
+
+        reader = itk.ImageSeriesReader[ImageType].New()
+        dicomIO = itk.GDCMImageIO.New()
+        reader.SetImageIO(dicomIO)
+        reader.SetFileNames(fileNames)
+        reader.ForceOrthogonalDirectionOff()
+
+        writer = itk.ImageFileWriter[ImageType].New()
+
+        outFileName = os.path.join(output_dir, uid + '.' + params['file_ext'])
+        writer.SetFileName(outFileName)
+        writer.UseCompressionOn()
+        writer.SetInput(reader.GetOutput())
+        logger.info('Writing: ' + outFileName)
+        writer.Update()
+
+    # Prepare metadata and commit
+    record_type = params['file_ext']
+    record_properties = {
+        'path' : output_dir,
+        'zdim' : n_slices,
+        'hash':  dirhash(output_dir, "sha256") 
+    }
+
+    output_node = Node(record_type, name, record_properties)
+
+    return output_node
+
+
+def extract_radiomics(name: str, image_path: str, label_path: str, output_dir: str, params: dict) -> Node:
+    """
+    Extract radiomics given and image, label to and output_dir, parameterized by params
+
+    :param name: name of function call, output node
+    :param image_path: filepath to image
+    :param label_path: filepath to 3d segmentation
+    :param output_dir: destination directory
+    :param params {
+        RadiomicsFeatureExtractor dict: configuration for the RadiomicsFeatureExtractor
+    }
+
+    :return: Node, None if function fails
+    """
+    logger = logging.getLogger(__name__)
+
+    extractor = featureextractor.RadiomicsFeatureExtractor(**params['RadiomicsFeatureExtractor'])
+
+    try:
+        result = extractor.execute(image_path, label_path)
+    except Exception as e:
+        logger.error ("Extraction failed!!!")
+        logger.error (str(e))
+        return
+
+    output_filename = os.path.join(output_dir, "radiomics-out.csv")
+
+    logger.info("Saving to " + output_filename)
+    sers = pd.Series(result)
+    sers.to_frame().transpose().to_csv(output_filename)
+
+    # Prepare metadata and commit
+    record_properties = {
+        "path":output_dir, 
+        "hash":dirhash(output_dir, "sha256")
+    }
+
+    output_node = Node("radiomics", name, record_properties)
+
+    return output_node
+
+
+def window_dicoms(name: str, dicom_paths: list, output_dir: str, params: dict) -> Node:
+    """
+    Extract radiomics given and image, label to and output_dir, parameterized by params
+
+    :param name: name of function call, output node
+    :param dicom_paths: list of filepaths to process
+    :param output_dir: destination directory
+    :param params {
+        window bool: whether to apply windowing
+        window.low_level int, float : lower level to clip
+        window.high_level int, float: higher level to clip
+    }
+
+    :return: Node, None if function fails
+    """ 
+ 
+    logger = logging.getLogger(__name__)
+
+    # Scale and clip each dicom, and save in new directory
+    logger.info("Processing %s dicoms!", len(dicom_paths))
+    for dcm in dicom_paths:
+        ds = dcmread(dcm)
+        hu = ds.RescaleSlope * ds.pixel_array + ds.RescaleIntercept
+        if params['window']:
+            hu = np.clip( hu, params['window.low_level'], params['window.high_level']   )
+        ds.PixelData = hu.astype(ds.pixel_array.dtype).tobytes()
+        ds.save_as (os.path.join( output_dir, dcm.stem + ".cthu.dcm"  ))
+
+    # Prepare metadata and commit
+    record_properties = {
+        "RescaleSlope":ds.RescaleSlope, 
+        "RescaleIntercept":ds.RescaleIntercept, 
+        "units":"HU", 
+        "path":output_dir, 
+        "hash":dirhash(output_dir, "sha256")
+    }
+
+    output_node = Node("dicom", name, record_properties)
+
+    return output_node

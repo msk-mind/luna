@@ -26,7 +26,7 @@ class Node(object):
 		self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
 		self.properties["type"] = self.type
 
-	def set_namespace(self, namespace_id: str, subspace_id='default'):
+	def set_namespace(self, namespace_id: str, subspace_id=None):
 		"""
 		Sets the namespace for this Node commits
 
@@ -34,9 +34,13 @@ class Node(object):
 		:params: subspace_id  - subspace value, optional
 		"""
 		self.properties['namespace'] = namespace_id
-		self.properties['subspace']  = subspace_id
-		self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
-		
+
+		if subspace_id is None:
+			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
+		else:
+			self.properties['subspace']  = subspace_id
+			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
+
 
 	def __repr__(self):
 		"""
