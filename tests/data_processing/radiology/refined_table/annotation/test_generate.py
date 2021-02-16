@@ -35,6 +35,5 @@ def test_cli(spark):
     assert result.exit_code == 0
 
     df = spark.read.format("delta").load(png_table_path)
-# TODO: Fix this test
     assert df.count() == 1
     df.unpersist()
