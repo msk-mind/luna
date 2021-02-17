@@ -11,8 +11,6 @@ from radiomics import featureextractor  # This module is used for interaction wi
 from pydicom import dcmread
 import itk
 
-from data_processing.common.Node  import Node
-
 def find_centroid(path, image_w, image_h):
     """
     Find the centroid of the 2d segmentation.
@@ -219,7 +217,7 @@ def overlay_images(dicom_path, seg, width, height):
     return (dicom_binary, overlay)
 
 
-def generate_scan(name: str, dicom_path: str, output_dir: str, params: dict) -> Node:
+def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
     """
     Extract radiomics given and image, label to and output_dir, parameterized by params
 
@@ -248,7 +246,7 @@ def generate_scan(name: str, dicom_path: str, output_dir: str, params: dict) -> 
 
     if num_dicoms < 1:
         logger.warning('No DICOMs in: ' + dicom_path)
-        return
+        return None
 
     logger.info('The directory {} contains {} DICOM Series'.format(dicom_path, str(num_dicoms)))
 
@@ -277,19 +275,16 @@ def generate_scan(name: str, dicom_path: str, output_dir: str, params: dict) -> 
         writer.Update()
 
     # Prepare metadata and commit
-    record_type = params['file_ext']
-    record_properties = {
+    properties = {
         'path' : output_dir,
         'zdim' : n_slices,
         'hash':  dirhash(output_dir, "sha256") 
     }
 
-    output_node = Node(record_type, name, record_properties)
-
-    return output_node
+    return properties
 
 
-def extract_radiomics(name: str, image_path: str, label_path: str, output_dir: str, params: dict) -> Node:
+def extract_radiomics(image_path: str, label_path: str, output_dir: str, params: dict) -> dict:
     """
     Extract radiomics given and image, label to and output_dir, parameterized by params
 
@@ -315,7 +310,7 @@ def extract_radiomics(name: str, image_path: str, label_path: str, output_dir: s
     except Exception as e:
         logger.error ("Extraction failed!!!")
         logger.error (str(e))
-        return
+        return None
 
     output_filename = os.path.join(output_dir, "radiomics-out.csv")
 
@@ -324,17 +319,15 @@ def extract_radiomics(name: str, image_path: str, label_path: str, output_dir: s
     sers.to_frame().transpose().to_csv(output_filename)
 
     # Prepare metadata and commit
-    record_properties = {
+    properties = {
         "path":output_dir, 
         "hash":dirhash(output_dir, "sha256")
     }
 
-    output_node = Node("radiomics", name, record_properties)
-
-    return output_node
+    return properties
 
 
-def window_dicoms(name: str, dicom_paths: list, output_dir: str, params: dict) -> Node:
+def window_dicoms(dicom_paths: list, output_dir: str, params: dict) -> dict:
     """
     Extract radiomics given and image, label to and output_dir, parameterized by params
 
@@ -354,6 +347,8 @@ def window_dicoms(name: str, dicom_paths: list, output_dir: str, params: dict) -
 
     # Scale and clip each dicom, and save in new directory
     logger.info("Processing %s dicoms!", len(dicom_paths))
+    if params.get('window', False):
+        logger.info ("Applying window [%s,%s]", params['window.low_level'], params['window.high_level'])
     for dcm in dicom_paths:
         ds = dcmread(dcm)
         hu = ds.RescaleSlope * ds.pixel_array + ds.RescaleIntercept
@@ -363,14 +358,12 @@ def window_dicoms(name: str, dicom_paths: list, output_dir: str, params: dict) -
         ds.save_as (os.path.join( output_dir, dcm.stem + ".cthu.dcm"  ))
 
     # Prepare metadata and commit
-    record_properties = {
-        "RescaleSlope":ds.RescaleSlope, 
-        "RescaleIntercept":ds.RescaleIntercept, 
+    properties = {
+        "RescaleSlope": float(ds.RescaleSlope), 
+        "RescaleIntercept": float(ds.RescaleIntercept), 
         "units":"HU", 
         "path":output_dir, 
         "hash":dirhash(output_dir, "sha256")
     }
 
-    output_node = Node("dicom", name, record_properties)
-
-    return output_node
+    return properties

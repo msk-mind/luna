@@ -10,13 +10,16 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, sys
+import os, json, sys
 import click
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.Container  import Container
-from data_processing.common.utils      import get_method_data
+from data_processing.common.utils           import get_method_data
+from data_processing.common.Container       import Container
+from data_processing.common.Node            import Node
+
+# From radiology.common
 from data_processing.radiology.common.preprocess   import extract_radiomics
 
 logger = init_logger("extractRadiomics.log")
@@ -50,15 +53,16 @@ def cli(cohort_id, container_id, method_id):
     output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
     if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-    output_node = extract_radiomics(
-        name = method_id,
+    properties = extract_radiomics(
         image_path = str(next(image_node.path.glob("*.mhd"))),
         label_path = str(label_node.path),
         output_dir = output_dir,
         params     = method_data
     )
 
-    if output_node is None: return
+    if properties is None: return
+
+    output_node = Node("radiomics", method_id, properties)
 
     container.add(output_node)
     container.saveAll()
