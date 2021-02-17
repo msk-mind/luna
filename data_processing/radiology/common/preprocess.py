@@ -299,18 +299,21 @@ def extract_radiomics(name: str, image_path: str, label_path: str, output_dir: s
     :param output_dir: destination directory
     :param params {
         RadiomicsFeatureExtractor dict: configuration for the RadiomicsFeatureExtractor
+        enableAllImageTypes bool: flat to enable all image types
     }
 
     :return: Node, None if function fails
     """
     logger = logging.getLogger(__name__)
 
-    extractor = featureextractor.RadiomicsFeatureExtractor(**params['RadiomicsFeatureExtractor'])
+    extractor = featureextractor.RadiomicsFeatureExtractor(**params.get('RadiomicsFeatureExtractor', {}))
+
+    if params.get("enableAllImageTypes", False): extractor.enableAllImageTypes()
 
     try:
         result = extractor.execute(image_path, label_path)
     except Exception as e:
-        logger.error ("Extraction failed!!!")
+        logger.error ("Extraction failed:")
         logger.error (str(e))
         return
 
@@ -318,6 +321,7 @@ def extract_radiomics(name: str, image_path: str, label_path: str, output_dir: s
 
     logger.info("Saving to " + output_filename)
     sers = pd.Series(result)
+    print (sers)
     sers.to_frame().transpose().to_csv(output_filename)
 
     # Prepare metadata and commit
