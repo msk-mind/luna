@@ -299,7 +299,7 @@ def extract_radiomics(name: str, image_path: str, label_path: str, output_dir: s
     :param output_dir: destination directory
     :param params {
         RadiomicsFeatureExtractor dict: configuration for the RadiomicsFeatureExtractor
-        enableAllImageTypes bool: flat to enable all image types
+        enableAllImageTypes bool: flag to enable all image types
     }
 
     :return: Node, None if function fails
