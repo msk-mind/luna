@@ -297,15 +297,18 @@ def extract_radiomics(name: str, image_path: str, label_path: str, output_dir: s
     :param image_path: filepath to image
     :param label_path: filepath to 3d segmentation
     :param output_dir: destination directory
-    :param params {
+      :param params {
         RadiomicsFeatureExtractor dict: configuration for the RadiomicsFeatureExtractor
+        enableAllImageTypes bool: flag to enable all image types
     }
 
     :return: Node, None if function fails
     """
     logger = logging.getLogger(__name__)
 
-    extractor = featureextractor.RadiomicsFeatureExtractor(**params['RadiomicsFeatureExtractor'])
+    extractor = featureextractor.RadiomicsFeatureExtractor(**params.get('RadiomicsFeatureExtractor', {}))
+
+    if params.get("enableAllImageTypes", False): extractor.enableAllImageTypes()
 
     try:
         result = extractor.execute(image_path, label_path)
