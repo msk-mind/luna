@@ -41,6 +41,10 @@ def cli(cohort_id, container_id, method_id):
     image_node  = container.get("mhd", method_data['image_input_name']) 
     label_node  = container.get("mha", method_data['label_input_name'])
 
+    if image_node is None or label_node is None:
+        logger.error("Image or Label not found, exiting!")
+        return
+
     # Data just goes under namespace/name
     # TODO: This path is really not great, but works for now
     output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
