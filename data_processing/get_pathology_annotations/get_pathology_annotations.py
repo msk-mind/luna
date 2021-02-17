@@ -6,7 +6,7 @@ How to run:
 - run: python3 -m data_processing.get_pathology_annotations.get_pathology_annotations -c {path to app config}
 
 Example:
-	python3 -m data_processing.get_pathology_annotations.get_pathology_annotations -c data_processing/get_pathology_annotations/app_config.yaml
+        python3 -m data_processing.get_pathology_annotations.get_pathology_annotations -c data_processing/get_pathology_annotations/app_config.yaml
 '''
 
 from flask import Flask, request, jsonify
@@ -72,31 +72,31 @@ curl http://<server>:5001/mind/api/v1/datasets/MY_DATASET
 # accepts both HobI and ImageIDs
 @app.route('/mind/api/v1/getPathologyAnnotation/<string:project>/<string:id>/<string:annotation_type>/<labelset>', methods=['GET'])
 def getPathologyAnnotation(annotation_type, project,id, labelset):
-	
-	pathology_root_path = app.config.get('pathology_root_path')
+        
+        pathology_root_path = app.config.get('pathology_root_path')
 
-	spark = app.config.get('spark')
+        spark = app.config.get('spark')
 
-	if slide_hid_regex.match(id):
-		slide_id = get_slide_id(id, "slide_hid")
-	elif slide_id_regex.match(id):
-		slide_id = id
-	else:
-		return "Invalid ID"
+        if slide_hid_regex.match(id):
+                slide_id = get_slide_id(id, "slide_hid")
+        elif slide_id_regex.match(id):
+                slide_id = id
+        else:
+                return "Invalid ID"
 
-	if annotation_type not in ANNOTATION_TABLE_MAPPINGS:
-		return "Illegal Annotation Type. This API supports \"regional\" or \"point\" annotations only"
+        if annotation_type not in ANNOTATION_TABLE_MAPPINGS:
+                return "Illegal Annotation Type. This API supports \"regional\" or \"point\" annotations only"
 
-	DATA_TYPE = ANNOTATION_TABLE_MAPPINGS[annotation_type]["DATA_TYPE"]
-	GEOJSON_COLUMN = ANNOTATION_TABLE_MAPPINGS[annotation_type]["GEOJSON_COLUMN_NAME"]
-	ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, PROJECT_MAPPING[project])
-	GEOJSON_TABLE_PATH = os.path.join(ANNOTATIONS_FOLDER , "tables", DATA_TYPE)
+        DATA_TYPE = ANNOTATION_TABLE_MAPPINGS[annotation_type]["DATA_TYPE"]
+        GEOJSON_COLUMN = ANNOTATION_TABLE_MAPPINGS[annotation_type]["GEOJSON_COLUMN_NAME"]
+        ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, PROJECT_MAPPING[project])
+        GEOJSON_TABLE_PATH = os.path.join(ANNOTATIONS_FOLDER , "tables", DATA_TYPE)
 
-	row = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset.upper()}' and latest=True")
-	if row.count() == 0:
-		return "No annotations match the provided query."
-	geojson = row.select(to_json(GEOJSON_COLUMN).alias("val")).head()['val']
-	return geojson
+        row = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset.upper()}' and latest=True")
+        if row.count() == 0:
+                return "No annotations match the provided query."
+        geojson = row.select(to_json(GEOJSON_COLUMN).alias("val")).head()['val']
+        return geojson
 
 
 @click.command()
@@ -107,24 +107,28 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
               help="path to config file for annotation API"
                    "See data_processing/get_pathology_annotations/app_config.yaml.template")
 def cli(config_file):
-	cfg = ConfigSet(name=APP_CFG, config_file=config_file)
-	spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.mind.api")	
-	pathology_root_path = cfg.get_value(path=APP_CFG+'::$.pathology[:1]["root_path"]')
+        cfg = ConfigSet(name=APP_CFG, config_file=config_file)
+        spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.mind.api")   
+        pathology_root_path = cfg.get_value(path=APP_CFG+'::$.pathology[:1]["root_path"]')
+
+        if os.environ.get("PATHOLOGY_ROOT_PATH", False): 
+            logger.info("Overriding pathology_root_path!!!")
+            pathology_root_path = os.environ.get("PATHOLOGY_ROOT_PATH")
+            logger.info("pathology_root_path=" + pathology_root_path)
+
+        app.config['cfg'] = cfg
+        app.config['spark'] = spark
+        app.config['pathology_root_path'] = pathology_root_path
 
 
-	app.config['cfg'] = cfg
-	app.config['spark'] = spark
-	app.config['pathology_root_path'] = pathology_root_path
+
+
+        app.run(host='0.0.0.0',port=5002, debug=False)
 
 
 
-
-	app.run(host='0.0.0.0',port=5002, debug=False)
-
-
-
-	
+        
 
 if __name__ == '__main__':
-	cli()
-	
+        cli()
+        
