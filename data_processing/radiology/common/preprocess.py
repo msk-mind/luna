@@ -221,14 +221,13 @@ def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
     """
     Extract radiomics given and image, label to and output_dir, parameterized by params
 
-    :param name: name of function call, output node
     :param dicom_path: filepath to folder of dicom images
     :param output_dir: destination directory
     :param params {
         file_ext str: file extention for scan generation
     }
 
-    :return: Node, None if function fails
+    :return: property dict, None if function fails
     """
     logger = logging.getLogger(__name__)
 
@@ -288,7 +287,6 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
     """
     Extract radiomics given and image, label to and output_dir, parameterized by params
 
-    :param name: name of function call, output node
     :param image_path: filepath to image
     :param label_path: filepath to 3d segmentation
     :param output_dir: destination directory
@@ -297,7 +295,7 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
         enableAllImageTypes bool: flag to enable all image types
     }
 
-    :return: Node, None if function fails
+    :return: property dict, None if function fails
     """
     logger = logging.getLogger(__name__)
 
@@ -331,7 +329,6 @@ def window_dicoms(dicom_paths: list, output_dir: str, params: dict) -> dict:
     """
     Extract radiomics given and image, label to and output_dir, parameterized by params
 
-    :param name: name of function call, output node
     :param dicom_paths: list of filepaths to process
     :param output_dir: destination directory
     :param params {
@@ -340,7 +337,7 @@ def window_dicoms(dicom_paths: list, output_dir: str, params: dict) -> dict:
         window.high_level int, float: higher level to clip
     }
 
-    :return: Node, None if function fails
+    :return: property dict, None if function fails
     """ 
  
     logger = logging.getLogger(__name__)
