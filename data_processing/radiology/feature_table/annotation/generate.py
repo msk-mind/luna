@@ -15,7 +15,7 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.utils import generate_uuid_binary
 import data_processing.common.constants as const
-from data_processing.radiology.common.utils import find_centroid, crop_images
+from data_processing.radiology.common.preprocess import find_centroid, crop_images
 
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, IntegerType, StructType, StructField, BinaryType
@@ -76,6 +76,8 @@ def generate_feature_table(cfg):
                   .drop("metadata", "length", "modificationTime")
 
     # Find x,y centroid using MHA segmentation
+    spark.sparkContext.addPyFile("./data_processing/radiology/common/preprocess.py")
+    from preprocess import find_centroid, crop_images
     find_centroid_udf = F.udf(find_centroid, StructType([StructField("x", IntegerType()), StructField("y", IntegerType())]))
     mha_df = mha_df.withColumn("center", find_centroid_udf("path", F.lit(IMAGE_WIDTH), F.lit(IMAGE_HEIGHT))) \
                    .select(F.col("center.x").alias("x"), F.col("center.y").alias("y"), "accession_number", "scan_annotation_record_uuid", F.col("label").alias("mha_label"))
@@ -105,6 +107,8 @@ def generate_feature_table(cfg):
         logger.info("Cropped pngs")
 
         spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
+        spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+        from utils import generate_uuid_binary
         generate_uuid_udf = F.udf(generate_uuid_binary, StringType())
         df = df.withColumn("feature_record_uuid", F.lit(generate_uuid_udf("overlay", F.array([F.lit("FEATURE")]))))
 

@@ -6,6 +6,7 @@ import pandas as pd
 
 from PIL import Image
 from medpy.io import load
+import cv2
 from radiomics import featureextractor  # This module is used for interaction with pyradiomics
 from pydicom import dcmread
 import itk
@@ -99,6 +100,22 @@ def crop_images(xcenter, ycenter, dicom, overlay, crop_w, crop_h, image_w, image
     return (dicom_feature, overlay_feature)
 
 
+def normalize(image: np.ndarray) -> np.ndarray:
+    """
+    Normalize scan image intensity. Sets minimum value to zero, rescales by
+    alpha factor and casts to uint8 w/ saturation.
+    :param np.ndarray image: a single slice of an mr scan
+    :return np.ndarray normalized_image: normalized mr slice
+    """
+
+    image = image - np.min(image)
+
+    alpha_norm = 255.0 / min(np.max(image) - np.min(image), 10000)
+
+    normalized_image = cv2.convertScaleAbs(image, alpha=alpha_norm)
+
+    return normalized_image
+
 def dicom_to_bytes(dicom_path, width, height):
     """
     Create an image binary from dicom image.
@@ -108,6 +125,8 @@ def dicom_to_bytes(dicom_path, width, height):
     :param height: height of the image
     :return: image in bytes
     """
+    from preprocess import normalize
+
     file_path = dicom_path.split(':')[-1]
 
     data, header = load(file_path)
@@ -117,7 +136,7 @@ def dicom_to_bytes(dicom_path, width, height):
     image_2d = data[:,:,0].astype(float).T
 
     # Rescaling grey scale between 0-255
-    image_2d_scaled = (np.maximum(image_2d, 0) / image_2d.max()) * 255.0
+    image_2d_scaled = normalize(image_2d)
 
     # Convert to uint
     image_2d_scaled = np.uint8(image_2d_scaled)
@@ -139,6 +158,7 @@ def create_seg_images(src_path, uuid, width, height):
     :param height: height of the image
     :return: an array of (instance_number, uuid, png binary) tuples
     """
+    from preprocess import normalize
 
     file_path = src_path.split(':')[-1]
     data, header = load(file_path)
@@ -156,7 +176,7 @@ def create_seg_images(src_path, uuid, width, height):
             # double check that subtracting is needed for all.
             slice_num = num_images - (i+1)
 
-            image_2d_scaled = (np.maximum(image_2d, 0) / image_2d.max()) * 255.0
+            image_2d_scaled = normalize(image_2d)
             image_2d_scaled = np.uint8(image_2d_scaled)
 
             im = Image.fromarray(image_2d_scaled)
