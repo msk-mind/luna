@@ -18,7 +18,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 from data_processing.scanManager.extractRadiomics import extract_radiomics_with_container
 from data_processing.scanManager.windowDicoms     import window_dicom_with_container
-from data_processing.scanManager.generateScan     import enerate_scan_with_container
+from data_processing.scanManager.generateScan     import generate_scan_with_container
 
 """
 Required config:
