@@ -40,7 +40,7 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 VERSION      = "branch:"+subprocess.check_output(["git","rev-parse" ,"--abbrev-ref", "HEAD"]).decode('ascii').strip()
 HOSTNAME     = os.environ["HOSTNAME"]
 PORT         = int(cfg.get_value("APP_CFG::scanManager_port"))
-NUM_ROCESSES = int(cfg.get_value("APP_CFG::scanManager_processes"))
+NUM_PROCS = int(cfg.get_value("APP_CFG::scanManager_processes"))
 
 # Setup App/Api
 app = Flask(__name__)
@@ -179,7 +179,7 @@ class runMethods(Resource):
 
         args_list = []
 
-        with ProcessPoolExecutor(16) as executor:
+        with ProcessPoolExecutor(NUM_PROCS) as executor:
 
             for scan_id in container_ids:
                 if method_config["function"] == 'data_processing.scanManager.windowDicoms':
@@ -191,7 +191,7 @@ class runMethods(Resource):
                 if method_config["function"] == 'data_processing.scanManager.saveRadiomics':
                     args_list.append(["python3","-m",method_config["function"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
 
-        p = Pool(NUM_ROCESSES)
+        p = Pool(NUM_PROCS)
         p.map(subprocess.call, args_list)
 
         return "Done"
