@@ -26,6 +26,9 @@ logger = init_logger("generateScan.log")
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
+    container_generate_scan(cohort_id, container_id, method_id)
+
+def container_generate_scan(cohort_id, container_id, method_id):
 
     # Eventually these will come from a cfg file, or somewhere else
     container_params = {

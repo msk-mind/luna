@@ -8,7 +8,6 @@ from data_processing.common.Node import Node
 from data_processing.common.config import ConfigSet
 from data_processing.common.Container  import Container
 
-
 from pyspark.sql.types import StringType, IntegerType, StructType, StructField
 
 import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests
@@ -16,6 +15,12 @@ import pandas as pd
 import subprocess
 from multiprocessing import Pool
 from filehash import FileHash
+
+from concurrent.futures import ProcessPoolExecutor
+
+from data_processing.scanManager.extractRadiomics import container_extract_radiomics
+from data_processing.scanManager.windowDicoms import container_window_dicom
+from data_processing.scanManager.generateScan import container_generate_scan
 
 """
 Required config:
@@ -45,7 +50,7 @@ api = Api(app, version=VERSION, title='scanManager', description='Manages and ex
 
 # Initialize some important classes
 logger = init_logger("flask-mind-server.log")
-spark  = SparkConfig().spark_session("APP_CFG", "data_processing.radiology.api.5003")
+# spark  = SparkConfig().spark_session("APP_CFG", "data_processing.radiology.api.5003")
 conn   = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
 # Method param model
@@ -149,7 +154,6 @@ class runMethods(Resource):
         """ Run a method """
         n_cohort = Node("cohort", cohort_id)
 
-   
         # Check for cohort existence
         if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1: 
             return make_response("No cohort namespace found", 300)
@@ -176,8 +180,18 @@ class runMethods(Resource):
         logger.info(container_ids)
 
         args_list = []
-        for scan_id in container_ids:
-            args_list.append(["python3","-m",method_config["function"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
+
+        with ProcessPoolExecutor(16) as executor:
+
+            for scan_id in container_ids:
+                if method_config["function"] == 'data_processing.scanManager.windowDicoms':
+                    executor.submit (container_window_dicom, cohort_id, str(scan_id), method_id )
+                if method_config["function"] == 'data_processing.scanManager.generateScan':
+                    executor.submit (container_generate_scan, cohort_id, str(scan_id), method_id )
+                if method_config["function"] == 'data_processing.scanManager.extractRadiomics':
+                    executor.submit (container_extract_radiomics, cohort_id, str(scan_id), method_id )
+                if method_config["function"] == 'data_processing.scanManager.saveRadiomics':
+                    args_list.append(["python3","-m",method_config["function"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
 
         p = Pool(NUM_ROCESSES)
         p.map(subprocess.call, args_list)
