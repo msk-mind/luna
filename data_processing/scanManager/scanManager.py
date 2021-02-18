@@ -50,7 +50,7 @@ api = Api(app, version=VERSION, title='scanManager', description='Manages and ex
 
 # Initialize some important classes
 logger = init_logger("flask-mind-server.log")
-# spark  = SparkConfig().spark_session("APP_CFG", "data_processing.radiology.api.5003")
+spark  = SparkConfig().spark_session("APP_CFG", "data_processing.radiology.api.5003")
 conn   = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
 # Method param model
