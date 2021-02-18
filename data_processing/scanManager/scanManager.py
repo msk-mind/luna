@@ -1,26 +1,24 @@
 from flask import Flask, request, jsonify, render_template, make_response
 from flask_restx import Api, Resource, fields
 
-from data_processing.common.custom_logger import init_logger
-from data_processing.common.sparksession import SparkConfig
-from data_processing.common.Neo4jConnection import Neo4jConnection
-from data_processing.common.Node import Node
-from data_processing.common.config import ConfigSet
-from data_processing.common.Container  import Container
+from data_processing.common.custom_logger    import init_logger
+from data_processing.common.sparksession     import SparkConfig
+from data_processing.common.Neo4jConnection  import Neo4jConnection
+from data_processing.common.Node      import Node
+from data_processing.common.config    import ConfigSet
+from data_processing.common.Container import Container
 
 from pyspark.sql.types import StringType, IntegerType, StructType, StructField
 
-import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests
+import os, shutil, sys, json, subprocess, uuid, requests
 import pandas as pd
-import subprocess
-from multiprocessing import Pool
-from filehash import FileHash
 
+from multiprocessing    import Pool
 from concurrent.futures import ProcessPoolExecutor
 
 from data_processing.scanManager.extractRadiomics import container_extract_radiomics
-from data_processing.scanManager.windowDicoms import container_window_dicom
-from data_processing.scanManager.generateScan import container_generate_scan
+from data_processing.scanManager.windowDicoms     import container_window_dicom
+from data_processing.scanManager.generateScan     import container_generate_scan
 
 """
 Required config:
