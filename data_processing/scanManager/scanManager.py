@@ -1,21 +1,24 @@
 from flask import Flask, request, jsonify, render_template, make_response
 from flask_restx import Api, Resource, fields
 
-from data_processing.common.custom_logger import init_logger
-from data_processing.common.sparksession import SparkConfig
-from data_processing.common.Neo4jConnection import Neo4jConnection
-from data_processing.common.Node import Node
-from data_processing.common.config import ConfigSet
-from data_processing.common.Container  import Container
-
+from data_processing.common.custom_logger    import init_logger
+from data_processing.common.sparksession     import SparkConfig
+from data_processing.common.Neo4jConnection  import Neo4jConnection
+from data_processing.common.Node      import Node
+from data_processing.common.config    import ConfigSet
+from data_processing.common.Container import Container
 
 from pyspark.sql.types import StringType, IntegerType, StructType, StructField
 
-import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests
+import os, shutil, sys, json, subprocess, uuid, requests
 import pandas as pd
-import subprocess
-from multiprocessing import Pool
-from filehash import FileHash
+
+from multiprocessing    import Pool
+from concurrent.futures import ProcessPoolExecutor
+
+from data_processing.scanManager.extractRadiomics import extract_radiomics_with_container
+from data_processing.scanManager.windowDicoms     import window_dicom_with_container
+from data_processing.scanManager.generateScan     import generate_scan_with_container
 
 """
 Required config:
@@ -37,7 +40,7 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 VERSION      = "branch:"+subprocess.check_output(["git","rev-parse" ,"--abbrev-ref", "HEAD"]).decode('ascii').strip()
 HOSTNAME     = os.environ["HOSTNAME"]
 PORT         = int(cfg.get_value("APP_CFG::scanManager_port"))
-NUM_ROCESSES = int(cfg.get_value("APP_CFG::scanManager_processes"))
+NUM_PROCS = int(cfg.get_value("APP_CFG::scanManager_processes"))
 
 # Setup App/Api
 app = Flask(__name__)
@@ -149,7 +152,6 @@ class runMethods(Resource):
         """ Run a method """
         n_cohort = Node("cohort", cohort_id)
 
-   
         # Check for cohort existence
         if not len(conn.query(f""" MATCH (co:{n_cohort.get_match_str()}) RETURN co """ ))==1: 
             return make_response("No cohort namespace found", 300)
@@ -176,11 +178,22 @@ class runMethods(Resource):
         logger.info(container_ids)
 
         args_list = []
-        for scan_id in container_ids:
-            args_list.append(["python3","-m",method_config["function"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
 
-        p = Pool(NUM_ROCESSES)
-        p.map(subprocess.call, args_list)
+        with ProcessPoolExecutor(NUM_PROCS) as executor:
+            if method_config["function"] == 'data_processing.scanManager.windowDicoms':
+                for scan_id in container_ids:
+                    executor.submit (window_dicom_with_container, cohort_id, str(scan_id), method_id )
+            if method_config["function"] == 'data_processing.scanManager.generateScan':
+                for scan_id in container_ids:
+                    executor.submit (generate_scan_with_container, cohort_id, str(scan_id), method_id )
+            if method_config["function"] == 'data_processing.scanManager.extractRadiomics':
+                for scan_id in container_ids:
+                    executor.submit (extract_radiomics_with_container, cohort_id, str(scan_id), method_id )
+            if method_config["function"] == 'data_processing.scanManager.saveRadiomics':
+                for scan_id in container_ids:
+                    args_list.append(["python3","-m",method_config["function"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
+                p = Pool(NUM_PROCS)
+                p.map(subprocess.call, args_list)
 
         return "Done"
 

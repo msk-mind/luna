@@ -29,7 +29,9 @@ logger = init_logger("windowDicoms.log")
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
+    window_dicom_with_container(cohort_id, container_id, method_id)
 
+def window_dicom_with_container(cohort_id, container_id, method_id):
     # Eventually these will come from a cfg file, or somewhere else
     container_params = {
         'GRAPH_URI':  os.environ['GRAPH_URI'],
