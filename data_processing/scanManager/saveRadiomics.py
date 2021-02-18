@@ -61,10 +61,10 @@ def cli(cohort_id, container_id, method_id):
 
     output_dir  = os.path.join(const.PUBLIC_DIR, method_data['output_dir'])
     output_file = os.path.join(output_dir, input_data['results.hash'] + ".flatten.parquet")
-    if not os.path.exists(output_dir): os.mkdir(output_dir)
+    if not os.path.exists(output_dir): os.makedirs(output_dir)
 
     # Get Results package
-    df = pd.read_csv(input_data['results.path'] + '/' + method_data['input_name'] + ".csv")
+    df = pd.read_csv(input_data['results.path'] + "/radiomics-out.csv").astype('double', errors='ignore')
 
     # Add ID hierachy information
     df['PatientID']         = input_data['px.name']
