@@ -180,19 +180,20 @@ class runMethods(Resource):
         args_list = []
 
         with ProcessPoolExecutor(NUM_PROCS) as executor:
-
-            for scan_id in container_ids:
-                if method_config["function"] == 'data_processing.scanManager.windowDicoms':
+            if method_config["function"] == 'data_processing.scanManager.windowDicoms':
+                for scan_id in container_ids:
                     executor.submit (container_window_dicom, cohort_id, str(scan_id), method_id )
-                if method_config["function"] == 'data_processing.scanManager.generateScan':
+            if method_config["function"] == 'data_processing.scanManager.generateScan':
+                for scan_id in container_ids:
                     executor.submit (container_generate_scan, cohort_id, str(scan_id), method_id )
-                if method_config["function"] == 'data_processing.scanManager.extractRadiomics':
+            if method_config["function"] == 'data_processing.scanManager.extractRadiomics':
+                for scan_id in container_ids:
                     executor.submit (container_extract_radiomics, cohort_id, str(scan_id), method_id )
-                if method_config["function"] == 'data_processing.scanManager.saveRadiomics':
+            if method_config["function"] == 'data_processing.scanManager.saveRadiomics':
+                for scan_id in container_ids:
                     args_list.append(["python3","-m",method_config["function"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
-
-        p = Pool(NUM_PROCS)
-        p.map(subprocess.call, args_list)
+                p = Pool(NUM_PROCS)
+                p.map(subprocess.call, args_list)
 
         return "Done"
 
