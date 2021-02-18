@@ -26,9 +26,9 @@ logger = init_logger("extractRadiomics.log")
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
-    container_extract_radiomics(cohort_id, container_id, method_id)
+    extract_radiomics_with_container(cohort_id, container_id, method_id)
 
-def container_extract_radiomics(cohort_id, container_id, method_id):
+def extract_radiomics_with_container(cohort_id, container_id, method_id):
     # Eventually these will come from a cfg file, or somewhere else
     container_params = {
         'GRAPH_URI':  os.environ['GRAPH_URI'],

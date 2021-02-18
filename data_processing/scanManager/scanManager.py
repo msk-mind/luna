@@ -16,9 +16,9 @@ import pandas as pd
 from multiprocessing    import Pool
 from concurrent.futures import ProcessPoolExecutor
 
-from data_processing.scanManager.extractRadiomics import container_extract_radiomics
-from data_processing.scanManager.windowDicoms     import container_window_dicom
-from data_processing.scanManager.generateScan     import container_generate_scan
+from data_processing.scanManager.extractRadiomics import extract_radiomics_with_container
+from data_processing.scanManager.windowDicoms     import window_dicom_with_container
+from data_processing.scanManager.generateScan     import enerate_scan_with_container
 
 """
 Required config:
@@ -182,13 +182,13 @@ class runMethods(Resource):
         with ProcessPoolExecutor(NUM_PROCS) as executor:
             if method_config["function"] == 'data_processing.scanManager.windowDicoms':
                 for scan_id in container_ids:
-                    executor.submit (container_window_dicom, cohort_id, str(scan_id), method_id )
+                    executor.submit (window_dicom_with_container, cohort_id, str(scan_id), method_id )
             if method_config["function"] == 'data_processing.scanManager.generateScan':
                 for scan_id in container_ids:
-                    executor.submit (container_generate_scan, cohort_id, str(scan_id), method_id )
+                    executor.submit (generate_scan_with_container, cohort_id, str(scan_id), method_id )
             if method_config["function"] == 'data_processing.scanManager.extractRadiomics':
                 for scan_id in container_ids:
-                    executor.submit (container_extract_radiomics, cohort_id, str(scan_id), method_id )
+                    executor.submit (extract_radiomics_with_container, cohort_id, str(scan_id), method_id )
             if method_config["function"] == 'data_processing.scanManager.saveRadiomics':
                 for scan_id in container_ids:
                     args_list.append(["python3","-m",method_config["function"],"-c", cohort_id, "-s", str(scan_id), "-m", method_id])
