@@ -67,15 +67,14 @@ def cli(cohort_id, container_id, method_id):
     df = pd.read_csv(input_data['results.path'] + "/radiomics-out.csv").astype('double', errors='ignore')
 
     # Add ID hierachy information
-    df['PatientID']         = input_data['px.name']
-    df['AccessionNumber']   = input_data['case.AccessionNumber']
-    df['SeriesInstanceUID'] = input_data['scan.SeriesInstanceUID']
+    df['meta_patient_id']         = input_data['px.name']
+    df['meta_accession_number']   = input_data['case.AccessionNumber']
 
     # Add operational information
-    df['cohort_id'] = cohort_id
-    df['container_id'] = container_id
-    df['method_id'] = method_id
-    df['input'] = input_method_id
+    df['meta_cohort_id'] = cohort_id
+    df['meta_container_id'] = container_id
+    df['meta_method_id'] = method_id
+    df['meta_input'] = input_method_id
 
     # Cleanup unnamed columns
     df = df.loc[:, ~df.columns.str.contains('Unnamed')]
