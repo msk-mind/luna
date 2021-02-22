@@ -288,7 +288,7 @@ class Container(object):
         self._node_commits[node.name] = node
         
         # Decorate with the container namespace 
-        self._node_commits[node.name].set_namespace( self._namespace_id )
+        self._node_commits[node.name].set_namespace( self._namespace_id, self._name )
         self.logger.info ("Container has %s pending node commits",  len(self._node_commits))
 
         # Set node objects
@@ -324,7 +324,7 @@ class Container(object):
                     self.logger.info("Started object upload with 4 threads...")
                     futures = []
                     for p in n.objects:
-                        futures.append(executor.submit(self._client.fput_object, self._namespace_id, f"{n.name}/{p.name}", p))
+                        futures.append(executor.submit(self._client.fput_object, self._namespace_id, f"{self._container_id}/{n.name}/{p.name}", p))
     
                 self._conn.query(f""" 
                     MATCH (container) {self._match_clause}

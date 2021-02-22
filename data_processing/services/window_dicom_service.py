@@ -21,6 +21,7 @@ from flask_restx import Api, Resource, fields
 from data_processing.common.config          import ConfigSet
 from data_processing.common.custom_logger   import init_logger
 from data_processing.common.Container  import Container
+from data_processing.common.Node  import Node
 from data_processing.common.utils      import get_method_data
 from data_processing.radiology.common.preprocess import window_dicoms
 
@@ -32,7 +33,7 @@ def container_window_dicom(cohort_id, container_id, method_id, job_id=None):
         'GRAPH_URI':  os.environ['GRAPH_URI'],
         'GRAPH_USER': "neo4j",
         'GRAPH_PASSWORD': "password",
-        'MINIO_URI': 'pllimsksparky1:8002',
+        'MINIO_URI': 'localhost:8002',
         'MINIO_USER': "mind",
         'MINIO_PASSWORD': 'm2eN6TVfZOaeqiuieOGf'
     }
@@ -40,7 +41,7 @@ def container_window_dicom(cohort_id, container_id, method_id, job_id=None):
     # Do some setup
     container   = Container( container_params ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_data = get_method_data(cohort_id, method_id) 
-    input_node  = container.get("dicom", "data.name='init-scans'") # Only get origional dicoms from
+    input_node  = container.get("dicom", 'init-scans') # Only get origional dicoms from
     
     # Currently, store things at MIND_GPFS_DIR/data/<namespace>/<container name>/<method>/<schema>
     # Such that for every namespace, container, and method, there is one allocated path location
@@ -50,8 +51,7 @@ def container_window_dicom(cohort_id, container_id, method_id, job_id=None):
     logger.info("Allocated output directory at %s", output_dir)
 
     try:
-        output_node = window_dicoms(
-            name = method_id,
+        properties = window_dicoms(
             dicom_paths = list(input_node.path.glob("*dcm")),
             output_dir = output_dir,
             params = method_data
@@ -59,6 +59,7 @@ def container_window_dicom(cohort_id, container_id, method_id, job_id=None):
     except Exception as e:
         if job_id: logger.warning(f"Job {job_id} finished with errors: {e}")
         return
+    output_node = Node("dicom", method_id, properties)
  
     logger.info("Preparing")
 
