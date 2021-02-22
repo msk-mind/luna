@@ -22,7 +22,7 @@ from data_processing.common.config          import ConfigSet
 from data_processing.common.custom_logger   import init_logger
 from data_processing.common.Container  import Container
 from data_processing.common.utils      import get_method_data
-from data_processing.radiology.common.preprocess   import window_dicoms
+from data_processing.radiology.common.preprocess import window_dicoms
 
 logger = init_logger("windowDicoms.log")
 
@@ -31,13 +31,16 @@ def container_window_dicom(cohort_id, container_id, method_id, job_id=None):
     container_params = {
         'GRAPH_URI':  os.environ['GRAPH_URI'],
         'GRAPH_USER': "neo4j",
-        'GRAPH_PASSWORD': "password"
+        'GRAPH_PASSWORD': "password",
+        'MINIO_URI': 'pllimsksparky1:8002',
+        'MINIO_USER': "mind",
+        'MINIO_PASSWORD': 'm2eN6TVfZOaeqiuieOGf'
     }
 
     # Do some setup
     container   = Container( container_params ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_data = get_method_data(cohort_id, method_id) 
-    input_node  = container.get("dicom", method_data['input_name']) # Only get origional dicoms from
+    input_node  = container.get("dicom", "data.name='init-scans'") # Only get origional dicoms from
     
     # Currently, store things at MIND_GPFS_DIR/data/<namespace>/<container name>/<method>/<schema>
     # Such that for every namespace, container, and method, there is one allocated path location
@@ -82,6 +85,12 @@ class API_window_dicom(Resource):
         future = executor.submit (container_window_dicom, cohort_id, container_id, method_id, job_id)
         return f"Submitted job {job_id} with future {future}"
 
+
+@api.route('/service/health', methods=['GET'])
+class API_window_dicom(Resource):
+    def get(self):
+        return make_response("Alive.")
+
 @click.command()
 @click.argument('run')
 @click.option('-c', '--cohort_id',    required=True)
@@ -95,7 +104,7 @@ if __name__ == '__main__':
     if sys.argv[1] == "start":
         logger.info(f"Running in API mode")
         logger.info(f"Starting worker on {HOSTNAME}:{PORT}")
-        app.run(host=HOSTNAME,port=PORT, debug=False)
+        app.run(host=HOSTNAME,port=PORT, debug=True)
     if sys.argv[1] == "run":
         logger.info(f"Running as in CLI mode")
         cli()
