@@ -41,7 +41,7 @@ def container_window_dicom(cohort_id, container_id, method_id, job_id=None):
     # Do some setup
     container   = Container( container_params ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_data = get_method_data(cohort_id, method_id) 
-    input_node  = container.get("dicom", 'init-scans') # Only get origional dicoms from
+    input_node  = container.get("dicom", method_data['input_name']) # Only get origional dicoms from
     
     # Currently, store things at MIND_GPFS_DIR/data/<namespace>/<container name>/<method>/<schema>
     # Such that for every namespace, container, and method, there is one allocated path location
@@ -59,6 +59,7 @@ def container_window_dicom(cohort_id, container_id, method_id, job_id=None):
     except Exception as e:
         if job_id: logger.warning(f"Job {job_id} finished with errors: {e}")
         return
+
     output_node = Node("dicom", method_id, properties)
  
     logger.info("Preparing")
