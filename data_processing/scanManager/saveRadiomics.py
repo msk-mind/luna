@@ -81,6 +81,7 @@ def cli(cohort_id, container_id, method_id):
         kv = method_data.get("metadata")
         for key in kv.keys(): df['meta_' + key] = kv[key]
 
+
     # Cleanup unnamed columns
     df = df.loc[:, ~df.columns.str.contains('Unnamed')]
 
