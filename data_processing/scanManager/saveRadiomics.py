@@ -76,6 +76,12 @@ def cli(cohort_id, container_id, method_id):
     df['meta_method_id'] = method_id
     df['meta_input'] = input_method_id
 
+    # Add custom user-specified metadata
+    if method_data.get("metadata", False):
+        kv = method_data.get("metadata")
+        for key in kv.keys(): df['meta_' + key] = kv[key]
+
+
     # Cleanup unnamed columns
     df = df.loc[:, ~df.columns.str.contains('Unnamed')]
 
@@ -84,6 +90,8 @@ def cli(cohort_id, container_id, method_id):
 
     # Write!
     pq.write_table(table, output_file)
+
+    logger.info("Saved to : " + str(output_file))
 
 if __name__ == "__main__":
     cli()
