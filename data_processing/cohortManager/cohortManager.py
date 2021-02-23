@@ -27,6 +27,70 @@ METHODS = {}
 HOST = os.environ['HOSTNAME']
 
 
+
+# ============================================================================================
+# cohort views
+@api.route('/mind/api/v1/cohort/<cohort_id>/views/patient', 
+    methods=['PUT', 'GET'],
+    doc={"description": "Return patient view of the cohort"}
+)
+@api.doc(
+    params={'cohort_id': 'Cohort identifier, must be unique if creating a new cohort'},
+    responses={200:"Success", 201:"Created successfully", 400:"Invalid", 404:"Cohort not found"}
+)
+class cohortPatientView(Resource):
+    def get(self, cohort_id):
+            """ Retrieve listing for cohort """
+
+            cohort = Node("cohort", cohort_id)
+            co_res = conn.query(f""" MATCH (co:{cohort.get_match_str()}) RETURN co """ )
+            px_res = conn.query(f""" MATCH (co:{cohort.get_match_str()})-[:INCLUDE]-(px:patient) RETURN px """ )
+
+            if co_res is None:
+                return make_response("Bad query", 400)
+            if len(co_res)==0:
+                return make_response("Cohort not found, please create it first", 400)
+        
+            # Build summary responses:
+            patient_list = []
+            for rec in px_res:
+                px_dict     = rec.data()['px']
+                patient_id  = px_dict['name']
+                px_dict['Patient Accessions'] = requests.get(f'http://{HOST}:5004/mind/api/v1/patient/{cohort_id}/{patient_id}').json()
+                patient_list.append(px_dict)
+            return jsonify(patient_list)
+           
+# cohort views
+@api.route('/mind/api/v1/cohort/<cohort_id>/views/data/<data_name>', 
+    methods=['PUT', 'GET'],
+    doc={"description": "Return data view of the cohort"}
+)
+@api.doc(
+    params={'cohort_id': 'Cohort identifier, must be unique if creating a new cohort'},
+    responses={200:"Success", 201:"Created successfully", 400:"Invalid", 404:"Cohort not found"}
+)
+class cohortDataView(Resource):
+    def get(self, cohort_id, data_name):
+            """ Retrieve listing for cohort """
+
+            cohort = Node("cohort", cohort_id)
+            co_res = conn.query(f""" MATCH (co:{cohort.get_match_str()}) RETURN co """ )
+            da_res = conn.query(f""" MATCH (co:{cohort.get_match_str()})-[:INCLUDE]-(container)-[:HAS_DATA]-(data) WHERE data.name='{data_name}' AND data.namespace='{cohort_id}' RETURN data """ )
+
+            if co_res is None:
+                return make_response("Bad query", 400)
+            if len(co_res)==0:
+                return make_response("Cohort not found, please create it first", 400)
+        
+            # Build summary responses:
+            data_list = [ rec.data()['data'] for rec in da_res  ]
+            return jsonify(data_list)
+           
+# --------------------------------------------------------------------------------------------
+
+
+
+
 # ============================================================================================
 # get-put-cohort
 @api.route('/mind/api/v1/cohort/<cohort_id>', 
@@ -237,5 +301,5 @@ class addOrRemoveCases(Resource):
 
 
 if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'],port=5004, threaded=True, debug=False)
+    app.run(host=os.environ['HOSTNAME'],port=5004, threaded=True, debug=True)
 
