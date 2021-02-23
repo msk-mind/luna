@@ -29,9 +29,10 @@ logger = init_logger("windowDicoms.log")
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
-    window_dicom_with_container(cohort_id, container_id, method_id)
+    method_data = get_method_data(cohort_id, method_id)
+    window_dicom_with_container(cohort_id, container_id, method_data)
 
-def window_dicom_with_container(cohort_id, container_id, method_id):
+def window_dicom_with_container(cohort_id, container_id, method_data):
     # Eventually these will come from a cfg file, or somewhere else
     container_params = {
         'GRAPH_URI':  os.environ['GRAPH_URI'],
@@ -41,7 +42,7 @@ def window_dicom_with_container(cohort_id, container_id, method_id):
 
     # Do some setup
     container   = Container( container_params ).setNamespace(cohort_id).lookupAndAttach(container_id)
-    method_data = get_method_data(cohort_id, method_id) 
+    method_id   = method_data.get("job_tag", "none")
 
     input_node  = container.get("dicom", method_data['input_name']) # Only get origional dicoms from
     
