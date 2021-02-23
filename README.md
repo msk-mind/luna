@@ -22,6 +22,13 @@ process-string=<any combination of 'transfer,delta,graph'>
 4. Verify logs.
 
 
+## get-path API
+```
+docker build . -t getpath
+docker run -it -p 5002:5002 -e GRAPH_URI=neo4j://localhost:7687 getpath:latest
+```
+Test with `http://localhost:5002/mind/api/v1/getSlideIDs/case/<accession number>`
+
 
 ## API Steps:
 
