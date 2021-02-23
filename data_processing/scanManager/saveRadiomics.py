@@ -61,21 +61,26 @@ def cli(cohort_id, container_id, method_id):
 
     output_dir  = os.path.join(const.PUBLIC_DIR, method_data['output_dir'])
     output_file = os.path.join(output_dir, input_data['results.hash'] + ".flatten.parquet")
-    if not os.path.exists(output_dir): os.mkdir(output_dir)
+    if not os.path.exists(output_dir): os.makedirs(output_dir)
 
     # Get Results package
-    df = pd.read_csv(input_data['results.path'] + '/' + method_data['input_name'] + ".csv")
+    df = pd.read_csv(input_data['results.path'] + "/radiomics-out.csv").astype('double', errors='ignore')
 
     # Add ID hierachy information
-    df['PatientID']         = input_data['px.name']
-    df['AccessionNumber']   = input_data['case.AccessionNumber']
-    df['SeriesInstanceUID'] = input_data['scan.SeriesInstanceUID']
+    df['meta_patient_id']         = input_data['px.name']
+    df['meta_accession_number']   = input_data['case.AccessionNumber']
 
     # Add operational information
-    df['cohort_id'] = cohort_id
-    df['container_id'] = container_id
-    df['method_id'] = method_id
-    df['input'] = input_method_id
+    df['meta_cohort_id'] = cohort_id
+    df['meta_container_id'] = container_id
+    df['meta_method_id'] = method_id
+    df['meta_input'] = input_method_id
+
+    # Add custom user-specified metadata
+    if method_data.get("metadata", False):
+        kv = method_data.get("metadata")
+        for key in kv.keys(): df['meta_' + key] = kv[key]
+
 
     # Cleanup unnamed columns
     df = df.loc[:, ~df.columns.str.contains('Unnamed')]
@@ -85,6 +90,8 @@ def cli(cohort_id, container_id, method_id):
 
     # Write!
     pq.write_table(table, output_file)
+
+    logger.info("Saved to : " + str(output_file))
 
 if __name__ == "__main__":
     cli()
