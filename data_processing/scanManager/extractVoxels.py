@@ -4,7 +4,7 @@ Created: January 2021
 
 Given a scan (container) ID
 1. resolve the path to a volumentric image and annotation (label) files
-2. extract radiomics features into a vector (csv)
+2. resample image and segmentation, and save voxels as a 3d numpy array (.npy)
 3. store results on HDFS and add metadata to the graph
 
 '''
