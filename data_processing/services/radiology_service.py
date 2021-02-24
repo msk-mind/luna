@@ -20,9 +20,6 @@ from flask_restx import Api, Resource, fields
 # From common
 from data_processing.common.config          import ConfigSet
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.Container       import Container
-from data_processing.common.Node            import Node
-from data_processing.common.utils           import get_method_data
 
 from data_processing.scanManager.windowDicoms       import window_dicom_with_container
 from data_processing.scanManager.extractRadiomics   import extract_radiomics_with_container
@@ -40,23 +37,22 @@ app = Flask(__name__)
 api = Api(app, version=VERSION, title='MIND Radiology Processing Service', description='Job-style endpoints for radiology image processing', ordered=True)
 executor = ProcessPoolExecutor(NUM_PROCS) 
 
-
 # param models
-extract_radiomics_model = api.model("Extract Radiomics Job",
+extract_radiomics_model = api.model("Extract Radiomics", 
     {
-        "job_tag": fields.String(description="Tag/name of output record", required=True, example='my-radiomics'),
-        "image_input_name": fields.String(description="Tag/name of input image record", required=True, example='mhd'),
-        "label_input_name": fields.String(description="Tag/name of label image record", required=True, example='mha'),
+        "job_tag": fields.String(description="Tag/name of output record", required=True, example='my_radiomics'),
+        "image_input_name": fields.String(description="Tag/name of input image record", required=True, example='generated_mhd'),
+        "label_input_name": fields.String(description="Tag/name of label image record", required=True, example='user_segmentations'),
         "enableAllImageTypes": fields.Boolean(description="Toggle all images", required=False, example=False),
-        "RadiomicsFeatureExtractor": fields.String(description="Key-value pairs for radiomics feature extractor", required=False, example={"interpolator": 'sitkBSpline'}),
+        "RadiomicsFeatureExtractor": fields.Raw(description="Key-value pairs for radiomics feature extractor", required=False, example={"interpolator": 'sitkBSpline'}),
     }
 )
 
 # param models
-window_dicom_model = api.model("Window/Convert Dicom CTs",
+window_dicom_model = api.model("Scale and Window CT Dicom Datasets",
     {
-        "job_tag": fields.String(description="Tag/name of output record", required=True, example='my-windowed-dicoms'),
-        "input_name": fields.String(description="Tag/name of input image record", required=True, example='mhd'),
+        "job_tag": fields.String(description="Tag/name of output record", required=True, example='my_windowed_dicoms'),
+        "input_name": fields.String(description="Tag/name of input image record", required=True, example='dicoms'),
         "window": fields.Boolean(description="Toggle window function", required=False, example=True),
         "window.low_level": fields.Float(description="Low window value", required=False, example=-100),
         "window.high_level": fields.Float(description="High window value", required=False, example=100),
@@ -66,7 +62,7 @@ window_dicom_model = api.model("Window/Convert Dicom CTs",
 # param models
 generate_scan_model = api.model("Generate Volumetric Image",
     {
-        "job_tag": fields.String(description="Tag/name of output record", required=True, example='my-nrrd'),
+        "job_tag": fields.String(description="Tag/name of output record", required=True, example='my_nrrd'),
         "input_name": fields.String(description="Tag/name of input image record", required=True, example='dicoms'),
         "file_ext": fields.String(description="A valid ITK image file extention", required=True, example='nrrd'),
     }
@@ -74,7 +70,7 @@ generate_scan_model = api.model("Generate Volumetric Image",
 
 @api.route('/mind/api/v1/window_dicom/<cohort_id>/<container_id>/submit', methods=['POST'])
 class API_window_dicom(Resource):
-    @api.expect(window_dicom_model)
+    @api.expect(window_dicom_model, validate=True)
     def post(self, cohort_id, container_id):
         """Submit job"""
         job_id = str(uuid.uuid4())
@@ -83,7 +79,7 @@ class API_window_dicom(Resource):
 
 @api.route('/mind/api/v1/extract_radiomics/<cohort_id>/<container_id>/submit', methods=['POST'])
 class API_extract_radiomics(Resource):
-    @api.expect(extract_radiomics_model)
+    @api.expect(extract_radiomics_model, validate=True)
     def post(self, cohort_id, container_id):
         """Submit job"""
         job_id = str(uuid.uuid4())
@@ -92,7 +88,7 @@ class API_extract_radiomics(Resource):
 
 @api.route('/mind/api/v1/generate_scan/<cohort_id>/<container_id>/submit', methods=['POST'])
 class API_generate_scan(Resource):
-    @api.expect(generate_scan_model)
+    @api.expect(generate_scan_model, validate=True)
     def post(self, cohort_id, container_id):
         """Submit job"""
         job_id = str(uuid.uuid4())
