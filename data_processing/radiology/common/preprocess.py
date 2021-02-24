@@ -9,6 +9,8 @@ from medpy.io import load
 import cv2
 from radiomics import featureextractor  # This module is used for interaction with pyradiomics
 from pydicom import dcmread
+from medpy.io import load
+from skimage.transform import resize
 import itk
 
 def find_centroid(path, image_w, image_h):
@@ -216,6 +218,51 @@ def overlay_images(dicom_path, seg, width, height):
 
     return (dicom_binary, overlay)
 
+def calculate_target_shape(volume, header, target_spacing):
+    """
+    :param volume: as numpy.ndarray
+    :param header: ITK-SNAP header
+    :param target_spacing: as tuple or list
+    :return: target_shape as list
+    """
+    src_spacing = header.get_voxel_spacing()
+    target_shape = [int(src_d * src_sp / tar_sp) for src_d, src_sp, tar_sp in
+                    zip(volume.shape, src_spacing, target_spacing)]
+    return target_shape
+
+def resample_volume(volume, order, target_shape):
+    """
+    Resamples volume using order specified.
+    :param volume: as numpy.ndarray
+    :param order: 0 for NN (for segmentation), 3 for cubic (recommended for acquisition)
+    :param target_shape: as tuple or list
+    :return: Resampled volume as numpy.ndarray
+    """
+    if order == 0:
+        anti_alias = False
+    else:
+        anti_alias = True
+
+    volume = resize(volume, target_shape,
+                    order=order, clip=True, mode='edge',
+                    preserve_range=True, anti_aliasing=anti_alias)
+    return volume
+
+def interpolate_segmentation_masks(seg, target_shape):
+    """
+    Use NN interpolation for segmentation masks by resampling boolean masks for each value present.
+    :param seg: as numpy.ndarray
+    :param target_shape: as tuple or list
+    :return: new segmentation as numpy.ndarray
+    """
+    new_seg = np.zeros(target_shape).astype(int)
+    for roi in np.unique(seg):
+        if roi == 0:
+            continue
+        mask = resample_volume(seg == roi, 0, target_shape).astype(bool)
+        new_seg[mask] = int(roi)
+    return new_seg
+
 
 def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
     """
@@ -282,6 +329,52 @@ def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
 
     return properties
 
+def extract_voxels(image_path: str, label_path: str, output_dir: str, params: dict) -> dict:
+    """
+    Perform resampling on an input image and mask, and save as binary .npy files
+
+    :param image_path: filepath to image
+    :param label_path: filepath to 3d segmentation
+    :param output_dir: destination directory
+      :param params {
+        resampledPixelSpacing dict: configuration for the RadiomicsFeatureExtractor
+        enableAllImageTypes bool: flag to enable all image types
+    }
+
+    :return: property dict, None if function fails
+    """
+    logger = logging.getLogger(__name__)
+
+    img, img_header = load(image_path)
+    seg, seg_header = load(label_path)
+
+    logger.info("Extracting voxels with resampledPixelSpacing = %s", params['resampledPixelSpacing'])
+
+    target_shape = calculate_target_shape(img, img_header, params['resampledPixelSpacing'])
+
+    logger.info("Target shape = %s", target_shape)
+
+    img_resampled = resample_volume(img, 3, target_shape)
+    logger.info("Resampled image with size %s", img_resampled.shape)
+    img_output_filename = os.path.join(output_dir, "image_voxels.npy")
+    np.save (img_output_filename, img_resampled)
+    logger.info("Saved resampled image at %s", img_output_filename)
+
+    seg_interpolated = interpolate_segmentation_masks(seg, target_shape)
+    logger.info("Resampled segmentation with size %s", seg_interpolated.shape)
+    seg_output_filename = os.path.join(output_dir, "label_voxels.npy")
+    np.save(seg_output_filename, seg_interpolated)
+    logger.info("Saved resampled mask at %s", seg_output_filename)
+
+    # Prepare metadata and commit
+    properties = {
+        "resampledPixelSpacing":params['resampledPixelSpacing'], 
+        "targetShape": target_shape,
+        "path":output_dir, 
+        "hash":dirhash(output_dir, "sha256")
+    }
+
+    return properties
 
 def extract_radiomics(image_path: str, label_path: str, output_dir: str, params: dict) -> dict:
     """
