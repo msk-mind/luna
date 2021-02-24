@@ -86,7 +86,7 @@ class API_window_dicom(Resource):
         """Submit a scale and window CT dicom Job"""
         job_id = str(uuid.uuid4())
         future = executor.submit (window_dicom_with_container, cohort_id, container_id, request.json)
-        return f"Submitted job {job_id} with future {future}"
+        return make_response( f"Submitted job {job_id} with future {future}", 202)
 
 @api.route('/mind/api/v1/extract_voxels/<cohort_id>/<container_id>/submit', methods=['POST'])
 class API_extract_voxels(Resource):
@@ -94,9 +94,9 @@ class API_extract_voxels(Resource):
     def post(self, cohort_id, container_id):
         """Submit an extract radiomics Job"""
         job_id = str(uuid.uuid4())
-        return "Not implimented yet"
+        return make_response( "Not implimented yet", 402 )
         #future = executor.submit (extract_voxels_with_container, cohort_id, container_id, request.json)
-        #return f"Submitted job {job_id} with future {future}"
+        #return make_response( f"Submitted job {job_id} with future {future}"
 
 @api.route('/mind/api/v1/extract_radiomics/<cohort_id>/<container_id>/submit', methods=['POST'])
 class API_extract_radiomics(Resource):
@@ -105,7 +105,7 @@ class API_extract_radiomics(Resource):
         """Submit an extract radiomics Job"""
         job_id = str(uuid.uuid4())
         future = executor.submit (extract_radiomics_with_container, cohort_id, container_id, request.json)
-        return f"Submitted job {job_id} with future {future}"
+        return make_response( f"Submitted job {job_id} with future {future}", 202 )
 
 @api.route('/mind/api/v1/generate_scan/<cohort_id>/<container_id>/submit', methods=['POST'])
 class API_generate_scan(Resource):
@@ -114,7 +114,7 @@ class API_generate_scan(Resource):
         """Submit a generate scan Job"""
         job_id = str(uuid.uuid4())
         future = executor.submit (generate_scan_with_container, cohort_id, container_id, request.json)
-        return f"Submitted job {job_id} with future {future}"
+        return make_response( f"Submitted job {job_id} with future {future}", 202 )
 
 
 @api.route('/service/health', methods=['GET'])
