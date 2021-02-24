@@ -99,7 +99,12 @@ class API_generate_scan(Resource):
 @api.route('/service/health', methods=['GET'])
 class API_heatlh(Resource):
     def get(self):
-        return make_response("I'm doing okay! :)")
+        try:
+            executor.submit(print, "Test")
+            return make_response("I'm doing okay! :)")
+        except:
+            return make_response("I'm not okay :(", 400)
+        
 
 if __name__ == '__main__':
     # Setup App/Api
