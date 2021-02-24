@@ -23,6 +23,7 @@ from data_processing.common.custom_logger   import init_logger
 
 from data_processing.scanManager.windowDicoms       import window_dicom_with_container
 from data_processing.scanManager.extractRadiomics   import extract_radiomics_with_container
+# from data_processing.scanManager.extractVoxels   import extract_voxels_with_container
 from data_processing.scanManager.generateScan       import generate_scan_with_container
 
 logger = init_logger("radiology-service.log")
@@ -36,6 +37,16 @@ NUM_PROCS    = int(cfg.get_value("APP_CFG::radiology_service_processes"))
 app = Flask(__name__)
 api = Api(app, version=VERSION, title='MIND Radiology Processing Service', description='Job-style endpoints for radiology image processing', ordered=True)
 executor = ProcessPoolExecutor(NUM_PROCS) 
+
+# param models
+extract_voxels_model = api.model("Resample and Extract Voxels", 
+    {
+        "job_tag": fields.String(description="Tag/name of output record", required=True, example='my_radiomics'),
+        "image_input_name": fields.String(description="Tag/name of input image record", required=True, example='generated_mhd'),
+        "label_input_name": fields.String(description="Tag/name of label image record", required=True, example='user_segmentations'),
+        "resampledPixelSpacing": fields.List(fields.Float, description="Pixel resampling in mm in x,y,z", required=True, example=[1,1,1]),
+    }
+)
 
 # param models
 extract_radiomics_model = api.model("Extract Radiomics", 
@@ -76,6 +87,16 @@ class API_window_dicom(Resource):
         job_id = str(uuid.uuid4())
         future = executor.submit (window_dicom_with_container, cohort_id, container_id, request.json)
         return f"Submitted job {job_id} with future {future}"
+
+@api.route('/mind/api/v1/extract_voxels/<cohort_id>/<container_id>/submit', methods=['POST'])
+class API_extract_voxels(Resource):
+    @api.expect(extract_voxels_model, validate=True)
+    def post(self, cohort_id, container_id):
+        """Submit an extract radiomics Job"""
+        job_id = str(uuid.uuid4())
+        return "Not implimented yet"
+        #future = executor.submit (extract_voxels_with_container, cohort_id, container_id, request.json)
+        #return f"Submitted job {job_id} with future {future}"
 
 @api.route('/mind/api/v1/extract_radiomics/<cohort_id>/<container_id>/submit', methods=['POST'])
 class API_extract_radiomics(Resource):
