@@ -80,7 +80,7 @@ class Container(object):
         # Connect to graph DB
         self.logger.info ("Connecting to: %s", params['GRAPH_URI'])
         self._conn = Neo4jConnection(uri=params['GRAPH_URI'], user=params['GRAPH_USER'], pwd=params['GRAPH_PASSWORD'])
-        self.logger.info ("Connection test to %s: %s", params['GRAPH_URI'], self._conn.test_connection())
+        self.logger.info ("Connection test: %s", self._conn.test_connection())
 
         self.logger.info ("Connecting to: %s", params['MINIO_URI'])
         self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
