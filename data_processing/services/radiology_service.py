@@ -83,7 +83,7 @@ generate_scan_model = api.model("Generate Volumetric Image",
 class API_window_dicom(Resource):
     @api.expect(window_dicom_model, validate=True)
     def post(self, cohort_id, container_id):
-        """Submit a scale and window CT dicom Job"""
+        """Submit a scale and window CT dicom job"""
         job_id = str(uuid.uuid4())
         future = executor.submit (window_dicom_with_container, cohort_id, container_id, request.json)
         return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
@@ -92,7 +92,7 @@ class API_window_dicom(Resource):
 class API_extract_voxels(Resource):
     @api.expect(extract_voxels_model, validate=True)
     def post(self, cohort_id, container_id):
-        """Submit an extract radiomics Job"""
+        """Submit an volumentric resample and voxel extraction job"""
         job_id = str(uuid.uuid4())
         return make_response( "Not implimented yet", 400 )
         #future = executor.submit (extract_voxels_with_container, cohort_id, container_id, request.json)
@@ -102,7 +102,7 @@ class API_extract_voxels(Resource):
 class API_extract_radiomics(Resource):
     @api.expect(extract_radiomics_model, validate=True)
     def post(self, cohort_id, container_id):
-        """Submit an extract radiomics Job"""
+        """Submit an extract radiomics job"""
         job_id = str(uuid.uuid4())
         future = executor.submit (extract_radiomics_with_container, cohort_id, container_id, request.json)
         return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
@@ -111,7 +111,7 @@ class API_extract_radiomics(Resource):
 class API_generate_scan(Resource):
     @api.expect(generate_scan_model, validate=True)
     def post(self, cohort_id, container_id):
-        """Submit a generate scan Job"""
+        """Submit a generate scan job"""
         job_id = str(uuid.uuid4())
         future = executor.submit (generate_scan_with_container, cohort_id, container_id, request.json)
         return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
