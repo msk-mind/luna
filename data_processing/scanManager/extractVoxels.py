@@ -62,7 +62,7 @@ def extract_voxels_with_container(cohort_id, container_id, method_data):
     )
     if properties is None: return
 
-    output_node = Node("radiomics", method_id, properties)
+    output_node = Node("voxels", method_id, properties)
 
     container.add(output_node)
     container.saveAll()
