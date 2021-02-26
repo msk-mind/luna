@@ -48,7 +48,7 @@ def extract_radiomics_with_container(cohort_id, container_id, method_data):
             raise ValueError("Image node not found")
 
         if label_node is None:
-            raise ValueError("Image node not found")
+            raise ValueError("Label node not found")
         
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
