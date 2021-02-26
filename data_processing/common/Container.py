@@ -83,15 +83,17 @@ class Container(object):
         self.logger.info ("Connection test: %s", self._conn.test_connection())
 
         self.logger.info ("Connecting to: %s", params['MINIO_URI'])
-        self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
-        try:
-            for bucket in self._client.list_buckets():
-                self.logger.info("Found bucket %s", bucket.name )
-            self.logger.info("object_store_enabled=True")
-            params['object_store_enabled'] = True
-        except:
-            self.logger.warning("object_store_enabled=False")
-            params['object_store_enabled'] = False
+        if params.get('OBJECT_STORE_ENABLED',  False):
+            self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
+            try:
+                for bucket in self._client.list_buckets():
+                    self.logger.info("Found bucket %s", bucket.name )
+                self.logger.info("OBJECT_STORE_ENABLED=True")
+                params['OBJECT_STORE_ENABLED'] = True
+            except:
+                self.logger.warning("Could not connect to object store")
+                self.logger.warning("Set OBJECT_STORE_ENABLED=False")
+                params['OBJECT_STORE_ENABLED'] = False
 
         self._host = socket.gethostname() # portable to *docker* containers
         self.logger.info ("Running on: %s", self._host)
@@ -107,8 +109,9 @@ class Container(object):
         self._namespace_id = namespace_id.lower()
         self.logger.info ("Container namespace: %s", self._namespace_id)
 
-        if not self._client.bucket_exists(self._namespace_id):
-            self._client.make_bucket(self._namespace_id)
+        if self.params.get('OBJECT_STORE_ENABLED',  False):
+            if not self._client.bucket_exists(self._namespace_id):
+                self._client.make_bucket(self._namespace_id)
 
         return self
     
@@ -304,7 +307,7 @@ class Container(object):
         self.logger.info ("Container has %s pending node commits",  len(self._node_commits))
 
         # Set node objects only if there is a path and the object store is enabled
-        if "path" in node.properties.keys() and self.params.get("object_store_enabled", False):
+        if "path" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
             node.objects = []
             node.properties['object_bucket'] = f"{self._namespace_id}"
             node.properties['object_folder'] = f"{self._name}/{node.name}"
@@ -328,7 +331,7 @@ class Container(object):
                 """
             )
 
-            if self.params.get("object_store_enabled", False):
+            if self.params.get("OBJECT_STORE_ENABLED", False):
                 object_bucket = n.properties.get("object_bucket")
                 object_folder = n.properties.get("object_folder")
 

@@ -40,7 +40,7 @@ def window_dicom_with_container(cohort_id, container_id, method_data):
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_id   = method_data.get("job_tag", "none")
 
-    input_node  = container.get("dicom", method_data['input_name']) # Only get origional dicoms from
+    input_node  = container.get("dicom", method_data['dicom_input_tag']) # Only get origional dicoms from
     
     # Currently, store things at MIND_GPFS_DIR/data/<namespace>/<container name>/<method>/<schema>
     # Such that for every namespace, container, and method, there is one allocated path location

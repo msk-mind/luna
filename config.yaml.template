@@ -41,6 +41,7 @@ GRAPH_URI: neo4j://localhost:7687
 GRAPH_USER: user
 GRAPH_PASSWORD: password
 
+OBJECT_STORE_ENABLED: True
 MINIO_URI: localhost:8000
 MINIO_USER: user
 MINIO_PASSWORD: password

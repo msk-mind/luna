@@ -42,8 +42,8 @@ executor = ProcessPoolExecutor(NUM_PROCS)
 extract_voxels_model = api.model("Resample and Extract Voxels", 
     {
         "job_tag": fields.String(description="Tag/name of output record", required=True, example='my_radiomics'),
-        "image_input_name": fields.String(description="Tag/name of input image record", required=True, example='generated_mhd'),
-        "label_input_name": fields.String(description="Tag/name of label image record", required=True, example='user_segmentations'),
+        "image_input_tag": fields.String(description="Tag/name of input image record", required=True, example='generated_mhd'),
+        "label_input_tag": fields.String(description="Tag/name of label image record", required=True, example='user_segmentations'),
         "resampledPixelSpacing": fields.List(fields.Float, description="Pixel resampling in mm in x,y,z", required=True, example=[1,1,1]),
     }
 )
@@ -52,8 +52,8 @@ extract_voxels_model = api.model("Resample and Extract Voxels",
 extract_radiomics_model = api.model("Extract Radiomics", 
     {
         "job_tag": fields.String(description="Tag/name of output record", required=True, example='my_radiomics'),
-        "image_input_name": fields.String(description="Tag/name of input image record", required=True, example='generated_mhd'),
-        "label_input_name": fields.String(description="Tag/name of label image record", required=True, example='user_segmentations'),
+        "image_input_tag": fields.String(description="Tag/name of input image record", required=True, example='generated_mhd'),
+        "label_input_tag": fields.String(description="Tag/name of label image record", required=True, example='user_segmentations'),
         "enableAllImageTypes": fields.Boolean(description="Toggle all images", required=False, example=False),
         "RadiomicsFeatureExtractor": fields.Raw(description="Key-value pairs for radiomics feature extractor", required=False, example={"interpolator": 'sitkBSpline'}),
     }
@@ -63,10 +63,10 @@ extract_radiomics_model = api.model("Extract Radiomics",
 window_dicom_model = api.model("Scale and Window CT Dicom Datasets",
     {
         "job_tag": fields.String(description="Tag/name of output record", required=True, example='my_windowed_dicoms'),
-        "input_name": fields.String(description="Tag/name of input image record", required=True, example='dicoms'),
+        "dicom_input_tag": fields.String(description="Tag/name of input image record", required=True, example='dicoms'),
         "window": fields.Boolean(description="Toggle window function", required=False, example=True),
-        "window.low_level": fields.Float(description="Low window value", required=False, example=-100),
-        "window.high_level": fields.Float(description="High window value", required=False, example=100),
+        "window_low_level":  fields.Float(description="Low window value", required=False,  example=-100),
+        "window_high_level": fields.Float(description="High window value", required=False, example=100),
     }
 )
 
@@ -74,8 +74,8 @@ window_dicom_model = api.model("Scale and Window CT Dicom Datasets",
 generate_scan_model = api.model("Generate Volumetric Image",
     {
         "job_tag": fields.String(description="Tag/name of output record", required=True, example='my_nrrd'),
-        "input_name": fields.String(description="Tag/name of input image record", required=True, example='dicoms'),
-        "file_ext": fields.String(description="A valid ITK image file extention", required=True, example='nrrd'),
+        "dicom_input_tag": fields.String(description="Tag/name of input image record", required=True, example='dicoms'),
+        "itkImageType": fields.String(description="A valid ITK image file extention", required=True, example='nrrd'),
     }
 )
 

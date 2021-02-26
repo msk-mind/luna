@@ -266,7 +266,7 @@ def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
 
         writer = itk.ImageFileWriter[ImageType].New()
 
-        outFileName = os.path.join(output_dir, uid + '.' + params['file_ext'])
+        outFileName = os.path.join(output_dir, 'volumetric_image.' + params['itkImageType'])
         writer.SetFileName(outFileName)
         writer.UseCompressionOn()
         writer.SetInput(reader.GetOutput())
@@ -333,8 +333,8 @@ def window_dicoms(dicom_paths: list, output_dir: str, params: dict) -> dict:
     :param output_dir: destination directory
     :param params {
         window bool: whether to apply windowing
-        window.low_level int, float : lower level to clip
-        window.high_level int, float: higher level to clip
+        window_low_level  int, float : lower level to clip
+        window_high_level int, float: higher level to clip
     }
 
     :return: property dict, None if function fails
@@ -345,12 +345,12 @@ def window_dicoms(dicom_paths: list, output_dir: str, params: dict) -> dict:
     # Scale and clip each dicom, and save in new directory
     logger.info("Processing %s dicoms!", len(dicom_paths))
     if params.get('window', False):
-        logger.info ("Applying window [%s,%s]", params['window.low_level'], params['window.high_level'])
+        logger.info ("Applying window [%s,%s]", params['window_low_level'], params['window_high_level'])
     for dcm in dicom_paths:
         ds = dcmread(dcm)
         hu = ds.RescaleSlope * ds.pixel_array + ds.RescaleIntercept
         if params['window']:
-            hu = np.clip( hu, params['window.low_level'], params['window.high_level']   )
+            hu = np.clip( hu, params['window_low_level'], params['window_high_level']   )
         ds.PixelData = hu.astype(ds.pixel_array.dtype).tobytes()
         ds.save_as (os.path.join( output_dir, dcm.stem + ".cthu.dcm"  ))
 
@@ -358,9 +358,9 @@ def window_dicoms(dicom_paths: list, output_dir: str, params: dict) -> dict:
     properties = {
         "RescaleSlope": float(ds.RescaleSlope), 
         "RescaleIntercept": float(ds.RescaleIntercept), 
-        "units":"HU", 
-        "path":output_dir, 
-        "hash":dirhash(output_dir, "sha256")
+        "units": "HU", 
+        "path": output_dir, 
+        "hash": dirhash(output_dir, "sha256")
     }
 
     return properties
