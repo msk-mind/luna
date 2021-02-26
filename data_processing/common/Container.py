@@ -1,8 +1,11 @@
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.Node import Node
+from data_processing.common.config import ConfigSet
 
 import os, socket, pathlib, logging
+from minio import Minio
 
+from concurrent.futures import ThreadPoolExecutor
 
 class Container(object):
     """
@@ -71,14 +74,31 @@ class Container(object):
         #self.logger = init_logger("common-container.log", "Container [empty]")
         self.logger = logging.getLogger(__name__)
 
-        self.params=params
+        if isinstance(params, ConfigSet):
+            params=params.get_config_set("CONTAINER_CFG")
 
         # Connect to graph DB
         self.logger.info ("Connecting to: %s", params['GRAPH_URI'])
         self._conn = Neo4jConnection(uri=params['GRAPH_URI'], user=params['GRAPH_USER'], pwd=params['GRAPH_PASSWORD'])
         self.logger.info ("Connection test: %s", self._conn.test_connection())
+
+        self.logger.info ("Connecting to: %s", params['MINIO_URI'])
+        if params.get('OBJECT_STORE_ENABLED',  False):
+            self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
+            try:
+                for bucket in self._client.list_buckets():
+                    self.logger.info("Found bucket %s", bucket.name )
+                self.logger.info("OBJECT_STORE_ENABLED=True")
+                params['OBJECT_STORE_ENABLED'] = True
+            except:
+                self.logger.warning("Could not connect to object store")
+                self.logger.warning("Set OBJECT_STORE_ENABLED=False")
+                params['OBJECT_STORE_ENABLED'] = False
+
         self._host = socket.gethostname() # portable to *docker* containers
         self.logger.info ("Running on: %s", self._host)
+
+        self.params = params
     
     def setNamespace(self, namespace_id: str):
         """
@@ -86,8 +106,12 @@ class Container(object):
 
         :params: namespace_id - namespace value 
         """
-        self._namespace_id = namespace_id
+        self._namespace_id = namespace_id.lower()
         self.logger.info ("Container namespace: %s", self._namespace_id)
+
+        if self.params.get('OBJECT_STORE_ENABLED',  False):
+            if not self._client.bucket_exists(self._namespace_id):
+                self._client.make_bucket(self._namespace_id)
 
         return self
     
@@ -280,7 +304,15 @@ class Container(object):
         
         # Decorate with the container namespace 
         self._node_commits[node.name].set_namespace( self._namespace_id, self._name )
-        self.logger.info ("Container has %s pending commits",  len(self._node_commits))
+        self.logger.info ("Container has %s pending node commits",  len(self._node_commits))
+
+        # Set node objects only if there is a path and the object store is enabled
+        if "path" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
+            node.objects = []
+            node.properties['object_bucket'] = f"{self._namespace_id}"
+            node.properties['object_folder'] = f"{self._name}/{node.name}"
+            for path in pathlib.Path(node.properties['path']).glob("*"): node.objects.append(path)        
+            self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
     def saveAll(self):
         """
@@ -298,3 +330,14 @@ class Container(object):
                     ON CREATE SET da = {n.get_map_str()}
                 """
             )
+
+            if self.params.get("OBJECT_STORE_ENABLED", False):
+                object_bucket = n.properties.get("object_bucket")
+                object_folder = n.properties.get("object_folder")
+
+                self.logger.info("Started object upload with 4 threads...")
+                with ThreadPoolExecutor(max_workers=4) as executor:
+                    for p in n.objects:
+                        self.logger.info("uploading: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
+                        executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p)
+            self.logger.info("Done.")

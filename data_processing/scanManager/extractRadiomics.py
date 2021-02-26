@@ -18,33 +18,30 @@ from data_processing.common.custom_logger   import init_logger
 from data_processing.common.utils           import get_method_data
 from data_processing.common.Container       import Container
 from data_processing.common.Node            import Node
+from data_processing.common.config import ConfigSet
 
 # From radiology.common
 from data_processing.radiology.common.preprocess   import extract_radiomics
 
 logger = init_logger("extractRadiomics.log")
+cfg = ConfigSet("CONTAINER_CFG",  config_file="config.yaml")
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--container_id', required=True)
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
-    extract_radiomics_with_container(cohort_id, container_id, method_id)
+    method_data = get_method_data(cohort_id, method_id)
+    extract_radiomics_with_container(cohort_id, container_id, method_data)
 
-def extract_radiomics_with_container(cohort_id, container_id, method_id):
-    # Eventually these will come from a cfg file, or somewhere else
-    container_params = {
-        'GRAPH_URI':  os.environ['GRAPH_URI'],
-        'GRAPH_USER': "neo4j",
-        'GRAPH_PASSWORD': "password"
-    }
+def extract_radiomics_with_container(cohort_id, container_id, method_data):
 
     # Do some setup
-    container   = Container( container_params ).setNamespace(cohort_id).lookupAndAttach(container_id)
-    method_data = get_method_data(cohort_id, method_id) 
+    container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
+    method_id   = method_data.get("job_tag", "none")
 
-    image_node  = container.get("mhd", method_data['image_input_name']) 
-    label_node  = container.get("mha", method_data['label_input_name'])
+    image_node  = container.get("mhd", method_data['image_input_tag']) 
+    label_node  = container.get("mha", method_data['label_input_tag'])
 
     if image_node is None or label_node is None:
         logger.error("Image or Label not found, exiting!")

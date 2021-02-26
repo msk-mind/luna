@@ -195,6 +195,19 @@ class ConfigSet():
             raise ValueError('configuration with logical name '+name+' was never loaded')
 
         return list(ConfigSet.__INSTANCE.__config[name].keys())
+    
+    def get_config_set(self, name):
+        '''
+
+        :param name: logical name of the configuration
+        :return: a dictonary of top-level keys in the config stored in this instance.
+        :raises: ValueError if a configuration with the specified name was never loaded
+
+        '''
+        if ConfigSet.__INSTANCE is None or name not in ConfigSet.__INSTANCE.__config.keys():
+            raise ValueError('configuration with logical name '+name+' was never loaded')
+        return ConfigSet.__INSTANCE.__config[name]
+  
 
 
     def clear(self):

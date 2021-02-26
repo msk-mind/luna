@@ -82,7 +82,7 @@ def test_generate_scan_1(tmp_path):
     properties = generate_scan(
         dicom_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
         output_dir = tmp_path,
-        params     = {'file_ext':'mhd'}
+        params     = {'itkImageType':'mhd'}
     )
     #assert output_node.properties['hash'] == 'eb8574fa61db82aa085ba7c05739d99519b140ca73da95920b887f6bcdba6a9c'
     assert properties['zdim'] == 9
@@ -93,7 +93,7 @@ def test_generate_scan_2(tmp_path):
     properties = generate_scan(
         dicom_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
         output_dir = tmp_path,
-        params     = {'file_ext':'nrrd'}
+        params     = {'itkImageType':'nrrd'}
     )
     #assert output_node.properties['hash'] == '53b504fb8fee82e3065104634965fe517cd27c97da97f60057e872c020656262'
     assert properties['zdim'] == 9
@@ -120,7 +120,7 @@ def test_window_dicoms_2(tmp_path):
     properties = window_dicoms(
         dicom_paths = list(pathlib.Path(f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/').glob("*.dcm")),
         output_dir = tmp_path,
-        params     = {'window':True, 'window.low_level': -100, 'window.high_level': 100}
+        params     = {'window':True, 'window_low_level': -100, 'window_high_level': 100}
     )
     #assert output_node.properties['hash'] == '5624a11d08ab8ef4e66e3fd9307e775bf8bbad7d0759aab893d1648d7c60ae19'
     print (properties)

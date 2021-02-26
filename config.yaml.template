@@ -26,3 +26,22 @@ spark_application_config:
   - spark.sql.shuffle.partitions: 300
 
   - spark.driver.maxResultSize: 2g
+
+scanManager_port: 5001 
+getPathologyAnnotations_port: 5002 
+scanManager_port: 5003 
+cohortManager_port: 5004 
+radiologyPreprocessingLibrary_port: 5005
+radiology_service_port: 5006 
+
+scanManager_processes: 16 
+radiology_service_processes: 16 
+
+GRAPH_URI: neo4j://localhost:7687
+GRAPH_USER: user
+GRAPH_PASSWORD: password
+
+OBJECT_STORE_ENABLED: True
+MINIO_URI: localhost:8000
+MINIO_USER: user
+MINIO_PASSWORD: password
