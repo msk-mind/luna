@@ -20,6 +20,8 @@ from data_processing.common.Container       import Container
 from data_processing.common.Node            import Node
 from data_processing.common.config import ConfigSet
 
+from pymongo import MongoClient
+
 # From radiology.common
 from data_processing.radiology.common.preprocess   import extract_radiomics
 
@@ -35,6 +37,9 @@ def cli(cohort_id, container_id, method_id):
     extract_radiomics_with_container(cohort_id, container_id, method_data)
 
 def extract_radiomics_with_container(cohort_id, container_id, method_data):
+    if method_data.get("job_id", False):
+        job_db = MongoClient('mongodb://dlliskimind1.mskcc.org:27017/').db.jobs
+        job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "running" } )
 
     # Do some setup
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
@@ -61,12 +66,20 @@ def extract_radiomics_with_container(cohort_id, container_id, method_data):
             output_dir = output_dir,
             params     = method_data
         )
-    except Exception:
+    except Exception as e:
         container.logger.exception ("Exception raised, stopping job execution.")
+        if method_data.get("job_id", False):
+            job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "failed" } )
     else:
         output_node = Node("radiomics", method_id, properties)
         container.add(output_node)
         container.saveAll()
+        if method_data.get("job_id", False):
+            job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "succeeded" })
+
+    finally:
+        if method_data.get("job_id", False):
+            job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "done" })
 
 
 
