@@ -301,14 +301,18 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
 
     extractor = featureextractor.RadiomicsFeatureExtractor(**params.get('RadiomicsFeatureExtractor', {}))
 
+    if params.get("strictGeometry", False): 
+        image, image_header = load(image_path)
+        label, label_header = load(label_path)
+        if not image_header.get_voxel_spacing() == label_header.get_voxel_spacing():
+            raise RuntimeError(f"Voxel spacing mismatch, image.spacing={image_header.get_voxel_spacing()}, label.spacing={label_header.get_voxel_spacing()}" )
+        if not image.shape == label.shape:
+            raise RuntimeError(f"Shape mismatch: image.shape={image.shape}, label.shape={label.shape}")
+
+
     if params.get("enableAllImageTypes", False): extractor.enableAllImageTypes()
 
-    try:
-        result = extractor.execute(image_path, label_path)
-    except Exception as e:
-        logger.error ("Extraction failed!!!")
-        logger.error (str(e))
-        return None
+    result = extractor.execute(image_path, label_path)
 
     output_filename = os.path.join(output_dir, "radiomics-out.csv")
 
