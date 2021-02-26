@@ -39,7 +39,7 @@ NUM_PROCS    = int(cfg.get_value("APP_CFG::radiology_service_processes"))
 app = Flask(__name__)
 api = Api(app, version=VERSION, title='MIND Radiology Processing Service', description='Job-style endpoints for radiology image processing', ordered=True)
 executor = ProcessPoolExecutor(NUM_PROCS) 
-job_db = MongoClient('mongodb://dlliskimind1.mskcc.org:27017/').db.jobs
+job_db = MongoClient(cfg.get_value("APP_CFG::MONGODB_URI")).db.jobs
 
 # param models
 extract_voxels_model = api.model("Resample and Extract Voxels", 
