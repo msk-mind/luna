@@ -42,8 +42,8 @@ def extract_voxels_with_container(cohort_id, container_id, method_data):
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_id   = method_data.get("job_tag", "none")
 
-    image_node  = container.get("mhd", method_data['image_input_name']) 
-    label_node  = container.get("mha", method_data['label_input_name'])
+    image_node  = container.get("mhd", method_data['image_input_tag']) 
+    label_node  = container.get("mha", method_data['label_input_tag'])
 
     if image_node is None or label_node is None:
         logger.error("Image or Label not found, exiting!")
