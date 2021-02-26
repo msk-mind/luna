@@ -55,6 +55,7 @@ extract_radiomics_model = api.model("Extract Radiomics",
         "image_input_tag": fields.String(description="Tag/name of input image record", required=True, example='generated_mhd'),
         "label_input_tag": fields.String(description="Tag/name of label image record", required=True, example='user_segmentations'),
         "enableAllImageTypes": fields.Boolean(description="Toggle all images", required=False, example=False),
+        "strictGeometry": fields.Boolean(description="Ensure dimensions and voxel spacing of input image match input mask", required=False, example=True),
         "RadiomicsFeatureExtractor": fields.Raw(description="Key-value pairs for radiomics feature extractor", required=False, example={"interpolator": 'sitkBSpline'}),
     }
 )
