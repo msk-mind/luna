@@ -12,6 +12,7 @@ Given a scan (container) ID
 # General imports
 import os, json, sys
 import click
+from datetime import datetime
 
 # From common
 from data_processing.common.custom_logger   import init_logger
@@ -39,7 +40,7 @@ def cli(cohort_id, container_id, method_id):
 def extract_radiomics_with_container(cohort_id, container_id, method_data):
     if method_data.get("job_id", False):
         job_db = MongoClient(cfg.get_value("APP_CFG::MONGODB_URI")).db.jobs
-        job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "running" } )
+        job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "running", "timestamp": datetime.now() } )
 
     # Do some setup
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
@@ -69,17 +70,17 @@ def extract_radiomics_with_container(cohort_id, container_id, method_data):
     except Exception as e:
         container.logger.exception ("Exception raised, stopping job execution.")
         if method_data.get("job_id", False):
-            job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "failed" } )
+            job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "failed", "timestamp": datetime.now(), "exception": repr(e) } )
     else:
         output_node = Node("radiomics", method_id, properties)
         container.add(output_node)
         container.saveAll()
         if method_data.get("job_id", False):
-            job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "succeeded" })
+            job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "succeeded", "timestamp": datetime.now() })
 
     finally:
         if method_data.get("job_id", False):
-            job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "done" })
+            job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "done" , "timestamp": datetime.now()})
 
 
 

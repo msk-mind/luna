@@ -11,6 +11,7 @@ Given a scan (container) ID
 # General imports
 import os, sys, subprocess, uuid
 import click
+from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
 
 from pymongo import MongoClient
@@ -89,7 +90,7 @@ class API_window_dicom(Resource):
     def post(self, cohort_id, container_id):
         """Submit a scale and window CT dicom job"""
         job_id = str(uuid.uuid4())
-        job_db.insert_one ( {"job_id": job_id, "status": "submitted" } )
+        job_db.insert_one ( {"namespace": cohort_id, "job_id": job_id, "status": "submitted" } )
         future = executor.submit (window_dicom_with_container, cohort_id, container_id, request.json)
         return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
 
@@ -109,7 +110,7 @@ class API_extract_radiomics(Resource):
     def post(self, cohort_id, container_id):
         """Submit an extract radiomics job"""
         job_id = str(uuid.uuid4())
-        job_db.insert_one ( {"job_id": job_id, "status": "submitted" } )
+        job_db.insert_one ( {"namespace": cohort_id, "job_id": job_id, "status": "submitted", "timestamp": datetime.now()} )
         params = request.json
         params["job_id"] = job_id
         future = executor.submit (extract_radiomics_with_container, cohort_id, container_id, params)
@@ -121,15 +122,21 @@ class API_generate_scan(Resource):
     def post(self, cohort_id, container_id):
         """Submit a generate scan job"""
         job_id = str(uuid.uuid4())
-        job_db.insert_one ( {"job_id": job_id, "status": "submitted" } )
+        job_db.insert_one ( {"namespace": cohort_id, "job_id": job_id, "status": "submitted" } )
         future = executor.submit (generate_scan_with_container, cohort_id, container_id, request.json)
         return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
 
 @api.route('/job/<job_id>', methods=['GET'])
-class API_get_jobs(Resource):
+class API_get_job(Resource):
     def get(self, job_id):
         """Get job status"""
-        return jsonify( [x['status'] for x in job_db.find ( {"job_id": job_id} )] )
+        return jsonify( [{y:str(x[y]) for y in x.keys() if 'id' not in y} for x in job_db.find ( {"job_id": job_id} )] )
+
+@api.route('/jobs/<cohort_id>', methods=['GET'])
+class API_get_jobs(Resource):
+    def get(self, cohort_id):
+        """Get job status"""
+        return jsonify( { x['job_id']:API_get_job().get(x['job_id']).json for x in job_db.find ( {"namespace": cohort_id} )  } )
 
 @api.route('/service/health', methods=['GET'])
 class API_heatlh(Resource):
