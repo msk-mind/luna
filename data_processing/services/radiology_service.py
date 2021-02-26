@@ -13,6 +13,8 @@ import os, sys, subprocess, uuid
 import click
 from concurrent.futures import ProcessPoolExecutor
 
+from pymongo import MongoClient
+
 # Server imports
 from flask import Flask, request, jsonify, render_template, make_response
 from flask_restx import Api, Resource, fields
@@ -37,6 +39,7 @@ NUM_PROCS    = int(cfg.get_value("APP_CFG::radiology_service_processes"))
 app = Flask(__name__)
 api = Api(app, version=VERSION, title='MIND Radiology Processing Service', description='Job-style endpoints for radiology image processing', ordered=True)
 executor = ProcessPoolExecutor(NUM_PROCS) 
+job_db = MongoClient('mongodb://dlliskimind1.mskcc.org:27017/').db.jobs
 
 # param models
 extract_voxels_model = api.model("Resample and Extract Voxels", 
@@ -86,6 +89,7 @@ class API_window_dicom(Resource):
     def post(self, cohort_id, container_id):
         """Submit a scale and window CT dicom job"""
         job_id = str(uuid.uuid4())
+        job_db.insert_one ( {"job_id": job_id, "status": "submitted" } )
         future = executor.submit (window_dicom_with_container, cohort_id, container_id, request.json)
         return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
 
@@ -105,7 +109,10 @@ class API_extract_radiomics(Resource):
     def post(self, cohort_id, container_id):
         """Submit an extract radiomics job"""
         job_id = str(uuid.uuid4())
-        future = executor.submit (extract_radiomics_with_container, cohort_id, container_id, request.json)
+        job_db.insert_one ( {"job_id": job_id, "status": "submitted" } )
+        params = request.json
+        params["job_id"] = job_id
+        future = executor.submit (extract_radiomics_with_container, cohort_id, container_id, params)
         return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
 
 @api.route('/mind/api/v1/generate_scan/<cohort_id>/<container_id>/submit', methods=['POST'])
@@ -114,9 +121,15 @@ class API_generate_scan(Resource):
     def post(self, cohort_id, container_id):
         """Submit a generate scan job"""
         job_id = str(uuid.uuid4())
+        job_db.insert_one ( {"job_id": job_id, "status": "submitted" } )
         future = executor.submit (generate_scan_with_container, cohort_id, container_id, request.json)
         return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
 
+@api.route('/job/<job_id>', methods=['GET'])
+class API_get_jobs(Resource):
+    def get(self, job_id):
+        """Get job status"""
+        return jsonify( [x['status'] for x in job_db.find ( {"job_id": job_id} )] )
 
 @api.route('/service/health', methods=['GET'])
 class API_heatlh(Resource):
