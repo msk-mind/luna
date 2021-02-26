@@ -38,7 +38,7 @@ def cli(cohort_id, container_id, method_id):
 
 def extract_radiomics_with_container(cohort_id, container_id, method_data):
     if method_data.get("job_id", False):
-        job_db = MongoClient('mongodb://dlliskimind1.mskcc.org:27017/').db.jobs
+        job_db = MongoClient(cfg.get_value("APP_CFG::MONGODB_URI")).db.jobs
         job_db.insert_one ( {"job_id": method_data.get("job_id"), "status": "running" } )
 
     # Do some setup
