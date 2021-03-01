@@ -56,6 +56,36 @@ def test_crop_images():
     # RGB overlay image
     assert 256*256*3 == len(dicom_overlay[1])
 
+
+def test_extract_voxels_1(tmp_path):
+    properties = extract_voxels(
+        image_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
+        label_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
+        output_dir = tmp_path,
+        params     = {"resampledPixelSpacing": [2.5,2.5,2.5]}
+    )
+
+    print (properties)
+
+    assert properties['targetShape'] == [280, 280, 11] # Check target shape
+    assert abs(np.load(str(properties['path']) + '/image_voxels.npy').mean() - -1289.5683001548427) < 1e-8 # Mean within some percision 
+    assert np.load(str(properties['path']) + '/label_voxels.npy').sum() == 1139 # ~ number of 1 label voxels
+
+
+def test_extract_voxels_2(tmp_path):
+    properties = extract_voxels(
+        image_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
+        label_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
+        output_dir = tmp_path,
+        params     = {"resampledPixelSpacing": [5,5,5]}
+    )
+
+    print (properties)
+    assert properties['targetShape'] == [140, 140, 5] # Check target shape
+    assert abs(np.load(str(properties['path']) + '/image_voxels.npy').mean() - -1289.2570235496087) < 1e-8 # Mean within some percision 
+    assert np.load(str(properties['path']) + '/label_voxels.npy').sum() == 132 # ~ number of 1 label voxels, less due to different resampling
+
+
 def test_extract_radiomics_1(tmp_path):
     properties = extract_radiomics(
         image_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
