@@ -338,6 +338,6 @@ class Container(object):
                 self.logger.info("Started object upload with 4 threads...")
                 with ThreadPoolExecutor(max_workers=4) as executor:
                     for p in n.objects:
-                        self.logger.info("uploading: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
+                        self.logger.info(f"uploading: /minio/{object_bucket}/{object_folder}/{p.name}")
                         executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p)
             self.logger.info("Done.")
