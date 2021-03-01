@@ -35,6 +35,9 @@ def cli(cohort_id, container_id, method_id):
     window_dicom_with_container(cohort_id, container_id, method_data)
 
 def window_dicom_with_container(cohort_id, container_id, method_data):
+    """
+    Using the container API interface, perform dicom CT preprocessing (windowing)
+    """
 
     # Do some setup
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
