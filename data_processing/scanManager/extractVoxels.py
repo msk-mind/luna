@@ -48,28 +48,31 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
     image_node  = container.get("mhd", method_data['image_input_tag']) 
     label_node  = container.get("mha", method_data['label_input_tag'])
 
-    if image_node is None or label_node is None:
-        logger.error("Image or Label not found, exiting!")
-        return
+    try:
+        if image_node is None:
+            raise ValueError("Image node not found")
 
-    # Data just goes under namespace/name
-    # TODO: This path is really not great, but works for now
-    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
-    if not os.path.exists(output_dir): os.makedirs(output_dir)
+        if label_node is None:
+            raise ValueError("Label node not found")
 
-    properties = extract_voxels(
-        image_path = str(next(image_node.path.glob("*.mhd"))),
-        label_path = str(label_node.path),
-        output_dir = output_dir,
-        params     = method_data
-    )
-    if properties is None: return
+        # Data just goes under namespace/name
+        # TODO: This path is really not great, but works for now
+        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
+        if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-    output_node = Node("voxels", method_id, properties)
+        properties = extract_voxels(
+            image_path = str(next(image_node.path.glob("*.mhd"))),
+            label_path = str(label_node.path),
+            output_dir = output_dir,
+            params     = method_data
+        )
 
-    container.add(output_node)
-    container.saveAll()
-
+    except Exception:
+        container.logger.exception ("Exception raised, stopping job execution.")
+    else:
+        output_node = Node("voxels", method_id, properties)
+        container.add(output_node)
+        container.saveAll()
 
 
 if __name__ == "__main__":

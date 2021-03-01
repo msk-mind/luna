@@ -35,6 +35,9 @@ def cli(cohort_id, container_id, method_id):
     extract_radiomics_with_container(cohort_id, container_id, method_data)
 
 def extract_radiomics_with_container(cohort_id, container_id, method_data):
+    """
+    Using the container API interface, extract radiomics for a given scan container
+    """
 
     # Do some setup
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
@@ -61,6 +64,7 @@ def extract_radiomics_with_container(cohort_id, container_id, method_data):
             output_dir = output_dir,
             params     = method_data
         )
+        
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
