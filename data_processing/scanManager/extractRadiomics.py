@@ -64,6 +64,7 @@ def extract_radiomics_with_container(cohort_id, container_id, method_data):
             output_dir = output_dir,
             params     = method_data
         )
+        
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:

@@ -43,25 +43,29 @@ def generate_scan_with_container(cohort_id, container_id, method_data):
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_id   = method_data.get("job_tag", "none")
     
-    input_node  = container.get("dicom", method_data['dicom_input_tag']) # Only get origional dicoms from
+    dicom_node  = container.get("dicom", method_data['dicom_input_tag']) # Only get origional dicoms from
 
-    output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
-    if not os.path.exists(output_dir): os.makedirs(output_dir)
+    try:
+        if dicom_node is None:
+            raise ValueError("Dicom node not found")
+        
+        # Data just goes under namespace/name
+        # TODO: This path is really not great, but works for now
+        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
+        if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-    properties = generate_scan(
-        dicom_path = str(input_node.path),
-        output_dir = output_dir,
-        params = method_data
-    )
-    
-    if properties is None: return
-
-    output_node = Node(method_data['itkImageType'], method_id, properties)
-
-    container.add(output_node)
-    container.saveAll()
-
-
+        properties = generate_scan(
+            dicom_path = str(dicom_node.path),
+            output_dir = output_dir,
+            params = method_data
+        )
+        
+    except Exception:
+        container.logger.exception ("Exception raised, stopping job execution.")
+    else:
+        output_node = Node(method_data['itkImageType'], method_id, properties)
+        container.add(output_node)
+        container.saveAll()
 
 
 if __name__ == "__main__":
