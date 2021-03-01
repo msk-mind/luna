@@ -1,5 +1,5 @@
 '''
-Created: January 2021
+Created: February 2021
 @author: aukermaa@mskcc.org
 
 Given a scan (container) ID
@@ -36,7 +36,10 @@ def cli(cohort_id, container_id, method_id):
     method_data = get_method_data(cohort_id, method_id)
     extract_voxels_with_container(cohort_id, container_id, method_data)
 
-def extract_voxels_with_container(cohort_id, container_id, method_data):
+def extract_voxels_with_container(cohort_id: str, container_id: str, method_data: dict):
+    """
+    Using the container API interface, extract voxels for a given scan container
+    """
 
     # Do some setup
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)

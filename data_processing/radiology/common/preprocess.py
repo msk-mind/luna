@@ -220,6 +220,11 @@ def overlay_images(dicom_path, seg, width, height):
 
 def calculate_target_shape(volume, header, target_spacing):
     """
+    Calculates a new number of pixels along a dimension determined by multiplying the 
+    current dimension by a scale factor of (source spacing / target spacing)
+
+    The dimension of the volume, header spacing, and target spacing must all match, but the common usecase is 3D
+
     :param volume: as numpy.ndarray
     :param header: ITK-SNAP header
     :param target_spacing: as tuple or list
@@ -232,16 +237,15 @@ def calculate_target_shape(volume, header, target_spacing):
 
 def resample_volume(volume, order, target_shape):
     """
-    Resamples volume using order specified.
+    Resamples volume using order specified, returning a new volume with resized dimensions = target_shape
+
     :param volume: as numpy.ndarray
     :param order: 0 for NN (for segmentation), 3 for cubic (recommended for acquisition)
     :param target_shape: as tuple or list
     :return: Resampled volume as numpy.ndarray
     """
-    if order == 0:
-        anti_alias = False
-    else:
-        anti_alias = True
+    # Only anti_alias if order = 0
+    anti_alias = True if order == 0 else False
 
     volume = resize(volume, target_shape,
                     order=order, clip=True, mode='edge',
