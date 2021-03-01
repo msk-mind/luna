@@ -245,7 +245,7 @@ def resample_volume(volume, order, target_shape):
     :return: Resampled volume as numpy.ndarray
     """
     # Only anti_alias if order = 0
-    anti_alias = True if order == 0 else False
+    anti_alias = False if order == 0 else True
 
     volume = resize(volume, target_shape,
                     order=order, clip=True, mode='edge',

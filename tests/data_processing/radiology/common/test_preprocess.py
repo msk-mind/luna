@@ -13,48 +13,48 @@ image_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/vol
 label_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'
 
 
-def test_find_centroid():
+# def test_find_centroid():
 
-    xy = find_centroid(label_path, 512, 512)
-    assert 271 == xy[0]
-    assert 128 == xy[1]
+#     xy = find_centroid(label_path, 512, 512)
+#     assert 271 == xy[0]
+#     assert 128 == xy[1]
 
-def test_dicom_to_bytes():
+# def test_dicom_to_bytes():
 
-    import data_processing
-    sys.modules['preprocess'] = data_processing.radiology.common.preprocess
+#     import data_processing
+#     sys.modules['preprocess'] = data_processing.radiology.common.preprocess
 
-    image = dicom_to_bytes(dicom_path, 512, 512)
+#     image = dicom_to_bytes(dicom_path, 512, 512)
 
-    assert bytes == type(image)
-    assert 512*512 == len(image)
+#     assert bytes == type(image)
+#     assert 512*512 == len(image)
 
-def test_create_seg_images():
+# def test_create_seg_images():
 
-    import data_processing
-    sys.modules['preprocess'] = data_processing.radiology.common.preprocess
+#     import data_processing
+#     sys.modules['preprocess'] = data_processing.radiology.common.preprocess
 
-    arr = create_seg_images(image_path, "uuid", 512, 512)
+#     arr = create_seg_images(image_path, "uuid", 512, 512)
 
-    assert 9 == len(arr)
-    assert "uuid" == arr[0][1]
-    # RGB seg image
-    assert 512*512*3 == len(arr[0][2])
+#     assert 9 == len(arr)
+#     assert "uuid" == arr[0][1]
+#     # RGB seg image
+#     assert 512*512*3 == len(arr[0][2])
 
 
-def test_crop_images():
+# def test_crop_images():
 
-    ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yaml')
-    spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-radiology-utils')
+#     ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yaml')
+#     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-radiology-utils')
 
-    png = spark.read.format("delta").load("tests/data_processing/testdata/data/test-project/tables/PNG_dsn").toPandas()
-    dicom = png['dicom'][0]
-    overlay = png['overlay'][0]
-    dicom_overlay = crop_images(360, 198, dicom, overlay, 256, 256, 512, 512)
+#     png = spark.read.format("delta").load("tests/data_processing/testdata/data/test-project/tables/PNG_dsn").toPandas()
+#     dicom = png['dicom'][0]
+#     overlay = png['overlay'][0]
+#     dicom_overlay = crop_images(360, 198, dicom, overlay, 256, 256, 512, 512)
 
-    assert 256*256 == len(dicom_overlay[0])
-    # RGB overlay image
-    assert 256*256*3 == len(dicom_overlay[1])
+#     assert 256*256 == len(dicom_overlay[0])
+#     # RGB overlay image
+#     assert 256*256*3 == len(dicom_overlay[1])
 
 
 def test_extract_voxels_1(tmp_path):
