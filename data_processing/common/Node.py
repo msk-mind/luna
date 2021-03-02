@@ -9,18 +9,22 @@ class Node(object):
 	:param: name: required node name. e.g. scan-123
 	:param: properties: dict of key, value pairs for the node.
 	"""
-	def __init__(self, node_type, node_name, properties={}):
+	def __init__(self, node_type, node_name, properties=None):
 
 		# Required schema: node_type, node_name
 
 		self.type = node_type
 		self.name = node_name
-		self.properties = properties
+                
+		if properties is None: 
+			self.properties = {}
+		else: 
+			self.properties = properties 
 
 		if self.type=="cohort":
 			self.properties['namespace'] = node_name
 
-		if not "namespace" in properties.keys():
+		if not "namespace" in self.properties.keys():
 			self.properties['namespace'] = 'default'
 
 		self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
@@ -132,5 +136,5 @@ class Node(object):
 		"""
 		for name in args: does_not_contain(":", name)
 
-		return "::".join(args)
+		return "::".join(args).lower()
 	
