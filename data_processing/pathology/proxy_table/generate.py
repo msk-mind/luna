@@ -166,13 +166,16 @@ def update_graph(config_file):
         logger.info("Loading %s:", table_path)
         tuple_to_add = spark.read.format("delta").load(table_path).select("slide_id", "path", "metadata").toPandas()
 
-    with CodeTimer(logger, 'synchronize graph'):
+    with CodeTimer(logger, 'synchronize lake'):
         for index, row in tuple_to_add.iterrows():
             logger.info ("Requesting %s, %s", f"http://pllimsksparky1:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}", requests.put(f"http://pllimsksparky1:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}").text)
             container = Container( cfg ).setNamespace(namespace).lookupAndAttach(namespace + "::" + row.slide_id)
-            node = Node("wsi", "data_processing.pathology.proxy_table.generate", row.metadata)
+            properties = row.metadata
+            properties['file'] = row.path.split(':')[-1]
+            node = Node("wsi", "data_processing.pathology.proxy_table.generate", properties)
             container.add(node)
             container.saveAll()
+
 
     return exit_code
 
