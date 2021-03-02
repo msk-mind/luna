@@ -48,7 +48,7 @@ def PROJECT_LOCATION(cfg):
     :param cfg:
     :return: ROOT_PATH/PROJECT_NAME
     """
-    return os.path.join(cfg.get_value(path=DATA_CFG+'::ROOT_PATH'), cfg.get_value(path=DATA_CFG+'::PROJECT'))
+    return os.path.join(cfg.get_value(path=DATA_CFG+'::ROOT_PATH'), "data", cfg.get_value(path=DATA_CFG+'::PROJECT'))
 
 
 def TABLE_LOCATION(cfg, is_source=False):
