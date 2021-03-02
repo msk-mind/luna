@@ -106,12 +106,13 @@ class Container(object):
 
         :params: namespace_id - namespace value 
         """
-        self._namespace_id = namespace_id.lower()
+        self._namespace_id = namespace_id
+        self._bucket_id    = namespace_id.lower()
         self.logger.info ("Container namespace: %s", self._namespace_id)
 
         if self.params.get('OBJECT_STORE_ENABLED',  False):
-            if not self._client.bucket_exists(self._namespace_id):
-                self._client.make_bucket(self._namespace_id)
+            if not self._client.bucket_exists(self._bucket_id):
+                self._client.make_bucket(self._bucket_id)
 
         return self
     
@@ -127,7 +128,7 @@ class Container(object):
         # Figure out how to match the node
         if isinstance(container_id, str) and not container_id.isdigit(): 
             if not "::" in container_id: self.logger.warning ("Qualified path %s doesn't look like one...", container_id)
-            self._match_clause = f"""WHERE container.qualified_address = '{container_id}'"""
+            self._match_clause = f"""WHERE container.qualified_address = '{container_id.lower()}'"""
         elif (isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
             self._match_clause = f"""WHERE id(container) = {container_id} """
         else:
@@ -165,7 +166,7 @@ class Container(object):
         # Attach
         cohort = Node("cohort", self._namespace_id)
         if not len(self._conn.query(f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) {self._match_clause} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """ ))==1: 
-            self.logger.warning ( "Cannot attach")
+            self.logger.warning ( "Cannot attach, tried [%s]", f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) {self._match_clause} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)
             return self
 
         # Let us know attaching was a success! :)
@@ -309,7 +310,7 @@ class Container(object):
         # Set node objects only if there is a path and the object store is enabled
         if "path" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
             node.objects = []
-            node.properties['object_bucket'] = f"{self._namespace_id}"
+            node.properties['object_bucket'] = f"{self._bucket_id}"
             node.properties['object_folder'] = f"{self._name}/{node.name}"
             for path in pathlib.Path(node.properties['path']).glob("*"): node.objects.append(path)        
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
