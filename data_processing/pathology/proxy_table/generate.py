@@ -14,6 +14,8 @@ from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
 from data_processing.common.utils import generate_uuid
+from data_processing.common.Container import Container 
+from data_processing.common.Container import Node 
 
 from pyspark.sql.functions import udf, lit, col, array
 from pyspark.sql.types import StringType, MapType
@@ -22,6 +24,7 @@ import shutil, sys, importlib, glob, yaml, os, subprocess, time
 from pathlib import Path
 
 import openslide 
+import requests 
 
 logger = init_logger()
 
@@ -102,6 +105,11 @@ def cli(template_file, config_file, process_string):
             if exit_code != 0:
                 logger.error("Delta table creation had errors. Exiting.")
                 return
+        if 'graph' in processes or 'all' in processes:
+            exit_code = update_graph(config_file)
+            if exit_code != 0:
+                logger.error("Graph creation had errors. Exiting.")
+                return
 
 
 def create_proxy_table(config_file):
@@ -111,9 +119,8 @@ def create_proxy_table(config_file):
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.pathology.proxy_table.generate")
 
     logger.info("generating binary proxy table... ")
-    wsi_path  = const.TABLE_LOCATION(cfg)
-    write_uri = os.environ["HDFS_URI"]
-    save_path = os.path.join(write_uri, wsi_path)
+    save_path = const.TABLE_LOCATION(cfg)
+    logger.info ("Writing to %s", save_path)
 
     with CodeTimer(logger, 'load wsi metadata'):
 
@@ -144,7 +151,30 @@ def create_proxy_table(config_file):
     logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(path=DATA_CFG+'::FILE_COUNT')))
     return exit_code
 
+def update_graph(config_file):
+    exit_code = 0
+    cfg  = ConfigSet(name="CONTAINER_CFG",  config_file=config_file)
+    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.pathology.proxy_table.generate")
 
+    table_path = const.TABLE_LOCATION(cfg)
+    namespace = cfg.get_value("DATA_CFG::PROJECT")
+
+    logger.info ("Requesting %s, %s", f"http://pllimsksparky1:5004/mind/api/v1/cohort/{namespace}", requests.put(f"http://pllimsksparky1:5004/mind/api/v1/cohort/{namespace}").text)
+
+    with CodeTimer(logger, 'setup proxy table'):
+        # Reading dicom and opdata
+        logger.info("Loading %s:", table_path)
+        tuple_to_add = spark.read.format("delta").load(table_path).select("slide_id", "path", "metadata").toPandas()
+
+    with CodeTimer(logger, 'synchronize graph'):
+        for index, row in tuple_to_add.iterrows():
+            logger.info ("Requesting %s, %s", f"http://pllimsksparky1:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}", requests.put(f"http://pllimsksparky1:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}").text)
+            container = Container( cfg ).setNamespace(namespace).lookupAndAttach(namespace + "::" + row.slide_id)
+            node = Node("wsi", "data_processing.pathology.proxy_table.generate", row.metadata)
+            container.add(node)
+            container.saveAll()
+
+    return exit_code
 
 if __name__ == "__main__":
     cli()
