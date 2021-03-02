@@ -142,7 +142,7 @@ class createContainer(Resource):
             if not create_res is None: 
                 return make_response("Created successfully", 201)
             elif not match_res is None:           
-                return make_response("Patient already exists", 200)
+                return make_response(f"Container at already exists at {container.get_match_str()}", 200)
             else:
                 return make_response("Bad query", 400)
 # --------------------------------------------------------------------------------------------
@@ -273,5 +273,5 @@ class addOrRemoveCases(Resource):
 
 
 if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'],port=5004, threaded=True, debug=False)
+    app.run(host='0.0.0.0',port=5004, threaded=True, debug=False)
 

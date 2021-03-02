@@ -159,7 +159,7 @@ def update_graph(config_file):
     table_path = const.TABLE_LOCATION(cfg)
     namespace = cfg.get_value("DATA_CFG::PROJECT")
 
-    logger.info ("Requesting %s, %s", f"http://pllimsksparky1:5004/mind/api/v1/cohort/{namespace}", requests.put(f"http://pllimsksparky1:5004/mind/api/v1/cohort/{namespace}").text)
+    logger.info ("Requesting %s, %s", f"http://localhost:5004/mind/api/v1/cohort/{namespace}", requests.put(f"http://localhost:5004/mind/api/v1/cohort/{namespace}").text)
 
     with CodeTimer(logger, 'setup proxy table'):
         # Reading dicom and opdata
@@ -168,7 +168,7 @@ def update_graph(config_file):
 
     with CodeTimer(logger, 'synchronize lake'):
         for index, row in tuple_to_add.iterrows():
-            logger.info ("Requesting %s, %s", f"http://pllimsksparky1:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}", requests.put(f"http://pllimsksparky1:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}").text)
+            logger.info ("Requesting %s, %s", f"http://localhost:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}", requests.put(f"http://localhost:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}").text)
             container = Container( cfg ).setNamespace(namespace).lookupAndAttach(namespace + "::" + row.slide_id)
             properties = row.metadata
             properties['file'] = row.path.split(':')[-1]
