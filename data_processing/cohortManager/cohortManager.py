@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template, make_response
 from flask_restx import Api, Resource
 
 from data_processing.common.custom_logger import init_logger
-from data_processing.common.GraphEnum import Node
+from data_processing.common.Node import Node
 from data_processing.common.Neo4jConnection import Neo4jConnection
 import data_processing.common.constants as const
 from data_processing.common.config import ConfigSet
@@ -110,6 +110,42 @@ class modifyPatientInCohort(Resource):
 # --------------------------------------------------------------------------------------------
 
 
+# ============================================================================================
+@api.route('/mind/api/v1/container/<cohort_id>/<container_type>/<container_id>', 
+    methods=['PUT'],
+    doc={"description": "Create a container"}
+)
+@api.doc(params={'cohort_id': 'Cohort Identifier', 'container_type': 'Type in [scan, patient, slide]', 'container_id':'Unique container identifier'})
+class createContainer(Resource):
+
+    def put(self, cohort_id, container_type,  container_id):
+            """ Create new container """
+            cohort    = Node("cohort", cohort_id)
+            container = Node(container_type, container_id)
+            container.set_namespace(cohort_id)
+
+            if ":" in container_id: 
+                return make_response("Invalid patient name, only use alphanumeric characters", 400)
+
+            print (f""" MATCH (co:{cohort.get_match_str()}) RETURN co """)
+            if not len(conn.query(f""" MATCH (co:{cohort.get_match_str()}) RETURN co """ ))==1: 
+                return make_response("No cohort namespace found", 300)
+
+            create_res = conn.query(f""" CREATE (container:{container.get_create_str()}) RETURN container""")
+            match_res  = conn.query(f"""
+                MATCH (px:{container.get_create_str()})
+                MATCH (co:{cohort.get_match_str()})
+                MERGE (co)-[r:INCLUDE]-(px)
+                RETURN px
+                """
+            )
+            if not create_res is None: 
+                return make_response("Created successfully", 201)
+            elif not match_res is None:           
+                return make_response("Patient already exists", 200)
+            else:
+                return make_response("Bad query", 400)
+# --------------------------------------------------------------------------------------------
 # ============================================================================================
 @api.route('/mind/api/v1/patient/<cohort_id>/<patient_id>', 
     methods=['GET', 'PUT'],
