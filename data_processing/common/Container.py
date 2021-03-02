@@ -348,5 +348,5 @@ class Container(object):
                 with ThreadPoolExecutor(max_workers=4) as executor:
                     for p in n.objects:
                         self.logger.info("uploading: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
-                        executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=262144000)
+                        executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
             self.logger.info("Done.")
