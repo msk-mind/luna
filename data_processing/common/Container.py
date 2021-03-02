@@ -6,6 +6,7 @@ import os, socket, pathlib, logging
 from minio import Minio
 
 from concurrent.futures import ThreadPoolExecutor
+import subprocess
 
 class Container(object):
     """
@@ -308,11 +309,18 @@ class Container(object):
         self.logger.info ("Container has %s pending node commits",  len(self._node_commits))
 
         # Set node objects only if there is a path and the object store is enabled
+        node.objects = []
         if "path" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
-            node.objects = []
             node.properties['object_bucket'] = f"{self._bucket_id}"
             node.properties['object_folder'] = f"{self._name}/{node.name}"
             for path in pathlib.Path(node.properties['path']).glob("*"): node.objects.append(path)        
+            self.logger.info ("Node has %s pending object commits",  len(node.objects))
+
+        if "file" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
+            node.properties['path'] = node.properties['file']
+            node.properties['object_bucket'] = f"{self._bucket_id}"
+            node.properties['object_folder'] = f"{self._name}/{node.name}"
+            node.objects.append(pathlib.Path(node.properties['path']))
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
     def saveAll(self):
@@ -323,7 +331,7 @@ class Container(object):
         # Will fully overwrite existing nodes, since we assume changes in the FS already occured
          
         for n in self._node_commits.values():
-            self.logger.info ("Committing %s", n.get_create_str())
+            self.logger.info ("Committing %s", n.get_match_str())
             self._conn.query(f""" 
                 MATCH (container) {self._match_clause}
                 MERGE (container)-[:HAS_DATA]->(da:{n.get_match_str()})
@@ -340,5 +348,5 @@ class Container(object):
                 with ThreadPoolExecutor(max_workers=4) as executor:
                     for p in n.objects:
                         self.logger.info("uploading: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
-                        executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p)
+                        executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=262144000)
             self.logger.info("Done.")
