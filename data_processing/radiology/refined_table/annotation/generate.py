@@ -72,10 +72,6 @@ def generate_png_tables(cfg):
                      "{0}_{1}".format("MHD", cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')))
 
     dicom_df = spark.read.format("delta").load(dicom_table_path)
-   
-    # subset dicom based on SQL_STRING - to identify a series within the case.
-    dicom_df = dicom_df.drop("content") \
-                       .filter(cfg.get_value(path=const.DATA_CFG+'::SQL_STRING'))
 
     seg_df = spark.read.format("delta").load(seg_table_path)
     logger.info("Loaded dicom and seg tables")
@@ -111,7 +107,9 @@ def generate_png_tables(cfg):
         seg_df = seg_df.select("accession_number", seg_df.path.alias("seg_path"), "label",
                                "instance_number", "seg_png", "scan_annotation_record_uuid")
         
-        cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number, dicom_df.metadata.InstanceNumber == seg_df.instance_number] 
+        cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number,
+                dicom_df.metadata.SeriesnNumber == seg_df.series_number,
+                dicom_df.metadata.InstanceNumber == seg_df.instance_number]
         
         seg_df = seg_df.join(dicom_df, cond)
 

@@ -2,7 +2,7 @@
 FILE_TYPE: mha
 
 # path to data directory
-ROOT_PATH: tests/data_processing/radiology/proxy_table/annotation/testdata
+ROOT_PATH: tests/data_processing/radiology/testdata
 
 # annotation data type - used to create table names
 DATA_TYPE: MHA
@@ -14,10 +14,10 @@ PROJECT: test-project
 DATASET_NAME: datasetname
 
 # path for the annotation data on the data lake
-RAW_DATA_PATH: tests/data_processing/radiology/proxy_table/annotation/testdata/scan_annotations
+RAW_DATA_PATH: tests/data_processing/radiology/testdata/test-project/scan_annotations
 
 # path to annotation metadata csv including AccessionNumber, SeriesNumber
-METADATA_CSV: tests/data_processing/radiology/proxy_table/annotation/testdata/metadata.csv
+METADATA_CSV: tests/data_processing/radiology/testdata/metadata.csv
 
 # columns to include from csv
 METADATA_COLUMNS:

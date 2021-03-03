@@ -8,8 +8,8 @@ from data_processing.radiology.proxy_table.annotation.generate import *
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
 
-mha_table_path = "tests/data_processing/radiology/proxy_table/annotation/testdata/test-project/tables/MHA_datasetname"
-mhd_table_path = "tests/data_processing/radiology/proxy_table/annotation/testdata/test-project/tables/MHD_datasetname"
+mha_table_path = "tests/data_processing/radiology/testdata/test-project/tables/MHA_datasetname"
+mhd_table_path = "tests/data_processing/radiology/testdata/test-project/tables/MHD_datasetname"
 
 @pytest.fixture(autouse=True)
 def spark():
