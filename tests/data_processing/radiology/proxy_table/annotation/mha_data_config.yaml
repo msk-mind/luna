@@ -31,4 +31,4 @@ METADATA_JOIN_ON: accession_number
 NUM_PARTITION: 20
 
 # number of annotation files
-FILE_COUNT: 40
+FILE_COUNT: 1

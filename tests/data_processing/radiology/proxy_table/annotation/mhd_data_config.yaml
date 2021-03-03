@@ -20,4 +20,4 @@ RAW_DATA_PATH: tests/data_processing/radiology/testdata/test-project/scan_annota
 NUM_PARTITION: 20
 
 # number of annotation files
-FILE_COUNT: 40
+FILE_COUNT: 1
