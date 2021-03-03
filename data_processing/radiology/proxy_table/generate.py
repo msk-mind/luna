@@ -11,7 +11,6 @@ from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
-from data_processing.common.utils import generate_uuid_binary
 import data_processing.common.constants as const
 
 from pyspark.sql.functions import udf, lit, array
@@ -158,9 +157,8 @@ def create_proxy_table(config_file):
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.radiology.proxy_table.generate")
 
     # setup for using external py in udf
-    #sys.path.append("data_processing/common")
-    #importlib.import_module("data_processing.common.EnsureByteContext")
     spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
+    spark.sparkContext.addPyFile("./data_processing/common/utils.py")
     # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
 
@@ -174,6 +172,7 @@ def create_proxy_table(config_file):
             option("recursiveFileLookup", "true"). \
             load(cfg.get_value(path=DATA_CFG+'::RAW_DATA_PATH'))
 
+        from utils import generate_uuid_binary
         generate_uuid_udf = udf(generate_uuid_binary, StringType())
         df = df.withColumn("dicom_record_uuid", lit(generate_uuid_udf(df.content, array([lit("DICOM")]))))
 
@@ -181,8 +180,10 @@ def create_proxy_table(config_file):
     with CodeTimer(logger, 'parse and save dicom'):
         parse_dicom_from_delta_record_udf = udf(parse_dicom_from_delta_record, MapType(StringType(), StringType()))
         header = df.withColumn("metadata", lit(parse_dicom_from_delta_record_udf(df.path, df.content)))
+        header = header.drop("content")
 
-        header.coalesce(6144).write.format(cfg.get_value(path=DATA_CFG+'::FORMAT_TYPE')) \
+        header.coalesce(cfg.get_value(path=DATA_CFG+'::NUM_PARTITION')).write \
+            .format(cfg.get_value(path=DATA_CFG+'::FORMAT_TYPE')) \
             .mode("overwrite") \
             .option("mergeSchema", "true") \
             .save(dicom_path)
@@ -197,6 +198,7 @@ def create_proxy_table(config_file):
     df = spark.read.format(cfg.get_value(path=DATA_CFG+'::FORMAT_TYPE')).load(dicom_path)
     df.printSchema()
     return exit_code
+
 
 def update_graph(config_file):
     cfg = ConfigSet()
