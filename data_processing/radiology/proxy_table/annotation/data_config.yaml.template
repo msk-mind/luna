@@ -1,4 +1,4 @@
-# annotation file type extension like MHA, MHD..
+# annotation file type extension like mha, mhd (case sensitive) ..
 FILE_TYPE: mha
 
 # annotation data type - used to create table names

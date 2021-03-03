@@ -23,6 +23,7 @@ METADATA_CSV: tests/data_processing/radiology/testdata/metadata.csv
 METADATA_COLUMNS:
   - accession_number
   - series_number
+  - label
 
 # column to join on
 METADATA_JOIN_ON: accession_number

@@ -13,6 +13,18 @@ PROJECT: test-project
 # dataset name
 DATASET_NAME: datasetname
 
+# path to annotation metadata csv including AccessionNumber, SeriesNumber
+METADATA_CSV: tests/data_processing/radiology/testdata/metadata.csv
+
+# columns to include from csv
+METADATA_COLUMNS:
+  - accession_number
+  - series_number
+  - label
+
+# column to join on
+METADATA_JOIN_ON: accession_number
+
 # path for the annotation data on the data lake
 RAW_DATA_PATH: tests/data_processing/radiology/testdata/test-project/scan_annotations
 
