@@ -85,13 +85,13 @@ def cli(template_file, config_file, process_string):
         logger.info('processes: ' + str(processes))
 
         # load configs
-        cfg = ConfigSet(name=DATA_CFG, config_file=template_file, schema_file=SCHEMA_FILE)
-        cfg = ConfigSet(name=APP_CFG,  config_file=config_file)
+        cfg = ConfigSet(name="APP_CFG",  config_file=config_file)
+        cfg = ConfigSet(name="DATA_CFG", config_file=template_file, schema_file=SCHEMA_FILE)
 
         # write template file to manifest_yaml under LANDING_PATH
         # todo: write to hdfs without using local gpfs/
         hdfs_path = os.environ['MIND_GPFS_DIR']
-        landing_path = cfg.get_value(path=DATA_CFG+'::LANDING_PATH')
+        landing_path = cfg.get_value(path='DATA_CFG::LANDING_PATH')
         
         full_landing_path = os.path.join(hdfs_path, landing_path)     
         if not os.path.exists(full_landing_path):
@@ -124,7 +124,7 @@ def create_proxy_table(config_file):
 
     with CodeTimer(logger, 'load wsi metadata'):
 
-        search_path = os.path.join(cfg.get_value(path=DATA_CFG+'::SOURCE_PATH'), ("**" + cfg.get_value(path=DATA_CFG+'::FILE_TYPE')))
+        search_path = os.path.join(cfg.get_value(path='DATA_CFG::SOURCE_PATH'), ("**" + cfg.get_value(path='DATA_CFG::FILE_TYPE')))
         logger.debug(search_path)
         for path in glob.glob(search_path, recursive=True):
             logger.debug(path)
@@ -135,9 +135,9 @@ def create_proxy_table(config_file):
         parse_openslide_udf = udf(parse_openslide, MapType(StringType(), StringType()))
 
         df = spark.read.format("binaryFile"). \
-            option("pathGlobFilter", "*."+cfg.get_value(path=DATA_CFG+'::FILE_TYPE')). \
+            option("pathGlobFilter", "*."+cfg.get_value(path='DATA_CFG::FILE_TYPE')). \
             option("recursiveFileLookup", "true"). \
-            load(cfg.get_value(path=DATA_CFG+'::SOURCE_PATH')). \
+            load(cfg.get_value(path='DATA_CFG::SOURCE_PATH')). \
             drop("content").\
             withColumn("wsi_record_uuid", generate_uuid_udf  (col("path"), array(lit("WSI")))).\
             withColumn("slide_id",        parse_slide_id_udf (col("path"))).\
@@ -148,7 +148,7 @@ def create_proxy_table(config_file):
     df.coalesce(48).write.format("delta").save(save_path)
 
     processed_count = df.count()
-    logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(path=DATA_CFG+'::FILE_COUNT')))
+    logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(path='DATA_CFG::FILE_COUNT')))
     return exit_code
 
 def update_graph(config_file):
@@ -157,7 +157,7 @@ def update_graph(config_file):
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.pathology.proxy_table.generate")
 
     table_path = const.TABLE_LOCATION(cfg)
-    namespace = cfg.get_value("DATA_CFG::PROJECT")
+    namespace  = cfg.get_value("DATA_CFG::PROJECT")
 
     logger.info ("Requesting %s, %s", f"http://localhost:5004/mind/api/v1/cohort/{namespace}", requests.put(f"http://localhost:5004/mind/api/v1/cohort/{namespace}").text)
 
@@ -167,14 +167,15 @@ def update_graph(config_file):
         tuple_to_add = spark.read.format("delta").load(table_path).select("slide_id", "path", "metadata").toPandas()
 
     with CodeTimer(logger, 'synchronize lake'):
+        container = Container( cfg ).setNamespace(namespace)
         for index, row in tuple_to_add.iterrows():
             logger.info ("Requesting %s, %s", f"http://localhost:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}", requests.put(f"http://localhost:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}").text)
-            container = Container( cfg ).setNamespace(namespace).lookupAndAttach(namespace + "::" + row.slide_id)
+            container.lookupAndAttach(namespace + "::" + row.slide_id)
             properties = row.metadata
             properties['file'] = row.path.split(':')[-1]
             node = Node("wsi", "data_processing.pathology.proxy_table.generate", properties)
             container.add(node)
-            container.saveAll()
+        container.saveAll()
 
 
     return exit_code

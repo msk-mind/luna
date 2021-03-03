@@ -355,15 +355,16 @@ class Container(object):
                 object_folder = n.properties.get("object_folder")
                 for p in n.objects:
                     self.logger.info("Submitting: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
-                    future_uploads.append(executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000))
+                    future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
+                    future_uploads.append(future)
         
         for future in as_completed(future_uploads):
             try:
                 data = future.result()
-            except Exception as exc:
+            except:
                 self.logger.exception('Bad upload: generated an exception:')
             else:
                 self.logger.info("Upload successful with etag: %s", data[0])
-                
+        self.logger.info("Shutdown executor %s", executor)                
         executor.shutdown()    
-        self.logger.info("Done.")
+        self.logger.info("Done saving all records!!")
