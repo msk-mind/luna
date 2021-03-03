@@ -152,14 +152,26 @@ def create_proxy_table(config_file):
     return exit_code
 
 def update_graph(config_file):
+    """
+    This function reads a delta table and:
+        1. Creates/validates a cohort-namespace exists given the PROJECT name
+        2. Creates slide containers for each slide_id, and 
+        3. Commits associated metadata/raw data to neo4j/minio
+    """
+
     exit_code = 0
-    cfg  = ConfigSet(name="CONTAINER_CFG",  config_file=config_file)
+    cfg  = ConfigSet()
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.pathology.proxy_table.generate")
 
     table_path = const.TABLE_LOCATION(cfg)
-    namespace  = cfg.get_value("DATA_CFG::PROJECT")
 
-    logger.info ("Requesting %s, %s", f"http://localhost:5004/mind/api/v1/cohort/{namespace}", requests.put(f"http://localhost:5004/mind/api/v1/cohort/{namespace}").text)
+    namespace            = cfg.get_value("DATA_CFG::PROJECT")
+    api_base_url         = cfg.get_value("APP_CFG::api_base_url")
+    cohort_service_host  = cfg.get_value("APP_CFG::cohortManager_host")
+    cohort_service_port  = cfg.get_value("APP_CFG::cohortManager_port")
+    cohort_uri           = f"http://{cohort_service_host}:{cohort_service_port}{api_base_url}"
+
+    logger.info ("Requesting %s, %s", os.path.join(cohort_uri, "cohort", namespace), requests.put(os.path.join(cohort_uri, "cohort", namespace)).text)
 
     with CodeTimer(logger, 'setup proxy table'):
         # Reading dicom and opdata
@@ -168,15 +180,14 @@ def update_graph(config_file):
 
     with CodeTimer(logger, 'synchronize lake'):
         container = Container( cfg ).setNamespace(namespace)
-        for index, row in tuple_to_add.iterrows():
-            logger.info ("Requesting %s, %s", f"http://localhost:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}", requests.put(f"http://localhost:5004/mind/api/v1/container/{namespace}/slide/{row.slide_id}").text)
+        for _, row in tuple_to_add.iterrows():
+            logger.info ("Requesting %s, %s", os.path.join(cohort_uri, "container", namespace, "slide", row.slide_id), requests.put(os.path.join(cohort_uri, "container", namespace, "slide", row.slide_id)).text)
             container.lookupAndAttach(namespace + "::" + row.slide_id)
             properties = row.metadata
             properties['file'] = row.path.split(':')[-1]
             node = Node("wsi", "data_processing.pathology.proxy_table.generate", properties)
             container.add(node)
         container.saveAll()
-
 
     return exit_code
 

@@ -24,7 +24,7 @@ from data_processing.common.config import ConfigSet
 from data_processing.radiology.common.preprocess   import extract_radiomics
 
 logger = init_logger("extractRadiomics.log")
-cfg = ConfigSet("CONTAINER_CFG",  config_file="config.yaml")
+cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)

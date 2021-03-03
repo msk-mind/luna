@@ -26,7 +26,7 @@ from data_processing.radiology.common.preprocess   import extract_voxels
 from medpy.io import load
 
 logger = init_logger("extractVoxels.log")
-cfg = ConfigSet("CONTAINER_CFG",  config_file="config.yaml")
+cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
