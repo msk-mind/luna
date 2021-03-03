@@ -5,7 +5,7 @@ from data_processing.common.config import ConfigSet
 import os, socket, pathlib, logging
 from minio import Minio
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import subprocess
 
 class Container(object):
@@ -100,6 +100,8 @@ class Container(object):
         self.logger.info ("Running on: %s", self._host)
 
         self.params = params
+        self._node_commits    = {}
+
     
     def setNamespace(self, namespace_id: str):
         """
@@ -153,7 +155,6 @@ class Container(object):
         self._qualifiedpath = res[0]["container.qualified_address"]
         self._type          = res[0]["container.type"]
         self._labels        = res[0]["labels(container)"]
-        self._node_commits    = {}
 
         # Containers need to have a qualified path
         if self._qualifiedpath is None: 
@@ -174,14 +175,14 @@ class Container(object):
         self.logger = logging.getLogger(f'Container [{self._container_id}]')
         self.logger.info ("Successfully attached to: %s %s", self._type, self._qualifiedpath)
         self._attached = True
-
         return self
-    
+
     def isAttached(self):
         """
         Returns true if container was properly attached (i.e. checks in lookupAndAttach succeeded), else False
         """
         self.logger.info ("Attached: %s", self._attached)
+        return self._attached
 
 
     def listTypes(self):
@@ -299,14 +300,10 @@ class Container(object):
         :param: node - node object
         """
         assert isinstance(node, Node)
+        assert self.isAttached()
 
-        # Add to node commit dictonary
-        self.logger.info ("Adding: %s", node.name)
-        self._node_commits[node.name] = node
-        
         # Decorate with the container namespace 
-        self._node_commits[node.name].set_namespace( self._namespace_id, self._name )
-        self.logger.info ("Container has %s pending node commits",  len(self._node_commits))
+        node.set_namespace( self._namespace_id, self._name )
 
         # Set node objects only if there is a path and the object store is enabled
         node.objects = []
@@ -323,13 +320,26 @@ class Container(object):
             node.objects.append(pathlib.Path(node.properties['path']))
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
+        # Add to node commit dictonary
+        self.logger.info ("Adding: %s", node.get_address())
+        self._node_commits[node.get_address()] = node
+        
+        self.logger.info ("Container has %s pending node commits",  len(self._node_commits))
+
+      
     def saveAll(self):
         """
         Tries to create nodes for all committed nodes
         """
         # Loop through all nodes in commit dictonary, and run query
         # Will fully overwrite existing nodes, since we assume changes in the FS already occured
-         
+        self.logger.info("Detaching container...")
+        self._attached = False
+        self.logger = logging.getLogger(__name__)
+
+        self.logger.info("Started minio executor with 4 threads")
+        executor = ThreadPoolExecutor(max_workers=4)
+        future_uploads = []
         for n in self._node_commits.values():
             self.logger.info ("Committing %s", n.get_match_str())
             self._conn.query(f""" 
@@ -343,10 +353,17 @@ class Container(object):
             if self.params.get("OBJECT_STORE_ENABLED", False):
                 object_bucket = n.properties.get("object_bucket")
                 object_folder = n.properties.get("object_folder")
-
-                self.logger.info("Started object upload with 4 threads...")
-                with ThreadPoolExecutor(max_workers=4) as executor:
-                    for p in n.objects:
-                        self.logger.info("uploading: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
-                        executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
-            self.logger.info("Done.")
+                for p in n.objects:
+                    self.logger.info("Submitting: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
+                    future_uploads.append(executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000))
+        
+        for future in as_completed(future_uploads):
+            try:
+                data = future.result()
+            except Exception as exc:
+                self.logger.exception('Bad upload: generated an exception:')
+            else:
+                self.logger.info("Upload successful with etag: %s", data[0])
+                
+        executor.shutdown()    
+        self.logger.info("Done.")
