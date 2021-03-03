@@ -10,22 +10,17 @@ from data_processing.common.config import ConfigSet
 import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests
 import pandas as pd
 
-import threading
-
 app    = Flask(__name__)
 api = Api(app, version='1.1', title='cohortManager', description='Manages and exposes study cohort and associated data', ordered=True)
 
 logger = init_logger("flask-mind-server.log")
 cfg    = ConfigSet(name=const.APP_CFG,  config_file="config.yaml")
 conn   = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-lock   = threading.Lock()
+
+HOSTNAME     =     cfg.get_value("APP_CFG::cohortManager_host")
+PORT         = int(cfg.get_value("APP_CFG::cohortManager_port"))
 
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
-
-STREAMS = {}
-METHODS = {}
-HOST = os.environ['HOSTNAME']
-
 
 # ============================================================================================
 # get-put-cohort
@@ -273,5 +268,5 @@ class addOrRemoveCases(Resource):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',port=5004, threaded=True, debug=False)
+    app.run(host=HOSTNAME,port=PORT, threaded=True, debug=False)
 
