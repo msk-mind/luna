@@ -1,0 +1,14 @@
+# annotation file type extension like MHA, MHD..
+FILE_TYPE: MHA
+
+# path for the annotation data on the data lake
+RAW_DATA_PATH: /path/to/annotations
+
+# path to annotation metadata csv including AccessionNumber, SeriesNumber
+METADATA_CSV: /path/to/annotation_metadata.csv
+
+# number of partitions for delta table
+NUM_PARTITION: 20
+
+# number of annotation files
+FILE_COUNT: 40

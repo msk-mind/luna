@@ -1,0 +1,26 @@
+# annotation file type extension like MHA, MHD..
+FILE_TYPE: mha
+
+# annotation data type - used to create table names
+DATA_TYPE: MHA
+
+# path to data directory
+ROOT_PATH: /path/to/data
+
+# project name
+PROJECT: project
+
+# dataset name
+DATASET_NAME: datasetname
+
+# path for the annotation data on the data lake
+RAW_DATA_PATH: /path/to/annotations
+
+# path to annotation metadata csv including AccessionNumber, SeriesNumber
+METADATA_CSV: /path/to/annotation_metadata.csv
+
+# number of partitions for delta table
+NUM_PARTITION: 20
+
+# number of annotation files
+FILE_COUNT: 40
