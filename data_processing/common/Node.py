@@ -91,23 +91,11 @@ class Node(object):
 
 		prop_string = self.prop_str(kv.keys(), kv)
 		return f"""{{ {prop_string} }}"""
-
-
-	def get_object(self, glob_string):
+	def get_address(self):
 		"""
-		Return a singular object for the data node given glob string
-		"""
-		return str(next(self.path.glob(glob_string)))
-	
-
-	def get_objects(self, glob_string):
-		"""
-		Return all objects for the data node given glob string
-		"""
-		if os.path.isdir(self.path):
-			return self.path.glob(glob_string)
-		else:
-			return self.path.parent.glob(glob_string)
+		Returns current node address
+		"""		
+		return self.properties.get("qualified_address")
 
 	@staticmethod
 	def prop_str(fields, row):
