@@ -118,8 +118,6 @@ def create_proxy_table(data_config):
             annotation_metadata = spark.read.load(cfg.get_value(path=const.DATA_CFG+'::METADATA_CSV'),
                                                   format="csv", header="true", inferSchema="true")
 
-            print(cfg.get_value(path=const.DATA_CFG+'::METADATA_COLUMNS'))
-
             annotation_metadata = annotation_metadata.select(cfg.get_value(path=const.DATA_CFG+'::METADATA_COLUMNS'))
 
             df = df.join(annotation_metadata,
