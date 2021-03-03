@@ -76,7 +76,7 @@ class Container(object):
         self.logger = logging.getLogger(__name__)
 
         if isinstance(params, ConfigSet):
-            params=params.get_config_set("CONTAINER_CFG")
+            params=params.get_config_set("APP_CFG")
 
         # Connect to graph DB
         self.logger.info ("Connecting to: %s", params['GRAPH_URI'])
@@ -131,15 +131,15 @@ class Container(object):
         # Figure out how to match the node
         if isinstance(container_id, str) and not container_id.isdigit(): 
             if not "::" in container_id: self.logger.warning ("Qualified path %s doesn't look like one...", container_id)
-            self._match_clause = f"""WHERE container.qualified_address = '{container_id.lower()}'"""
+            match_clause = f"""WHERE container.qualified_address = '{container_id.lower()}'"""
         elif (isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
-            self._match_clause = f"""WHERE id(container) = {container_id} """
+            match_clause = f"""WHERE id(container) = {container_id} """
         else:
             raise RuntimeError("Invalid container_id type not (str, int)")
 
         # Run query
         res = self._conn.query(f"""
-            MATCH (container) {self._match_clause}
+            MATCH (container) {match_clause}
             RETURN id(container), labels(container), container.type, container.name, container.namespace, container.qualified_address"""
         )
         
@@ -162,18 +162,17 @@ class Container(object):
             return self
         
         # Set match clause to id
-        self._match_clause = f"""WHERE id(container) = {self._container_id} """
-        self.logger.debug ("Match on: %s", self._match_clause)
+        self.logger.debug ("Match on: %s", self._container_id)
 
         # Attach
         cohort = Node("cohort", self._namespace_id)
-        if not len(self._conn.query(f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) {self._match_clause} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """ ))==1: 
-            self.logger.warning ( "Cannot attach, tried [%s]", f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) {self._match_clause} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)
+        if not len(self._conn.query(f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._container_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """ ))==1: 
+            self.logger.warning ( "Cannot attach, tried [%s]", f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._container_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)
             return self
 
         # Let us know attaching was a success! :)
         self.logger = logging.getLogger(f'Container [{self._container_id}]')
-        self.logger.info ("Successfully attached to: %s %s", self._type, self._qualifiedpath)
+        self.logger.info ("Successfully attached to: %s %s %s", self._type, self._container_id, self._qualifiedpath)
         self._attached = True
         return self
 
@@ -196,7 +195,7 @@ class Container(object):
         # Run query, subject to SQL injection attacks (but right now, our entire system is)
         res = self._conn.query(f"""
             MATCH (container)-[:HAS_DATA]-(data) 
-            {self._match_clause}
+            WHERE id(container) = {self._container_id}
             RETURN labels(data)"""
         )
         types = set()
@@ -222,7 +221,7 @@ class Container(object):
         # Run query, subject to SQL injection attacks (but right now, our entire system is)
         res = self._conn.query(f"""
             MATCH (container)-[:HAS_DATA]-(data:{type}) 
-            {self._match_clause}
+            WHERE id(container) = {self._container_id}
             {view}
             RETURN data"""
         )
@@ -246,7 +245,7 @@ class Container(object):
             e.g. name of the node in the subspace of the container (e.g. generate-mhd)
         :example: get("mhd", "generate-mhd") gets data of type "mhd" generated from the method "generate-mhd" in this container's context/subspace
         """
-        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type})  {self._match_clause} AND data.name='{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
+        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type}) WHERE id(container) = {self._container_id} AND data.name='{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
 
         self.logger.info(query)
         res = self._conn.query(query)
@@ -304,6 +303,7 @@ class Container(object):
 
         # Decorate with the container namespace 
         node.set_namespace( self._namespace_id, self._name )
+        node._container_id = self._container_id
 
         # Set node objects only if there is a path and the object store is enabled
         node.objects = []
@@ -343,7 +343,7 @@ class Container(object):
         for n in self._node_commits.values():
             self.logger.info ("Committing %s", n.get_match_str())
             self._conn.query(f""" 
-                MATCH (container) {self._match_clause}
+                MATCH (container) WHERE id(container) = {n._container_id}
                 MERGE (container)-[:HAS_DATA]->(da:{n.get_match_str()})
                     ON MATCH  SET da = {n.get_map_str()}
                     ON CREATE SET da = {n.get_map_str()}
