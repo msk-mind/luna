@@ -9,7 +9,6 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
-from data_processing.common.utils import generate_uuid
 import data_processing.common.constants as const
 
 from pyspark.sql.functions import udf, lit, array, col
@@ -95,7 +94,9 @@ def create_proxy_table(data_config):
     with CodeTimer(logger, 'load scan annotations'):
 
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
-
+ 
+        spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+        from utils import generate_uuid
         generate_uuid_udf = udf(generate_uuid, StringType())
         parse_accession_number_udf = udf(parse_accession_number, StringType())
         parse_metadata_udf = udf(parse_metadata, MapType(StringType(), StringType()))
