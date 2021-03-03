@@ -16,9 +16,6 @@ DATASET_NAME: datasetname
 # path for the annotation data on the data lake
 RAW_DATA_PATH: tests/data_processing/radiology/proxy_table/annotation/testdata/scan_annotations
 
-# path to annotation metadata csv including AccessionNumber, SeriesNumber
-METADATA_CSV: tests/data_processing/radiology/proxy_table/annotation/testdata/metadata.csv
-
 # number of partitions for delta table
 NUM_PARTITION: 20
 

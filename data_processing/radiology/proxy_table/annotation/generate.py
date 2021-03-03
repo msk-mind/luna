@@ -109,14 +109,22 @@ def create_proxy_table(data_config):
 
         df = df.withColumn("accession_number", parse_accession_number_udf(df.path))
 
-        # TODO: once radiology segmentation information is on REDCap join with that table.
-        # for now, we join with a curated csv that includes AccessionNumber, SeriesNumber columns
-        annotation_metadata = spark.read.load(cfg.get_value(path=const.DATA_CFG+'::METADATA_CSV'),
-                                              format="csv", header="true", inferSchema="true")
-        annotation_metadata = annotation_metadata.select(col("AccessionNumber").alias("accession_number"),
-                                                         col("SeriesNumber").alias("series_number"))
+        # optional join with metadata csv
+        if cfg.has_value(path=const.DATA_CFG+'::METADATA_CSV') \
+                and cfg.has_value(path=const.DATA_CFG+'::METADATA_COLUMNS') \
+                and cfg.has_value(path=const.DATA_CFG+'::METADATA_JOIN_ON'):
 
-        df = df.join(annotation_metadata, on="accession_number", how="left")
+            # TODO: once radiology segmentation information is on REDCap join with that table.
+            annotation_metadata = spark.read.load(cfg.get_value(path=const.DATA_CFG+'::METADATA_CSV'),
+                                                  format="csv", header="true", inferSchema="true")
+
+            print(cfg.get_value(path=const.DATA_CFG+'::METADATA_COLUMNS'))
+
+            annotation_metadata = annotation_metadata.select(cfg.get_value(path=const.DATA_CFG+'::METADATA_COLUMNS'))
+
+            df = df.join(annotation_metadata,
+                         on=cfg.get_value(path=const.DATA_CFG+'::METADATA_JOIN_ON'),
+                         how="left")
 
         df = df.withColumn("scan_annotation_record_uuid", generate_uuid_udf(df.path, array([lit("SCAN_ANNOTATION")]))) \
             .withColumn("metadata", parse_metadata_udf(df.path))

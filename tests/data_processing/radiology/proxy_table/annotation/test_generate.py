@@ -54,7 +54,8 @@ def test_cli_mhd(spark):
     df = spark.read.format("delta").load(os.path.join(os.getcwd(), mhd_table_path))
     df.show(10, False)
     assert df.count() == 1
-    assert set(['modificationTime', 'length','scan_annotation_record_uuid', 'path', 'accession_number', 'series_number', 'metadata']) \
+    # No metadata csv provided, and no series_number column added
+    assert set(['modificationTime', 'length','scan_annotation_record_uuid', 'path', 'accession_number', 'metadata']) \
             == set(df.columns)
 
     df.unpersist()

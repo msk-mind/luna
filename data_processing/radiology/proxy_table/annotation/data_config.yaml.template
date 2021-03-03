@@ -16,8 +16,18 @@ DATASET_NAME: datasetname
 # path for the annotation data on the data lake
 RAW_DATA_PATH: /path/to/annotations
 
-# path to annotation metadata csv including AccessionNumber, SeriesNumber
+# All METADATA_* fields should be present for fields to be correctly added to the table.
+# (Optional) path to annotation metadata csv
 METADATA_CSV: /path/to/annotation_metadata.csv
+
+# (Optional) columns to include in the annotation table, including METADATA_JOIN_ON field.
+METADATA_COLUMNS:
+  - accession_number
+  - series_number
+
+# (Optional) metadata field to join with annotation table.
+# most likely accession_number
+METADATA_JOIN_ON: accession_number
 
 # number of partitions for delta table
 NUM_PARTITION: 20
