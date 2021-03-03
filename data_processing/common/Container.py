@@ -108,7 +108,7 @@ class Container(object):
         :params: namespace_id - namespace value 
         """
         self._namespace_id = namespace_id
-        self._bucket_id    = namespace_id.lower()
+        self._bucket_id    = namespace_id.lower().replace('_','-')
         self.logger.info ("Container namespace: %s", self._namespace_id)
 
         if self.params.get('OBJECT_STORE_ENABLED',  False):
