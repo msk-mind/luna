@@ -112,8 +112,9 @@ def generate_image_table():
         cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number,
                 dicom_df.metadata.SeriesNumber == seg_df.series_number,
                 dicom_df.metadata.InstanceNumber == seg_df.instance_number]
-        
-        seg_df = seg_df.join(dicom_df, cond)
+        print("Before Join: ", seg_df.count())
+        seg_df = seg_df.join(dicom_df, cond, how='left')
+        print("After Join: ", seg_df.count())
 
         overlay_image_udf = F.udf(overlay_images, StructType([StructField("dicom", BinaryType()), StructField("overlay", BinaryType())]))
 
