@@ -83,8 +83,8 @@ class Container(object):
         self._conn = Neo4jConnection(uri=params['GRAPH_URI'], user=params['GRAPH_USER'], pwd=params['GRAPH_PASSWORD'])
         self.logger.info ("Connection test: %s", self._conn.test_connection())
 
-        self.logger.info ("Connecting to: %s", params['MINIO_URI'])
         if params.get('OBJECT_STORE_ENABLED',  False):
+            self.logger.info ("Connecting to: %s", params['MINIO_URI'])
             self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
             try:
                 for bucket in self._client.list_buckets():
@@ -191,7 +191,8 @@ class Container(object):
             > INFO - Available types: {'radiomics', 'dicom', 'mha', 'globals', 'dataset', 'nrrd', 'mhd'}
         """
 
-        # Run query, subject to SQL injection attacks (but right now, our entire system is)
+        assert self.isAttached()
+
         res = self._conn.query(f"""
             MATCH (container)-[:HAS_DATA]-(data) 
             WHERE id(container) = {self._container_id}
@@ -214,6 +215,8 @@ class Container(object):
 
         :example: ls("png") gets data nodes of type "png" and prints the repr of each node
         """
+        assert self.isAttached()
+
         # Prepend AND since the query runs with a WHERE on the container ID by default
         if view is not "": view = "AND " + view
 
@@ -244,6 +247,8 @@ class Container(object):
             e.g. name of the node in the subspace of the container (e.g. generate-mhd)
         :example: get("mhd", "generate-mhd") gets data of type "mhd" generated from the method "generate-mhd" in this container's context/subspace
         """
+        assert self.isAttached()
+
         query = f"""MATCH (container)-[:HAS_DATA]-(data:{type}) WHERE id(container) = {self._container_id} AND data.name='{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
 
         self.logger.info(query)
