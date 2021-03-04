@@ -1,3 +1,0 @@
-{"commitInfo":{"timestamp":1614800511816,"operation":"WRITE","operationParameters":{"mode":"Overwrite","partitionBy":"[]"},"readVersion":0,"isBlindAppend":false,"operationMetrics":{"numFiles":"1","numOutputBytes":"4703","numOutputRows":"1"}}}
-{"add":{"path":"part-00000-edb8804a-9128-4294-883c-3727615df9b1-c000.parquet","partitionValues":{},"size":4703,"modificationTime":1614800510000,"dataChange":true}}
-{"remove":{"path":"part-00000-e7c3ab32-fdbb-4e98-ae26-2783d26b0601-c000.parquet","deletionTimestamp":1614800511804,"dataChange":true}}
