@@ -80,15 +80,18 @@ def generate_feature_table(cfg):
     from preprocess import find_centroid, crop_images
     find_centroid_udf = F.udf(find_centroid, StructType([StructField("x", IntegerType()), StructField("y", IntegerType())]))
     mha_df = mha_df.withColumn("center", find_centroid_udf("path", F.lit(IMAGE_WIDTH), F.lit(IMAGE_HEIGHT))) \
-                   .select(F.col("center.x").alias("x"), F.col("center.y").alias("y"), "accession_number", "scan_annotation_record_uuid", F.col("label").alias("mha_label"))
+                   .select(F.col("center.x").alias("x"), F.col("center.y").alias("y"), "accession_number", "series_number", "scan_annotation_record_uuid", F.col("label").alias("mha_label"))
     
     logger.info("Loaded mha and png tables")
 
     # Join PNG and MHA tables
     columns = ["metadata", "dicom", "overlay", "png_record_uuid", "scan_annotation_record_uuid", "x","y", "label"]
     
-    #TODO add L/R labels in MHD/MHA so we can match MHA/MHD, based on the accession, label
-    df = mha_df.join(png_df, [png_df.metadata.AccessionNumber == mha_df.accession_number, png_df.label.eqNullSafe(mha_df.mha_label)]) \
+    cond = [png_df.metadata.AccessionNumber == mha_df.accession_number,
+            png_df.metadata.SeriesNumber == mha_df.series_number,
+            png_df.label.eqNullSafe(mha_df.mha_label)]
+
+    df = mha_df.join(png_df, cond) \
                .select(columns) \
                .dropna(subset=["dicom", "overlay"])
     logger.info(df.count())
