@@ -67,7 +67,7 @@ def test_get_all_properties():
 
 def test_patient_no_namespace():
     node = Node("patient", "pid", properties={})
-    assert node.properties['namespace'] == 'default'
+    assert node.properties['qualified_address'] == 'pid'
 
 def test_cohort_wrong_properties():
     with pytest.raises(TypeError):
