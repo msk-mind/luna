@@ -25,11 +25,11 @@ logger.info("Starting data_processing.radiology.feature_table.annotation.generat
 
 
 @click.command()
-@click.option('-f', '--config_file', default='config.yaml', required=True, 
+@click.option('-a', '--app_config_file', default='config.yaml', required=True,
     help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-t', '--data_config_file', default='data_processing/radiology/feature_table/annotation/config.yaml', required=True,
-    help="path to data configuration file. See data_processing/radiology/feature_table/annotation/config.yaml.template")
-def cli(config_file, data_config_file):
+@click.option('-d', '--data_config_file', default='data_processing/radiology/feature_table/annotation/config.yaml', required=True,
+    help="path to data configuration file. See data_processing/radiology/feature_table/annotation/data_config.yaml.template")
+def cli(app_config_file, data_config_file):
     """
     This module generates cropped png images based on png and mha (2d segmentation) tables.
  
@@ -38,11 +38,11 @@ def cli(config_file, data_config_file):
     Example:
     $ python3 -m data_processing.radiology.feature_table.annotation.generate \
         --data_config_file data_processing/radiology/feature_table/config.yaml \
-        --config_file config.yaml
+        --app_config_file config.yaml
     """
     start_time = time.time()
 
-    cfg = ConfigSet(name=const.APP_CFG, config_file=config_file)
+    cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
     cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
 
     generate_feature_table(cfg)
