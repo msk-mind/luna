@@ -11,7 +11,7 @@ from data_processing.radiology.feature_table.annotation.generate import cli
 import data_processing.common.constants as const
 
 
-feature_table_path = "tests/data_processing/testdata/data/test-project/tables/FEATURE_dsn"
+feature_table_path = "tests/data_processing/radiology/testdata/test-project/tables/FEATURE_ds"
 
 @pytest.fixture(autouse=True)
 def spark():
