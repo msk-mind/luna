@@ -106,38 +106,25 @@ class modifyPatientInCohort(Resource):
 
 
 # ============================================================================================
-@api.route('/mind/api/v1/container/<cohort_id>/<container_type>/<container_id>', 
+@api.route('/mind/api/v1/container/<container_type>/<container_id>', 
     methods=['PUT'],
     doc={"description": "Create a container"}
 )
-@api.doc(params={'cohort_id': 'Cohort Identifier', 'container_type': 'Type in [scan, patient, slide]', 'container_id':'Unique container identifier'})
+@api.doc(params={'container_type': 'Type in [generic, scan, patient, slide]', 'container_id':'Unique container identifier'})
 class createContainer(Resource):
 
-    def put(self, cohort_id, container_type,  container_id):
+    def put(self, container_type,  container_id):
             """ Create new container """
-            cohort    = Node("cohort", cohort_id)
+            if not container_type in ['generic', 'patient', 'accession', 'scan', 'slide']: return make_response("Invalid container type", 400)
+
             container = Node(container_type, container_id)
-            container.set_namespace(cohort_id)
 
             if ":" in container_id: 
                 return make_response("Invalid patient name, only use alphanumeric characters", 400)
 
-            print (f""" MATCH (co:{cohort.get_match_str()}) RETURN co """)
-            if not len(conn.query(f""" MATCH (co:{cohort.get_match_str()}) RETURN co """ ))==1: 
-                return make_response("No cohort namespace found", 300)
-
             create_res = conn.query(f""" CREATE (container:{container.get_create_str()}) RETURN container""")
-            match_res  = conn.query(f"""
-                MATCH (px:{container.get_create_str()})
-                MATCH (co:{cohort.get_match_str()})
-                MERGE (co)-[r:INCLUDE]-(px)
-                RETURN px
-                """
-            )
             if not create_res is None: 
                 return make_response("Created successfully", 201)
-            elif not match_res is None:           
-                return make_response(f"Container at already exists at {container.get_match_str()}", 200)
             else:
                 return make_response("Bad query", 400)
 # --------------------------------------------------------------------------------------------

@@ -181,8 +181,8 @@ def update_graph(config_file):
     with CodeTimer(logger, 'synchronize lake'):
         container = Container( cfg ).setNamespace(namespace)
         for _, row in tuple_to_add.iterrows():
-            logger.info ("Requesting %s, %s", os.path.join(cohort_uri, "container", namespace, "slide", row.slide_id), requests.put(os.path.join(cohort_uri, "container", namespace, "slide", row.slide_id)).text)
-            container.lookupAndAttach(namespace + "::" + row.slide_id)
+            logger.info ("Requesting %s, %s", os.path.join(cohort_uri, "container", "slide", row.slide_id), requests.put(os.path.join(cohort_uri, "container", "slide", row.slide_id)).text)
+            container.lookupAndAttach(row.slide_id)
             properties = row.metadata
             properties['file'] = row.path.split(':')[-1]
             node = Node("wsi", "whole_slide_image", properties)

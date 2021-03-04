@@ -130,7 +130,6 @@ class Container(object):
 
         # Figure out how to match the node
         if isinstance(container_id, str) and not container_id.isdigit(): 
-            if not "::" in container_id: self.logger.warning ("Qualified path %s doesn't look like one...", container_id)
             match_clause = f"""WHERE container.qualified_address = '{container_id.lower()}'"""
         elif (isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
             match_clause = f"""WHERE id(container) = {container_id} """

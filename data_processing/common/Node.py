@@ -25,9 +25,9 @@ class Node(object):
 			self.properties['namespace'] = node_name
 
 		if not "namespace" in self.properties.keys():
-			self.properties['namespace'] = 'default'
-
-		self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
+			self.properties['qualified_address'] = self.name.lower()
+		else:
+			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
 		self.properties["type"] = self.type
 
 	def set_namespace(self, namespace_id: str, subspace_id=None):
