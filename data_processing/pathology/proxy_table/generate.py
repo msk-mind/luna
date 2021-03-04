@@ -185,7 +185,7 @@ def update_graph(config_file):
             container.lookupAndAttach(namespace + "::" + row.slide_id)
             properties = row.metadata
             properties['file'] = row.path.split(':')[-1]
-            node = Node("wsi", "data_processing.pathology.proxy_table.generate", properties)
+            node = Node("wsi", "whole_slide_image", properties)
             container.add(node)
         container.saveAll()
 

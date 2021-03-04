@@ -7,7 +7,7 @@ from data_processing.common.Neo4jConnection import Neo4jConnection
 import data_processing.common.constants as const
 from data_processing.common.config import ConfigSet
 
-import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests
+import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests, socket
 import pandas as pd
 
 app    = Flask(__name__)
@@ -17,7 +17,7 @@ logger = init_logger("flask-mind-server.log")
 cfg    = ConfigSet(name=const.APP_CFG,  config_file="config.yaml")
 conn   = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
 
-HOSTNAME     =     cfg.get_value("APP_CFG::cohortManager_host")
+HOSTNAME     = socket.gethostname()
 PORT         = int(cfg.get_value("APP_CFG::cohortManager_port"))
 
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
