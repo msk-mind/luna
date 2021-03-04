@@ -24,10 +24,13 @@ class Node(object):
 		if self.type=="cohort":
 			self.properties['namespace'] = node_name
 
-		if not "namespace" in self.properties.keys():
-			self.properties['qualified_address'] = self.name.lower()
-		else:
+		if   "namespace" in self.properties.keys() and "subspace" in self.properties.keys():
+                        self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
+		elif "namespace" in self.properties.keys():
 			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
+		else:
+			self.properties['qualified_address'] = self.name.lower()
+
 		self.properties["type"] = self.type
 
 	def set_namespace(self, namespace_id: str, subspace_id=None):
