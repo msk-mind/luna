@@ -37,7 +37,7 @@ def cli(cohort_id, container_id, method_id):
 
 def collect_csv_with_container(cohort_id, container_id, method_data):
     """
-    Using the container API interface, extract radiomics for a given scan container
+    Using the container API interface, collect csv type output into a single container
     """
 
     # Do some setup
@@ -73,7 +73,8 @@ def collect_csv_with_container(cohort_id, container_id, method_data):
 
         properties = {
             "rows": len(df),
-            "columns": len(df.columns)
+            "columns": len(df.columns),
+            "file": output_file
         }
 
     except Exception:
