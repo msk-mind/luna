@@ -29,13 +29,16 @@ spark_application_config:
 
 scanManager_port: 5001 
 getPathologyAnnotations_port: 5002 
+scanManager_port: 5003
 cohort_service_port: 5004
 radiologyPreprocessingLibrary_port: 5005
 radiology_service_port: 5006
 
+scanManager_host: localhost 
 cohort_service_host: localhost 
 radiology_service_host: localhost 
 
+scanManager_processes: 16
 cohort_service_processes: 16
 radiology_service_processes: 16
 
