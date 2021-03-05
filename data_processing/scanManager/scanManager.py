@@ -29,11 +29,6 @@ Config.yaml:
     - scanManager_port      - What port to publish API
     - scanManager_processes - Number of concurrent jobs
 """
-container_params = {
-        'GRAPH_URI':  os.environ['GRAPH_URI'],
-        'GRAPH_USER': "neo4j",
-        'GRAPH_PASSWORD': "password"
-    }
 
 # Setup configurations
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
@@ -127,7 +122,7 @@ class manageContainer(Resource):
         except:
             return make_response("Failed to configure node, bad type???", 401)
 
-        container = Container( container_params ).setNamespace(cohort_id).lookupAndAttach(container_id)
+        container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
         container.add(n_data)
         container.saveAll()
 
@@ -135,11 +130,11 @@ class manageContainer(Resource):
         return make_response(f"Added {n_data.get_match_str()} to container {container_id}", 200)
 
 
-@api.route('/mind/api/v1/methods/<cohort_id>/<method_id>/run', 
+@api.route('/mind/api/v1/methods/<cohort_id>/run', 
     methods=['POST'],
     doc={"description": "Add new or view current namespace methods"}
 )
-@api.route('/mind/api/v1/methods/<cohort_id>/<method_id>/<container_id>/run', 
+@api.route('/mind/api/v1/methods/<cohort_id>/<container_id>/run', 
     methods=['POST'],
     doc={"description": "Add new or view current namespace methods"}
 )
@@ -148,7 +143,7 @@ class manageContainer(Resource):
     responses={200:"Success", 400: "Method already exists"}
 )
 class runMethods(Resource):
-    def post(self, cohort_id, method_id, container_id=None):
+    def post(self, cohort_id, container_id=None):
         """ Run a method """
         n_cohort = Node("cohort", cohort_id)
 
@@ -332,11 +327,11 @@ class initScans(Resource):
             count += 1
 
             properties = dict(row)
-            properties['path'] = os.path.split(properties['path'])[0]
+            properties['path'] = os.path.split(properties['path'])[0].split(':')[-1]
 
             n_meta = Node("dicom", 'init-scans', properties=properties)
             
-            container = Container( container_params ).setNamespace(cohort_id).lookupAndAttach(row['SeriesInstanceUID'])
+            container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(row['SeriesInstanceUID'])
             container.add(n_meta)
             container.saveAll()
 
