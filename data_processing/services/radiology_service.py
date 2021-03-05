@@ -9,7 +9,7 @@ Given a scan (container) ID
 
 '''
 # General imports
-import os, sys, subprocess, uuid
+import os, sys, subprocess, uuid, requests
 import click
 from concurrent.futures import ProcessPoolExecutor
 
@@ -20,10 +20,11 @@ from flask_restx import Api, Resource, fields
 # From common
 from data_processing.common.config          import ConfigSet
 from data_processing.common.custom_logger   import init_logger
+from data_processing.common.Neo4jConnection import Neo4jConnection
 
 from data_processing.scanManager.windowDicoms       import window_dicom_with_container
 from data_processing.scanManager.extractRadiomics   import extract_radiomics_with_container
-from data_processing.scanManager.extractVoxels   import extract_voxels_with_container
+from data_processing.scanManager.extractVoxels      import extract_voxels_with_container
 from data_processing.scanManager.generateScan       import generate_scan_with_container
 
 logger = init_logger("radiology-service.log")
@@ -37,6 +38,15 @@ NUM_PROCS    = int(cfg.get_value("APP_CFG::radiology_service_processes"))
 app = Flask(__name__)
 api = Api(app, version=VERSION, title='MIND Radiology Processing Service', description='Job-style endpoints for radiology image processing', ordered=True)
 executor = ProcessPoolExecutor(NUM_PROCS) 
+conn   = Neo4jConnection(uri=cfg.get_value("APP_CFG::GRAPH_URI"), user=cfg.get_value("APP_CFG::GRAPH_USER"), pwd=cfg.get_value("APP_CFG::GRAPH_PASSWORD"))
+
+# general models
+general_model = api.model("Query+Job Model", 
+    {
+        "query":  fields.String(description="Tag/name of output record", required=True, example='my_radiomics'),
+        "params": fields.Raw(description="Job parameters", required=True)
+    }
+)
 
 # param models
 extract_voxels_model = api.model("Resample and Extract Voxels", 
@@ -79,6 +89,34 @@ generate_scan_model = api.model("Generate Volumetric Image",
         "itkImageType": fields.String(description="A valid ITK image file extention", required=True, example='nrrd'),
     }
 )
+
+
+@api.route('/mind/api/v1/<function>/<cohort_id>/submit', methods=['POST'])
+class runMethods(Resource):
+    @api.expect(general_model, validate=True)
+    def post(self, function, cohort_id):
+        """ Execution function for container IDs matching a graph query """
+        data = request.json
+        query  = data.get("query")
+        params = data.get("params")
+
+        container_ids = [rec.data() for rec in conn.query(query)]
+
+        # Check for cohort existence
+        if not len(container_ids) >= 1: 
+            return make_response("No matching containers found!", 400)
+         # Check for cohort existence
+        if not len(container_ids[0].keys()) == 1: 
+            return make_response("Too many return keys, please only return (node).qualified_address", 400)   
+        if not "qualified_address" in list(container_ids[0].keys())[0]: 
+            return make_response("Cannot find qualified address, please return (node).qualified_address", 400)  
+
+        container_ids = [list(rec.values())[0] for rec in container_ids]
+        print (container_ids)
+
+        for container_id in container_ids: requests.post(f"http://{HOSTNAME}:{PORT}/mind/api/v1/{function}/{cohort_id}/{container_id}/submit", json=params)
+
+
 
 @api.route('/mind/api/v1/window_dicom/<cohort_id>/<container_id>/submit', methods=['POST'])
 class API_window_dicom(Resource):
