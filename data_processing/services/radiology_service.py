@@ -9,7 +9,7 @@ Given a scan (container) ID
 
 '''
 # General imports
-import os, sys, subprocess, uuid, requests
+import os, sys, subprocess, uuid, requests, socket
 import click
 from concurrent.futures import ProcessPoolExecutor
 
@@ -26,12 +26,13 @@ from data_processing.scanManager.windowDicoms       import window_dicom_with_con
 from data_processing.scanManager.extractRadiomics   import extract_radiomics_with_container
 from data_processing.scanManager.extractVoxels      import extract_voxels_with_container
 from data_processing.scanManager.generateScan       import generate_scan_with_container
+from data_processing.scanManager.collectCSV         import collect_csv_with_container
 
 logger = init_logger("radiology-service.log")
     
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 VERSION      = "branch:"+subprocess.check_output(["git","rev-parse" ,"--abbrev-ref", "HEAD"]).decode('ascii').strip()
-HOSTNAME     = os.environ["HOSTNAME"]
+HOSTNAME     = socket.gethostname()
 PORT         = int(cfg.get_value("APP_CFG::radiology_service_port"))
 NUM_PROCS    = int(cfg.get_value("APP_CFG::radiology_service_processes"))
 
@@ -87,6 +88,14 @@ generate_scan_model = api.model("Generate Volumetric Image",
         "job_tag": fields.String(description="Tag/name of output record", required=True, example='my_nrrd'),
         "dicom_input_tag": fields.String(description="Tag/name of input image record", required=True, example='dicoms'),
         "itkImageType": fields.String(description="A valid ITK image file extention", required=True, example='nrrd'),
+    }
+)
+
+# param models
+collect_parquet_model = api.model("Collect CSVs",
+    {
+        "output_container": fields.String(description="Parquet container qualified address", required=True, example='my_parquet_store'),
+        "input_tags": fields.List(fields.String, description="Input tags to add to container slice", required=True, example=["csv-job-1", "csv-job-2"])
     }
 )
 
@@ -154,6 +163,14 @@ class API_generate_scan(Resource):
         future = executor.submit (generate_scan_with_container, cohort_id, container_id, request.json)
         return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
 
+@api.route('/mind/api/v1/collect_parquet/<cohort_id>/<container_id>/submit', methods=['POST'])
+class API_collect_parquet(Resource):
+    @api.expect(collect_parquet_model, validate=True)
+    def post(self, cohort_id, container_id):
+        """Submit a generate scan job"""
+        job_id = str(uuid.uuid4())
+        future = executor.submit (collect_csv_with_container, cohort_id, container_id, request.json)
+        return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
 
 @api.route('/service/health', methods=['GET'])
 class API_heatlh(Resource):
@@ -170,5 +187,5 @@ if __name__ == '__main__':
     if sys.argv[1] == "start":
         logger.info(f"Running in API mode")
         logger.info(f"Starting worker on {HOSTNAME}:{PORT}")
-        app.run(host=HOSTNAME,port=PORT, debug=True)
+        app.run(host=HOSTNAME,port=PORT, debug=False)
 
