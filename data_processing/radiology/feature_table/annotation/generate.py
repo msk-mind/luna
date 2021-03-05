@@ -91,7 +91,7 @@ def generate_feature_table(cfg):
             png_df.metadata.SeriesNumber == mha_df.series_number,
             png_df.label.eqNullSafe(mha_df.mha_label)]
 
-    df = mha_df.join(png_df, cond) \
+    df = png_df.join(mha_df, cond) \
                .select(columns) \
                .dropna(subset=["dicom", "overlay"])
     logger.info(df.count())
