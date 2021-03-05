@@ -67,7 +67,7 @@ class createOrGetCohort(Resource):
             for rec in px_res:
                 px_dict     = rec.data()['px']
                 patient_id  = px_dict['name']
-                px_dict['Patient Accessions'] = requests.get(f'http://{HOST}:5004/mind/api/v1/patient/{cohort_id}/{patient_id}').json()
+                px_dict['Patient Accessions'] = requests.get(f'http://{HOSTNAME}:5004/mind/api/v1/patient/{cohort_id}/{patient_id}').json()
                 cohort_summary['Patients'].append(px_dict)
             return jsonify(cohort_summary)
            
