@@ -149,6 +149,7 @@ def create_proxy_table(config_file):
 
     processed_count = df.count()
     logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(path='DATA_CFG::FILE_COUNT')))
+    df.show()
     return exit_code
 
 def update_graph(config_file):
