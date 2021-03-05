@@ -14,8 +14,6 @@ from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
 from data_processing.common.utils import generate_uuid
-from data_processing.common.Container import Container 
-from data_processing.common.Container import Node 
 
 from pyspark.sql.functions import udf, lit, col, array
 from pyspark.sql.types import StringType, MapType
@@ -24,7 +22,6 @@ import shutil, sys, importlib, glob, yaml, os, subprocess, time
 from pathlib import Path
 
 import openslide 
-import requests 
 
 logger = init_logger()
 
@@ -85,13 +82,13 @@ def cli(template_file, config_file, process_string):
         logger.info('processes: ' + str(processes))
 
         # load configs
-        cfg = ConfigSet(name="APP_CFG",  config_file=config_file)
-        cfg = ConfigSet(name="DATA_CFG", config_file=template_file, schema_file=SCHEMA_FILE)
+        cfg = ConfigSet(name=DATA_CFG, config_file=template_file, schema_file=SCHEMA_FILE)
+        cfg = ConfigSet(name=APP_CFG,  config_file=config_file)
 
         # write template file to manifest_yaml under LANDING_PATH
         # todo: write to hdfs without using local gpfs/
         hdfs_path = os.environ['MIND_GPFS_DIR']
-        landing_path = cfg.get_value(path='DATA_CFG::LANDING_PATH')
+        landing_path = cfg.get_value(path=DATA_CFG+'::LANDING_PATH')
         
         full_landing_path = os.path.join(hdfs_path, landing_path)     
         if not os.path.exists(full_landing_path):
@@ -105,11 +102,6 @@ def cli(template_file, config_file, process_string):
             if exit_code != 0:
                 logger.error("Delta table creation had errors. Exiting.")
                 return
-        if 'graph' in processes or 'all' in processes:
-            exit_code = update_graph(config_file)
-            if exit_code != 0:
-                logger.error("Graph creation had errors. Exiting.")
-                return
 
 
 def create_proxy_table(config_file):
@@ -119,12 +111,13 @@ def create_proxy_table(config_file):
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.pathology.proxy_table.generate")
 
     logger.info("generating binary proxy table... ")
-    save_path = const.TABLE_LOCATION(cfg)
-    logger.info ("Writing to %s", save_path)
+    wsi_path  = const.TABLE_LOCATION(cfg)
+    write_uri = os.environ["HDFS_URI"]
+    save_path = os.path.join(write_uri, wsi_path)
 
     with CodeTimer(logger, 'load wsi metadata'):
 
-        search_path = os.path.join(cfg.get_value(path='DATA_CFG::SOURCE_PATH'), ("**" + cfg.get_value(path='DATA_CFG::FILE_TYPE')))
+        search_path = os.path.join(cfg.get_value(path=DATA_CFG+'::SOURCE_PATH'), ("**" + cfg.get_value(path=DATA_CFG+'::FILE_TYPE')))
         logger.debug(search_path)
         for path in glob.glob(search_path, recursive=True):
             logger.debug(path)
@@ -135,9 +128,9 @@ def create_proxy_table(config_file):
         parse_openslide_udf = udf(parse_openslide, MapType(StringType(), StringType()))
 
         df = spark.read.format("binaryFile"). \
-            option("pathGlobFilter", "*."+cfg.get_value(path='DATA_CFG::FILE_TYPE')). \
+            option("pathGlobFilter", "*."+cfg.get_value(path=DATA_CFG+'::FILE_TYPE')). \
             option("recursiveFileLookup", "true"). \
-            load(cfg.get_value(path='DATA_CFG::SOURCE_PATH')). \
+            load(cfg.get_value(path=DATA_CFG+'::SOURCE_PATH')). \
             drop("content").\
             withColumn("wsi_record_uuid", generate_uuid_udf  (col("path"), array(lit("WSI")))).\
             withColumn("slide_id",        parse_slide_id_udf (col("path"))).\
@@ -148,48 +141,10 @@ def create_proxy_table(config_file):
     df.coalesce(48).write.format("delta").save(save_path)
 
     processed_count = df.count()
-    logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(path='DATA_CFG::FILE_COUNT')))
+    logger.info("Processed {} whole slide images out of total {} files".format(processed_count,cfg.get_value(path=DATA_CFG+'::FILE_COUNT')))
     return exit_code
 
-def update_graph(config_file):
-    """
-    This function reads a delta table and:
-        1. Creates/validates a cohort-namespace exists given the PROJECT name
-        2. Creates slide containers for each slide_id, and 
-        3. Commits associated metadata/raw data to neo4j/minio
-    """
 
-    exit_code = 0
-    cfg  = ConfigSet()
-    spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.pathology.proxy_table.generate")
-
-    table_path = const.TABLE_LOCATION(cfg)
-
-    namespace            = cfg.get_value("DATA_CFG::PROJECT")
-    api_base_url         = cfg.get_value("APP_CFG::api_base_url")
-    cohort_service_host  = cfg.get_value("APP_CFG::cohortManager_host")
-    cohort_service_port  = cfg.get_value("APP_CFG::cohortManager_port")
-    cohort_uri           = f"http://{cohort_service_host}:{cohort_service_port}{api_base_url}"
-
-    logger.info ("Requesting %s, %s", os.path.join(cohort_uri, "cohort", namespace), requests.put(os.path.join(cohort_uri, "cohort", namespace)).text)
-
-    with CodeTimer(logger, 'setup proxy table'):
-        # Reading dicom and opdata
-        logger.info("Loading %s:", table_path)
-        tuple_to_add = spark.read.format("delta").load(table_path).select("slide_id", "path", "metadata").toPandas()
-
-    with CodeTimer(logger, 'synchronize lake'):
-        container = Container( cfg ).setNamespace(namespace)
-        for _, row in tuple_to_add.iterrows():
-            logger.info ("Requesting %s, %s", os.path.join(cohort_uri, "container", "slide", row.slide_id), requests.put(os.path.join(cohort_uri, "container", "slide", row.slide_id)).text)
-            container.lookupAndAttach(row.slide_id)
-            properties = row.metadata
-            properties['file'] = row.path.split(':')[-1]
-            node = Node("wsi", "whole_slide_image", properties)
-            container.add(node)
-        container.saveAll()
-
-    return exit_code
 
 if __name__ == "__main__":
     cli()

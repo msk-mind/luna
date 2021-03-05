@@ -33,8 +33,7 @@ def test_cli(spark):
     runner = CliRunner()
     result = runner.invoke(cli, 
         ['-t', 'tests/data_processing/pathology/proxy_table/data.yaml',
-        '-f', 'tests/test_config.yaml',
-        '-p', 'delta'])
+        '-f', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
 
