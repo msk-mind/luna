@@ -11,7 +11,7 @@ from data_processing.radiology.feature_table.annotation.generate import cli
 import data_processing.common.constants as const
 
 
-feature_table_path = "tests/data_processing/testdata/data/test-project/tables/FEATURE_dsn"
+feature_table_path = "tests/data_processing/radiology/testdata/test-project/tables/FEATURE_ds"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -29,8 +29,8 @@ def test_cli(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
-        ['-t', 'tests/data_processing/radiology/feature_table/annotation/data.yaml',
-        '-f', 'tests/test_config.yaml'])
+        ['-d', 'tests/data_processing/radiology/feature_table/annotation/data.yaml',
+        '-a', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
 

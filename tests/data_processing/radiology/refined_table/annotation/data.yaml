@@ -1,15 +1,13 @@
 
-ROOT_PATH: tests/data_processing/testdata/data
+ROOT_PATH: tests/data_processing/radiology/testdata
 
-DICOM_TABLE_PATH: tests/data_processing/testdata/data/test-project/tables/DICOM_ds
+DICOM_TABLE_PATH: tests/data_processing/radiology/testdata/test-project/tables/DICOM_ds
 
 PROJECT: test-project
 
-DATASET_NAME: ds
+DATASET_NAME: dsn
 
 DATA_TYPE: PNG
-
-SQL_STRING: metadata.SeriesNumber == '10'
 
 # num partition for delta table
 NUM_PARTITION: 1

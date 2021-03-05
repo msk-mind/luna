@@ -1,9 +1,9 @@
 
-ROOT_PATH: tests/data_processing/testdata/data
+ROOT_PATH: tests/data_processing/radiology/testdata
 
 PROJECT: test-project
 
-DATASET_NAME: dsn
+DATASET_NAME: ds
 
 DATA_TYPE: FEATURE
 

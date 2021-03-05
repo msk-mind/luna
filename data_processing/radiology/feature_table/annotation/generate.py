@@ -25,11 +25,11 @@ logger.info("Starting data_processing.radiology.feature_table.annotation.generat
 
 
 @click.command()
-@click.option('-f', '--config_file', default='config.yaml', required=True, 
+@click.option('-a', '--app_config_file', default='config.yaml', required=True,
     help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-t', '--data_config_file', default='data_processing/radiology/feature_table/annotation/config.yaml', required=True,
-    help="path to data configuration file. See data_processing/radiology/feature_table/annotation/config.yaml.template")
-def cli(config_file, data_config_file):
+@click.option('-d', '--data_config_file', default='data_processing/radiology/feature_table/annotation/config.yaml', required=True,
+    help="path to data configuration file. See data_processing/radiology/feature_table/annotation/data_config.yaml.template")
+def cli(app_config_file, data_config_file):
     """
     This module generates cropped png images based on png and mha (2d segmentation) tables.
  
@@ -38,11 +38,11 @@ def cli(config_file, data_config_file):
     Example:
     $ python3 -m data_processing.radiology.feature_table.annotation.generate \
         --data_config_file data_processing/radiology/feature_table/config.yaml \
-        --config_file config.yaml
+        --app_config_file config.yaml
     """
     start_time = time.time()
 
-    cfg = ConfigSet(name=const.APP_CFG, config_file=config_file)
+    cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
     cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
 
     generate_feature_table(cfg)
@@ -80,15 +80,18 @@ def generate_feature_table(cfg):
     from preprocess import find_centroid, crop_images
     find_centroid_udf = F.udf(find_centroid, StructType([StructField("x", IntegerType()), StructField("y", IntegerType())]))
     mha_df = mha_df.withColumn("center", find_centroid_udf("path", F.lit(IMAGE_WIDTH), F.lit(IMAGE_HEIGHT))) \
-                   .select(F.col("center.x").alias("x"), F.col("center.y").alias("y"), "accession_number", "scan_annotation_record_uuid", F.col("label").alias("mha_label"))
+                   .select(F.col("center.x").alias("x"), F.col("center.y").alias("y"), "accession_number", "series_number", "scan_annotation_record_uuid", F.col("label").alias("mha_label"))
     
     logger.info("Loaded mha and png tables")
 
     # Join PNG and MHA tables
     columns = ["metadata", "dicom", "overlay", "png_record_uuid", "scan_annotation_record_uuid", "x","y", "label"]
     
-    #TODO add L/R labels in MHD/MHA so we can match MHA/MHD, based on the accession, label
-    df = mha_df.join(png_df, [png_df.metadata.AccessionNumber == mha_df.accession_number, png_df.label.eqNullSafe(mha_df.mha_label)]) \
+    cond = [png_df.metadata.AccessionNumber == mha_df.accession_number,
+            png_df.metadata.SeriesNumber == mha_df.series_number,
+            png_df.label.eqNullSafe(mha_df.mha_label)]
+
+    df = png_df.join(mha_df, cond) \
                .select(columns) \
                .dropna(subset=["dicom", "overlay"])
     logger.info(df.count())

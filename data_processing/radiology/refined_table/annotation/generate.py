@@ -28,11 +28,11 @@ logger.info("Starting data_processing.radiology.refined_table.annotation.generat
 
 
 @click.command()
-@click.option('-f', '--config_file', default='config.yaml', required=True, 
+@click.option('-a', '--app_config_file', default='config.yaml', required=True,
     help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-t', '--data_config_file', default='data_processing/refined_table/annotation/config.yaml', required=True,
-    help="path to data configuration file. See data_processing/refined_table/annotation/config.yaml.template")
-def cli(config_file, data_config_file):
+@click.option('-d', '--data_config_file', default='data_processing/refined_table/annotation/config.yaml', required=True,
+    help="path to data configuration file. See data_processing/refined_table/annotation/data_config.yaml.template")
+def cli(app_config_file, data_config_file):
     """
     This module takes a SeriesInstanceUID, calls a script to generate volumetric images, and updates the scan table.
     
@@ -41,23 +41,25 @@ def cli(config_file, data_config_file):
     Example:
     $ python3 -m data_processing.radiology.refined_table.annotation.generate \
 	--data_config_file data_processing/refined_table/annotation/config.yaml \
-	--config_file config.yaml
+	--app_config_file config.yaml
     """
     start_time = time.time()
 
-    cfg = ConfigSet(name=const.APP_CFG, config_file=config_file)
+    cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
     cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
 
-    generate_png_tables(cfg)
+    generate_image_table()
 
     logger.info("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 
-def generate_png_tables(cfg):
+def generate_image_table():
     """
     Create pngs for all dicoms in a series that have corresponding annotations.
     Generate dicom_png and seg_png tables.
     """
+    cfg = ConfigSet()
+
     # setup project path
     project_path = const.PROJECT_LOCATION(cfg)
     logger.info("Got project path : " + project_path)
@@ -72,10 +74,6 @@ def generate_png_tables(cfg):
                      "{0}_{1}".format("MHD", cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')))
 
     dicom_df = spark.read.format("delta").load(dicom_table_path)
-   
-    # subset dicom based on SQL_STRING - to identify a series within the case.
-    dicom_df = dicom_df.drop("content") \
-                       .filter(cfg.get_value(path=const.DATA_CFG+'::SQL_STRING'))
 
     seg_df = spark.read.format("delta").load(seg_table_path)
     logger.info("Loaded dicom and seg tables")
@@ -103,16 +101,18 @@ def generate_png_tables(cfg):
         seg_df = seg_df.withColumn("slices_uuid_pngs", F.explode("slices_uuid_pngs")) \
                        .select(F.col("slices_uuid_pngs.instance_number").alias("instance_number"), F.col("slices_uuid_pngs.seg_png").alias("seg_png"),
                                 F.col("slices_uuid_pngs.scan_annotation_record_uuid").alias("scan_annotation_record_uuid"),
-                               "accession_number", "path", "label") 
+                               "accession_number", "series_number", "path", "label")
 
         logger.info("Exploded rows")
 
         # create overlay images: blend seg and the dicom images
         seg_df = seg_df.select("accession_number", seg_df.path.alias("seg_path"), "label",
-                               "instance_number", "seg_png", "scan_annotation_record_uuid")
-        
-        cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number, dicom_df.metadata.InstanceNumber == seg_df.instance_number] 
-        
+                               "instance_number", "seg_png", "scan_annotation_record_uuid", "series_number")
+
+        cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number,
+                dicom_df.metadata.SeriesNumber == seg_df.series_number,
+                dicom_df.metadata.InstanceNumber == seg_df.instance_number]
+
         seg_df = seg_df.join(dicom_df, cond)
 
         overlay_image_udf = F.udf(overlay_images, StructType([StructField("dicom", BinaryType()), StructField("overlay", BinaryType())]))

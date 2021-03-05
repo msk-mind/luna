@@ -10,7 +10,7 @@ from data_processing.radiology.refined_table.annotation.generate import cli
 import data_processing.common.constants as const
 
 
-png_table_path = "tests/data_processing/testdata/data/test-project/tables/PNG_ds"
+png_table_path = "tests/data_processing/radiology/testdata/test-project/tables/PNG_dsn"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -29,11 +29,12 @@ def test_cli(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
-        ['-t', 'tests/data_processing/radiology/refined_table/annotation/data.yaml',
-        '-f', 'tests/test_config.yaml'])
+        ['-d', 'tests/data_processing/radiology/refined_table/annotation/data.yaml',
+        '-a', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
 
     df = spark.read.format("delta").load(png_table_path)
+    df.show(10)
     assert df.count() == 1
     df.unpersist()

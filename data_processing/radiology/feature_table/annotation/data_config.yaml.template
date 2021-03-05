@@ -1,0 +1,19 @@
+# mind root data path
+ROOT_PATH: /path/to/data/path
+
+PROJECT: DMT_IRB
+
+DATASET_NAME: DMT_IRB_DATE
+
+# num partition for delta table
+NUM_PARTITION: 240
+
+# crop image width, height
+CROP_WIDTH: 256
+
+CROP_HEIGHT: 256
+
+# original png image width, height
+IMAGE_WIDTH: 512
+
+IMAGE_HEIGHT: 512
