@@ -48,6 +48,7 @@ def PROJECT_LOCATION(cfg):
     :param cfg:
     :return: ROOT_PATH/PROJECT_NAME
     """
+    # This function assumes <uri_root>/data as "ROOT_PATH"
     return os.path.join(cfg.get_value(path=DATA_CFG+'::ROOT_PATH'), cfg.get_value(path=DATA_CFG+'::PROJECT'))
 
 

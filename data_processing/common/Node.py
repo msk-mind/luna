@@ -9,21 +9,28 @@ class Node(object):
 	:param: name: required node name. e.g. scan-123
 	:param: properties: dict of key, value pairs for the node.
 	"""
-	def __init__(self, node_type, node_name, properties={}):
+	def __init__(self, node_type, node_name, properties=None):
 
 		# Required schema: node_type, node_name
 
 		self.type = node_type
 		self.name = node_name
-		self.properties = properties
+                
+		if properties is None: 
+			self.properties = {}
+		else: 
+			self.properties = properties 
 
 		if self.type=="cohort":
 			self.properties['namespace'] = node_name
 
-		if not "namespace" in properties.keys():
-			self.properties['namespace'] = 'default'
+		if   "namespace" in self.properties.keys() and "subspace" in self.properties.keys():
+                        self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
+		elif "namespace" in self.properties.keys():
+			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
+		else:
+			self.properties['qualified_address'] = self.name.lower()
 
-		self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
 		self.properties["type"] = self.type
 
 	def set_namespace(self, namespace_id: str, subspace_id=None):
@@ -87,23 +94,11 @@ class Node(object):
 
 		prop_string = self.prop_str(kv.keys(), kv)
 		return f"""{{ {prop_string} }}"""
-
-
-	def get_object(self, glob_string):
+	def get_address(self):
 		"""
-		Return a singular object for the data node given glob string
-		"""
-		return str(next(self.path.glob(glob_string)))
-	
-
-	def get_objects(self, glob_string):
-		"""
-		Return all objects for the data node given glob string
-		"""
-		if os.path.isdir(self.path):
-			return self.path.glob(glob_string)
-		else:
-			return self.path.parent.glob(glob_string)
+		Returns current node address
+		"""		
+		return self.properties.get("qualified_address")
 
 	@staticmethod
 	def prop_str(fields, row):
@@ -132,5 +127,5 @@ class Node(object):
 		"""
 		for name in args: does_not_contain(":", name)
 
-		return "::".join(args)
+		return "::".join(args).lower()
 	

@@ -2,15 +2,13 @@ from flask import Flask, request, jsonify, render_template, make_response
 from flask_restx import Api, Resource
 
 from data_processing.common.custom_logger import init_logger
-from data_processing.common.GraphEnum import Node
+from data_processing.common.Node import Node
 from data_processing.common.Neo4jConnection import Neo4jConnection
 import data_processing.common.constants as const
 from data_processing.common.config import ConfigSet
 
-import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests
+import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests, socket
 import pandas as pd
-
-import threading
 
 app    = Flask(__name__)
 api = Api(app, version='1.1', title='cohortManager', description='Manages and exposes study cohort and associated data', ordered=True)
@@ -18,14 +16,11 @@ api = Api(app, version='1.1', title='cohortManager', description='Manages and ex
 logger = init_logger("flask-mind-server.log")
 cfg    = ConfigSet(name=const.APP_CFG,  config_file="config.yaml")
 conn   = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-lock   = threading.Lock()
+
+HOSTNAME     = socket.gethostname()
+PORT         = int(cfg.get_value("APP_CFG::cohortManager_port"))
 
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
-
-STREAMS = {}
-METHODS = {}
-HOST = os.environ['HOSTNAME']
-
 
 # ============================================================================================
 # get-put-cohort
@@ -72,7 +67,7 @@ class createOrGetCohort(Resource):
             for rec in px_res:
                 px_dict     = rec.data()['px']
                 patient_id  = px_dict['name']
-                px_dict['Patient Accessions'] = requests.get(f'http://{HOST}:5004/mind/api/v1/patient/{cohort_id}/{patient_id}').json()
+                px_dict['Patient Accessions'] = requests.get(f'http://{HOSTNAME}:5004/mind/api/v1/patient/{cohort_id}/{patient_id}').json()
                 cohort_summary['Patients'].append(px_dict)
             return jsonify(cohort_summary)
            
@@ -110,6 +105,29 @@ class modifyPatientInCohort(Resource):
 # --------------------------------------------------------------------------------------------
 
 
+# ============================================================================================
+@api.route('/mind/api/v1/container/<container_type>/<container_id>', 
+    methods=['PUT'],
+    doc={"description": "Create a container"}
+)
+@api.doc(params={'container_type': 'Type in [generic, scan, patient, slide]', 'container_id':'Unique container identifier'})
+class createContainer(Resource):
+
+    def put(self, container_type,  container_id):
+            """ Create new container """
+            if not container_type in ['generic', 'patient', 'accession', 'scan', 'slide']: return make_response("Invalid container type", 400)
+
+            container = Node(container_type, container_id)
+
+            if ":" in container_id: 
+                return make_response("Invalid patient name, only use alphanumeric characters", 400)
+
+            create_res = conn.query(f""" CREATE (container:{container.get_create_str()}) RETURN container""")
+            if not create_res is None: 
+                return make_response("Created successfully", 201)
+            else:
+                return make_response("Bad query", 400)
+# --------------------------------------------------------------------------------------------
 # ============================================================================================
 @api.route('/mind/api/v1/patient/<cohort_id>/<patient_id>', 
     methods=['GET', 'PUT'],
@@ -237,5 +255,5 @@ class addOrRemoveCases(Resource):
 
 
 if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'],port=5004, threaded=True, debug=False)
+    app.run(host=HOSTNAME,port=PORT, threaded=True, debug=False)
 

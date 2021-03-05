@@ -5,7 +5,8 @@ from data_processing.common.config import ConfigSet
 import os, socket, pathlib, logging
 from minio import Minio
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import subprocess
 
 class Container(object):
     """
@@ -75,15 +76,15 @@ class Container(object):
         self.logger = logging.getLogger(__name__)
 
         if isinstance(params, ConfigSet):
-            params=params.get_config_set("CONTAINER_CFG")
+            params=params.get_config_set("APP_CFG")
 
         # Connect to graph DB
         self.logger.info ("Connecting to: %s", params['GRAPH_URI'])
         self._conn = Neo4jConnection(uri=params['GRAPH_URI'], user=params['GRAPH_USER'], pwd=params['GRAPH_PASSWORD'])
         self.logger.info ("Connection test: %s", self._conn.test_connection())
 
-        self.logger.info ("Connecting to: %s", params['MINIO_URI'])
         if params.get('OBJECT_STORE_ENABLED',  False):
+            self.logger.info ("Connecting to: %s", params['MINIO_URI'])
             self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
             try:
                 for bucket in self._client.list_buckets():
@@ -99,6 +100,8 @@ class Container(object):
         self.logger.info ("Running on: %s", self._host)
 
         self.params = params
+        self._node_commits    = {}
+
     
     def setNamespace(self, namespace_id: str):
         """
@@ -106,12 +109,13 @@ class Container(object):
 
         :params: namespace_id - namespace value 
         """
-        self._namespace_id = namespace_id.lower()
+        self._namespace_id = namespace_id
+        self._bucket_id    = namespace_id.lower().replace('_','-')
         self.logger.info ("Container namespace: %s", self._namespace_id)
 
         if self.params.get('OBJECT_STORE_ENABLED',  False):
-            if not self._client.bucket_exists(self._namespace_id):
-                self._client.make_bucket(self._namespace_id)
+            if not self._client.bucket_exists(self._bucket_id):
+                self._client.make_bucket(self._bucket_id)
 
         return self
     
@@ -126,16 +130,15 @@ class Container(object):
 
         # Figure out how to match the node
         if isinstance(container_id, str) and not container_id.isdigit(): 
-            if not "::" in container_id: self.logger.warning ("Qualified path %s doesn't look like one...", container_id)
-            self._match_clause = f"""WHERE container.qualified_address = '{container_id}'"""
+            match_clause = f"""WHERE container.qualified_address = '{container_id.lower()}'"""
         elif (isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
-            self._match_clause = f"""WHERE id(container) = {container_id} """
+            match_clause = f"""WHERE id(container) = {container_id} """
         else:
             raise RuntimeError("Invalid container_id type not (str, int)")
 
         # Run query
         res = self._conn.query(f"""
-            MATCH (container) {self._match_clause}
+            MATCH (container) {match_clause}
             RETURN id(container), labels(container), container.type, container.name, container.namespace, container.qualified_address"""
         )
         
@@ -151,7 +154,6 @@ class Container(object):
         self._qualifiedpath = res[0]["container.qualified_address"]
         self._type          = res[0]["container.type"]
         self._labels        = res[0]["labels(container)"]
-        self._node_commits    = {}
 
         # Containers need to have a qualified path
         if self._qualifiedpath is None: 
@@ -159,27 +161,26 @@ class Container(object):
             return self
         
         # Set match clause to id
-        self._match_clause = f"""WHERE id(container) = {self._container_id} """
-        self.logger.debug ("Match on: %s", self._match_clause)
+        self.logger.debug ("Match on: %s", self._container_id)
 
         # Attach
         cohort = Node("cohort", self._namespace_id)
-        if not len(self._conn.query(f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) {self._match_clause} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """ ))==1: 
-            self.logger.warning ( "Cannot attach")
+        if not len(self._conn.query(f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._container_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """ ))==1: 
+            self.logger.warning ( "Cannot attach, tried [%s]", f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._container_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)
             return self
 
         # Let us know attaching was a success! :)
         self.logger = logging.getLogger(f'Container [{self._container_id}]')
-        self.logger.info ("Successfully attached to: %s %s", self._type, self._qualifiedpath)
+        self.logger.info ("Successfully attached to: %s %s %s", self._type, self._container_id, self._qualifiedpath)
         self._attached = True
-
         return self
-    
+
     def isAttached(self):
         """
         Returns true if container was properly attached (i.e. checks in lookupAndAttach succeeded), else False
         """
         self.logger.info ("Attached: %s", self._attached)
+        return self._attached
 
 
     def listTypes(self):
@@ -190,10 +191,11 @@ class Container(object):
             > INFO - Available types: {'radiomics', 'dicom', 'mha', 'globals', 'dataset', 'nrrd', 'mhd'}
         """
 
-        # Run query, subject to SQL injection attacks (but right now, our entire system is)
+        assert self.isAttached()
+
         res = self._conn.query(f"""
             MATCH (container)-[:HAS_DATA]-(data) 
-            {self._match_clause}
+            WHERE id(container) = {self._container_id}
             RETURN labels(data)"""
         )
         types = set()
@@ -213,13 +215,15 @@ class Container(object):
 
         :example: ls("png") gets data nodes of type "png" and prints the repr of each node
         """
+        assert self.isAttached()
+
         # Prepend AND since the query runs with a WHERE on the container ID by default
         if view is not "": view = "AND " + view
 
         # Run query, subject to SQL injection attacks (but right now, our entire system is)
         res = self._conn.query(f"""
             MATCH (container)-[:HAS_DATA]-(data:{type}) 
-            {self._match_clause}
+            WHERE id(container) = {self._container_id}
             {view}
             RETURN data"""
         )
@@ -243,7 +247,9 @@ class Container(object):
             e.g. name of the node in the subspace of the container (e.g. generate-mhd)
         :example: get("mhd", "generate-mhd") gets data of type "mhd" generated from the method "generate-mhd" in this container's context/subspace
         """
-        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type})  {self._match_clause} AND data.name='{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
+        assert self.isAttached()
+
+        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type}) WHERE id(container) = {self._container_id} AND data.name='{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
 
         self.logger.info(query)
         res = self._conn.query(query)
@@ -297,34 +303,51 @@ class Container(object):
         :param: node - node object
         """
         assert isinstance(node, Node)
+        assert self.isAttached()
 
-        # Add to node commit dictonary
-        self.logger.info ("Adding: %s", node.name)
-        self._node_commits[node.name] = node
-        
         # Decorate with the container namespace 
-        self._node_commits[node.name].set_namespace( self._namespace_id, self._name )
-        self.logger.info ("Container has %s pending node commits",  len(self._node_commits))
+        node.set_namespace( self._namespace_id, self._name )
+        node._container_id = self._container_id
 
         # Set node objects only if there is a path and the object store is enabled
+        node.objects = []
         if "path" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
-            node.objects = []
-            node.properties['object_bucket'] = f"{self._namespace_id}"
+            node.properties['object_bucket'] = f"{self._bucket_id}"
             node.properties['object_folder'] = f"{self._name}/{node.name}"
             for path in pathlib.Path(node.properties['path']).glob("*"): node.objects.append(path)        
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
+        if "file" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
+            node.properties['path'] = node.properties['file']
+            node.properties['object_bucket'] = f"{self._bucket_id}"
+            node.properties['object_folder'] = f"{self._name}/{node.name}"
+            node.objects.append(pathlib.Path(node.properties['path']))
+            self.logger.info ("Node has %s pending object commits",  len(node.objects))
+
+        # Add to node commit dictonary
+        self.logger.info ("Adding: %s", node.get_address())
+        self._node_commits[node.get_address()] = node
+        
+        self.logger.info ("Container has %s pending node commits",  len(self._node_commits))
+
+      
     def saveAll(self):
         """
         Tries to create nodes for all committed nodes
         """
         # Loop through all nodes in commit dictonary, and run query
         # Will fully overwrite existing nodes, since we assume changes in the FS already occured
-         
+        self.logger.info("Detaching container...")
+        self._attached = False
+        self.logger = logging.getLogger(__name__)
+
+        self.logger.info("Started minio executor with 4 threads")
+        executor = ThreadPoolExecutor(max_workers=4)
+        future_uploads = []
         for n in self._node_commits.values():
-            self.logger.info ("Committing %s", n.get_create_str())
+            self.logger.info ("Committing %s", n.get_match_str())
             self._conn.query(f""" 
-                MATCH (container) {self._match_clause}
+                MATCH (container) WHERE id(container) = {n._container_id}
                 MERGE (container)-[:HAS_DATA]->(da:{n.get_match_str()})
                     ON MATCH  SET da = {n.get_map_str()}
                     ON CREATE SET da = {n.get_map_str()}
@@ -334,10 +357,18 @@ class Container(object):
             if self.params.get("OBJECT_STORE_ENABLED", False):
                 object_bucket = n.properties.get("object_bucket")
                 object_folder = n.properties.get("object_folder")
-
-                self.logger.info("Started object upload with 4 threads...")
-                with ThreadPoolExecutor(max_workers=4) as executor:
-                    for p in n.objects:
-                        self.logger.info("uploading: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
-                        executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p)
-            self.logger.info("Done.")
+                for p in n.objects:
+                    self.logger.info("Submitting: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
+                    future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
+                    future_uploads.append(future)
+        
+        for future in as_completed(future_uploads):
+            try:
+                data = future.result()
+            except:
+                self.logger.exception('Bad upload: generated an exception:')
+            else:
+                self.logger.info("Upload successful with etag: %s", data[0])
+        self.logger.info("Shutdown executor %s", executor)                
+        executor.shutdown()    
+        self.logger.info("Done saving all records!!")

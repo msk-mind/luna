@@ -43,7 +43,7 @@ def test_metadata_create():
 
     create_string = Node("mhd", "SCAN-001", properties=properties).get_create_str()
     assert "mhd:globals" in create_string    
-    assert "qualified_address: 'my_cohort::SCAN-001'"  in create_string
+    assert "qualified_address: 'my_cohort::scan-001'"  in create_string
     assert "dim"  in create_string
 
 def test_metadata_match():
@@ -51,8 +51,8 @@ def test_metadata_match():
     properties['namespace'] = "my_cohort"
     properties['dim'] = 3
 
-    match_string = Node("mhd", "SCAN-001", properties=properties).get_match_str()
-    assert "qualified_address: 'my_cohort::SCAN-001'"  in match_string
+    match_string = Node("mhd", "SCAN-002", properties=properties).get_match_str()
+    assert "qualified_address: 'my_cohort::scan-002"  in match_string
     assert "dim"  not in match_string
 
 
@@ -67,7 +67,7 @@ def test_get_all_properties():
 
 def test_patient_no_namespace():
     node = Node("patient", "pid", properties={})
-    assert node.properties['namespace'] == 'default'
+    assert node.properties['qualified_address'] == 'pid'
 
 def test_cohort_wrong_properties():
     with pytest.raises(TypeError):
