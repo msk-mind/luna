@@ -136,6 +136,7 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
     df.loc[:, "otsu_score"  ] = get_otsu_scores   (df['coordinates'], otsu_thumbnail, tile_size // scale_factor)
     df.loc[:, "purple_score"] = get_purple_scores (df['coordinates'], rbg_thumbnail,  tile_size // scale_factor)
 
+    logger.info("Displaying DataFrame for otsu_score > 0.5:")
     logger.info (df [ df["otsu_score"] > 0.5 ])
 
     output_file = os.path.join(output_dir, "tile_scores_and_labels.csv")
