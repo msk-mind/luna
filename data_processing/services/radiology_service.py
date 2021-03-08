@@ -167,7 +167,7 @@ class API_generate_scan(Resource):
 class API_collect_parquet(Resource):
     @api.expect(collect_parquet_model, validate=True)
     def post(self, cohort_id, container_id):
-        """Submit a generate scan job"""
+        """Submit a parquet collection scan job"""
         job_id = str(uuid.uuid4())
         future = executor.submit (collect_csv_with_container, cohort_id, container_id, request.json)
         return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
