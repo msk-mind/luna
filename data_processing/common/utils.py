@@ -7,6 +7,11 @@ def to_sql_field(s):
 	filter2 = ''.join(e for e in filter1 if e.isalnum() or e=='_')
 	return filter2
 
+def to_sql_value(s):
+	if isinstance(s, str): return f"'{s}'"
+	else: return f"{s}"
+
+
 def clean_nested_colname(s):
 	"""
 	Removes map name for MapType columns.

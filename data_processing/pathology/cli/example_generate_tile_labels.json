@@ -1,0 +1,7 @@
+{
+  "input_wsi_tag": "whole_slide_image", 
+  "job_tag": "test_generate_tiles",
+  "tile_size": 2560,
+  "scale_factor": 16,
+  "magnification": 40 
+}
