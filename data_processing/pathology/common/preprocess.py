@@ -40,9 +40,9 @@ def get_scale_factor_at_magnfication(slide, requested_mangification):
     return scale_factor
 
 # USED
-def get_full_resolution_generator(slide, tile_size, overlap=0, level_offset=0):
+def get_full_resolution_generator(slide, tile_size, level_offset=0):
     assert isinstance(slide, openslide.OpenSlide) or isinstance(slide, openslide.ImageSlide)
-    generator = DeepZoomGenerator(slide, overlap=overlap, tile_size=tile_size, limit_bounds=False)
+    generator = DeepZoomGenerator(slide, overlap=0, tile_size=tile_size, limit_bounds=False)
     generator_level = generator.level_count - 1 - level_offset
     if level_offset == 0:
         assert generator.level_dimensions[generator_level] == slide.dimensions
@@ -98,7 +98,7 @@ def make_otsu(img, scale=1):
     threshold = threshold_otsu(_img)
     return (_img < (threshold * scale)).astype(float)
 
-## MAIN ENTRY METHOD 
+### MAIN ENTRY METHOD 
 def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
     logger = logging.getLogger(__name__)
 

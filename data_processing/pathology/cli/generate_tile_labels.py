@@ -2,12 +2,16 @@
 Created: February 2021
 @author: aukermaa@mskcc.org
 
-
 Given a slide (container) ID
 1. resolve the path to the WSI image
 2. perform various scoring and labeling to tiles
 3. save tiles as a csv with schema [address, coordinates, *scores, *labels ]
 
+Example:
+python3 -m data_processing.pathology.cli.generate_tile_labels \
+    -c TCGA-BRCA \
+    -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
+    -m data_processing/pathology/cli/example_generate_tile_labels.json
 '''
 
 # General imports
