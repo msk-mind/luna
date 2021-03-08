@@ -40,7 +40,6 @@ ANNOTATION_TABLE_MAPPINGS = {"regional":\
     }
 
 
-
 def PROJECT_LOCATION(cfg):
     """
     ROOT_PATH is a path to mind data e.g. /gpfs/mind/data or hdfs://server:port/data
@@ -51,6 +50,8 @@ def PROJECT_LOCATION(cfg):
     # This function assumes <uri_root>/data as "ROOT_PATH"
     return os.path.join(cfg.get_value(path=DATA_CFG+'::ROOT_PATH'), cfg.get_value(path=DATA_CFG+'::PROJECT'))
 
+def CONFIG_LOCATION(cfg):
+    return "{0}/config/{1}".format(PROJECT_LOCATION(cfg), TABLE_NAME(cfg))
 
 def TABLE_LOCATION(cfg, is_source=False):
     return "{0}/tables/{1}".format(PROJECT_LOCATION(cfg), TABLE_NAME(cfg, is_source))
