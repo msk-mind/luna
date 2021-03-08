@@ -16,7 +16,7 @@ from PIL import Image
 import openslide
 from openslide.deepzoom import DeepZoomGenerator
 
-from skimage.color import rgb2gray
+from skimage.color   import rgb2gray
 from skimage.filters import threshold_otsu
 
 # USED
