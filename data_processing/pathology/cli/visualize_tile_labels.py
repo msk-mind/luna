@@ -42,7 +42,7 @@ def cli(cohort_id, container_id, method_param_path):
 
 def visualize_tile_labels_with_container(cohort_id: str, container_id: str, method_data: dict):
     """
-    Using the container API interface, extract voxels for a given scan container
+    Using the container API interface, visualize tile-wise scores
     """
 
     # Do some setup
