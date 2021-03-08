@@ -69,6 +69,7 @@ def cli(data_config_file, app_config_file):
     with CodeTimer(logger, 'generate clinical proxy table'):
         # Setup configs
         cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
+        # data_type used to build the table name can be pretty arbitrary, so left the schema file out for now.
         cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
 
         # copy app and data configuration
