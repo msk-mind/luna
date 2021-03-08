@@ -54,7 +54,7 @@ def generate_proxy_table():
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
               help="path to yaml template file containing information required for clinical proxy data ingestion. "
-                   "See data_config.yaml.template")
+                   "See data_ingestion_template.yaml.template")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to config file containing application configuration. See config.yaml.template")
 def cli(data_config_file, app_config_file):
