@@ -1,3 +1,11 @@
+'''
+@author: aukermaa@mskcc.org
+@author: pateld6@mskcc.org
+@author: rosed2@mskcc.org
+
+Various utility and processing methods for pathology
+'''
+
 import os, itertools, logging
 
 import numpy  as np

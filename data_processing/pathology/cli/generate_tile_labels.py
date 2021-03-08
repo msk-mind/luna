@@ -2,10 +2,11 @@
 Created: February 2021
 @author: aukermaa@mskcc.org
 
-Given a scan (container) ID
-1. resolve the path to a volumentric image and annotation (label) files
-2. resample image and segmentation, and save voxels as a 3d numpy array (.npy)
-3. store results on HDFS and add metadata to the graph
+
+Given a slide (container) ID
+1. resolve the path to the WSI image
+2. perform various scoring and labeling to tiles
+3. save tiles as a csv with schema [address, coordinates, *scores, *labels ]
 
 '''
 
