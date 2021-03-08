@@ -1,3 +1,16 @@
+'''
+Created: February 2021
+@author: aukermaa@mskcc.org
+
+Given a scan (container) ID
+1. resolve the path to the dicom folder
+2. for all dicoms, rescale into HU and optionally window
+3. store results on HDFS and add metadata to the graph
+
+'''
+import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests, socket
+import pandas as pd
+
 from flask import Flask, request, jsonify, render_template, make_response
 from flask_restx import Api, Resource
 
@@ -7,18 +20,18 @@ from data_processing.common.Neo4jConnection import Neo4jConnection
 import data_processing.common.constants as const
 from data_processing.common.config import ConfigSet
 
-import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests, socket
-import pandas as pd
+logger = init_logger("cohort-service.log")
 
-app    = Flask(__name__)
-api = Api(app, version='1.1', title='cohortManager', description='Manages and exposes study cohort and associated data', ordered=True)
-
-logger = init_logger("flask-mind-server.log")
-cfg    = ConfigSet(name=const.APP_CFG,  config_file="config.yaml")
-conn   = Neo4jConnection(uri=os.environ["GRAPH_URI"], user="neo4j", pwd="password")
-
+cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
+VERSION      = "branch:"+subprocess.check_output(["git","rev-parse" ,"--abbrev-ref", "HEAD"]).decode('ascii').strip()
 HOSTNAME     = socket.gethostname()
-PORT         = int(cfg.get_value("APP_CFG::cohortManager_port"))
+PORT         = int(cfg.get_value("APP_CFG::cohort_service_port"))
+NUM_PROCS    = int(cfg.get_value("APP_CFG::cohort_service_processes"))
+
+app = Flask(__name__)
+api = Api(app, version=VERSION, title='MIND Cohort-Namespace Service', description='Endpoints to manage cohorts, containers, and namespaces', ordered=True)
+conn   = Neo4jConnection(uri=cfg.get_value("APP_CFG::GRAPH_URI"), user=cfg.get_value("APP_CFG::GRAPH_USER"), pwd=cfg.get_value("APP_CFG::GRAPH_PASSWORD"))
+
 
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
