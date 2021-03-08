@@ -1,4 +1,4 @@
-from data_processing.common.utils import to_sql_field, does_not_contain
+from data_processing.common.utils import to_sql_field, to_sql_value, does_not_contain
 import warnings, os
 
 class Node(object):
@@ -107,7 +107,7 @@ class Node(object):
 		"""
 		fields = set(fields).intersection(set(row.keys()))
 
-		kv = [f" {to_sql_field(x)}: '{row[x]}'" for x in fields]
+		kv = [f" {to_sql_field(x)}: {to_sql_value(row[x])}" for x in fields]
 		return ','.join(kv)
 	
 	@staticmethod
@@ -117,7 +117,7 @@ class Node(object):
 		"""
 		fields = set(fields).intersection(set(row.keys()))
 
-		kv = [f"   {to_sql_field(x)}: '{row[x]}'" for x in fields]
+		kv = [f"   {to_sql_field(x)}: {to_sql_value(row[x])}" for x in fields]
 		return '\n'.join(kv)
 	
 	@staticmethod
