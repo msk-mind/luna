@@ -2,7 +2,5 @@
   "input_wsi_tag": "whole_slide_image", 
   "input_label_tag": "test_generate_tiles",
   "job_tag": "test_visualize_tiles",
-  "tile_size": 2560,
-  "scale_factor": 50,
-  "magnification": 40 
+  "scale_factor": 4 
 }

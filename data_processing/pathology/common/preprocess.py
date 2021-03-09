@@ -145,9 +145,8 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size):
 def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
     logger = logging.getLogger(__name__)
 
-    tile_size       = params.get("tile_size")
-    magnification   = params.get("magnification")
-    scale_factor    = params.get("scale_factor", 16)
+    requested_tile_size       = params.get("tile_size")
+    requested_magnification   = params.get("magnification")
 
     logger.info("Processing slide %s", slide_file_path)
     logger.info("Params = %s", params)
@@ -156,28 +155,35 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
 
     logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
  
-    mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_mangification=magnification)
+    # To magnification scale factor tells us how much to scale to get from full resolution to desired mag
+    # To thumbnail scale factor tells us how much to scale to get from desired mangifciation to the desired thumbnail downscale, relative to requested mag
+    # The tile size is defined at the requested mag, so it's bigger at full resolution
+    scale_factor = params.get("scale_factor", 4)
+    to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
+    to_thumbnail_scale_factor   = to_mag_scale_factor * scale_factor
 
-    scale_factor *=  mag_scale_factor
+    full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
+    thumbnail_tile_size       = requested_tile_size // scale_factor
 
-    logger.info("Normalized mangification scale factor for %sx is %s, overall thumbnail scale factor is %s", magnification, mag_scale_factor, scale_factor)
+    logger.info("Normalized mangification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
+    logger.info("Requested tile size=%s, tile size at full magnficiation=%s, tile size at thumbnail=%s", requested_tile_size, full_resolution_tile_size, thumbnail_tile_size)
 
     # Create thumbnail image for scoring
-    rbg_thumbnail  = get_downscaled_thumbnail(slide, scale_factor)
+    rbg_thumbnail  = get_downscaled_thumbnail(slide, to_thumbnail_scale_factor)
     otsu_thumbnail = make_otsu(rbg_thumbnail)
 
     # get DeepZoomGenerator, level
-    full_generator, full_level = get_full_resolution_generator(slide, tile_size=tile_size, level_offset=0)
+    full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size, level_offset=0)
 
     tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
     
-    address_raster = [{"address": coord_to_address(address, magnification), "coordinates": address} for address in itertools.product(range(tile_x_count), range(tile_y_count))]
+    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(tile_x_count), range(tile_y_count))]
     logger.info("Number of tiles in raster: %s", len(address_raster))
 
     df = pd.DataFrame(address_raster).set_index("address")
 
-    df.loc[:, "otsu_score"  ] = get_otsu_scores   (df['coordinates'], otsu_thumbnail, tile_size // scale_factor)
-    df.loc[:, "purple_score"] = get_purple_scores (df['coordinates'], rbg_thumbnail,  tile_size // scale_factor)
+    df.loc[:, "otsu_score"  ] = get_otsu_scores   (df['coordinates'], otsu_thumbnail, thumbnail_tile_size)
+    df.loc[:, "purple_score"] = get_purple_scores (df['coordinates'], rbg_thumbnail,  thumbnail_tile_size)
 
     logger.info("Displaying DataFrame for otsu_score > 0.5:")
     logger.info (df [ df["otsu_score"] > 0.5 ])
@@ -190,6 +196,10 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
 
     properties = {
         "file": output_file,
+        "magnification": requested_magnification,
+        "full_resolution_magnification": requested_magnification * to_mag_scale_factor,
+        "tile_size": requested_tile_size,
+        "full_resolution_tile_size": full_resolution_tile_size,
         "total_tiles": len(df),
         "available_labels": list(df.columns)
     }
@@ -201,9 +211,8 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
 def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: str, params: dict):
     logger = logging.getLogger(__name__)
 
-    tile_size       = params.get("tile_size")
-    magnification   = params.get("magnification")
-    scale_factor    = params.get("scale_factor", 16)
+    requested_tile_size       = params.get("tile_size")
+    requested_magnification   = params.get("magnification")
 
     logger.info("Processing slide %s", slide_file_path)
     logger.info("Params = %s", params)
@@ -212,18 +221,23 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
 
     logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
  
-    mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_mangification=magnification)
+    scale_factor = params.get("scale_factor", 4)
+    to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
+    to_thumbnail_scale_factor   = to_mag_scale_factor * scale_factor
 
-    scale_factor *=  mag_scale_factor
+    full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
+    thumbnail_tile_size       = requested_tile_size // scale_factor
 
-    logger.info("Normalized mangification scale factor for %sx is %s, overall thumbnail scale factor is %s", magnification, mag_scale_factor, scale_factor)
+    logger.info("Normalized mangification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
+    logger.info("Requested tile size=%s, tile size at full magnficiation=%s, tile size at thumbnail=%s", requested_tile_size, full_resolution_tile_size, thumbnail_tile_size)
+
     output_file = os.path.join(output_dir, "tile_scores_and_labels_visualization.png")
 
     # Create thumbnail image for scoring
-    rbg_thumbnail  = get_downscaled_thumbnail(slide, scale_factor)
+    rbg_thumbnail  = get_downscaled_thumbnail(slide, to_thumbnail_scale_factor)
     df_scores      = pd.read_csv(scores_file_path).set_index("address")
 
-    thumbnail_overlayed = visualize_tiling_scores(df_scores, rbg_thumbnail, tile_size // scale_factor)
+    thumbnail_overlayed = visualize_tiling_scores(df_scores, rbg_thumbnail, thumbnail_tile_size)
     thumbnail_overlayed = Image.fromarray(thumbnail_overlayed)
     thumbnail_overlayed.save(output_file)
 
@@ -234,3 +248,29 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     }
 
     return properties
+
+
+### MAIN ENTRY METHOD -> save tiles
+def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: str, params: dict):
+    logger = logging.getLogger(__name__)
+
+    logger.info("Processing slide %s", slide_file_path)
+    logger.info("Params = %s", params)
+
+    requested_tile_size       = params.get("tile_size")
+    requested_magnification   = params.get("magnification")
+
+    df_scores = pd.read_csv(scores_file_path).set_index("address")
+
+    slide = openslide.OpenSlide(slide_file_path)
+
+    to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
+    full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
+    
+    for index, row in df_scores.iterrows():
+        if not row.otsu_score > 0.5: continue
+        address = address_to_coord(str(index))
+        slide.read_region (address, 0, (full_resolution_tile_size, full_resolution_tile_size) ).resize((requested_tile_size, requested_tile_size))
+        print (index)
+
+
