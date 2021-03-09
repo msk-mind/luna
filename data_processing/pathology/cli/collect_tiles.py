@@ -65,17 +65,17 @@ def visualize_tile_labels_with_container(cohort_id: str, container_id: str, meth
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        save_tiles_parquet(str(image_node.path), str(label_node.path),output_dir, method_data )
+        properties = save_tiles_parquet(str(image_node.path), str(label_node.path),output_dir, method_data )
 
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        parquet_container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(output_container_id)
+        #parquet_container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(output_container_id)
 
-        output_node = Node("parquet", method_id, properties)
+        output_node = Node("TileImages", method_id, properties)
         logger.info(output_node) 
-        # container.add(output_node)
-        # container.saveAll()
+        container.add(output_node)
+        container.saveAll()
 
 
 if __name__ == "__main__":

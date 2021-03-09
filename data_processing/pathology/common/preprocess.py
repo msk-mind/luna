@@ -47,12 +47,11 @@ def get_scale_factor_at_magnfication(slide, requested_mangification):
     return scale_factor
 
 # USED -> utils
-def get_full_resolution_generator(slide, tile_size, level_offset=0):
+def get_full_resolution_generator(slide, tile_size):
     assert isinstance(slide, openslide.OpenSlide) or isinstance(slide, openslide.ImageSlide)
-    generator = DeepZoomGenerator(slide, overlap=0, tile_size=tile_size, limit_bounds=False)
-    generator_level = generator.level_count - 1 - level_offset
-    if level_offset == 0:
-        assert generator.level_dimensions[generator_level] == slide.dimensions
+    generator = DeepZoomGenerator(slide, overlap=0, tile_size=tile_size, limit_bounds=True)
+    generator_level = generator.level_count - 1
+    assert generator.level_dimensions[generator_level] == slide.dimensions
     return generator, generator_level
 
 # USED -> generate cli
@@ -129,6 +128,7 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size):
 
     for index, row in df.iterrows():
         address = address_to_coord(str(index))
+        if not row.otsu_score > 0.1: continue
         extent = generator.get_tile_dimensions(generator_level, address)
         start = (address[1] * tile_size, address[0] * tile_size)  # flip because OpenSlide uses
                                                                     # (column, row), but skimage
@@ -179,7 +179,7 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
     otsu_thumbnail = make_otsu(rbg_thumbnail)
 
     # get DeepZoomGenerator, level
-    full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size, level_offset=0)
+    full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
 
     tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
     
@@ -266,17 +266,25 @@ def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: 
     requested_tile_size       = params.get("tile_size")
     requested_magnification   = params.get("magnification")
 
+    slide = openslide.OpenSlide(slide_file_path)
     df_scores = pd.read_csv(scores_file_path).set_index("address")
 
-    slide = openslide.OpenSlide(slide_file_path)
-
     to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
+
+    # best_level = slide.get_best_level_for_downsample(to_mag_scale_factor)
+    # downsample_factor = slide.level_downsamples[best_level]
+    # full_resolution_tile_size = requested_tile_size * to_mag_scale_factor / downsample_factor
+    # logger.info("Downsample %s, Level %s, Factor %s, Read Tile Size %s", to_mag_scale_factor, best_level, downsample_factor, full_resolution_tile_size)
+
     full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
-    
+
+    generator, level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
+
+    #tiles = {str(index):generator.get_tile(level, address_to_coord(str(index))) for index, row in df_scores.iterrows() if row.otsu_score > 0.1}
     for index, row in df_scores.iterrows():
-        if not row.otsu_score > 0.5: continue
-        address = address_to_coord(str(index))
-        slide.read_region (address, 0, (full_resolution_tile_size, full_resolution_tile_size) ).resize((requested_tile_size, requested_tile_size))
-        print (index)
+        if not row.otsu_score > 0.1: continue
+        generator.get_tile(level, address_to_coord(str(index))).save(f"{output_dir}/{str(index)}.png")  
 
+    return {"path":output_dir}
 
+      
