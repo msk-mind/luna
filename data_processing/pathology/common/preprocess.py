@@ -143,6 +143,15 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size):
 
 ### MAIN ENTRY METHOD -> pretile
 def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
+    """
+
+    Notes: 
+    to_mag_scale_factor tells us how much to scale to get from full resolution to desired magnification
+    to_thumbnail_scale_factor tells us how much to scale to get from desired mangifciation to the desired thumbnail downscale, relative to requested mag
+    
+    The tile size is defined at the requested mag, so it's bigger at full resolution and smaller for the thumbnail
+    to_mag_scale_factor and to_thumbnail_scale_factor both need to be event integers, i.e. the scale factors are multiples of the the scanned magnficiation
+    """
     logger = logging.getLogger(__name__)
 
     requested_tile_size       = params.get("tile_size")
@@ -155,10 +164,6 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
 
     logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
  
-    # to_mag_scale_factor tells us how much to scale to get from full resolution to desired magnification
-    # to_thumbnail_scale_factor tells us how much to scale to get from desired mangifciation to the desired thumbnail downscale, relative to requested mag
-    # The tile size is defined at the requested mag, so it's bigger at full resolution and smaller for the thumbnail
-    # to_mag_scale_factor and to_thumbnail_scale_factor both need to be event integers, i.e. the scale factors are multiples of the the scanned magnficiation
     scale_factor = params.get("scale_factor", 4)
     to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
     to_thumbnail_scale_factor   = to_mag_scale_factor * scale_factor
