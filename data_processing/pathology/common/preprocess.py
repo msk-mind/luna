@@ -21,6 +21,9 @@ from skimage.color   import rgb2gray
 from skimage.filters import threshold_otsu
 from skimage.draw import rectangle_perimeter, rectangle
 
+import dill
+from io import BytesIO
+
 NUM_COLORS = 100 + 1
 scoring_palette = sns.color_palette("viridis_r", n_colors=NUM_COLORS)
 scoring_palette_as_list = [[int(x * 255) for x in scoring_palette.pop()] for i in range(NUM_COLORS)]
@@ -128,7 +131,7 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size):
 
     for index, row in df.iterrows():
         address = address_to_coord(str(index))
-        if not row.otsu_score > 0.1: continue
+        if not row.otsu_score > 0.5: continue
         extent = generator.get_tile_dimensions(generator_level, address)
         start = (address[1] * tile_size, address[0] * tile_size)  # flip because OpenSlide uses
                                                                     # (column, row), but skimage
@@ -281,10 +284,26 @@ def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: 
     generator, level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
 
     #tiles = {str(index):generator.get_tile(level, address_to_coord(str(index))) for index, row in df_scores.iterrows() if row.otsu_score > 0.1}
+    tile_map = {}
+    reference_image = None
     for index, row in df_scores.iterrows():
-        if not row.otsu_score > 0.1: continue
-        generator.get_tile(level, address_to_coord(str(index))).save(f"{output_dir}/{str(index)}.png")  
+        if not row.otsu_score > 0.5: continue
+        tile_map[str(index)] = generator.get_tile(level, address_to_coord(str(index)))
+        if reference_image is None: reference_image = tile_map[str(index)]
+    
+    save_file = f"{output_dir}/tiles.slice.pil"
 
-    return {"path":output_dir}
+    with open(save_file,'wb') as fp:
+        for img in tile_map.values():
+            fp.write(img.tobytes())
+
+
+    properties = {
+        "path":output_dir,
+        "pil_image_mode": reference_image.mode,
+        "pil_image_size": reference_image.size[0],
+        "pil_image_length": len(reference_image.tobytes())
+    }
+    return properties
 
       

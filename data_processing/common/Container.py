@@ -341,8 +341,7 @@ class Container(object):
         self._attached = False
         self.logger = logging.getLogger(__name__)
 
-        self.logger.info("Started minio executor with 4 threads")
-        executor = ThreadPoolExecutor(max_workers=4)
+
         future_uploads = []
         for n in self._node_commits.values():
             self.logger.info ("Committing %s", n.get_match_str())
@@ -355,20 +354,28 @@ class Container(object):
             )
 
             if self.params.get("OBJECT_STORE_ENABLED", False):
+                self.logger.info("Started minio executor with 4 threads")
+                executor = ThreadPoolExecutor(max_workers=4)
+
                 object_bucket = n.properties.get("object_bucket")
                 object_folder = n.properties.get("object_folder")
                 for p in n.objects:
-                    self.logger.info("Submitting: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
+                    # self.logger.info("Submitting: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
                     future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
                     future_uploads.append(future)
         
+        n_count_futures = 0
+        n_total_futures = len (future_uploads)
         for future in as_completed(future_uploads):
             try:
                 data = future.result()
             except:
                 self.logger.exception('Bad upload: generated an exception:')
             else:
-                self.logger.info("Upload successful with etag: %s", data[0])
+                n_count_futures += 1
+                if n_count_futures < 10: self.logger.info("Upload successful with etag: %s", data[0])
+                if n_count_futures < 1000 and n_count_futures % 100 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
+                if n_count_futures % 1000 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
         self.logger.info("Shutdown executor %s", executor)                
         executor.shutdown()    
         self.logger.info("Done saving all records!!")
