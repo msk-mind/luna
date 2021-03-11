@@ -129,8 +129,8 @@ class Container(object):
         self.logger.info ("Lookup ID: %s", container_id)
 
         # Figure out how to match the node
-        if isinstance(container_id, str) and not container_id.isdigit(): 
-            match_clause = f"""WHERE container.qualified_address = '{container_id.lower()}'"""
+        if isinstance(container_id, str): 
+            match_clause = f"""WHERE container.qualified_address = '{container_id}'"""
         elif (isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
             match_clause = f"""WHERE id(container) = {container_id} """
         else:
@@ -171,7 +171,7 @@ class Container(object):
 
         # Let us know attaching was a success! :)
         self.logger = logging.getLogger(f'Container [{self._container_id}]')
-        self.logger.info ("Successfully attached to: %s %s %s", self._type, self._container_id, self._qualifiedpath)
+        self.logger.info ("Successfully attached to: %s [%s] @ %s", self._type, self._container_id, self._qualifiedpath)
         self._attached = True
         return self
 

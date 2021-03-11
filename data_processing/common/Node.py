@@ -29,7 +29,7 @@ class Node(object):
 		elif "namespace" in self.properties.keys():
 			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
 		else:
-			self.properties['qualified_address'] = self.name.lower()
+			self.properties['qualified_address'] = self.name
 
 		self.properties["type"] = self.type
 
@@ -127,5 +127,5 @@ class Node(object):
 		"""
 		for name in args: does_not_contain(":", name)
 
-		return "::".join(args).lower()
+		return "::".join(args)
 	

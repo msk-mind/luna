@@ -12,13 +12,14 @@ import os, shutil, sys, importlib, json, yaml, subprocess, time, uuid, requests,
 import pandas as pd
 
 from flask import Flask, request, jsonify, render_template, make_response
-from flask_restx import Api, Resource
+from flask_restx import Api, Resource, fields
 
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.Node import Node
 from data_processing.common.Neo4jConnection import Neo4jConnection
 import data_processing.common.constants as const
 from data_processing.common.config import ConfigSet
+from data_processing.common.Container import Container 
 
 logger = init_logger("cohort-service.log")
 
@@ -34,6 +35,14 @@ conn   = Neo4jConnection(uri=cfg.get_value("APP_CFG::GRAPH_URI"), user=cfg.get_v
 
 
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
+
+# general models
+general_model = api.model("Query+Job Model", 
+    {
+        "properties":  fields.Raw(description="Job parameters", required=True)
+    }
+)
+
 
 # ============================================================================================
 # get-put-cohort
@@ -121,14 +130,14 @@ class modifyPatientInCohort(Resource):
 # ============================================================================================
 @api.route('/mind/api/v1/container/<container_type>/<container_id>', 
     methods=['PUT'],
-    doc={"description": "Create a container"}
+    doc={"description": "Restful container"}
 )
 @api.doc(params={'container_type': 'Type in [generic, scan, patient, slide]', 'container_id':'Unique container identifier'})
 class createContainer(Resource):
 
     def put(self, container_type,  container_id):
             """ Create new container """
-            if not container_type in ['generic', 'patient', 'accession', 'scan', 'slide']: return make_response("Invalid container type", 400)
+            if not container_type in ['generic', 'parquet', 'patient', 'accession', 'scan', 'slide']: return make_response("Invalid container type", 400)
 
             container = Node(container_type, container_id)
 
@@ -141,6 +150,24 @@ class createContainer(Resource):
             else:
                 return make_response("Bad query", 400)
 # --------------------------------------------------------------------------------------------
+
+
+# ============================================================================================
+@api.route('/mind/api/v1/data/<namespace>/<container_id>/<data_type>/<data_id>', 
+    methods=['PUT'],
+    doc={"description": "Restful Data"}
+)
+@api.doc(params={})
+class createContainerData(Resource):
+    @api.expect(general_model)
+    def put(self, namespace, container_id, data_type, data_id):
+            """ Create new container """
+            container =  Container( cfg ).setNamespace(namespace).lookupAndAttach(container_id)
+            container.add(Node(data_type, data_id, request.json))
+            container.saveAll()
+# --------------------------------------------------------------------------------------------
+
+
 # ============================================================================================
 @api.route('/mind/api/v1/patient/<cohort_id>/<patient_id>', 
     methods=['GET', 'PUT'],
@@ -268,5 +295,5 @@ class addOrRemoveCases(Resource):
 
 
 if __name__ == '__main__':
-    app.run(host=HOSTNAME,port=PORT, threaded=True, debug=False)
+    app.run(host=HOSTNAME,port=PORT, threaded=True, debug=True)
 
