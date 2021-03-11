@@ -267,8 +267,8 @@ class Container(object):
             return None
         else:
             node = Node(res[0]['data']['type'], res[0]['data']['name'], dict(res[0]['data'].items()))
-            self.logger.info ("Query Successful:")
-            self.logger.info (node)
+            # self.logger.info ("Query Successful:")
+            # self.logger.info (node)
 
         
         # Parse path (filepath) URI: more sophistic path logic to come (pulling from S3, external mounts, etc!!!!)

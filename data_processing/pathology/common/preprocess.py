@@ -37,7 +37,9 @@ def array_to_slide(arr):
     
 # USED -> utils
 def get_scale_factor_at_magnfication(slide, requested_mangification):
-    scanned_magnfication = int(slide.properties['aperio.AppMag'])  
+    mag_value = float(slide.properties['aperio.AppMag'])
+    scanned_magnfication = int (mag_value)
+    assert int (mag_value) == mag_value
     # verify magnification valid
     scale_factor = 1
     if scanned_magnfication != requested_mangification:
@@ -167,7 +169,7 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
 
     logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
  
-    scale_factor = params.get("scale_factor", 4)
+    scale_factor = params.get("scale_factor", 4) # Instead, we should specifiy a thumbnail zoom, and calculate this using get_scale_factor_at_magnfication()
     to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
     to_thumbnail_scale_factor   = to_mag_scale_factor * scale_factor
 
@@ -186,7 +188,7 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
 
     tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
     
-    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(tile_x_count), range(tile_y_count))]
+    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(tile_x_count - 1), range(tile_y_count - 1))]
     logger.info("Number of tiles in raster: %s", len(address_raster))
 
     df = pd.DataFrame(address_raster).set_index("address")
@@ -274,16 +276,10 @@ def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: 
 
     to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
 
-    # best_level = slide.get_best_level_for_downsample(to_mag_scale_factor)
-    # downsample_factor = slide.level_downsamples[best_level]
-    # full_resolution_tile_size = requested_tile_size * to_mag_scale_factor / downsample_factor
-    # logger.info("Downsample %s, Level %s, Factor %s, Read Tile Size %s", to_mag_scale_factor, best_level, downsample_factor, full_resolution_tile_size)
-
     full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
 
     generator, level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
 
-    #tiles = {str(index):generator.get_tile(level, address_to_coord(str(index))) for index, row in df_scores.iterrows() if row.otsu_score > 0.1}
     tile_map = {}
     reference_image = None
     for index, row in df_scores.iterrows():
@@ -297,12 +293,11 @@ def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: 
         for img in tile_map.values():
             fp.write(img.tobytes())
 
-
     properties = {
         "path":output_dir,
-        "pil_image_mode": reference_image.mode,
-        "pil_image_size": reference_image.size[0],
-        "pil_image_length": len(reference_image.tobytes())
+        "pil_image_bytes_mode": reference_image.mode,
+        "pil_image_bytes_size": reference_image.size[0],
+        "pil_image_bytes_length": len(reference_image.tobytes())
     }
     return properties
 
