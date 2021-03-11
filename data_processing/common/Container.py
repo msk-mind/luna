@@ -88,7 +88,7 @@ class Container(object):
             self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
             try:
                 for bucket in self._client.list_buckets():
-                    self.logger.info("Found bucket %s", bucket.name )
+                    self.logger.debug("Found bucket %s", bucket.name )
                 self.logger.info("OBJECT_STORE_ENABLED=True")
                 params['OBJECT_STORE_ENABLED'] = True
             except:
@@ -251,7 +251,7 @@ class Container(object):
 
         query = f"""MATCH (container)-[:HAS_DATA]-(data:{type}) WHERE id(container) = {self._container_id} AND data.name='{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
 
-        self.logger.info(query)
+        self.logger.debug(query)
         res = self._conn.query(query)
 
         # Catches bad queries
@@ -267,8 +267,8 @@ class Container(object):
             return None
         else:
             node = Node(res[0]['data']['type'], res[0]['data']['name'], dict(res[0]['data'].items()))
-            # self.logger.info ("Query Successful:")
-            # self.logger.info (node)
+            self.logger.debug ("Query Successful:")
+            self.logger.debug (node)
 
         
         # Parse path (filepath) URI: more sophistic path logic to come (pulling from S3, external mounts, etc!!!!)
@@ -313,14 +313,14 @@ class Container(object):
         node.objects = []
         if "path" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
             node.properties['object_bucket'] = f"{self._bucket_id}"
-            node.properties['object_folder'] = f"{self._name}/{node.name}"
+            node.properties['object_folder'] = f"{node.name}/{self._name}"
             for path in pathlib.Path(node.properties['path']).glob("*"): node.objects.append(path)        
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
         if "file" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
             node.properties['path'] = node.properties['file']
             node.properties['object_bucket'] = f"{self._bucket_id}"
-            node.properties['object_folder'] = f"{self._name}/{node.name}"
+            node.properties['object_folder'] = f"{node.name}/{self._name}"
             node.objects.append(pathlib.Path(node.properties['path']))
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
@@ -360,8 +360,7 @@ class Container(object):
                 object_bucket = n.properties.get("object_bucket")
                 object_folder = n.properties.get("object_folder")
                 for p in n.objects:
-                    # self.logger.info("Submitting: %s", f"minio/{object_bucket}/{object_folder}/{p.name}")
-                    future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
+                    future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}_{p.name}", p, part_size=250000000)
                     future_uploads.append(future)
         
         n_count_futures = 0
