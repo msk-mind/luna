@@ -54,7 +54,7 @@ def get_scale_factor_at_magnfication(slide, requested_mangification):
 # USED -> utils
 def get_full_resolution_generator(slide, tile_size):
     assert isinstance(slide, openslide.OpenSlide) or isinstance(slide, openslide.ImageSlide)
-    generator = DeepZoomGenerator(slide, overlap=0, tile_size=tile_size, limit_bounds=True)
+    generator = DeepZoomGenerator(slide, overlap=0, tile_size=tile_size, limit_bounds=False)
     generator_level = generator.level_count - 1
     assert generator.level_dimensions[generator_level] == slide.dimensions
     return generator, generator_level
@@ -92,6 +92,7 @@ def coord_to_address(s, magnification):
 
 # USED -> utils
 def address_to_coord(s):
+    s = str(s)
     p = re.compile('x(\d+)_y(\d+)_z(\d+)', re.IGNORECASE)
     m = p.match(s)
     x = int(m.group(1))
@@ -132,8 +133,11 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size):
     generator, generator_level = get_full_resolution_generator(thumbnail, tile_size=tile_size)
 
     for index, row in df.iterrows():
-        address = address_to_coord(str(index))
-        if not row.otsu_score > 0.5: continue
+        address = address_to_coord(index)
+
+        # if not row.otsu_score   > 0.5: continue
+        # if not row.purple_score > 0.1: continue
+
         extent = generator.get_tile_dimensions(generator_level, address)
         start = (address[1] * tile_size, address[0] * tile_size)  # flip because OpenSlide uses
                                                                     # (column, row), but skimage
@@ -188,7 +192,7 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
 
     tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
     
-    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(tile_x_count - 1), range(tile_y_count - 1))]
+    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(tile_x_count), range(tile_y_count))]
     logger.info("Number of tiles in raster: %s", len(address_raster))
 
     df = pd.DataFrame(address_raster).set_index("address")
@@ -280,24 +284,35 @@ def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: 
 
     generator, level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
 
-    tile_map = {}
-    reference_image = None
+    fp = open(f"{output_dir}/tiles.slice.pil",'wb')
+    offset = 0
+    counter = 0
     for index, row in df_scores.iterrows():
-        if not row.otsu_score > 0.5: continue
-        tile_map[str(index)] = generator.get_tile(level, address_to_coord(str(index)))
-        if reference_image is None: reference_image = tile_map[str(index)]
-    
-    save_file = f"{output_dir}/tiles.slice.pil"
+        counter += 1
+        if counter % 10000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_scores))
 
-    with open(save_file,'wb') as fp:
-        for img in tile_map.values():
-            fp.write(img.tobytes())
+        if not row.otsu_score   > 0.5: continue
+        if not row.purple_score > 0.1: continue
+
+        img_pil     = generator.get_tile(level, address_to_coord(index))
+        img_bytes   = img_pil.tobytes()
+
+        fp.write( img_bytes )
+
+        df_scores.loc[index, "tile_image_offset"]   = int(offset)
+        df_scores.loc[index, "tile_image_length"]   = int(len(img_bytes))
+        df_scores.loc[index, "tile_image_size_xy"]  = int(img_pil.size[0])
+        df_scores.loc[index, "tile_image_mode"]     = img_pil.mode
+
+        offset += len(img_bytes)
+
+    logger.info (df_scores [ df_scores["otsu_score"] > 0.5 ])
 
     properties = {
         "path":output_dir,
-        "pil_image_bytes_mode": reference_image.mode,
-        "pil_image_bytes_size": reference_image.size[0],
-        "pil_image_bytes_length": len(reference_image.tobytes())
+        "pil_image_bytes_mode": img_pil.mode,
+        "pil_image_bytes_size": img_pil.size[0],
+        "pil_image_bytes_length": len(img_pil.tobytes())
     }
     return properties
 
