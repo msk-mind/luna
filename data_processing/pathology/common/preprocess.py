@@ -80,7 +80,7 @@ def get_purple_scores(address_raster, rgb_img, rgb_tile_size):
         # cond1 = r > 75
         # cond2 = b > 90
         # score = np.sum(cond1 & cond2)
-        score = np.sum((r > (g + 10)) & (b > (g + 10))) / rgb_tile.size
+        score = np.mean((r > (g + 10)) & (b > (g + 10)))
         purple_score_results.append ( score )  
     return purple_score_results
 
@@ -135,8 +135,8 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size):
     for index, row in df.iterrows():
         address = address_to_coord(index)
 
-        # if not row.otsu_score   > 0.5: continue
-        # if not row.purple_score > 0.1: continue
+        if not row.otsu_score   > 0.5: continue
+        if not row.purple_score > 0.1: continue
 
         extent = generator.get_tile_dimensions(generator_level, address)
         start = (address[1] * tile_size, address[0] * tile_size)  # flip because OpenSlide uses
@@ -191,8 +191,13 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
     full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
 
     tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
+    logger.info("tiles x %s, tiles y %s", tile_x_count, tile_y_count)
+
+    if not to_mag_scale_factor % 1 == 0 or not requested_tile_size % scale_factor == 0: 
+        raise ValueError("You chose a combination of requested tile sizes and mangifications that resulted in non-integer tile sizes at different scales")
+
     
-    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(tile_x_count), range(tile_y_count))]
+    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(1, tile_x_count-1), range(1, tile_y_count-1))]
     logger.info("Number of tiles in raster: %s", len(address_raster))
 
     df = pd.DataFrame(address_raster).set_index("address")
@@ -240,8 +245,11 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
     to_thumbnail_scale_factor   = to_mag_scale_factor * scale_factor
 
-    full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
-    thumbnail_tile_size       = requested_tile_size // scale_factor
+    full_resolution_tile_size   = requested_tile_size * to_mag_scale_factor
+    thumbnail_tile_size         = requested_tile_size // scale_factor
+
+    if not to_mag_scale_factor % 1 == 0 or not requested_tile_size % scale_factor == 0: 
+        raise ValueError("You chose a combination of requested tile sizes and mangifications that resulted in non-integer tile sizes at different scales")
 
     logger.info("Normalized mangification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
     logger.info("Requested tile size=%s, tile size at full magnficiation=%s, tile size at thumbnail=%s", requested_tile_size, full_resolution_tile_size, thumbnail_tile_size)
@@ -280,6 +288,9 @@ def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: 
 
     to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
 
+    if not to_mag_scale_factor % 1 == 0: 
+        raise ValueError("You chose a combination of requested tile sizes and mangifications that resulted in non-integer tile sizes at different scales")
+
     full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
 
     generator, level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
@@ -294,7 +305,7 @@ def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: 
         if not row.otsu_score   > 0.5: continue
         if not row.purple_score > 0.1: continue
 
-        img_pil     = generator.get_tile(level, address_to_coord(index))
+        img_pil     = generator.get_tile(level, address_to_coord(index)).resize((requested_tile_size,requested_tile_size))
         img_bytes   = img_pil.tobytes()
 
         fp.write( img_bytes )
@@ -305,8 +316,10 @@ def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: 
         df_scores.loc[index, "tile_image_mode"]     = img_pil.mode
 
         offset += len(img_bytes)
+    
+    fp.close()
 
-    logger.info (df_scores [ df_scores["otsu_score"] > 0.5 ])
+    df_scores.dropna().to_csv(f"{output_dir}/address.slice.pil")
 
     properties = {
         "path":output_dir,
