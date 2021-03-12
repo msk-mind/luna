@@ -285,6 +285,8 @@ class Container(object):
                 node.path = pathlib.Path(path.split(":")[-1])
             else:
                 node.path = pathlib.Path(path)
+            
+            node.static_path = str(node.path)
         
             # Output and check
             self.logger.info ("Resolved %s -> %s", node.properties["path"], node.path)
