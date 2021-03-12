@@ -21,9 +21,6 @@ from skimage.color   import rgb2gray
 from skimage.filters import threshold_otsu
 from skimage.draw import rectangle_perimeter, rectangle
 
-import dill
-from io import BytesIO
-
 NUM_COLORS = 100 + 1
 scoring_palette = sns.color_palette("viridis_r", n_colors=NUM_COLORS)
 scoring_palette_as_list = [[int(x * 255) for x in scoring_palette.pop()] for i in range(NUM_COLORS)]
