@@ -33,19 +33,26 @@ def array_to_slide(arr):
     return slide
     
 # USED -> utils
-def get_scale_factor_at_magnfication(slide, requested_mangification):
+def get_scale_factor_at_magnfication(slide, requested_magnification):
+    
+    # First convert to float to handle true integers encoded as string floats (e.g. '20.000')
     mag_value = float(slide.properties['aperio.AppMag'])
+
+    # Then convert to integer
     scanned_magnfication = int (mag_value)
+
+    # Make sure we don't have non-integer magnifications
     assert int (mag_value) == mag_value
-    # verify magnification valid
+
+    # Verify magnification valid
     scale_factor = 1
-    if scanned_magnfication != requested_mangification:
-        if scanned_magnfication < requested_mangification:
-            raise ValueError(f'Expected magnification >={requested_mangification} but got {scanned_magnfication}')
-        elif (scanned_magnfication % requested_mangification) == 0:
-            scale_factor = scanned_magnfication // requested_mangification
+    if scanned_magnfication != requested_magnification:
+        if scanned_magnfication < requested_magnification:
+            raise ValueError(f'Expected magnification >={requested_magnification} but got {scanned_magnfication}')
+        elif (scanned_magnfication % requested_magnification) == 0:
+            scale_factor = scanned_magnfication // requested_magnification
         else:
-            raise ValueError(f'Expected magnification {requested_mangification} to be an divisor multiple of {scanned_magnfication}')
+            raise ValueError(f'Expected magnification {requested_magnification} to be an divisor multiple of {scanned_magnfication}')
     return scale_factor
 
 # USED -> utils
@@ -153,7 +160,7 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
 
     Notes: 
     to_mag_scale_factor tells us how much to scale to get from full resolution to desired magnification
-    to_thumbnail_scale_factor tells us how much to scale to get from desired mangifciation to the desired thumbnail downscale, relative to requested mag
+    to_thumbnail_scale_factor tells us how much to scale to get from desired magnification to the desired thumbnail downscale, relative to requested mag
     
     The tile size is defined at the requested mag, so it's bigger at full resolution and smaller for the thumbnail
     to_mag_scale_factor and to_thumbnail_scale_factor both need to be event integers, i.e. the scale factors are multiples of the the scanned magnficiation
@@ -171,13 +178,16 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
     logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
  
     scale_factor = params.get("scale_factor", 4) # Instead, we should specifiy a thumbnail zoom, and calculate this using get_scale_factor_at_magnfication()
-    to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
+    to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)
     to_thumbnail_scale_factor   = to_mag_scale_factor * scale_factor
+
+    if not to_mag_scale_factor % 1 == 0 or not requested_tile_size % scale_factor == 0: 
+        raise ValueError("You chose a combination of requested tile sizes and magnification that resulted in non-integer tile sizes at different scales")
 
     full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
     thumbnail_tile_size       = requested_tile_size // scale_factor
 
-    logger.info("Normalized mangification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
+    logger.info("Normalized magnification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
     logger.info("Requested tile size=%s, tile size at full magnficiation=%s, tile size at thumbnail=%s", requested_tile_size, full_resolution_tile_size, thumbnail_tile_size)
 
     # Create thumbnail image for scoring
@@ -189,9 +199,6 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
 
     tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
     logger.info("tiles x %s, tiles y %s", tile_x_count, tile_y_count)
-
-    if not to_mag_scale_factor % 1 == 0 or not requested_tile_size % scale_factor == 0: 
-        raise ValueError("You chose a combination of requested tile sizes and mangifications that resulted in non-integer tile sizes at different scales")
 
     
     address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(1, tile_x_count-1), range(1, tile_y_count-1))]
@@ -239,16 +246,16 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
  
     scale_factor = params.get("scale_factor", 4)
-    to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
+    to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)
     to_thumbnail_scale_factor   = to_mag_scale_factor * scale_factor
+    
+    if not to_mag_scale_factor % 1 == 0 or not requested_tile_size % scale_factor == 0: 
+        raise ValueError("You chose a combination of requested tile sizes and magnification that resulted in non-integer tile sizes at different scales")
 
     full_resolution_tile_size   = requested_tile_size * to_mag_scale_factor
     thumbnail_tile_size         = requested_tile_size // scale_factor
 
-    if not to_mag_scale_factor % 1 == 0 or not requested_tile_size % scale_factor == 0: 
-        raise ValueError("You chose a combination of requested tile sizes and mangifications that resulted in non-integer tile sizes at different scales")
-
-    logger.info("Normalized mangification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
+    logger.info("Normalized magnification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
     logger.info("Requested tile size=%s, tile size at full magnficiation=%s, tile size at thumbnail=%s", requested_tile_size, full_resolution_tile_size, thumbnail_tile_size)
 
     output_file = os.path.join(output_dir, "tile_scores_and_labels_visualization.png")
@@ -283,10 +290,10 @@ def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: 
     slide = openslide.OpenSlide(slide_file_path)
     df_scores = pd.read_csv(scores_file_path).set_index("address")
 
-    to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_mangification=requested_magnification)
+    to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)
 
     if not to_mag_scale_factor % 1 == 0: 
-        raise ValueError("You chose a combination of requested tile sizes and mangifications that resulted in non-integer tile sizes at different scales")
+        raise ValueError("You chose a combination of requested tile sizes and magnifications that resulted in non-integer tile sizes at different scales")
 
     full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
 
@@ -316,7 +323,7 @@ def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: 
     
     fp.close()
 
-    df_scores.dropna().to_csv(f"{output_dir}/address.slice.pil")
+    df_scores.dropna().to_csv(f"{output_dir}/address.slice.csv")
 
     properties = {
         "path":output_dir,
