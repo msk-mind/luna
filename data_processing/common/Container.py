@@ -315,14 +315,14 @@ class Container(object):
         node.objects = []
         if "path" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
             node.properties['object_bucket'] = f"{self._bucket_id}"
-            node.properties['object_folder'] = f"{node.name}/{self._name}"
+            node.properties['object_folder'] = f"{self._name}/{node.name}"
             for path in pathlib.Path(node.properties['path']).glob("*"): node.objects.append(path)        
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
         if "file" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
             node.properties['path'] = node.properties['file']
             node.properties['object_bucket'] = f"{self._bucket_id}"
-            node.properties['object_folder'] = f"{node.name}/{self._name}"
+            node.properties['object_folder'] = f"{self._name}/{node.name}"
             node.objects.append(pathlib.Path(node.properties['path']))
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
@@ -362,7 +362,7 @@ class Container(object):
                 object_bucket = n.properties.get("object_bucket")
                 object_folder = n.properties.get("object_folder")
                 for p in n.objects:
-                    future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}_{p.name}", p, part_size=250000000)
+                    future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
                     future_uploads.append(future)
         
         n_count_futures = 0
