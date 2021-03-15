@@ -25,9 +25,13 @@ from data_processing.common.Container       import Container
 from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
 
-from data_processing.pathology.common.preprocess      import save_tiles_parquet
+from data_processing.pathology.common.preprocess import save_tiles
 
-logger = init_logger("visualize_tile_labels.log")
+import pandas as pd
+import pyarrow.parquet as pq
+import pyarrow as pa
+
+logger = init_logger("save_tiles.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
@@ -37,9 +41,9 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 def cli(cohort_id, container_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    visualize_tile_labels_with_container(cohort_id, container_id, method_data)
+    save_tiles_with_container(cohort_id, container_id, method_data)
 
-def visualize_tile_labels_with_container(cohort_id: str, container_id: str, method_data: dict):
+def save_tiles_with_container(cohort_id: str, container_id: str, method_data: dict):
     """
     Using the container API interface, visualize tile-wise scores
     """
@@ -65,17 +69,57 @@ def visualize_tile_labels_with_container(cohort_id: str, container_id: str, meth
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        properties = save_tiles_parquet(image_node.get_path(), label_node.get_path(), output_dir, method_data )
+        properties = save_tiles(image_node.get_path(), label_node.get_path(), output_dir, method_data )
 
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        #parquet_container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(output_container_id)
 
         output_node = Node("TileImages", method_id, properties)
         logger.info(output_node) 
         container.add(output_node)
         container.saveAll()
+
+    
+    container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
+
+    image_node  = container.get("TileImages", method_id) 
+
+    try:
+        if image_node is None:
+            raise ValueError("Image node not found")
+
+        df = pd.read_csv(image_node.get_path(type="pathlib").joinpath("address.slice.csv"))
+        df.loc[:,"object_bucket"] = image_node.properties['object_bucket']
+        df.loc[:,"object_path"]   = image_node.properties['object_folder'] + "/tiles.slice.pil"
+        logger.info(df)
+
+        output_container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(output_container_id)
+
+        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", output_container._namespace_id, output_container._name)
+        if not os.path.exists(output_dir): os.makedirs(output_dir)
+
+        output_file = os.path.join(output_dir, f"{container._container_id}.parquet")
+
+        pq.write_table(pa.Table.from_pandas(df), output_file)
+
+        logger.info("Saved to : " + str(output_file))
+
+        properties = {
+            "rows": len(df),
+            "columns": len(df.columns),
+            "file": output_file
+        }
+
+    except Exception:
+        container.logger.exception ("Exception raised, stopping job execution.")
+    else:
+        output_node = Node("parquet", f"slice-{container._container_id}", properties)
+        output_container.add(output_node)
+        output_container.saveAll()
+
+
+
 
 
 if __name__ == "__main__":
