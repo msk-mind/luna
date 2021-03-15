@@ -278,7 +278,7 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
 
 
 ### MAIN ENTRY METHOD -> save tiles
-def save_tiles_parquet(slide_file_path: str, scores_file_path: str, output_dir: str, params: dict):
+def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, params: dict):
     logger = logging.getLogger(__name__)
 
     logger.info("Processing slide %s", slide_file_path)
