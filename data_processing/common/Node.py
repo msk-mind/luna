@@ -1,5 +1,6 @@
 from data_processing.common.utils import to_sql_field, to_sql_value, does_not_contain
 import warnings, os
+from pathlib import Path
 
 class Node(object):
 	"""
@@ -33,6 +34,8 @@ class Node(object):
 
 		self.properties["type"] = self.type
 
+		self.path = None
+
 	def set_namespace(self, namespace_id: str, subspace_id=None):
 		"""
 		Sets the namespace for this Node commits
@@ -47,6 +50,15 @@ class Node(object):
 		else:
 			self.properties['subspace']  = subspace_id
 			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
+
+
+	def get_path(self, type='string'):
+		"""
+		Returns node's current path
+		"""
+		if self.path is None: raise RuntimeError("Node's path was never set, however was accessed!")
+		elif type=='string':  return str ( self.path )
+		elif type=='pathlib': return Path( self.path )
 
 
 	def __repr__(self):
