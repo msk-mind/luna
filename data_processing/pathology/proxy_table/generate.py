@@ -68,7 +68,7 @@ def parse_openslide(path):
                    "See ./app_config.yaml.template")
 @click.option('-p', '--process_string', default='all',
               help='comma separated list of processes to run or replay: e.g. transfer,delta,graph, or all')
-def cli(template_file, config_file, process_string):
+def cli(data_config_file, app_config_file, process_string):
     """
     This module generates a set of proxy tables for pathology data based on information specified in the template file.
 
@@ -81,13 +81,13 @@ def cli(template_file, config_file, process_string):
     """
     with CodeTimer(logger, 'generate proxy table'):
         processes = process_string.lower().strip().split(",")
-        logger.info('data_ingestions_template: ' + template_file)
-        logger.info('config_file: ' + config_file)
+        logger.info('data_ingestions_template: ' + data_config_file)
+        logger.info('config_file: ' + app_config_file)
         logger.info('processes: ' + str(processes))
 
         # load configs
-        cfg = ConfigSet(name="APP_CFG",  config_file=config_file)
-        cfg = ConfigSet(name="DATA_CFG", config_file=template_file, schema_file=SCHEMA_FILE)
+        cfg = ConfigSet(name="APP_CFG", config_file=app_config_file)
+        cfg = ConfigSet(name="DATA_CFG", config_file=data_config_file, schema_file=SCHEMA_FILE)
 
         # write template file to manifest_yaml under LANDING_PATH
         # todo: write to hdfs without using local gpfs/
@@ -97,17 +97,17 @@ def cli(template_file, config_file, process_string):
         full_landing_path = os.path.join(hdfs_path, landing_path)     
         if not os.path.exists(full_landing_path):
             os.makedirs(full_landing_path)
-        shutil.copy(template_file, os.path.join(full_landing_path, "manifest.yaml"))
+        shutil.copy(data_config_file, os.path.join(full_landing_path, "manifest.yaml"))
         logger.info("template file copied to %s", os.path.join(full_landing_path, "manifest.yaml"))
 
         # subprocess - create proxy table
         if 'delta' in processes or 'all' in processes:
-            exit_code = create_proxy_table(config_file)
+            exit_code = create_proxy_table(app_config_file)
             if exit_code != 0:
                 logger.error("Delta table creation had errors. Exiting.")
                 return
         if 'graph' in processes or 'all' in processes:
-            exit_code = update_graph(config_file)
+            exit_code = update_graph(app_config_file)
             if exit_code != 0:
                 logger.error("Graph creation had errors. Exiting.")
                 return

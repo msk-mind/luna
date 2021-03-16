@@ -31,7 +31,7 @@ logger.info("Starting data_processing.radiology.feature_table.annotation.generat
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to yaml file containing application runtime parameters. "
                    "See ./app_config.yaml.template")
-def cli(app_config_file, data_config_file):
+def cli(data_config_file, app_config_file):
     """
     This module generates cropped png images based on png and mha (2d segmentation) tables.
  

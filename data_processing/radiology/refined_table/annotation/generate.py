@@ -34,7 +34,7 @@ logger.info("Starting data_processing.radiology.refined_table.annotation.generat
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to yaml file containing application runtime parameters. "
                    "See ./app_config.yaml.template")
-def cli(app_config_file, data_config_file):
+def cli(data_config_file, app_config_file):
     """
     This module takes a SeriesInstanceUID, calls a script to generate volumetric images, and updates the scan table.
     

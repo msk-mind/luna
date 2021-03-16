@@ -29,7 +29,7 @@ logger.info("Starting data_processing.radiology.feature_table.unpack")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to yaml file containing application runtime parameters. "
                    "See ./app_config.yaml.template")
-def cli(config_file, data_config_file):
+def cli(data_config_file, app_config_file):
     """
     This module unpacks embedded png binaries from the given table and saves the pngs at the destination.
  
@@ -42,7 +42,7 @@ def cli(config_file, data_config_file):
     """
     start_time = time.time()
 
-    cfg = ConfigSet(name=const.APP_CFG, config_file=config_file)
+    cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
     cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
 
     binary_to_png(cfg)
