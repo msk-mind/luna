@@ -165,7 +165,7 @@ def create_proxy_table(config_file):
     # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
 
-    dicom_path = os.path.join(cfg.get_value(path=DATA_CFG+'::LANDING_PATH'), const.DICOM_TABLE)
+    dicom_path = const.TABLE_LOCATION(cfg)
 
     with CodeTimer(logger, 'load dicom files'):
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")

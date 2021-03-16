@@ -100,6 +100,8 @@ def create_proxy_table(data_config):
 
     logger.info("generating proxy table... ")
 
+    cfg = ConfigSet()
+
     table_path = const.TABLE_LOCATION(cfg)
 
     with CodeTimer(logger, 'load scan annotations'):
