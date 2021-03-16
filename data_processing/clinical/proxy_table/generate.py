@@ -74,12 +74,13 @@ def cli(data_config_file, app_config_file):
         # data_type used to build the table name can be pretty arbitrary, so left the schema file out for now.
         cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
 
-        # copy app and data configuration
+        # copy app and data configuration to destination config dir
         config_location = const.CONFIG_LOCATION(cfg)
         os.makedirs(config_location, exist_ok=True)
 
         shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
         shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
+        logger.info("config files copied to %s", config_location)
 
         generate_proxy_table()
 

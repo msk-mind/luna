@@ -3,6 +3,9 @@ Created on December 11, 2020
 
 @author: rosed2@mskcc.org
 '''
+import os
+import shutil
+
 import click
 
 from data_processing.common.CodeTimer import CodeTimer
@@ -68,6 +71,15 @@ def cli(data_config_file, app_config_file, process_string):
 
         # load configs
         cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
+        cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
+
+        # copy app and data configuration to destination config dir
+        config_location = const.CONFIG_LOCATION(cfg)
+        os.makedirs(config_location, exist_ok=True)
+
+        shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
+        shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
+        logger.info("config files copied to %s", config_location)
 
         # TODO add transfer logic when we establish a standard method for scan annotations.
 
@@ -82,7 +94,6 @@ def cli(data_config_file, app_config_file, process_string):
 def create_proxy_table(data_config):
 
     exit_code = 0
-    cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config)
 
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, 
         app_name="data_processing.radiology.proxy_table.annotation.generate")

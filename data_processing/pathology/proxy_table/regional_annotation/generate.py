@@ -278,14 +278,13 @@ def cli(data_config_file, app_config_file):
         data_cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file, schema_file=DATA_SCHEMA_FILE)
         cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
 
-        # write template file to manifest_yaml under LANDING_PATH
-        # todo: write to hdfs without using local gpfs/
-        landing_path = cfg.get_value(path=const.DATA_CFG + '::LANDING_PATH')
+        # copy app and data configuration to destination config dir
+        config_location = const.CONFIG_LOCATION(cfg)
+        os.makedirs(config_location, exist_ok=True)
 
-        if not os.path.exists(landing_path):
-            os.makedirs(landing_path)
-        shutil.copy(data_config_file, os.path.join(landing_path, "manifest.yaml"))
-        logger.info("template file copied to" + os.path.join(landing_path, "manifest.yaml"))
+        shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
+        shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
+        logger.info("config files copied to %s", config_location)
 
         # create proxy table
         exit_code = create_proxy_table()
