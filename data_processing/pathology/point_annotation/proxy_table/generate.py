@@ -52,13 +52,13 @@ def download_point_annotation(slideviewer_url, slideviewer_path, project_id, use
                    "See ./app_config.yaml.template")
 def cli(data_config_file, app_config_file):
     """
-    This module generates point_json_raw table for pathology data based on information specified in the template file.
+        This module generates a delta table with point_json_raw pathology data based on the input and output
+        parameters specified in the data_config_file.
 
-    Example:
-        python -m data_processing.pathology.point_annotation.proxy_table.generate \
-        --data_config_file {PATH_TO_DATA_CONFIG_FILE} \
-        --app_config_file {PATH_TO_APP_CONFIG_FILE}
-
+        Example:
+            python3 -m data_processing.pathology.point_annotation.proxy_table.generate \
+                     --data_config_file <path to data config file> \
+                     --app_config_file <path to app config file>
     """
     with CodeTimer(logger, 'generate POINT_RAW_JSON table'):
         logger.info('data config file: ' + data_config_file)

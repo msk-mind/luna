@@ -33,14 +33,13 @@ logger.info("Starting data_processing.radiology.feature_table.annotation.generat
                    "See ./app_config.yaml.template")
 def cli(data_config_file, app_config_file):
     """
-    This module generates cropped png images based on png and mha (2d segmentation) tables.
- 
-    This module is to be run from the top-level data-processing directory using the -m flag as follows:
+        This module generates a delta table with cropped png images based on png and mha (2d segmentation) tables
+        specified in the data_config_file.
 
-    Example:
-    $ python3 -m data_processing.radiology.feature_table.annotation.generate \
-        --data_config_file data_processing/radiology/feature_table/config.yaml \
-        --app_config_file config.yaml
+        Example:
+            python3 -m data_processing.radiology.feature_table.annotation.generate \
+                     --data_config_file <path to data config file> \
+                     --app_config_file <path to app config file>
     """
     start_time = time.time()
 

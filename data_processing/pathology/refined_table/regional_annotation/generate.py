@@ -62,14 +62,14 @@ TIMEOUT_SECONDS = 1800
               help='process to run or replay: e.g. geojson OR concat')
 def cli(data_config_file, app_config_file, process_string):
     """
-    This module generates geojson table for pathology data based on information specified in the template file.
+        This module generates a delta table with geojson pathology data based on the input and output parameters
+         specified in the data_config_file.
 
-    Example:
-        python -m data_processing.pathology.refined_table.regional_annotation.generate \
-        --data_config_file {PATH_TO_TEMPLATE_FILE} \
-        --app_config_file {PATH_TO_CONFIG_FILE} \
-        --process_string geojson
-
+        Example:
+            python3 -m data_processing.pathology.refined_table.regional_annotation.generate \
+                     --data_config_file <path to data config file> \
+                     --app_config_file <path to app config file> \
+                     --process_string geojson
     """
     with CodeTimer(logger, f"generate {process_string} table"):
         logger.info('data template: ' + data_config_file)

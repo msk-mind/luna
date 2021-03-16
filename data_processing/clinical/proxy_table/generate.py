@@ -60,12 +60,13 @@ def generate_proxy_table():
                    "See ./app_config.yaml.template")
 def cli(data_config_file, app_config_file):
     """
-    This module generates a delta table for clinical data stored in a csv or tsv file with tab delimiters.
+    This module generates a delta table with clinical data based on the input and output parameters specified in
+     the data_config_file.
 
     Example:
         python3 -m data_processing.clinical.proxy_table.generate \
                  --data_config_file <path to data config file> \
-                 --app_config_file <path to app config file> \
+                 --app_config_file <path to app config file>
     """
     with CodeTimer(logger, 'generate clinical proxy table'):
         # Setup configs

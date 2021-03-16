@@ -68,14 +68,14 @@ def parse_dicom_from_delta_record(path, content):
               help='comma separated list of processes to run or replay: e.g. transfer,delta,graph, or all')
 def cli(data_config_file, app_config_file, process_string):
     """
-    This module generates a set of proxy tables for radiology data based on information specified in the tempalte file.
+        This module generates a delta table with radiology data based on the input and output parameters specified in
+         the data_config_file.
 
-    Example:
-        python -m data_processing.radiology.proxy_table.generate \
-        --template_file {PATH_TO_TEMPLATE_FILE} \
-        --config_file {PATH_TO_CONFIG_FILE}
-        --process_string transfer,delta
-
+        Example:
+            python3 -m data_processing.radiology.proxy_table.generate \
+                     --data_config_file <path to data config file> \
+                     --app_config_file <path to app config file> \
+                     --process_string transfer,delta
     """
     with CodeTimer(logger, 'generate proxy table'):
         processes = process_string.lower().strip().split(",")

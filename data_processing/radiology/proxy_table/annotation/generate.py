@@ -51,15 +51,14 @@ def parse_metadata(path):
               help='comma separated list of processes to run or replay: e.g. transfer,delta,graph, or all')
 def cli(data_config_file, app_config_file, process_string):
     """
-    This module generates annotation tables for radiology data based on information specified in the template file.
-    This supports MHA and MHD as the raw files. Specify mha or mhd as the file_type and data_type in the ingestion template. 
+        This module generates a delta table with radiology annotation data based on the (mha or mhd) input and output
+         parameters specified in the data_config_file.
 
-    Example:
-        python -m data_processing.radiology.proxy_table.annotation.generate \
-        --data_config_file {PATH_TO_DATA_CONFIG_FILE} \
-        --app_config_file {PATH_TO_APP_CONFIG_FILE}
-        --process_string delta
-
+        Example:
+            python3 -m data_processing.radiology.proxy_table.annotation.generate \
+                     --data_config_file <path to data config file> \
+                     --app_config_file <path to app config file> \
+                     --process_string delta
     """
     with CodeTimer(logger, 'generate proxy table'):
         processes = process_string.lower().strip().split(",")

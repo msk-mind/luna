@@ -246,27 +246,30 @@ def create_proxy_table():
               help="path to yaml file containing application runtime parameters. "
                    "See ./app_config.yaml.template")
 def cli(data_config_file, app_config_file):
-    '''
-    This module performs the following sequence of operations -
-    1) Bitmap regional pathology tissue annotations are downloaded from SlideViewer
-    2) The downloaded bitmap annotations are then converted into npy arrays
-    3) A proxy table is built with the following fields.
+    """
+        This module generates a delta table with pathology data based on the input and output parameters specified in
+         the data_config_file.
 
-    slideviewer_path - path to original slide image in slideviewer platform
-    slide_id - synonymous with image_id
-    sv_project_id - same as the project_id from the data_config.yaml,refers to the SlideViewer project number.
-    bmp_filepath - file path to downloaded bmp annotation file
-    annotator - id of annotator for a given annotation
-    date_added - date annotation first added
-    date_updated - date annotation most recently updated
-    bmp_record_uuid - hash of bmp annotation file, format: SVBMP-{bmp_hash}
-    npy_filepath - file path to generated npy annotation file
+        This module performs the following sequence of operations -
+        1) Bitmap regional pathology tissue annotations are downloaded from SlideViewer
+        2) The downloaded bitmap annotations are then converted into npy arrays
+        3) A proxy table is built with the following fields.
 
-    Usage:
-    python3 -m data_processing.pathology.proxy_table.regional_annotation.generate \
-        -d {data_config_yaml} \
-        -a {app_config_yaml}
-    '''
+        slideviewer_path - path to original slide image in slideviewer platform
+        slide_id - synonymous with image_id
+        sv_project_id - same as the project_id from the data_config.yaml,refers to the SlideViewer project number.
+        bmp_filepath - file path to downloaded bmp annotation file
+        annotator - id of annotator for a given annotation
+        date_added - date annotation first added
+        date_updated - date annotation most recently updated
+        bmp_record_uuid - hash of bmp annotation file, format: SVBMP-{bmp_hash}
+        npy_filepath - file path to generated npy annotation file
+
+        Usage:
+        python3 -m data_processing.pathology.proxy_table.regional_annotation.generate \
+            -d {data_config_yaml} \
+            -a {app_config_yaml}
+    """
     with CodeTimer(logger, 'generate regional annotation proxy table'):
         # read and validate configs
         logger.info('data config: ' + data_config_file)
