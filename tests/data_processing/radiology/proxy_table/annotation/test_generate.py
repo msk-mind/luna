@@ -8,8 +8,14 @@ from data_processing.radiology.proxy_table.annotation.generate import *
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
 
-mha_table_path = "tests/data_processing/radiology/testdata/test-project/tables/MHA_datasetname"
-mhd_table_path = "tests/data_processing/radiology/testdata/test-project/tables/MHD_datasetname"
+project_path = "tests/data_processing/radiology/testdata/test-project"
+mha_table_path = project_path + "/tables/MHA_datasetname"
+mha_app_config_path = project_path + "/config/MHA_datasetname/app_config.yaml"
+mha_data_config_path = project_path + "/config/MHA_datasetname/data_config.yaml"
+
+mhd_table_path = project_path + "/tables/MHD_datasetname"
+mhd_app_config_path = project_path + "/config/MHD_datasetname/app_config.yaml"
+mhd_data_config_path = project_path + "/config/MHD_datasetname/data_config.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -24,6 +30,8 @@ def spark():
         shutil.rmtree(mha_table_path)
     if os.path.exists(mhd_table_path):
         shutil.rmtree(mhd_table_path)
+    if os.path.exists(project_path+"/config"):
+        shutil.rmtree(project_path+"/config")
 
 def test_cli_mha(spark):
 
@@ -33,6 +41,9 @@ def test_cli_mha(spark):
         '-a', 'tests/test_config.yaml',
         '-p', 'delta'])
     assert result.exit_code == 0
+
+    assert os.path.exists(mha_app_config_path)
+    assert os.path.exists(mha_data_config_path)
 
     df = spark.read.format("delta").load(os.path.join(os.getcwd(), mha_table_path))
     df.show(10, False)
@@ -51,6 +62,9 @@ def test_cli_mhd(spark):
         '-a', 'tests/test_config.yaml',
         '-p', 'delta'])
     assert result.exit_code == 0
+
+    assert os.path.exists(mhd_app_config_path)
+    assert os.path.exists(mhd_data_config_path)
 
     df = spark.read.format("delta").load(os.path.join(os.getcwd(), mhd_table_path))
     df.show(10, False)

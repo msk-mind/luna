@@ -7,8 +7,14 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.pathology.refined_table.regional_annotation.generate import cli
 import data_processing.common.constants as const
 
-geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/REGIONAL_GEOJSON_dsn"
-concat_geojson_table_path = "tests/data_processing/testdata/data/test-project/tables/REGIONAL_CONCAT_GEOJSON_ds"
+project_path = "tests/data_processing/testdata/data/test-project"
+geojson_table_path = project_path + "/tables/REGIONAL_GEOJSON_dsn"
+geojson_app_config_path = project_path +  "/config/REGIONAL_GEOJSON_dsn/app_config.yaml"
+geojson_data_config_path = project_path + "/config/REGIONAL_GEOJSON_dsn/data_config.yaml"
+
+concat_geojson_table_path = project_path +  "/tables/REGIONAL_CONCAT_GEOJSON_ds"
+concat_geojson_app_config_path = project_path +  "/config/REGIONAL_CONCAT_GEOJSON_ds/app_config.yaml"
+concat_geojson_data_config_path = project_path + "/config/REGIONAL_CONCAT_GEOJSON_ds/data_config.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -34,6 +40,9 @@ def test_cli_geojson(spark):
 
     assert result.exit_code == 0
 
+    assert os.path.exists(geojson_app_config_path)
+    assert os.path.exists(geojson_data_config_path)
+
     df = spark.read.format("delta").load(geojson_table_path)
     df.show(10, False)
     assert df.count() == 2
@@ -49,6 +58,9 @@ def test_cli_concat(spark):
                             '-p', 'concat'])
 
     assert result.exit_code == 0
+
+    assert os.path.exists(concat_geojson_app_config_path)
+    assert os.path.exists(concat_geojson_data_config_path)
 
     df = spark.read.format("delta").load(concat_geojson_table_path)
     df.show(10, False)

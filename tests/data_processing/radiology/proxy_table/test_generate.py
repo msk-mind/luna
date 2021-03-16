@@ -7,9 +7,10 @@ from data_processing.radiology.proxy_table.generate import *
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
 
-landing_path = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158/"
-table_path = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158/tables/CT_OV_16-158_CT_20201028"
-test_ingestion_template = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158/config/data_config.yaml"
+project_path = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158/"
+table_path = project_path + "/tables/CT_OV_16-158_CT_20201028"
+app_config_path = project_path + "/config/CT_OV_16-158_CT_20201028/app_config.yaml"
+data_config_path = project_path + "/config/CT_OV_16-158_CT_20201028/data_config.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -21,8 +22,8 @@ def spark():
     yield spark
 
     print('------teardown------')
-    if os.path.exists(landing_path):
-        shutil.rmtree(landing_path)
+    if os.path.exists(project_path):
+        shutil.rmtree(project_path)
 
 
 def test_cli(spark):
@@ -34,6 +35,9 @@ def test_cli(spark):
         '-p', 'delta'])
 
     assert result.exit_code == 0
+
+    assert os.path.exists(app_config_path)
+    assert os.path.exists(data_config_path)
 
     df = spark.read.format("delta").load(table_path)
     df.show()

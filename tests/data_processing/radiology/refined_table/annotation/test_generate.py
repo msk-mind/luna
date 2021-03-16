@@ -9,8 +9,11 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.radiology.refined_table.annotation.generate import cli
 import data_processing.common.constants as const
 
-
-png_table_path = "tests/data_processing/radiology/testdata/test-project/tables/PNG_dsn"
+project_path = "tests/data_processing/radiology/testdata/test-project"
+png_table_path = project_path + "/tables/PNG_dsn"
+png_config_path = project_path + "/config/PNG_dsn"
+app_config_path = png_config_path + "/app_config.yaml"
+data_config_path = png_config_path + "/data_config.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -23,6 +26,8 @@ def spark():
     print('------teardown------')
     if os.path.exists(png_table_path):
         shutil.rmtree(png_table_path)
+    if os.path.exists(project_path+"/config"):
+        shutil.rmtree(project_path+"/config")
 
 
 def test_cli(spark):
@@ -33,6 +38,9 @@ def test_cli(spark):
         '-a', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
+
+    assert os.path.exists(app_config_path)
+    assert os.path.exists(data_config_path)
 
     df = spark.read.format("delta").load(png_table_path)
     df.show(10)

@@ -10,8 +10,10 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.radiology.feature_table.annotation.generate import cli
 import data_processing.common.constants as const
 
-
-feature_table_path = "tests/data_processing/radiology/testdata/test-project/tables/FEATURE_ds"
+project_path = "tests/data_processing/radiology/testdata/test-project"
+feature_table_path = project_path + "/tables/FEATURE_ds"
+app_config_path = project_path + "/config/FEATURE_ds/app_config.yaml"
+data_config_path = project_path + "/config/FEATURE_ds/data_config.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -24,6 +26,8 @@ def spark():
     print('------teardown------')
     if os.path.exists(feature_table_path):
         shutil.rmtree(feature_table_path)
+    if os.path.exists(project_path + "/config"):
+        shutil.rmtree(project_path + "/config")
         
 def test_cli(spark):
 
@@ -33,6 +37,9 @@ def test_cli(spark):
         '-a', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
+
+    assert os.path.exists(app_config_path)
+    assert os.path.exists(data_config_path)
 
     df = spark.read.format("delta").load(feature_table_path)
     assert df.count() == 1
