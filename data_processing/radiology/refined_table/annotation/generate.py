@@ -28,10 +28,12 @@ logger.info("Starting data_processing.radiology.refined_table.annotation.generat
 
 
 @click.command()
-@click.option('-a', '--app_config_file', default='config.yaml', required=True,
-    help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-d', '--data_config_file', default='data_processing/refined_table/annotation/config.yaml', required=True,
-    help="path to data configuration file. See data_processing/refined_table/annotation/data_config.yaml.template")
+@click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
+              help="path to yaml file containing data input and output parameters. "
+                   "See ./data_config.yaml.template")
+@click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
+              help="path to yaml file containing application runtime parameters. "
+                   "See ./app_config.yaml.template")
 def cli(app_config_file, data_config_file):
     """
     This module takes a SeriesInstanceUID, calls a script to generate volumetric images, and updates the scan table.

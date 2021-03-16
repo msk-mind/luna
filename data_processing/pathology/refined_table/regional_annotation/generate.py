@@ -53,10 +53,11 @@ TIMEOUT_SECONDS = 1800
 
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
-              help="path to yaml template file containing information required for pathology regional annotation data creation. "
-                   "See data_config.yaml.template in the package")
+              help="path to yaml file containing data input and output parameters. "
+                   "See ./data_config.yaml.template")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
-              help="path to config file containing application configuration. See config.yaml.template")
+              help="path to yaml file containing application runtime parameters. "
+                   "See ./app_config.yaml.template")
 @click.option('-p', '--process_string', default='geojson',
               help='process to run or replay: e.g. geojson OR concat')
 def cli(data_config_file, app_config_file, process_string):

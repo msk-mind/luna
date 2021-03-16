@@ -23,10 +23,12 @@ logger.info("Starting data_processing.radiology.feature_table.unpack")
 
 
 @click.command()
-@click.option('-f', '--config_file', default='config.yaml', required=True, 
-    help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-t', '--data_config_file', default='data_processing/radiology/feature_table/config.yaml', required=True,
-    help="path to data configuration file. See data_processing/radiology/feature_table/config.yaml.template")
+@click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
+              help="path to yaml file containing data input and output parameters. "
+                   "See ./data_config.yaml.template")
+@click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
+              help="path to yaml file containing application runtime parameters. "
+                   "See ./app_config.yaml.template")
 def cli(config_file, data_config_file):
     """
     This module unpacks embedded png binaries from the given table and saves the pngs at the destination.

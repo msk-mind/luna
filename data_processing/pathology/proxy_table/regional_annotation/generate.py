@@ -239,17 +239,12 @@ def create_proxy_table():
 
 
 @click.command()
-@click.option('-d',
-              '--data_config_file',
-              default=None,
-              type=click.Path(exists=True),
-              help="path to data config file containing information required for pathology proxy data ingestion. "
-                   "See data_processing/pathology/proxy_table/annotation/data_config.yaml.template")
-@click.option('-a',
-              '--app_config_file',
-              default='config.yaml',
-              type=click.Path(exists=True),
-              help="path to app config file containing application configuration. See config.yaml.template")
+@click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
+              help="path to yaml file containing data input and output parameters. "
+                   "See ./data_config.yaml.template")
+@click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
+              help="path to yaml file containing application runtime parameters. "
+                   "See ./app_config.yaml.template")
 def cli(data_config_file, app_config_file):
     '''
     This module performs the following sequence of operations -

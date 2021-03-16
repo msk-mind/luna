@@ -53,10 +53,11 @@ def generate_proxy_table():
 
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
-              help="path to yaml template file containing information required for clinical proxy data ingestion. "
-                   "See data_ingestion_template.yaml.template")
+              help="path to yaml file containing data input and output parameters. "
+                   "See ./data_config.yaml.template")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
-              help="path to config file containing application configuration. See config.yaml.template")
+              help="path to yaml file containing application runtime parameters. "
+                   "See ./app_config.yaml.template")
 def cli(data_config_file, app_config_file):
     """
     This module generates a delta table for clinical data stored in a csv or tsv file with tab delimiters.
