@@ -10,7 +10,9 @@ import data_processing.common.constants as const
 
 
 proxy_table_path = "tests/data_processing/testdata/data/test-project/tables/WSI_dsn"
-landing_path = "tests/data_processing/testdata/data/test-project/wsi-project"
+landing_path = "tests/data_processing/testdata/data"
+app_config_path = landing_path + '/test-project/config/WSI_dsn/app_config.yaml'
+data_config_path = landing_path + '/test-project/config/WSI_dsn/data_config.yaml'
 
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
@@ -25,18 +27,19 @@ def spark(monkeypatch):
     print('------teardown------')
     if os.path.exists(proxy_table_path):
         shutil.rmtree(proxy_table_path)
-    if os.path.exists(landing_path):
-        shutil.rmtree(landing_path)
         
 def test_cli(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
-        ['-t', 'tests/data_processing/pathology/proxy_table/data.yaml',
-        '-f', 'tests/test_config.yaml',
+        ['-d', 'tests/data_processing/pathology/proxy_table/data.yaml',
+        '-a', 'tests/test_config.yaml',
         '-p', 'delta'])
 
     assert result.exit_code == 0
+
+    assert os.path.exists(app_config_path)
+    assert os.path.exists(data_config_path)
 
     df = spark.read.format("delta").load(proxy_table_path)
     assert df.count() == 1

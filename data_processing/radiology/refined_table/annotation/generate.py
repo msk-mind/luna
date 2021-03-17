@@ -28,25 +28,33 @@ logger.info("Starting data_processing.radiology.refined_table.annotation.generat
 
 
 @click.command()
-@click.option('-a', '--app_config_file', default='config.yaml', required=True,
-    help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-d', '--data_config_file', default='data_processing/refined_table/annotation/config.yaml', required=True,
-    help="path to data configuration file. See data_processing/refined_table/annotation/data_config.yaml.template")
-def cli(app_config_file, data_config_file):
+@click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
+              help="path to yaml file containing data input and output parameters. "
+                   "See ./data_config.yaml.template")
+@click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
+              help="path to yaml file containing application runtime parameters. "
+                   "See ./app_config.yaml.template")
+def cli(data_config_file, app_config_file):
     """
-    This module takes a SeriesInstanceUID, calls a script to generate volumetric images, and updates the scan table.
-    
-    This module is to be run from the top-level data-processing directory using the -m flag as follows:
+        This module generates a delta table with image and scan radiology data based on the input and output parameters        specified in the data_config_file.
 
-    Example:
-    $ python3 -m data_processing.radiology.refined_table.annotation.generate \
-	--data_config_file data_processing/refined_table/annotation/config.yaml \
-	--app_config_file config.yaml
+        Example:
+            python3 -m data_processing.radiology.refined_table.annotation.generate \
+                     --data_config_file <path to data config file> \
+                     --app_config_file <path to app config file>
     """
     start_time = time.time()
 
     cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
     cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
+
+    # copy app and data configuration to destination config dir
+    config_location = const.CONFIG_LOCATION(cfg)
+    os.makedirs(config_location, exist_ok=True)
+
+    shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
+    shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
+    logger.info("config files copied to %s", config_location)
 
     generate_image_table()
 

@@ -58,39 +58,42 @@ def parse_dicom_from_delta_record(path, content):
 
 
 @click.command()
-@click.option('-t', '--template_file', default=None, type=click.Path(exists=True),
-              help="path to yaml template file containing information required for radiology proxy data ingestion. "
-                   "See data_processing/radiology/proxy_table/data_ingestion_template.yaml.template")
-@click.option('-f', '--config_file', default='config.yaml', type=click.Path(exists=True),
-              help="path to config file containing application configuration. See config.yaml.template")
+@click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
+              help="path to yaml file containing data input and output parameters. "
+                   "See ./data_config.yaml.template")
+@click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
+              help="path to yaml file containing application runtime parameters. "
+                   "See ./app_config.yaml.template")
 @click.option('-p', '--process_string', default='all',
               help='comma separated list of processes to run or replay: e.g. transfer,delta,graph, or all')
-def cli(template_file, config_file, process_string):
+def cli(data_config_file, app_config_file, process_string):
     """
-    This module generates a set of proxy tables for radiology data based on information specified in the tempalte file.
+        This module generates a delta table with radiology data based on the input and output parameters specified in
+         the data_config_file.
 
-    Example:
-        python -m data_processing.radiology.proxy_table.generate \
-        --template_file {PATH_TO_TEMPLATE_FILE} \
-        --config_file {PATH_TO_CONFIG_FILE}
-        --process_string transfer,delta
-
+        Example:
+            python3 -m data_processing.radiology.proxy_table.generate \
+                     --data_config_file <path to data config file> \
+                     --app_config_file <path to app config file> \
+                     --process_string transfer,delta
     """
     with CodeTimer(logger, 'generate proxy table'):
         processes = process_string.lower().strip().split(",")
-        logger.info('data_ingestions_template: ' + template_file)
-        logger.info('config_file: ' + config_file)
+        logger.info('data_ingestions_template: ' + data_config_file)
+        logger.info('config_file: ' + app_config_file)
         logger.info('processes: ' + str(processes))
 
         # load configs
-        cfg = ConfigSet(name=DATA_CFG, config_file=template_file, schema_file=SCHEMA_FILE)
-        cfg = ConfigSet(name=APP_CFG, config_file=config_file)
+        cfg = ConfigSet(name=DATA_CFG, config_file=data_config_file, schema_file=SCHEMA_FILE)
+        cfg = ConfigSet(name=APP_CFG, config_file=app_config_file)
 
-        # write template file to manifest_yaml under LANDING_PATH
-        landing_path = cfg.get_value(path=DATA_CFG+'::LANDING_PATH')
-        if not os.path.exists(landing_path):
-            os.makedirs(landing_path)
-        shutil.copy(template_file, os.path.join(landing_path, "manifest.yaml"))
+        # copy app and data configuration to destination config dir
+        config_location = const.CONFIG_LOCATION(cfg)
+        os.makedirs(config_location, exist_ok=True)
+
+        shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
+        shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
+        logger.info("config files copied to %s", config_location)
 
         # subprocess call will preserve environmental variables set by the parent thread.
         if 'transfer' in processes or 'all' in processes:
@@ -100,14 +103,14 @@ def cli(template_file, config_file, process_string):
 
         # subprocess - create proxy table
         if 'delta' in processes or 'all' in processes:
-            exit_code = create_proxy_table(config_file)
+            exit_code = create_proxy_table(app_config_file)
             if exit_code != 0:
                 logger.error("Delta table creation had errors. Exiting.")
                 return
 
         # update graph
         if 'graph' in processes or 'all' in processes:
-            update_graph(config_file)
+            update_graph(app_config_file)
 
 
 def transfer_files():
@@ -162,7 +165,7 @@ def create_proxy_table(config_file):
     # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
 
-    dicom_path = os.path.join(cfg.get_value(path=DATA_CFG+'::LANDING_PATH'), const.DICOM_TABLE)
+    dicom_path = const.TABLE_LOCATION(cfg)
 
     with CodeTimer(logger, 'load dicom files'):
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")

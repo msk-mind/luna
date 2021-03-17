@@ -239,39 +239,37 @@ def create_proxy_table():
 
 
 @click.command()
-@click.option('-d',
-              '--data_config_file',
-              default=None,
-              type=click.Path(exists=True),
-              help="path to data config file containing information required for pathology proxy data ingestion. "
-                   "See data_processing/pathology/proxy_table/annotation/data_config.yaml.template")
-@click.option('-a',
-              '--app_config_file',
-              default='config.yaml',
-              type=click.Path(exists=True),
-              help="path to app config file containing application configuration. See config.yaml.template")
+@click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
+              help="path to yaml file containing data input and output parameters. "
+                   "See ./data_config.yaml.template")
+@click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
+              help="path to yaml file containing application runtime parameters. "
+                   "See ./app_config.yaml.template")
 def cli(data_config_file, app_config_file):
-    '''
-    This module performs the following sequence of operations -
-    1) Bitmap regional pathology tissue annotations are downloaded from SlideViewer
-    2) The downloaded bitmap annotations are then converted into npy arrays
-    3) A proxy table is built with the following fields.
+    """
+        This module generates a delta table with pathology data based on the input and output parameters specified in
+         the data_config_file.
 
-    slideviewer_path - path to original slide image in slideviewer platform
-    slide_id - synonymous with image_id
-    sv_project_id - same as the project_id from the data_config.yaml,refers to the SlideViewer project number.
-    bmp_filepath - file path to downloaded bmp annotation file
-    annotator - id of annotator for a given annotation
-    date_added - date annotation first added
-    date_updated - date annotation most recently updated
-    bmp_record_uuid - hash of bmp annotation file, format: SVBMP-{bmp_hash}
-    npy_filepath - file path to generated npy annotation file
+        This module performs the following sequence of operations -
+        1) Bitmap regional pathology tissue annotations are downloaded from SlideViewer
+        2) The downloaded bitmap annotations are then converted into npy arrays
+        3) A proxy table is built with the following fields.
 
-    Usage:
-    python3 -m data_processing.pathology.proxy_table.regional_annotation.generate \
-        -d {data_config_yaml} \
-        -a {app_config_yaml}
-    '''
+        slideviewer_path - path to original slide image in slideviewer platform
+        slide_id - synonymous with image_id
+        sv_project_id - same as the project_id from the data_config.yaml,refers to the SlideViewer project number.
+        bmp_filepath - file path to downloaded bmp annotation file
+        annotator - id of annotator for a given annotation
+        date_added - date annotation first added
+        date_updated - date annotation most recently updated
+        bmp_record_uuid - hash of bmp annotation file, format: SVBMP-{bmp_hash}
+        npy_filepath - file path to generated npy annotation file
+
+        Usage:
+        python3 -m data_processing.pathology.proxy_table.regional_annotation.generate \
+            -d {data_config_yaml} \
+            -a {app_config_yaml}
+    """
     with CodeTimer(logger, 'generate regional annotation proxy table'):
         # read and validate configs
         logger.info('data config: ' + data_config_file)
@@ -280,14 +278,13 @@ def cli(data_config_file, app_config_file):
         data_cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file, schema_file=DATA_SCHEMA_FILE)
         cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
 
-        # write template file to manifest_yaml under LANDING_PATH
-        # todo: write to hdfs without using local gpfs/
-        landing_path = cfg.get_value(path=const.DATA_CFG + '::LANDING_PATH')
+        # copy app and data configuration to destination config dir
+        config_location = const.CONFIG_LOCATION(cfg)
+        os.makedirs(config_location, exist_ok=True)
 
-        if not os.path.exists(landing_path):
-            os.makedirs(landing_path)
-        shutil.copy(data_config_file, os.path.join(landing_path, "manifest.yaml"))
-        logger.info("template file copied to" + os.path.join(landing_path, "manifest.yaml"))
+        shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
+        shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
+        logger.info("config files copied to %s", config_location)
 
         # create proxy table
         exit_code = create_proxy_table()

@@ -3,6 +3,9 @@ Created on December 11, 2020
 
 @author: rosed2@mskcc.org
 '''
+import os
+import shutil
+
 import click
 
 from data_processing.common.CodeTimer import CodeTimer
@@ -42,23 +45,23 @@ def parse_metadata(path):
 
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
-              help="path to yaml template file containing information required for scan annotation ingestion."
-                   "See data_config.yaml.template")
+              help="path to yaml file containing data input and output parameters. "
+                   "See ./data_config.yaml.template")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
-              help="path to config file containing application configuration. See config.yaml.template")
+              help="path to yaml file containing application runtime parameters. "
+                   "See ./app_config.yaml.template")
 @click.option('-p', '--process_string', default='all',
               help='comma separated list of processes to run or replay: e.g. transfer,delta,graph, or all')
 def cli(data_config_file, app_config_file, process_string):
     """
-    This module generates annotation tables for radiology data based on information specified in the template file.
-    This supports MHA and MHD as the raw files. Specify mha or mhd as the file_type and data_type in the ingestion template. 
+        This module generates a delta table with radiology annotation data based on the (mha or mhd) input and output
+         parameters specified in the data_config_file.
 
-    Example:
-        python -m data_processing.radiology.proxy_table.annotation.generate \
-        --data_config_file {PATH_TO_DATA_CONFIG_FILE} \
-        --app_config_file {PATH_TO_APP_CONFIG_FILE}
-        --process_string delta
-
+        Example:
+            python3 -m data_processing.radiology.proxy_table.annotation.generate \
+                     --data_config_file <path to data config file> \
+                     --app_config_file <path to app config file> \
+                     --process_string delta
     """
     with CodeTimer(logger, 'generate proxy table'):
         processes = process_string.lower().strip().split(",")
@@ -68,6 +71,15 @@ def cli(data_config_file, app_config_file, process_string):
 
         # load configs
         cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
+        cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
+
+        # copy app and data configuration to destination config dir
+        config_location = const.CONFIG_LOCATION(cfg)
+        os.makedirs(config_location, exist_ok=True)
+
+        shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
+        shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
+        logger.info("config files copied to %s", config_location)
 
         # TODO add transfer logic when we establish a standard method for scan annotations.
 
@@ -82,12 +94,13 @@ def cli(data_config_file, app_config_file, process_string):
 def create_proxy_table(data_config):
 
     exit_code = 0
-    cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config)
 
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, 
         app_name="data_processing.radiology.proxy_table.annotation.generate")
 
     logger.info("generating proxy table... ")
+
+    cfg = ConfigSet()
 
     table_path = const.TABLE_LOCATION(cfg)
 

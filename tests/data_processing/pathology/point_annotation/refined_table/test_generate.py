@@ -9,6 +9,8 @@ import data_processing.common.constants as const
 
 
 point_geojson_table_path = "tests/data_processing/pathology/point_annotation/testdata/test-project/tables/POINT_GEOJSON_dsn"
+app_config_path = "tests/data_processing/pathology/point_annotation/testdata/test-project/config/POINT_GEOJSON_dsn/app_config.yaml"
+data_config_path = "tests/data_processing/pathology/point_annotation/testdata/test-project/config/POINT_GEOJSON_dsn/data_config.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -30,6 +32,9 @@ def test_cli(spark):
          '-a', 'tests/test_config.yaml'])
 
     assert result.exit_code == 0
+
+    assert os.path.exists(app_config_path)
+    assert os.path.exists(data_config_path)
 
     df = spark.read.format("delta").load(point_geojson_table_path)
     df.show(10, False)

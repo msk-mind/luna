@@ -6,6 +6,8 @@ Data Transfer / Unpack binaries
 - column_name/accession#/instance#.png
 """
 import os, time
+import shutil
+
 import click
 import pandas as pd
 from PIL import Image 
@@ -23,25 +25,34 @@ logger.info("Starting data_processing.radiology.feature_table.unpack")
 
 
 @click.command()
-@click.option('-f', '--config_file', default='config.yaml', required=True, 
-    help="path to config file containing application configuration. See config.yaml.template")
-@click.option('-t', '--data_config_file', default='data_processing/radiology/feature_table/config.yaml', required=True,
-    help="path to data configuration file. See data_processing/radiology/feature_table/config.yaml.template")
-def cli(config_file, data_config_file):
+@click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
+              help="path to yaml file containing data input and output parameters. "
+                   "See ./data_config.yaml.template")
+@click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
+              help="path to yaml file containing application runtime parameters. "
+                   "See ./app_config.yaml.template")
+def cli(data_config_file, app_config_file):
     """
-    This module unpacks embedded png binaries from the given table and saves the pngs at the destination.
- 
-    This module is to be run from the top-level data-processing directory using the -m flag as follows:
+        This module generates a delta table with embedded png binaries based on the input and output parameters
+         specified in the data_config_file.
 
-    Example:
-    $ python3 -m data_processing.radiology.feature_table.unpack \
-        --data_config_file data_processing/radiology/feature_table/config.yaml \
-        --config_file config.yaml
+        Example:
+            python3 -m data_processing.radiology.feature_table.unpack \
+                     --data_config_file <path to data config file> \
+                     --app_config_file <path to app config file>
     """
     start_time = time.time()
 
-    cfg = ConfigSet(name=const.APP_CFG, config_file=config_file)
+    cfg = ConfigSet(name=const.APP_CFG, config_file=app_config_file)
     cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
+
+    # copy app and data configuration to destination config dir
+    config_location = const.CONFIG_LOCATION(cfg)
+    os.makedirs(config_location, exist_ok=True)
+
+    shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
+    shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
+    logger.info("config files copied to %s", config_location)
 
     binary_to_png(cfg)
 

@@ -5,6 +5,8 @@ The steps for processing pathology nuclei point annotations includes:
 """
 
 import os, json
+import shutil
+
 import click
 from pyspark.sql.window import Window
 from pyspark.sql.functions import first, last, col, lit, desc, udf, explode, array, to_json, current_timestamp
@@ -45,19 +47,20 @@ def download_point_annotation(slideviewer_url, slideviewer_path, project_id, use
 
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
-              help="path to data yaml file containing information required for pathology point annotation data ingestion. "
-                   "See data_config.yaml.template")
+              help="path to yaml file containing data input and output parameters. "
+                   "See ./data_config.yaml.template")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
-              help="path to config file containing application configuration. See config.yaml.template")
+              help="path to yaml file containing application runtime parameters. "
+                   "See ./app_config.yaml.template")
 def cli(data_config_file, app_config_file):
     """
-    This module generates point_json_raw table for pathology data based on information specified in the template file.
+        This module generates a delta table with point_json_raw pathology data based on the input and output
+        parameters specified in the data_config_file.
 
-    Example:
-        python -m data_processing.pathology.point_annotation.proxy_table.generate \
-        --data_config_file {PATH_TO_DATA_CONFIG_FILE} \
-        --app_config_file {PATH_TO_APP_CONFIG_FILE}
-
+        Example:
+            python3 -m data_processing.pathology.point_annotation.proxy_table.generate \
+                     --data_config_file <path to data config file> \
+                     --app_config_file <path to app config file>
     """
     with CodeTimer(logger, 'generate POINT_RAW_JSON table'):
         logger.info('data config file: ' + data_config_file)
@@ -66,6 +69,14 @@ def cli(data_config_file, app_config_file):
         # load configs
         cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
         cfg = ConfigSet(name=const.APP_CFG,  config_file=app_config_file)
+
+        # copy app and data configuration to destination config dir
+        config_location = const.CONFIG_LOCATION(cfg)
+        os.makedirs(config_location, exist_ok=True)
+
+        shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
+        shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
+        logger.info("config files copied to %s", config_location)
 
         create_proxy_table()
 

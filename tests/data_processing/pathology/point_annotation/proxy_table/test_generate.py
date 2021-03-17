@@ -1,15 +1,17 @@
 import pytest
 import os, shutil, sys
 import requests
+from click.testing import CliRunner
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
 from data_processing.pathology.point_annotation.proxy_table import generate
-from data_processing.pathology.point_annotation.proxy_table.generate import create_proxy_table, download_point_annotation
+from data_processing.pathology.point_annotation.proxy_table.generate import create_proxy_table, download_point_annotation, cli
 from tests.data_processing.pathology.common.request_mock import PointJsonResponse
 
-point_json_table_path = "tests/data_processing/pathology/point_annotation/testdata/test-project/tables/POINT_RAW_JSON_ds"
+project_path = "tests/data_processing/pathology/point_annotation/testdata/test-project"
+point_json_table_path = project_path + "/tables/POINT_RAW_JSON_ds"
 SLIDEVIEWER_URL = None
 
 def setup_module(module):
