@@ -270,7 +270,7 @@ def interpolate_segmentation_masks(seg, target_shape):
 
 def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
     """
-    Extract radiomics given and image, label to and output_dir, parameterized by params
+    Generate an ITK compatible image from a dicom series
 
     :param dicom_path: filepath to folder of dicom images
     :param output_dir: destination directory
