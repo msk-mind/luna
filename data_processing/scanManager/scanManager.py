@@ -329,7 +329,7 @@ class initScans(Resource):
             properties = dict(row)
             properties['path'] = os.path.split(properties['path'])[0].split(':')[-1]
 
-            n_meta = Node("DicomSeries", 'init-scans', properties=properties)
+            n_meta = Node("DicomSeries", 'radiology.etl', properties=properties)
             
             container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(row['SeriesInstanceUID'])
             container.add(n_meta)
