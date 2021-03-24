@@ -114,7 +114,7 @@ def save_tiles_with_container(cohort_id: str, container_id: str, method_data: di
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        output_node = Node("parquet", f"slice-{container._container_id}", properties)
+        output_node = Node("Parquet", f"slice-{container._container_id}", properties)
         output_container.add(output_node)
         output_container.saveAll()
 
