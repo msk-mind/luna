@@ -49,7 +49,7 @@ def generate_tile_labels_with_container(cohort_id: str, container_id: str, metho
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_id   = method_data.get("job_tag", "none")
 
-    image_node  = container.get("wsi", method_data['input_wsi_tag']) 
+    image_node  = container.get("WholeSlideImage", method_data['input_wsi_tag']) 
 
     try:
         if image_node is None:
