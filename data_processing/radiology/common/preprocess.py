@@ -317,7 +317,7 @@ def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
 
         writer = itk.ImageFileWriter[ImageType].New()
 
-        outFileName = os.path.join(output_dir, 'volumetric_image.' + params['itkImageType'])
+        outFileName = os.path.join(output_dir, uid + '_volumetric_image.' + params['itkImageType'])
         writer.SetFileName(outFileName)
         writer.UseCompressionOn()
         writer.SetInput(reader.GetOutput())
