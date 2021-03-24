@@ -45,8 +45,8 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_id   = method_data.get("job_tag", "none")
 
-    image_node  = container.get("mhd", method_data['image_input_tag']) 
-    label_node  = container.get("mha", method_data['label_input_tag'])
+    image_node  = container.get("VolumetricImage", method_data['image_input_tag']) 
+    label_node  = container.get("VolumetricLabel", method_data['label_input_tag'])
 
     try:
         if image_node is None:
@@ -70,7 +70,7 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        output_node = Node("voxels", method_id, properties)
+        output_node = Node("Voxels", method_id, properties)
         container.add(output_node)
         container.saveAll()
 
