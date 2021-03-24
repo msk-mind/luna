@@ -377,6 +377,7 @@ class Container(object):
                 if n_count_futures < 10: self.logger.info("Upload successful with etag: %s", data[0])
                 if n_count_futures < 1000 and n_count_futures % 100 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
                 if n_count_futures % 1000 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
+        self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
         self.logger.info("Shutdown executor %s", executor)                
         executor.shutdown()    
         self.logger.info("Done saving all records!!")
