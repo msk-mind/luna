@@ -12,8 +12,8 @@ import data_processing.common.constants as const
 
 project_path = "tests/data_processing/radiology/testdata/test-project"
 feature_table_path = project_path + "/tables/FEATURE_ds"
-app_config_path = project_path + "/config/FEATURE_ds/app_config.yaml"
-data_config_path = project_path + "/config/FEATURE_ds/data_config.yaml"
+app_config_path = project_path + "/configs/FEATURE_ds/app_config.yaml"
+data_config_path = project_path + "/configs/FEATURE_ds/data_config.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():

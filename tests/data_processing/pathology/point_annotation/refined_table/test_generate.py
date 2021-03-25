@@ -9,8 +9,9 @@ import data_processing.common.constants as const
 
 
 point_geojson_table_path = "tests/data_processing/pathology/point_annotation/testdata/test-project/tables/POINT_GEOJSON_dsn"
-app_config_path = "tests/data_processing/pathology/point_annotation/testdata/test-project/config/POINT_GEOJSON_dsn/app_config.yaml"
-data_config_path = "tests/data_processing/pathology/point_annotation/testdata/test-project/config/POINT_GEOJSON_dsn/data_config.yaml"
+config_path = "tests/data_processing/pathology/point_annotation/testdata/test-project/configs"
+app_config_path = config_path + "/POINT_GEOJSON_dsn/app_config.yaml"
+data_config_path = config_path + "/POINT_GEOJSON_dsn/data_config.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -23,7 +24,9 @@ def spark():
     print('------teardown------')
     if os.path.exists(point_geojson_table_path):
         shutil.rmtree(point_geojson_table_path)
-        
+    if os.path.exists(config_path):
+        shutil.rmtree(config_path)
+
 def test_cli(spark):
 
     runner = CliRunner()

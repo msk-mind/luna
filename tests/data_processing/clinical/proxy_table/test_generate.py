@@ -10,8 +10,8 @@ from data_processing.common.sparksession import SparkConfig
 
 project_path = 'tests/data_processing/clinical/testdata/test-project'
 clinical_proxy_table = 'tests/data_processing/clinical/testdata/test-project/tables/TEST_CLINICAL_PATIENTS_20210308'
-app_config_path = 'tests/data_processing/clinical/testdata/test-project/config/TEST_CLINICAL_PATIENTS_20210308/app_config.yaml'
-data_config_path = 'tests/data_processing/clinical/testdata/test-project/config/TEST_CLINICAL_PATIENTS_20210308/data_config.yaml'
+app_config_path = 'tests/data_processing/clinical/testdata/test-project/configs/TEST_CLINICAL_PATIENTS_20210308/app_config.yaml'
+data_config_path = 'tests/data_processing/clinical/testdata/test-project/configs/TEST_CLINICAL_PATIENTS_20210308/data_config.yaml'
 
 
 @pytest.fixture(autouse=True)

@@ -10,12 +10,12 @@ import data_processing.common.constants as const
 
 project_path = "tests/data_processing/radiology/testdata/test-project"
 mha_table_path = project_path + "/tables/MHA_datasetname"
-mha_app_config_path = project_path + "/config/MHA_datasetname/app_config.yaml"
-mha_data_config_path = project_path + "/config/MHA_datasetname/data_config.yaml"
+mha_app_config_path = project_path + "/configs/MHA_datasetname/app_config.yaml"
+mha_data_config_path = project_path + "/configs/MHA_datasetname/data_config.yaml"
 
 mhd_table_path = project_path + "/tables/MHD_datasetname"
-mhd_app_config_path = project_path + "/config/MHD_datasetname/app_config.yaml"
-mhd_data_config_path = project_path + "/config/MHD_datasetname/data_config.yaml"
+mhd_app_config_path = project_path + "/configs/MHD_datasetname/app_config.yaml"
+mhd_data_config_path = project_path + "/configs/MHD_datasetname/data_config.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -30,8 +30,8 @@ def spark():
         shutil.rmtree(mha_table_path)
     if os.path.exists(mhd_table_path):
         shutil.rmtree(mhd_table_path)
-    if os.path.exists(project_path+"/config"):
-        shutil.rmtree(project_path+"/config")
+    if os.path.exists(project_path+"/configs"):
+        shutil.rmtree(project_path+"/configs")
 
 def test_cli_mha(spark):
 

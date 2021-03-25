@@ -11,8 +11,8 @@ import data_processing.common.constants as const
 
 proxy_table_path = "tests/data_processing/testdata/data/test-project/tables/WSI_dsn"
 landing_path = "tests/data_processing/testdata/data"
-app_config_path = landing_path + '/test-project/config/WSI_dsn/app_config.yaml'
-data_config_path = landing_path + '/test-project/config/WSI_dsn/data_config.yaml'
+app_config_path = landing_path + '/test-project/configs/WSI_dsn/app_config.yaml'
+data_config_path = landing_path + '/test-project/configs/WSI_dsn/data_config.yaml'
 
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):

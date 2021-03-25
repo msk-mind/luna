@@ -9,12 +9,12 @@ import data_processing.common.constants as const
 
 project_path = "tests/data_processing/testdata/data/test-project"
 geojson_table_path = project_path + "/tables/REGIONAL_GEOJSON_dsn"
-geojson_app_config_path = project_path +  "/config/REGIONAL_GEOJSON_dsn/app_config.yaml"
-geojson_data_config_path = project_path + "/config/REGIONAL_GEOJSON_dsn/data_config.yaml"
+geojson_app_config_path = project_path +  "/configs/REGIONAL_GEOJSON_dsn/app_config.yaml"
+geojson_data_config_path = project_path + "/configs/REGIONAL_GEOJSON_dsn/data_config.yaml"
 
 concat_geojson_table_path = project_path +  "/tables/REGIONAL_CONCAT_GEOJSON_ds"
-concat_geojson_app_config_path = project_path +  "/config/REGIONAL_CONCAT_GEOJSON_ds/app_config.yaml"
-concat_geojson_data_config_path = project_path + "/config/REGIONAL_CONCAT_GEOJSON_ds/data_config.yaml"
+concat_geojson_app_config_path = project_path +  "/configs/REGIONAL_CONCAT_GEOJSON_ds/app_config.yaml"
+concat_geojson_data_config_path = project_path + "/configs/REGIONAL_CONCAT_GEOJSON_ds/data_config.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():

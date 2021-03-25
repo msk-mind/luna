@@ -9,8 +9,8 @@ import data_processing.common.constants as const
 
 project_path = "tests/data_processing/radiology/proxy_table/test_data/OV_16-158/"
 table_path = project_path + "/tables/CT_OV_16-158_CT_20201028"
-app_config_path = project_path + "/config/CT_OV_16-158_CT_20201028/app_config.yaml"
-data_config_path = project_path + "/config/CT_OV_16-158_CT_20201028/data_config.yaml"
+app_config_path = project_path + "/configs/CT_OV_16-158_CT_20201028/app_config.yaml"
+data_config_path = project_path + "/configs/CT_OV_16-158_CT_20201028/data_config.yaml"
 
 @pytest.fixture(autouse=True)
 def spark():

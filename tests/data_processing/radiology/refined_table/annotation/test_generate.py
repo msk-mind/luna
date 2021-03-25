@@ -11,7 +11,7 @@ import data_processing.common.constants as const
 
 project_path = "tests/data_processing/radiology/testdata/test-project"
 png_table_path = project_path + "/tables/PNG_dsn"
-png_config_path = project_path + "/config/PNG_dsn"
+png_config_path = project_path + "/configs/PNG_dsn"
 app_config_path = png_config_path + "/app_config.yaml"
 data_config_path = png_config_path + "/data_config.yaml"
 
@@ -26,8 +26,8 @@ def spark():
     print('------teardown------')
     if os.path.exists(png_table_path):
         shutil.rmtree(png_table_path)
-    if os.path.exists(project_path+"/config"):
-        shutil.rmtree(project_path+"/config")
+    if os.path.exists(project_path+"/configs"):
+        shutil.rmtree(project_path+"/configs")
 
 
 def test_cli(spark):

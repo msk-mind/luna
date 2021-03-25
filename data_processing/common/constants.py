@@ -51,7 +51,7 @@ def PROJECT_LOCATION(cfg):
     return os.path.join(cfg.get_value(path=DATA_CFG+'::ROOT_PATH'), cfg.get_value(path=DATA_CFG+'::PROJECT'))
 
 def CONFIG_LOCATION(cfg):
-    return "{0}/config/{1}".format(PROJECT_LOCATION(cfg), TABLE_NAME(cfg))
+    return "{0}/configs/{1}".format(PROJECT_LOCATION(cfg), TABLE_NAME(cfg))
 
 def TABLE_LOCATION(cfg, is_source=False):
     return "{0}/tables/{1}".format(PROJECT_LOCATION(cfg), TABLE_NAME(cfg, is_source))
