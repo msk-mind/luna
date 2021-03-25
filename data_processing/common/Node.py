@@ -20,7 +20,7 @@ class Node(object):
 		# Required schema: node_type, node_name
 
 		self.type = node_type
-                
+
 		if properties is None: 
 			self.properties = {}
 		else: 
@@ -29,6 +29,9 @@ class Node(object):
 		# Special case: a cohort name is it's own namespace
 		if self.type in ["cohort"]:
 			self.properties['namespace'] = node_name
+			self.name = f'{node_name}'
+		else:
+			self.name = f'{node_type}-{node_name}'
 
 		# For containers, DB name is the name, for data type nodes, it's type-name, and must be one of these two categories
 		if self.type in CONTAINER_TYPES:
@@ -73,7 +76,6 @@ class Node(object):
 		if self.path is None: raise RuntimeError("Node's path was never set, however was accessed!")
 		elif type=='string':  return str ( self.path )
 		elif type=='pathlib': return Path( self.path )
-
 
 	def __repr__(self):
 		"""
