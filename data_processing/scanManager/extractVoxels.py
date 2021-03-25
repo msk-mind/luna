@@ -23,8 +23,6 @@ from data_processing.common.config import ConfigSet
 # From radiology.common
 from data_processing.radiology.common.preprocess   import extract_voxels
 
-from medpy.io import load
-
 logger = init_logger("extractVoxels.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
