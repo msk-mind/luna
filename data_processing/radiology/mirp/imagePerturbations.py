@@ -69,7 +69,7 @@ def randomise_roi_contours(img_obj, roi_list, settings):
         # Include supervoxels with 90% coverage and exclude those with less then 20% coverage
         a = 0.7
         b = 0.3
-        #overlap_fract = (1.0 / (a-b)) * overlap_fract - ( b  / (a-b))
+        
         overlap_fract[overlap_fract > a] = 1.0
         overlap_fract[overlap_fract < b] = 0.0
 

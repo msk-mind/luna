@@ -516,8 +516,8 @@ def randomize_contours(image_path: str, label_path: str, output_dir: str, params
         if "COMBINED" in roi.name: roi.export(img_obj=image_class_object, file_path=f"{output_dir}/pertubations")
 
     # Construct return dicts
-    main_image_properties = {"path":f"{output_dir}/main_image"}
-    main_label_properties = {"path":f"{output_dir}/main_label"}
-    pertubation_set_properties = {"path":f"{output_dir}/pertubations"}
-    supervoxel_properties = {"path":f"{output_dir}/supervoxels"}
+    main_image_properties       = {"path":f"{output_dir}/main_image"}
+    main_label_properties       = {"path":f"{output_dir}/main_label"}
+    pertubation_set_properties  = {"path":f"{output_dir}/pertubations"}
+    supervoxel_properties       = {"path":f"{output_dir}/supervoxels"}
     return main_image_properties, main_label_properties, pertubation_set_properties, supervoxel_properties
