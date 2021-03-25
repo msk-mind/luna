@@ -1,0 +1,5 @@
+{
+    "image_input_tag": "mhd",
+    "label_input_tag": "user-annotations",
+    "job_tag" : "test_randomize_contours"
+}
