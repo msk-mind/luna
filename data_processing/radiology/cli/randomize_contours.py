@@ -59,7 +59,7 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        image_properties, label_properties, pertubation_properties = randomize_contours(
+        image_properties, label_properties, pertubation_properties, supervoxel_properties = randomize_contours(
             image_path = str(next(image_node.path.glob("*.mhd"))),
             label_path = str(label_node.path),
             output_dir = output_dir,
@@ -72,9 +72,11 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
         new_image_node          = Node("VolumetricImage",    method_id, image_properties)
         new_label_node          = Node("VolumetricLabel",    method_id, label_properties)
         new_pertubation_node    = Node("VolumetricLabelSet", method_id, pertubation_properties)
+        new_supervoxel_node     = Node("Voxels", method_id, supervoxel_properties)
         container.add(new_image_node)
         container.add(new_label_node)
         container.add(new_pertubation_node)
+        container.add(new_supervoxel_node)
         container.saveAll()
 
 

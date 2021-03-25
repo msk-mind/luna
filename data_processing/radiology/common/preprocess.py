@@ -510,7 +510,7 @@ def randomize_contours(image_path: str, label_path: str, output_dir: str, params
 
     roi_class_object_list, svx_class_object_list = randomise_roi_contours (img_obj=image_class_object, roi_list=roi_class_object_list, settings=settings)
     for roi in combine_all_rois (roi_list=svx_class_object_list, settings=settings):
-        if "SUPERVOXEL" in roi.name: roi.export(img_obj=image_class_object, file_path=f"{output_dir}/supervoxel")
+        if "SUPERVOXEL" in roi.name: roi.export(img_obj=image_class_object, file_path=f"{output_dir}/supervoxels")
 
     for roi in combine_pertubation_rois (roi_list=roi_class_object_list, settings=settings): 
         if "COMBINED" in roi.name: roi.export(img_obj=image_class_object, file_path=f"{output_dir}/pertubations")
@@ -519,4 +519,5 @@ def randomize_contours(image_path: str, label_path: str, output_dir: str, params
     main_image_properties = {"path":f"{output_dir}/main_image"}
     main_label_properties = {"path":f"{output_dir}/main_label"}
     pertubation_set_properties = {"path":f"{output_dir}/pertubations"}
-    return main_image_properties, main_label_properties, pertubation_set_properties
+    supervoxel_properties = {"path":f"{output_dir}/supervoxels"}
+    return main_image_properties, main_label_properties, pertubation_set_properties, supervoxel_properties

@@ -73,8 +73,10 @@ def randomise_roi_contours(img_obj, roi_list, settings):
         overlap_fract[overlap_fract > a] = 1.0
         overlap_fract[overlap_fract < b] = 0.0
 
-        candidate_indices  = overlap_indices[overlap_fract >= b]
+        candidate_indices  = overlap_indices[np.logical_and( overlap_fract > 0.0 , overlap_fract < 1.0 )]
         candidate_segments = np.where( np.isin(img_segments, candidate_indices), img_segments, 0 )
+
+        print ("Candidate segments: ", len(candidate_indices), " complexity: ", 2**len(candidate_indices))
 
         # Determine grid indices of the resected grid with respect to the original image grid
         grid_origin = world_to_index(coord=res_img_obj.origin, origin=img_obj.origin, spacing=img_obj.spacing)
