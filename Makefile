@@ -30,6 +30,7 @@ clean-test:      ## remove test and coverage artifacts
 	rm -fr htmlcov/
 
 dist: clean
+	pip install --upgrade pip
 	pip install --use-feature=2020-resolver -r requirements.txt
 	pyinstaller -F --clean --hidden-import py4j.java_collections --exclude-module tkinter data_processing/preprocess_feature.py
 	python setup.py sdist
@@ -41,6 +42,7 @@ lint:
 	flake8 data-processing test
 
 test: clean-test clean-pyc    ## run tests quickly with the default Python
+	pip install --upgrade pip
 	pip install --use-feature=2020-resolver -r requirements.txt
 	pytest
 
