@@ -7,6 +7,8 @@ import json
 import ast
 import copy
 import signal
+import shapely 
+from shapely.geometry import Polygon, MultiPolygon, shape, mapping
 
 # max amount of time for a geojson to be generated. if generation surpasses this limit, it is likely the annotation file is
 # too large or they may be annotation artifacts present in the slide. currently set at 30 minute timeout
@@ -53,6 +55,29 @@ def build_geojson_from_pointclick_json(labelsets, labelset, sv_json):
     return output_geojson
 
 
+# determines parent child relationships of polygons
+# returns a list of size n (where n is the number of input polygons in input list polygons)
+# each index in n corresponds to polygon n's parent. in case of no parent -1 is used.
+# for example, parent_nums[0] == 2 means that polygon 0's parent is polygon 2.
+def find_parents(polygons):
+    parent_nums = []
+    for child in polygons:
+        found_parent = False
+        for parent_idx, parent in enumerate(polygons):
+            if child == parent:
+                continue
+            # found parent for child
+            if parent.contains(child):
+                parent_nums.append(parent_idx)
+                found_parent = True
+                break
+        # finished looping through all potential parents, so child is a parent
+        if not found_parent:
+            parent_nums.append(-1)
+    print(parent_nums)
+    return parent_nums
+
+# TODO test performance with/without polygon-tolerance. approximate_polygons(polygon_tolerance) might just be a slow and unnecessary step. 
 # adapted from: https://github.com/ijmbarr/image-processing-with-numpy/blob/master/image-processing-with-numpy.ipynb
 def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, contour_level, polygon_tolerance):
     """
@@ -76,27 +101,42 @@ def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, 
         contours = measure.find_contours(mask, level = contour_level)
         print("num contours", len(contours))
 
-        scaled_tolerance = polygon_tolerance
-        if num_pixels >= 10000000:
-            scaled_tolerance = int(num_pixels / 10000000)
+        polygons = [Polygon(np.squeeze(c)) for c in contours]
+        parent_nums = find_parents(polygons)
 
-        simplified_contours = [measure.approximate_polygon(c, tolerance=scaled_tolerance) for c in contours]
+        polygon_by_index_number = {}
 
-        for n, contour in enumerate(simplified_contours):
-            feature_dict = {"type":"Feature", "properties":{}, "geometry":{"type":"Polygon", "coordinates": []}}
-            feature_dict['properties']['label_num'] = str(label_num)
-            feature_dict['properties']['label_name'] = mappings[label_num]
-
-            contour_list =   contour.tolist()
+        for index, parent in enumerate(parent_nums):
+            contour = contours[index]
+            contour_list = contour.tolist()
+            
+            # switch coordinates, otherwise gets flipped
             for coord in contour_list:
-                x = int(round(coord[0]))
-                y = int(round(coord[1]))
-                # switch coordinates, otherwise gets flipped
+                x = int(coord[0])
+                y = int(coord[1])
                 coord[0] = y
                 coord[1] = x
+            
+            # this polygon does not have parent, so this is a parent object (top level)
+            if parent == -1:
+                polygon = {"type":"Feature", "properties":{}, "geometry":{"type":"Polygon", "coordinates": []}}
+                polygon['properties']['label_num'] = str(label_num)
+                polygon['properties']['label_name'] = mappings[label_num]
+                polygon['geometry']['coordinates'].append(contour_list)
+                polygon_by_index_number[index] = polygon
+            else:
+                # this is a child object, add coordinates as a hole to the parent polygon
+                
+                # fetch parent's polygon 
+                parent_polygon = polygon_by_index_number[parent]
 
-            feature_dict['geometry']['coordinates'] = contour_list
-            annotation_geojson['features'].append(feature_dict)
+                # append as hole to parent
+                parent_polygon['geometry']['coordinates'].append(contour_list)
+
+        # add parent polygon feature dicts to running annotation geojson object
+        for index, polygon in polygon_by_index_number.items():
+            annotation_geojson['features'].append(polygon)
+
     else:
         print("No label " + str(label_num) + " found")
     return annotation_geojson

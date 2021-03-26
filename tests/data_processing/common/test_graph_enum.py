@@ -6,7 +6,7 @@ Created on October 17, 2019
 '''
 import pytest
 
-from data_processing.common.Node import Node
+from data_processing.common.Node import Node, CONTAINER_TYPES, ALL_DATA_TYPES
 
 def test_patient_create():
     create_string = Node("patient", "my_patient", properties={"namespace":"my_cohort", "Description":"a patient"}).get_create_str()
@@ -41,9 +41,9 @@ def test_metadata_create():
     properties['namespace'] = "my_cohort"
     properties['dim'] = 3
 
-    create_string = Node("mhd", "SCAN-001", properties=properties).get_create_str()
-    assert "mhd:globals" in create_string    
-    assert "qualified_address: 'my_cohort::scan-001'"  in create_string
+    create_string = Node("VolumetricImage", "SCAN-001", properties=properties).get_create_str()
+    assert "VolumetricImage:globals" in create_string    
+    assert "qualified_address: 'my_cohort::volumetricimage-scan-001'"  in create_string
     assert "dim"  in create_string
 
 def test_metadata_match():
@@ -51,8 +51,8 @@ def test_metadata_match():
     properties['namespace'] = "my_cohort"
     properties['dim'] = 3
 
-    match_string = Node("mhd", "SCAN-002", properties=properties).get_match_str()
-    assert "qualified_address: 'my_cohort::scan-002"  in match_string
+    match_string = Node("VolumetricImage", "SCAN-002", properties=properties).get_match_str()
+    assert "qualified_address: 'my_cohort::volumetricimage-scan-002"  in match_string
     assert "dim"  not in match_string
 
 
@@ -61,9 +61,8 @@ def test_get_all_properties():
     properties['namespace'] = "my_cohort"
     properties['dim'] = 3
 
-    all_props = Node("mhd", "SCAN-001", properties=properties).get_all_props()
+    all_props = Node("VolumetricImage", "SCAN-001", properties=properties).get_all_props()
     assert "name" in all_props
-    assert "SCAN-001" == all_props["name"]
 
 def test_patient_no_namespace():
     node = Node("patient", "pid", properties={})
@@ -81,4 +80,14 @@ def test_patient_bad_id():
 def test_cohort_bad_id():
     with pytest.raises(ValueError):
         Node("cohort", "my:cohort", properties={"Description":"a cohort"})
-       
+      
+@pytest.mark.parametrize(('node_type'),CONTAINER_TYPES)
+def test_container_types(node_type):
+    node = Node(node_type, "my_node")
+    assert node.properties["type"] == node_type
+
+@pytest.mark.parametrize(('node_type'),ALL_DATA_TYPES)
+def test_container_types(node_type):
+    node = Node(node_type, "my_node")
+    assert node.properties["type"] == node_type
+    assert node.properties["qualified_address"] == node_type.lower() + '-' + "my_node"

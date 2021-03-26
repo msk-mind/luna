@@ -14,7 +14,7 @@ def test_add_contours_for_label():
     annotation = np.load(os.path.join(npy_data_path, '123_jill_SVBMP-123sdf_annot.npy'))
     res = add_contours_for_label(base_geojson, annotation, 1, {1:"tissue_1"}, 0.5, 1)
 
-    assert 1 < len(res['features'][0]['geometry']['coordinates'])
+    assert 1 < len(res['features'][0]['geometry']['coordinates'][0])
 
 def test_add_contours_for_label_non_matching_label():
     base_geojson = {

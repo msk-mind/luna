@@ -184,7 +184,7 @@ def update_graph(config_file):
             container.lookupAndAttach(row.slide_id)
             properties = row.metadata
             properties['file'] = row.path.split(':')[-1]
-            node = Node("wsi", "whole_slide_image", properties)
+            node = Node("WholeSlideImage", "pathology.etl", properties)
             container.add(node)
         container.saveAll()
 
