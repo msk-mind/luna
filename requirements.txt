@@ -5,6 +5,6 @@
 
 # Editable mode. Requirements are picked up from setup.cfg install_requires and matched up to versions in the the index list above
 
-# can override abstract requirements in setup.cfg to specific versions by placing entries here
+# to override abstract requirements in setup.cfg to specific versions, place entries here
 
 -e .
