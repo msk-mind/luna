@@ -94,6 +94,8 @@ def randomise_roi_contours(img_obj, roi_list, settings):
 
             if average_segment_size < 100: break
 
+        print ("Candidate segments: ", len(candidate_indices), " complexity: ", 2**len(candidate_indices))
+
         # Determine grid indices of the resected grid with respect to the original image grid
         grid_origin = world_to_index(coord=res_img_obj.origin, origin=img_obj.origin, spacing=img_obj.spacing)
         grid_origin = grid_origin.astype(np.int)
