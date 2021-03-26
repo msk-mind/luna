@@ -270,7 +270,7 @@ def get_supervoxels(img_obj, roi_obj, settings):
  
     # Slic constants - number of segments
     min_n_voxels = np.max([20.0, 250.0 / np.prod(img_obj.spacing)])
-    n_segments   = int(np.prod(img_obj.size) / min_n_voxels) # aauker: amp up n supervoxels, reduce size ~ 6.3 mm supervoxels
+    n_segments   = 1000 #int(np.prod(img_obj.size) / min_n_voxels) # aauker: amp up n supervoxels, reduce size ~ 6.3 mm supervoxels
 
     # Sigma = 1mm
     sigma = 1.0 / np.min(img_obj.spacing)
