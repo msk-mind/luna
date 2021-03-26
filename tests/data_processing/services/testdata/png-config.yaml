@@ -4,7 +4,7 @@ PROJECT: test-project
 
 DATASET_NAME: dsn
 
-DATA_TYPE: png
+DATA_TYPE: DicomImageSeries 
 
 # mock graph configs
 GRAPH_URI: localhost:7897

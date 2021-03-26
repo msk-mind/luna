@@ -3,8 +3,8 @@ import warnings, os
 from pathlib import Path
 
 CONTAINER_TYPES = ["cohort", "patient", "scan", "slide", "parquet", "accession", "generic"]
-RADIOLOGY_TYPES = ["DicomSeries", "DicomImageSeries", "VolumetricImage", "VolumetricLabel", "VolumetricLabelList", "Voxels", "Radiomics"]
-PATHOLOGY_TYPES = ["WholeSlideImage", "WsiThumbnail", "TileScores", "TileImages", "PointAnnotation", "RegionalAnnotation", "CellMap"]
+RADIOLOGY_TYPES = ["DicomSeries", "DicomImageSeries", "DicomImage", "VolumetricImage", "VolumetricLabel", "VolumetricLabelList", "Voxels", "Radiomics"]
+PATHOLOGY_TYPES = ["WholeSlideImage", "WsiThumbnail", "TileScores", "TileImages", "PointAnnotation", "PointAnnotationJson", "RegionalAnnotationBitmap", "RegionalAnnotationJson", "CellMap"]
 ALL_DATA_TYPES  = RADIOLOGY_TYPES + PATHOLOGY_TYPES
 
 class Node(object):
