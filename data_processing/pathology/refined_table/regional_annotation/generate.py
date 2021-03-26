@@ -15,6 +15,7 @@ from pyspark.sql.types import StringType, IntegerType, ArrayType, MapType, Struc
 
 import yaml, os, json
 
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
 logger = init_logger()
 
 # geojson struct - example
@@ -22,7 +23,13 @@ logger = init_logger()
 # "features":[{"type":"Feature",
 #               "properties":{"label_num":"1","label_name":"tissue_1"},
 #               "geometry":{"type":"Polygon",
-#                           "coordinates":[[1261,2140],[1236,2140],[1222,2134],[1222,2132],[1216,2125]]}}]}
+#                           "coordinates":[
+#                                       [[1261,2140],[1236,2140],[1222,2134],[1222,2132],[1216,2125]],
+#                                       [[hole1_x,hole_y], [hole2_x, hole3_x], ...]
+#                                       ]
+#                           }
+#             }]
+# }
 geojson_struct = StructType([
     StructField("type", StringType()),
     StructField("features",
@@ -33,7 +40,7 @@ geojson_struct = StructType([
                         StructField("geometry",
                                     StructType([
                                         StructField("type", StringType()),
-                                        StructField("coordinates", ArrayType(ArrayType(IntegerType())))
+                                        StructField("coordinates", ArrayType(ArrayType(ArrayType(IntegerType()))))
                                     ])
                                     )
                     ])
@@ -142,6 +149,8 @@ def create_geojson_table():
             .withColumn("contour_level", lit(contour_level)) \
             .withColumn("polygon_tolerance", lit(polygon_tolerance)) \
             .withColumn("geojson", lit(""))
+
+    print(df.select("label_config").collect())
 
     df = df.groupby(["bmp_record_uuid", "labelset"]).applyInPandas(build_geojson_from_annotation, schema = df.schema)
 
