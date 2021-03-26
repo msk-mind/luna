@@ -248,7 +248,7 @@ def estimate_image_noise(img_obj, settings, method="chang"):
     return est_noise
 
 
-def get_supervoxels(img_obj, roi_obj, settings):
+def get_supervoxels(img_obj, roi_obj, settings, n_segments=None):
     """Extracts supervoxels from an image"""
 
     # Check if image and/or roi exist, and skip otherwise
@@ -266,11 +266,11 @@ def get_supervoxels(img_obj, roi_obj, settings):
 
     img_voxel_grid = np.clip( img_voxel_grid, low_level, high_level)
 
-    print (f"For [{roi_obj.name}]: Tumor window range: ", low_level, high_level )
+    # print (f"For [{roi_obj.name}]: Tumor window range: ", low_level, high_level )
  
     # Slic constants - number of segments
-    min_n_voxels = np.max([20.0, 250.0 / np.prod(img_obj.spacing)])
-    n_segments   = 1000 #int(np.prod(img_obj.size) / min_n_voxels) # aauker: amp up n supervoxels, reduce size ~ 6.3 mm supervoxels
+    if n_segments is None:
+        n_segments   = int(np.prod(img_obj.size) / min_n_voxels) # aauker: amp up n supervoxels, reduce size ~ 6.3 mm supervoxels
 
     # Sigma = 1mm
     sigma = 1.0 / np.min(img_obj.spacing)
