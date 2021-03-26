@@ -249,7 +249,7 @@ class Container(object):
         """
         assert self.isAttached()
 
-        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type}) WHERE id(container) = {self._container_id} AND data.name='{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
+        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type}) WHERE id(container) = {self._container_id} AND data.name='{type}-{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
 
         self.logger.debug(query)
         res = self._conn.query(query)
@@ -257,13 +257,13 @@ class Container(object):
         # Catches bad queries
         # If successfull query, reconstruct a Node object
         if res is None:
-            self.logger.error("get() query failed, returning None")
+            self.logger.error(f"get() query failed, data.name='{type}-{name}' returning None")
             return None
         elif len(res) == 0: 
-            self.logger.error("get() found no nodes, returning None")
+            self.logger.error(f"get() found no nodes, data.name='{type}-{name}' returning None")
             return None
         elif len(res) > 1: 
-            self.logger.error("get() found many nodes (?) returning None")
+            self.logger.error(f"get() found many nodes (?), data.name='{type}-{name}' returning None")
             return None
         else:
             node = Node(res[0]['data']['type'], res[0]['data']['name'], dict(res[0]['data'].items()))
