@@ -249,7 +249,7 @@ class Container(object):
         """
         assert self.isAttached()
 
-        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type}) WHERE id(container) = {self._container_id} AND data.name='{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
+        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type}) WHERE id(container) = {self._container_id} AND data.name='{type}-{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
 
         self.logger.debug(query)
         res = self._conn.query(query)
@@ -257,13 +257,13 @@ class Container(object):
         # Catches bad queries
         # If successfull query, reconstruct a Node object
         if res is None:
-            self.logger.error("get() query failed, returning None")
+            self.logger.error(f"get() query failed, data.name='{type}-{name}' returning None")
             return None
         elif len(res) == 0: 
-            self.logger.error("get() found no nodes, returning None")
+            self.logger.error(f"get() found no nodes, data.name='{type}-{name}' returning None")
             return None
         elif len(res) > 1: 
-            self.logger.error("get() found many nodes (?) returning None")
+            self.logger.error(f"get() found many nodes (?), data.name='{type}-{name}' returning None")
             return None
         else:
             node = Node(res[0]['data']['type'], res[0]['data']['name'], dict(res[0]['data'].items()))
@@ -377,6 +377,7 @@ class Container(object):
                 if n_count_futures < 10: self.logger.info("Upload successful with etag: %s", data[0])
                 if n_count_futures < 1000 and n_count_futures % 100 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
                 if n_count_futures % 1000 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
+        self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
         self.logger.info("Shutdown executor %s", executor)                
         executor.shutdown()    
         self.logger.info("Done saving all records!!")

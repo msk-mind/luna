@@ -54,7 +54,7 @@ def save_tiles_with_container(cohort_id: str, container_id: str, method_data: di
     method_id            = method_data.get("job_tag", "none")
     output_container_id  = method_data.get("output_container")
 
-    image_node  = container.get("wsi", method_data['input_wsi_tag']) 
+    image_node  = container.get("WholeSlideImage", method_data['input_wsi_tag']) 
     label_node  = container.get("TileScores", method_data['input_label_tag']) 
 
     # Add properties to method_data
@@ -114,7 +114,7 @@ def save_tiles_with_container(cohort_id: str, container_id: str, method_data: di
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        output_node = Node("parquet", f"slice-{container._container_id}", properties)
+        output_node = Node("Parquet", f"slice-{container._container_id}", properties)
         output_container.add(output_node)
         output_container.saveAll()
 

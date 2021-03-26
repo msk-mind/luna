@@ -2,6 +2,11 @@ from data_processing.common.utils import to_sql_field, to_sql_value, does_not_co
 import warnings, os
 from pathlib import Path
 
+CONTAINER_TYPES = ["cohort", "patient", "scan", "slide", "parquet", "accession", "generic"]
+RADIOLOGY_TYPES = ["DicomSeries", "DicomImageSeries", "DicomImage", "VolumetricImage", "VolumetricLabel", "VolumetricLabelList", "Voxels", "Radiomics"]
+PATHOLOGY_TYPES = ["WholeSlideImage", "WsiThumbnail", "TileScores", "TileImages", "PointAnnotation", "PointAnnotationJson", "RegionalAnnotationBitmap", "RegionalAnnotationJson", "CellMap"]
+ALL_DATA_TYPES  = RADIOLOGY_TYPES + PATHOLOGY_TYPES
+
 class Node(object):
 	"""
 	Node object defines the type and attributes of a graph node.
@@ -15,18 +20,27 @@ class Node(object):
 		# Required schema: node_type, node_name
 
 		self.type = node_type
-		self.name = node_name
                 
 		if properties is None: 
 			self.properties = {}
 		else: 
 			self.properties = properties 
 
-		if self.type=="cohort":
+		# Special case: a cohort name is it's own namespace
+		if self.type in ["cohort"]:
 			self.properties['namespace'] = node_name
 
+		# For containers, DB name is the name, for data type nodes, it's type-name, and must be one of these two categories
+		if self.type in CONTAINER_TYPES:
+			self.name = f'{node_name}'
+		elif self.type in ALL_DATA_TYPES:
+			self.name = f'{node_type}-{node_name}'
+		else:
+			raise RuntimeError(f"Invalid Node Data Type {self.type}")
+
+
 		if   "namespace" in self.properties.keys() and "subspace" in self.properties.keys():
-                        self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
+			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
 		elif "namespace" in self.properties.keys():
 			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
 		else:

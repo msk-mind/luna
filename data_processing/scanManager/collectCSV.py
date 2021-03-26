@@ -80,7 +80,7 @@ def collect_csv_with_container(cohort_id, container_id, method_data):
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        output_node = Node("parquet", f"slice-{container._container_id}", properties)
+        output_node = Node("Parquet", f"slice-{container._container_id}", properties)
         output_container.add(output_node)
         output_container.saveAll()
 

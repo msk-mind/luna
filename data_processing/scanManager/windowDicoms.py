@@ -43,7 +43,7 @@ def window_dicom_with_container(cohort_id, container_id, method_data):
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_id   = method_data.get("job_tag", "none")
 
-    dicom_node  = container.get("dicom", method_data['dicom_input_tag']) # Only get origional dicoms from
+    dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
 
     try:
         if dicom_node is None:
@@ -64,7 +64,7 @@ def window_dicom_with_container(cohort_id, container_id, method_data):
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
 
-        output_node = Node('dicom', method_id, properties)
+        output_node = Node("DicomSeries", method_id, properties)
         container.add(output_node)
         container.saveAll()
     

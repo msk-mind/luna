@@ -1,6 +1,7 @@
 from filehash import FileHash
 from io import BytesIO
 import os, json
+import math
 
 def to_sql_field(s):
 	filter1 = s.replace(".","_").replace(" ","_")
@@ -9,6 +10,8 @@ def to_sql_field(s):
 
 def to_sql_value(s):
 	if isinstance(s, str): return f"'{s}'"
+	if not s==s:  return 'Null'
+	if s is None: return 'Null'
 	else: return f"{s}"
 
 
