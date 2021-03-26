@@ -136,21 +136,7 @@ def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, 
         # add parent polygon feature dicts to running annotation geojson object
         for index, polygon in polygon_by_index_number.items():
             annotation_geojson['features'].append(polygon)
-        # for n, contour in enumerate(contours):
-        #     feature_dict = {"type":"Feature", "properties":{}, "geometry":{"type":"Polygon", "coordinates": []}}
-        #     feature_dict['properties']['label_num'] = str(label_num)
-        #     feature_dict['properties']['label_name'] = mappings[label_num]
 
-        #     contour_list =   contour.tolist()
-        #     for coord in contour_list:
-        #         x = int(round(coord[0]))
-        #         y = int(round(coord[1]))
-        #         # switch coordinates, otherwise gets flipped
-        #         coord[0] = y
-        #         coord[1] = x
-
-        #     feature_dict['geometry']['coordinates'] = contour_list
-        #     annotation_geojson['features'].append(feature_dict)
     else:
         print("No label " + str(label_num) + " found")
     return annotation_geojson
