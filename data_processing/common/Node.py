@@ -29,9 +29,6 @@ class Node(object):
 		# Special case: a cohort name is it's own namespace
 		if self.type in ["cohort"]:
 			self.properties['namespace'] = node_name
-			self.name = f'{node_name}'
-		else:
-			self.name = f'{node_type}-{node_name}'
 
 		# For containers, DB name is the name, for data type nodes, it's type-name, and must be one of these two categories
 		if self.type in CONTAINER_TYPES:
@@ -43,7 +40,7 @@ class Node(object):
 
 
 		if   "namespace" in self.properties.keys() and "subspace" in self.properties.keys():
-			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
+                        self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
 		elif "namespace" in self.properties.keys():
 			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
 		else:
@@ -76,6 +73,7 @@ class Node(object):
 		if self.path is None: raise RuntimeError("Node's path was never set, however was accessed!")
 		elif type=='string':  return str ( self.path )
 		elif type=='pathlib': return Path( self.path )
+
 
 	def __repr__(self):
 		"""
