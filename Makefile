@@ -31,7 +31,7 @@ clean-test:      ## remove test and coverage artifacts
 
 dist: clean
 	pip install --upgrade pip
-	pip install --prefix . --use-feature=2020-resolver -r requirements.txt
+	pip install --use-feature=2020-resolver -r requirements.txt
 	pyinstaller -F --clean --hidden-import py4j.java_collections --exclude-module tkinter data_processing/preprocess_feature.py
 	python setup.py sdist
 	python setup.py bdist_wheel
@@ -43,7 +43,7 @@ lint:
 
 test: clean-test clean-pyc    ## run tests quickly with the default Python
 	pip install --upgrade pip
-	pip install --prefix . --use-feature=2020-resolver -r requirements.txt
+	pip install --use-feature=2020-resolver -r requirements.txt
 	pytest
 
 coverage:
