@@ -28,6 +28,8 @@ from data_processing.scanManager.extractVoxels      import extract_voxels_with_c
 from data_processing.scanManager.generateScan       import generate_scan_with_container
 from data_processing.scanManager.collectCSV         import collect_csv_with_container
 
+from data_processing.radiology.cli.randomize_contours import randomize_contours_with_container
+
 logger = init_logger("radiology-service.log")
     
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
@@ -92,6 +94,15 @@ generate_scan_model = api.model("Generate Volumetric Image",
 )
 
 # param models
+randomize_contours_model = api.model("Generate Volumetric Pertbutations",
+    {
+        "job_tag": fields.String(description="Tag/name of output record", required=True, example='my_radiomics'),
+        "image_input_tag": fields.String(description="Tag/name of input image record", required=True, example='generated_mhd'),
+        "label_input_tag": fields.String(description="Tag/name of label image record", required=True, example='user_segmentations'),
+    }
+)
+
+# param models
 collect_parquet_model = api.model("Collect CSVs",
     {
         "output_container": fields.String(description="Parquet container qualified address", required=True, example='my_parquet_store'),
@@ -152,6 +163,15 @@ class API_extract_radiomics(Resource):
         """Submit an extract radiomics job"""
         job_id = str(uuid.uuid4())
         future = executor.submit (extract_radiomics_with_container, cohort_id, container_id, request.json)
+        return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
+
+@api.route('/mind/api/v1/randomize_contours/<cohort_id>/<container_id>/submit', methods=['POST'])
+class API_extract_radiomics(Resource):
+    @api.expect(randomize_contours_model, validate=True)
+    def post(self, cohort_id, container_id):
+        """Submit an extract radiomics job"""
+        job_id = str(uuid.uuid4())
+        future = executor.submit (randomize_contours_with_container, cohort_id, container_id, request.json)
         return make_response( {"message": f"Submitted job {job_id} with future {future}", "job_id": job_id }, 202 )
 
 @api.route('/mind/api/v1/generate_scan/<cohort_id>/<container_id>/submit', methods=['POST'])

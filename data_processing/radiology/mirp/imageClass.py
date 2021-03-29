@@ -788,6 +788,7 @@ class ImageClass:
         This step may precede writing to file."""
 
         import SimpleITK as sitk
+        sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(4)
 
         # Skip if the image is missing
         if self.is_missing:
@@ -811,6 +812,9 @@ class ImageClass:
         """ Writes the image to a file """
         import SimpleITK as sitk
         import os
+
+        sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(4)
+
 
         # Check if path exists
         file_path = os.path.normpath(file_path)

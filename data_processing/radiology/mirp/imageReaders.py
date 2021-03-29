@@ -4,6 +4,8 @@ from data_processing.radiology.mirp.roiClass import RoiClass
 import SimpleITK as sitk
 import numpy as np
 
+sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(4)
+
 def read_itk_image(path_to_itk_file, modality=None):
     """ This takes a itk volume in, and spits out this "ImageClass thing """
 

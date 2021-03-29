@@ -541,6 +541,8 @@ def interpolate_to_new_grid(orig_dim,
 
     elif processor == "sitk":
         import SimpleITK as sitk
+        sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(4)
+
 
         # Convert input voxel grid to sitk image. Note that SimpleITK expects x,y,z ordering, while we use z,y,
         # x ordering. Hence origins, spacings and sizes are inverted for both input image (sitk_orig_img) and
