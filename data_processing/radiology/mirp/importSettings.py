@@ -12,7 +12,7 @@ class ImageInterpolationSettingsClass:
     def __init__(self):
         self.interpolate = True
         self.spline_order = 3
-        self.new_spacing = [1.5]
+        self.new_spacing = [1.25]
         self.new_non_iso_spacing = [None]
         self.anti_aliasing = True
         self.smoothing_beta = 0.95
