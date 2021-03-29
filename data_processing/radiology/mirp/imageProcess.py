@@ -3,7 +3,7 @@ import logging
 from data_processing.radiology.mirp.imageClass import ImageClass
 
 from skimage.segmentation import slic
-from scipy.ndimage import binary_dilation
+from scipy.ndimage import binary_dilation, binary_erosion
 import copy
 
 import numpy as np
@@ -257,33 +257,31 @@ def get_supervoxels(img_obj, roi_obj, settings, n_segments=None):
         return None
 
     # Get image object grid aauker: I don't think this is neccessary anymore
-    img_voxel_grid =img_obj.get_voxel_grid()
+    img_voxel_grid = img_obj.get_voxel_grid()
+    roi_bool_mask  = roi_obj.roi.get_voxel_grid().astype(np.bool)
+
+    outside = binary_dilation(roi_bool_mask, iterations=int (10 // np.min(img_obj.spacing)))
+
+    min_n_voxels = np.max([20.0, 200.0 / np.prod(img_obj.spacing)])
+    segment_guess =  int(np.sum(outside) / min_n_voxels)
+    print ("Starting guess: ", segment_guess)
+    #inside  = binary_erosion(bool_mask,  iterations=10)
+    #ring_mask = np.logical_and( outside, np.invert(inside))
 
     # Calculate roi pixel grid, low-level pixels, high-level pixels
-    roi_level_pixels  = np.ma.array(img_voxel_grid, mask=~roi_obj.roi.get_voxel_grid().astype(np.bool))
-
+    roi_level_pixels  = np.ma.array(img_voxel_grid, mask=np.invert(roi_bool_mask))
     low_level, high_level = roi_level_pixels.min() - 3 * roi_level_pixels.std(), roi_level_pixels.max() + 3 * roi_level_pixels.std()
-
     img_voxel_grid = np.clip( img_voxel_grid, low_level, high_level)
 
-    # print (f"For [{roi_obj.name}]: Tumor window range: ", low_level, high_level )
- 
-    # Slic constants - number of segments
-    if n_segments is None:
-        n_segments   = int(np.prod(img_obj.size) / min_n_voxels) # aauker: amp up n supervoxels, reduce size ~ 6.3 mm supervoxels
-
-    # Sigma = 1mm
-    sigma = 1.0 / np.min(img_obj.spacing)
-
     # Convert to float with range [0.0, 1.0]
-    img_voxel_grid = (img_voxel_grid - np.min(img_voxel_grid))/np.ptp(img_voxel_grid)
+    img_voxel_grid = (img_voxel_grid - np.min(img_voxel_grid)) / np.ptp(img_voxel_grid)
 
     # Just also convert to floats
     img_voxel_grid = img_voxel_grid.astype(np.float)
 
     # Create a slic segmentation of the image stack
-    img_segments = slic(image=img_voxel_grid, n_segments=n_segments, sigma=sigma, spacing=img_obj.spacing,
-                        compactness=0.04, multichannel=False, convert2lab=False, enforce_connectivity=True, start_label=1)
+    img_segments = slic(image=img_voxel_grid, n_segments=segment_guess, spacing=img_obj.spacing, mask=outside, 
+                       max_iter=50, sigma=1.0, compactness=0.05, multichannel=False, convert2lab=False, enforce_connectivity=True, start_label=1)
 
     return img_segments
 

@@ -51,50 +51,52 @@ def randomise_roi_contours(img_obj, roi_list, settings):
     for roi_ind in np.arange(0, len(roi_list)):
         print (f">>> Processing ROI with label [{roi_list[roi_ind].label_value}]")
         # Resect image to speed up segmentation process
-        res_img_obj, res_roi_obj = crop_image(img_obj=img_obj, roi_obj=roi_list[roi_ind], boundary=10.0, z_only=False)
+        res_img_obj, res_roi_obj = crop_image(img_obj=img_obj, roi_obj=roi_list[roi_ind], boundary=5.0, z_only=False)
 
         # Calculate statistics on post-processed, cropped ROI
         res_roi_obj.calculate_roi_statistics(img_obj=res_img_obj, tag="postprocess")
             
-        tumor_volume     = res_roi_obj.roi.get_voxel_grid().sum() * np.prod(img_obj.spacing)
-        tumor_volume_1up = binary_dilation(res_roi_obj.roi.get_voxel_grid()).sum() * np.prod(img_obj.spacing)
-        tumor_surface_area = tumor_volume_1up-tumor_volume
-        print ("Volume, Differential Volume: ", tumor_volume, tumor_surface_area)
+        # tumor_volume     = res_roi_obj.roi.get_voxel_grid().sum() * np.prod(img_obj.spacing)
+        # tumor_volume_1up = binary_dilation(res_roi_obj.roi.get_voxel_grid()).sum() * np.prod(img_obj.spacing)
+        # tumor_surface_area = tumor_volume_1up-tumor_volume
+        # print ("Volume, Differential Volume: ", tumor_volume, tumor_surface_area)
 
-        min_n_voxels = np.max([20.0, 250.0 / np.prod(res_img_obj.spacing)])
-        segment_guess =  int(np.prod(res_img_obj.size) / min_n_voxels)
-        print ("Starting guess: ", segment_guess)
+        # min_n_voxels = np.max([20.0, 250.0 / np.prod(res_img_obj.spacing)])
+        # segment_guess =  int(np.prod(res_img_obj.size) / min_n_voxels)
+        # print ("Starting guess: ", segment_guess)
 
-        for n_segments in np.linspace(segment_guess, segment_guess*2, 20):
-            # Get supervoxels
-            n_segments = int(n_segments)
+        # for n_segments in np.linspace(segment_guess, segment_guess*5, 50):
+        #     # Get supervoxels
+        #     n_segments = int(n_segments)
 
-            img_segments = get_supervoxels(img_obj=res_img_obj, roi_obj=res_roi_obj, settings=settings, n_segments=n_segments)
+        img_segments = get_supervoxels(img_obj=res_img_obj, roi_obj=res_roi_obj, settings=settings, n_segments=None)
 
-            # Determine overlap of supervoxels with contour
-            overlap_indices, overlap_fract, overlap_size = get_supervoxel_overlap(roi_obj=res_roi_obj, img_segments=img_segments)
+        # Determine overlap of supervoxels with contour
+        overlap_indices, overlap_fract, overlap_size = get_supervoxel_overlap(roi_obj=res_roi_obj, img_segments=img_segments)
 
-            # Set the highest overlap to 1.0 to ensure selection of at least 1 supervoxel
-            # aauker: aka, highest overlapping supervoxel is always included
-            overlap_fract[np.argmax(overlap_fract)] = 1.0
+        # Set the highest overlap to 1.0 to ensure selection of at least 1 supervoxel
+        # aauker: aka, highest overlapping supervoxel is always included
+        overlap_fract[np.argmax(overlap_fract)] = 1.0
 
-            # Include supervoxels with 90% coverage and exclude those with less then 20% coverage
-            a = 0.7
-            b = 0.3
-            
-            overlap_fract[overlap_fract > a] = 1.0
-            overlap_fract[overlap_fract < b] = 0.0
+        # Include supervoxels with 90% coverage and exclude those with less then 20% coverage
+        a = 0.7
+        b = 0.3
+        
+        overlap_fract[overlap_fract > a] = 1.0
+        overlap_fract[overlap_fract < b] = 0.0
 
-            candidate_indices  = overlap_indices[np.logical_and( overlap_fract > 0.0 , overlap_fract < 1.0 )]
-            candidate_segments = np.where( np.isin(img_segments, candidate_indices), img_segments, 0 )
+        candidate_indices  = overlap_indices[np.logical_and( overlap_fract > 0.0 , overlap_fract < 1.0 )]
+        candidate_segments = np.where( np.isin(img_segments, candidate_indices), img_segments, 0 )
 
-            average_segment_size = np.prod(img_obj.spacing) * np.where ( candidate_segments > 0, 1, 0).sum() / len(candidate_indices)
-            
-            print (f"For [{n_segments}], average segment size: {average_segment_size}, volume per candiates: {tumor_surface_area/ len(candidate_indices)}")
+        average_segment_size = np.prod(img_obj.spacing) * np.where ( candidate_segments > 0, 1, 0).sum() / len(candidate_indices)
+        
+        print (f"Average segment size: {average_segment_size}")
 
-            if average_segment_size < 100: break
+            # if average_segment_size < 250: break
 
-        print ("Candidate segments: ", len(candidate_indices), " complexity: ", 2**len(candidate_indices))
+            # break # Use initial guess...for now
+
+        print ("Candidate segments: ", len(candidate_indices))
 
         # Determine grid indices of the resected grid with respect to the original image grid
         grid_origin = world_to_index(coord=res_img_obj.origin, origin=img_obj.origin, spacing=img_obj.spacing)
