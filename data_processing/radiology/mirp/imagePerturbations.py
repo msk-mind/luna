@@ -42,7 +42,7 @@ def randomise_roi_contours(img_obj, roi_list, settings):
         return roi_list
 
     from data_processing.radiology.mirp.utilities import world_to_index
-    from scipy.ndimage  import binary_closing, binary_dilation
+    from scipy.ndimage  import binary_closing
 
     new_roi_list = []
     svx_roi_list = []
@@ -79,8 +79,8 @@ def randomise_roi_contours(img_obj, roi_list, settings):
         overlap_fract[np.argmax(overlap_fract)] = 1.0
 
         # Include supervoxels with 90% coverage and exclude those with less then 20% coverage
-        a = 0.7
-        b = 0.3
+        a = 0.80
+        b = 0.20
         
         overlap_fract[overlap_fract > a] = 1.0
         overlap_fract[overlap_fract < b] = 0.0
