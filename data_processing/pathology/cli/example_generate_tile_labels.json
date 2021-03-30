@@ -1,7 +1,9 @@
 {
-  "input_wsi_tag": "whole_slide_image", 
+  "input_wsi_tag": "pathology.etl", 
   "job_tag": "test_generate_tiles",
   "tile_size": 128,
   "scale_factor": 8,
-  "magnification": 10 
+  "magnification": 10,
+  "slideviewer_dmt": "msk_mind_ov",
+  "labelset": "DEFAULT_LABELS"
 }

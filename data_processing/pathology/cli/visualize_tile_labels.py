@@ -48,7 +48,7 @@ def visualize_tile_labels_with_container(cohort_id: str, container_id: str, meth
     # Do some setup
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_id   = method_data.get("job_tag", "none")
-
+    
     image_node  = container.get("WholeSlideImage", method_data['input_wsi_tag']) 
     label_node  = container.get("TileScores", method_data['input_label_tag']) 
 
