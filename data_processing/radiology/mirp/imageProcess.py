@@ -282,7 +282,7 @@ def get_supervoxels(img_obj, roi_obj, settings, n_segments=None):
 
     # Create a slic segmentation of the image stack
     img_segments = slic(image=img_voxel_grid, n_segments=segment_guess, spacing=img_obj.spacing, mask=outside, 
-                       max_iter=50, sigma=1.0, compactness=0.05, multichannel=False, convert2lab=False, enforce_connectivity=True, start_label=1)
+                       max_iter=50, sigma=1.0, compactness=0.04, multichannel=False, convert2lab=False, enforce_connectivity=True, start_label=1)
 
     return img_segments
 
