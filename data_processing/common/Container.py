@@ -292,7 +292,23 @@ class Container(object):
             self.logger.info ("Resolved %s -> %s", node.properties["path"], node.path)
 
             # Check that we got it right, and this path is readable on the host system
+            if not os.path.exists(node.path):
+                raise RuntimeError("Invalid pathspec", node.path)
             self.logger.info ("Filepath is valid: %s", os.path.exists(node.path))
+
+        if "file" in node.properties.keys(): 
+
+            node.file = pathlib.Path(node.properties["file"])
+            
+            node.static_file = str(node.file)
+        
+            # Output and check
+            self.logger.info ("Resolved %s -> %s", node.properties["file"], node.static_file)
+
+            # Check that we got it right, and this path is readable on the host system
+            if not os.path.exists(node.file):
+                raise RuntimeError("Invalid filespec", node.file)
+            self.logger.info ("File object is valid: %s", os.path.exists(node.file))
 
         return node
     
@@ -320,10 +336,9 @@ class Container(object):
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
         if "file" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
-            node.properties['path'] = node.properties['file']
             node.properties['object_bucket'] = f"{self._bucket_id}"
             node.properties['object_folder'] = f"{self._name}/{node.name}"
-            node.objects.append(pathlib.Path(node.properties['path']))
+            node.objects.append(pathlib.Path(node.properties['file']))
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
         # Add to node commit dictonary

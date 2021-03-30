@@ -310,8 +310,8 @@ class initScans(Resource):
             .format("delta")\
             .load(res_data[0]['das']['TABLE_LOCATION'])\
             .select("path", \
-                "AccessionNumber", \
-                "SeriesInstanceUID", \
+                "metadata.AccessionNumber", \
+                "metadata.SeriesInstanceUID", \
                 "metadata.SeriesNumber", \
                 "metadata.SeriesDescription", \
                 "metadata.PerformedProcedureStepDescription", \

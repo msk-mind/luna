@@ -3,7 +3,7 @@ import warnings, os
 from pathlib import Path
 
 CONTAINER_TYPES = ["cohort", "patient", "scan", "slide", "parquet", "accession", "generic"]
-RADIOLOGY_TYPES = ["DicomSeries", "DicomImageSeries", "DicomImage", "VolumetricImage", "VolumetricLabel", "VolumetricLabelList", "Voxels", "Radiomics"]
+RADIOLOGY_TYPES = ["DicomSeries", "DicomImageSeries", "DicomImage", "VolumetricImage", "VolumetricLabel", "VolumetricLabelSet", "Voxels", "Radiomics"]
 PATHOLOGY_TYPES = ["WholeSlideImage", "WsiThumbnail", "TileScores", "TileImages", "PointAnnotation", "PointAnnotationJson", "RegionalAnnotationBitmap", "RegionalAnnotationJson", "CellMap"]
 ALL_DATA_TYPES  = RADIOLOGY_TYPES + PATHOLOGY_TYPES
 
@@ -20,7 +20,7 @@ class Node(object):
 		# Required schema: node_type, node_name
 
 		self.type = node_type
-                
+
 		if properties is None: 
 			self.properties = {}
 		else: 
@@ -40,7 +40,7 @@ class Node(object):
 
 
 		if   "namespace" in self.properties.keys() and "subspace" in self.properties.keys():
-			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
+                        self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
 		elif "namespace" in self.properties.keys():
 			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.name)
 		else:

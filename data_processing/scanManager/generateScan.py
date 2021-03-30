@@ -38,14 +38,12 @@ def generate_scan_with_container(cohort_id, container_id, method_data):
     """
     Using the container API interface, generate a volumetric image for a given scan container
     """
-
-    # Do some setup
-    container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
-    method_id   = method_data.get("job_tag", "none")
-    
-    dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
-
     try:
+         # Do some setup
+        container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
+        method_id   = method_data.get("job_tag", "none")
+        
+        dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
         if dicom_node is None:
             raise ValueError("Dicom node not found")
         

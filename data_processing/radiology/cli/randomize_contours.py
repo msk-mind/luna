@@ -21,22 +21,23 @@ from data_processing.common.Node            import Node
 from data_processing.common.config import ConfigSet
 
 # From radiology.common
-from data_processing.radiology.common.preprocess   import extract_voxels
+from data_processing.radiology.common.preprocess   import randomize_contours
 
-logger = init_logger("extractVoxels.log")
+logger = init_logger("randomize_contours.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--container_id', required=True)
-@click.option('-m', '--method_id',    required=True)
-def cli(cohort_id, container_id, method_id):
-    method_data = get_method_data(cohort_id, method_id)
-    extract_voxels_with_container(cohort_id, container_id, method_data)
+@click.option('-m', '--method_param_path',    required=True)
+def cli(cohort_id, container_id, method_param_path):
+    with open(method_param_path) as json_file:
+        method_data = json.load(json_file)
+    randomize_contours_with_container(cohort_id, container_id, method_data)
 
-def extract_voxels_with_container(cohort_id: str, container_id: str, method_data: dict):
+def randomize_contours_with_container(cohort_id: str, container_id: str, method_data: dict):
     """
-    Using the container API interface, extract voxels for a given scan container
+    Using the container API interface, perform MIRP contour randomization
     """
 
     # Do some setup
@@ -58,9 +59,9 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        properties = extract_voxels(
-            image_path = str(next(image_node.path.glob("*.mhd"))),
-            label_path = str(label_node.path),
+        image_properties, label_properties, pertubation_properties, supervoxel_properties = randomize_contours(
+            image_path = image_node.static_file,
+            label_path = label_node.static_file,
             output_dir = output_dir,
             params     = method_data
         )
@@ -68,8 +69,14 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        output_node = Node("Voxels", method_id, properties)
-        container.add(output_node)
+        new_image_node          = Node("VolumetricImage",    method_id, image_properties)
+        new_label_node          = Node("VolumetricLabel",    method_id, label_properties)
+        new_pertubation_node    = Node("VolumetricLabelSet", method_id, pertubation_properties)
+        new_supervoxel_node     = Node("Voxels", method_id, supervoxel_properties)
+        container.add(new_image_node)
+        container.add(new_label_node)
+        container.add(new_pertubation_node)
+        container.add(new_supervoxel_node)
         container.saveAll()
 
 
