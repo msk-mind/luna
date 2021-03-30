@@ -12,6 +12,7 @@ from pydicom import dcmread
 from medpy.io import load
 from skimage.transform import resize
 import itk
+from pathlib import Path
 
 def find_centroid(path, image_w, image_h):
     """
@@ -326,6 +327,7 @@ def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
 
     # Prepare metadata and commit
     properties = {
+        'file' : output_dir + "/" + uid + '_volumetric_image.' + params['itkImageType'],
         'path' : output_dir,
         'zdim' : n_slices,
         'hash':  dirhash(output_dir, "sha256") 
@@ -385,7 +387,7 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
     Extract radiomics given and image, label to and output_dir, parameterized by params
 
     :param image_path: filepath to image
-    :param label_path: filepath to 3d segmentation
+    :param label_path: filepath to 3d segmentation(s) as single path or list
     :param output_dir: destination directory
       :param params {
         RadiomicsFeatureExtractor dict: configuration for the RadiomicsFeatureExtractor
@@ -396,26 +398,38 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
     """
     logger = logging.getLogger(__name__)
 
-    extractor = featureextractor.RadiomicsFeatureExtractor(**params.get('RadiomicsFeatureExtractor', {}))
+    logger.info("Image file: %s",    image_path)
+    logger.info("Label file(s): %s", label_path)
 
-    if params.get("strictGeometry", False): 
-        image, image_header = load(image_path)
-        label, label_header = load(label_path)
-        if not image_header.get_voxel_spacing() == label_header.get_voxel_spacing():
-            raise RuntimeError(f"Voxel spacing mismatch, image.spacing={image_header.get_voxel_spacing()}, label.spacing={label_header.get_voxel_spacing()}" )
-        if not image.shape == label.shape:
-            raise RuntimeError(f"Shape mismatch: image.shape={image.shape}, label.shape={label.shape}")
+    if isinstance(label_path, list): label_path_list = label_path
+    else: label_path_list = [label_path]
+
+    result_list = []
+    for label_path in label_path_list:
+
+        extractor = featureextractor.RadiomicsFeatureExtractor(**params.get('RadiomicsFeatureExtractor', {}))
+
+        if params.get("strictGeometry", False): 
+            image, image_header = load(image_path)
+            label, label_header = load(label_path)
+            if not image_header.get_voxel_spacing() == label_header.get_voxel_spacing():
+                raise RuntimeError(f"Voxel spacing mismatch, image.spacing={image_header.get_voxel_spacing()}, label.spacing={label_header.get_voxel_spacing()}" )
+            if not image.shape == label.shape:
+                raise RuntimeError(f"Shape mismatch: image.shape={image.shape}, label.shape={label.shape}")
 
 
-    if params.get("enableAllImageTypes", False): extractor.enableAllImageTypes()
+        if params.get("enableAllImageTypes", False): extractor.enableAllImageTypes()
 
-    result = extractor.execute(image_path, label_path)
+        result = extractor.execute(image_path, label_path)
 
-    output_filename = os.path.join(output_dir, "radiomics-out.csv")
+        output_filename = os.path.join(output_dir, params["job_tag"] + ".csv")
 
-    logger.info("Saving to " + output_filename)
-    sers = pd.Series(result)
-    sers.to_frame().transpose().to_csv(output_filename)
+        logger.info("Saving to " + output_filename)
+        result_list.append( pd.Series(result).to_frame().transpose() )
+
+    pd.concat(result_list).to_csv(output_filename)
+
+    logger.info(pd.concat(result_list))
 
     # Prepare metadata and commit
     properties = {
@@ -502,22 +516,25 @@ def randomize_contours(image_path: str, label_path: str, output_dir: str, params
     roi_class_object_list = interpolate_roi   (img_obj=image_class_object, roi_list=roi_class_object_list, settings=settings)
 
     # Export
-    image_class_object.export(file_path=f"{output_dir}/main_image")
+    image_file = image_class_object.export(file_path=f"{output_dir}/main_image")
 
     # ROI processing
-    for roi in combine_all_rois (roi_list=roi_class_object_list, settings=settings): 
-        if "COMBINED" in roi.name: roi.export(img_obj=image_class_object, file_path=f"{output_dir}/main_label")
+    roi_class_object = combine_all_rois (roi_list=roi_class_object_list, settings=settings)
+    label_file = roi_class_object.export(img_obj=image_class_object, file_path=f"{output_dir}/main_label")
 
     roi_class_object_list, svx_class_object_list = randomise_roi_contours (img_obj=image_class_object, roi_list=roi_class_object_list, settings=settings)
-    for roi in combine_all_rois (roi_list=svx_class_object_list, settings=settings):
-        if "SUPERVOXEL" in roi.name: roi.export(img_obj=image_class_object, file_path=f"{output_dir}/supervoxels")
+
+    roi_supervoxels = combine_all_rois (roi_list=svx_class_object_list, settings=settings)
+    roi_supervoxels.export(img_obj=image_class_object, file_path=f"{output_dir}/supervoxels")
 
     for roi in combine_pertubation_rois (roi_list=roi_class_object_list, settings=settings): 
         if "COMBINED" in roi.name: roi.export(img_obj=image_class_object, file_path=f"{output_dir}/pertubations")
 
+    print (image_file, label_file)
+
     # Construct return dicts
-    main_image_properties       = {"path":f"{output_dir}/main_image"}
-    main_label_properties       = {"path":f"{output_dir}/main_label"}
+    main_image_properties       = {"path":f"{output_dir}/main_image", "file": image_file}
+    main_label_properties       = {"path":f"{output_dir}/main_label", "file": label_file}
     pertubation_set_properties  = {"path":f"{output_dir}/pertubations"}
     supervoxel_properties       = {"path":f"{output_dir}/supervoxels"}
     return main_image_properties, main_label_properties, pertubation_set_properties, supervoxel_properties

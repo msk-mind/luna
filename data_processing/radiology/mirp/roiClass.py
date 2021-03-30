@@ -876,7 +876,7 @@ class RoiClass:
             self.roi_intensity.write(file_path=file_path, file_name="_".join(roi_str_components + ["int.nii.gz"]))
 
         elif self.roi is not None:
-            self.roi.write(file_path=file_path, file_name="_".join(roi_str_components + ["roi.nii"]))
+            return self.roi.write(file_path=file_path, file_name="_".join(roi_str_components + ["roi.nii"]))
 
         else:
             return

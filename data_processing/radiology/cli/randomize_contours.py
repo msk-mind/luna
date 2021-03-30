@@ -60,8 +60,8 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         image_properties, label_properties, pertubation_properties, supervoxel_properties = randomize_contours(
-            image_path = str(next(image_node.path.glob("*.mhd"))),
-            label_path = str(label_node.path),
+            image_path = image_node.static_file,
+            label_path = label_node.static_file,
             output_dir = output_dir,
             params     = method_data
         )

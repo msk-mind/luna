@@ -738,7 +738,9 @@ class ImageClass:
         file_name = self.get_export_descriptor() + ".nii"
 
         # Export image to file
-        self.write(file_path=file_path, file_name=file_name)
+        return self.write(file_path=file_path, file_name=file_name)
+
+         
 
     def get_export_descriptor(self):
         """
@@ -830,6 +832,8 @@ class ImageClass:
         if sitk_img is not None:
             print (f"Writing to {file_path}")
             sitk.WriteImage(sitk_img, file_path, True)
+
+        return file_path
 
     def write_dicom(self, file_path, file_name, bit_depth=16):
         if self.metadata is None:

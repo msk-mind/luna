@@ -623,7 +623,6 @@ def combine_pertubation_rois(roi_list, settings):
     return new_roi_list
 
 def combine_all_rois(roi_list, settings):
-    new_roi_list = []
     repl_roi = roi_list[0].copy()
 
     roi_vox_new = np.zeros(shape=repl_roi.roi.size, dtype=np.uint8)
@@ -633,8 +632,7 @@ def combine_all_rois(roi_list, settings):
 
     repl_roi.roi.set_voxel_grid(roi_vox_new)
     repl_roi.name += "_COMBINED"          # Adapt roi name
-    new_roi_list += [repl_roi]
-    return new_roi_list
+    return repl_roi
 
 
 
