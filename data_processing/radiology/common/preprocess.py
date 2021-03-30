@@ -422,18 +422,18 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
 
         result = extractor.execute(image_path, label_path)
 
-        output_filename = os.path.join(output_dir, params["job_tag"] + ".csv")
 
-        logger.info("Saving to " + output_filename)
         result_list.append( pd.Series(result).to_frame().transpose() )
 
+    output_filename = os.path.join(output_dir, params["job_tag"] + ".csv")
+    logger.info("Saving to " + output_filename)
     pd.concat(result_list).to_csv(output_filename)
 
     logger.info(pd.concat(result_list))
 
     # Prepare metadata and commit
     properties = {
-        "path":output_dir, 
+        "file":output_filename, 
         "hash":dirhash(output_dir, "sha256")
     }
 
