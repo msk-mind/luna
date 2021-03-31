@@ -12,6 +12,8 @@ import numpy  as np
 import pandas as pd
 import seaborn as sns
 
+import json 
+
 from PIL import Image
 
 import openslide
@@ -21,9 +23,32 @@ from skimage.color   import rgb2gray
 from skimage.filters import threshold_otsu
 from skimage.draw import rectangle_perimeter, rectangle
 
-NUM_COLORS = 100 + 1
-scoring_palette = sns.color_palette("viridis_r", n_colors=NUM_COLORS)
-scoring_palette_as_list = [[int(x * 255) for x in scoring_palette.pop()] for i in range(NUM_COLORS)]
+import requests
+from shapely.geometry import shape, Point, Polygon
+
+from random import randint
+
+
+palette = sns.color_palette("viridis",as_cmap=True)
+categorical_colors = {}
+def get_tile_color(score):
+    # categorical
+    if isinstance(score, str):
+        if score in categorical_colors:
+            return categorical_colors[score]
+        else:
+            tile_color = [randint(0, 255) for i in range(3)]
+            categorical_colors[score] = tile_color
+            return tile_color
+
+    # float, expected to be value from [0,1]
+    elif isinstance(score, float) and score <= 1.0 and score >= 0.0:
+        tile_color = [int(255*i) for i in palette(score)[:3]]
+        return tile_color
+
+    else:
+        print("Invalid Score Type")
+        return None
 
 
 # USED -> utils
@@ -123,7 +148,7 @@ def make_otsu(img, scale=1):
     return (_img < (threshold * scale)).astype(float)
 
 # USED -> vis tiles
-def visualize_tiling_scores(df, thumbnail_img, tile_size):
+def visualize_tiling_scores(df, thumbnail_img, tile_size, score_type_to_visualize):
     """
     Draw colored boxes around tiles 
     :param _thumbnail: np.ndarray
@@ -141,6 +166,7 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size):
 
         if not row.otsu_score   > 0.5: continue
         if not row.purple_score > 0.1: continue
+        if 'regional_label' in row and pd.isna(row.regional_label): continue
 
         extent = generator.get_tile_dimensions(generator_level, address)
         start = (address[1] * tile_size, address[0] * tile_size)  # flip because OpenSlide uses
@@ -149,13 +175,58 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size):
         rr, cc = rectangle_perimeter(start=start, extent=extent, shape=thumbnail_img.shape)
         
         # set color based on intensity of value instead of black border (1)
-        scaled_score = round(row.otsu_score * (NUM_COLORS-1))
-        thumbnail_img[rr, cc] = scoring_palette_as_list[scaled_score]
+        score = row[score_type_to_visualize]
+        thumbnail_img[rr, cc] = get_tile_color(score)
     
     return thumbnail_img
 
+def build_shapely_polygons_from_geojson(annotation_geojson):
+
+    annotation_polygons = []
+    annotation_labels = []
+    for feature in annotation_geojson['features']:
+
+        coords = feature['geometry']['coordinates']
+        class_name = feature['properties']['label_name']
+
+        # filter out lines that may be present (polygons containing 2 coordinates)
+        if len(coords) >= 3:
+            annotation_polygon = Polygon(coords)
+            annotation_polygons.append(annotation_polygon)
+            annotation_labels.append(class_name)
+    return annotation_polygons,annotation_labels
+
+
+def get_regional_labels(address_raster, annotation_polygons, annotation_labels, full_generator, full_level):
+
+    regional_label_results = []
+
+    for address in address_raster:
+        tile_contains_annotation = False
+        tile,_,tile_size = full_generator.get_tile_coordinates(full_level, address)
+
+        tile_x, tile_y = tile
+        tile_size_x, tile_size_y = tile_size
+
+        tile_polygon = Polygon([ 
+            (tile_x,               tile_y),
+            (tile_x,               tile_y+tile_size_y),
+            (tile_x+tile_size_x,   tile_size_y + tile_y),
+            (tile_x + tile_size_x, tile_y),
+            ]) 
+            
+        for annotation_polygon, annotation_label in zip(annotation_polygons,annotation_labels):
+            if annotation_polygon.contains(tile_polygon):
+                tile_contains_annotation = True
+                regional_label_results.append (annotation_label)
+                break
+        if not tile_contains_annotation:
+            regional_label_results.append (None)
+
+    return regional_label_results
+
 ### MAIN ENTRY METHOD -> pretile
-def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
+def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_id: str):
     """
 
     Notes: 
@@ -169,6 +240,10 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
 
     requested_tile_size       = params.get("tile_size")
     requested_magnification   = params.get("magnification")
+
+    # non-required arguments related to slideviewer annotations
+    slideviewer_dmt           = params.get("slideviewer_dmt", None)
+    labelset                  = params.get("labelset", None)
 
     logger.info("Processing slide %s", slide_file_path)
     logger.info("Params = %s", params)
@@ -208,6 +283,24 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict):
 
     df.loc[:, "otsu_score"  ] = get_otsu_scores   (df['coordinates'], otsu_thumbnail, thumbnail_tile_size)
     df.loc[:, "purple_score"] = get_purple_scores (df['coordinates'], rbg_thumbnail,  thumbnail_tile_size)
+
+
+    # get pathology annotations for slide only if valid parameters
+    if slideviewer_dmt != None and slideviewer_dmt != "" and labelset != None and labelset != "":
+        annotation_url = os.path.join("http://", os.environ['MIND_API_URI'], "mind/api/v1/getPathologyAnnotation/", slideviewer_dmt, image_id, "regional", labelset)
+
+        response = requests.get(annotation_url)
+        response_text = response.text
+
+        if response_text == 'No annotations match the provided query.':
+            logger.info("No annotation found for slide.")
+        else:
+            annotation_geojson = response.json()
+            annotation_polygons, annotation_labels = build_shapely_polygons_from_geojson(annotation_geojson)
+            df.loc[:, "regional_label"] = get_regional_labels (df['coordinates'], annotation_polygons, annotation_labels, full_generator, full_level)
+            
+       
+
 
     logger.info("Displaying DataFrame for otsu_score > 0.5:")
     logger.info (df [ df["otsu_score"] > 0.5 ])
@@ -258,21 +351,27 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     logger.info("Normalized magnification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
     logger.info("Requested tile size=%s, tile size at full magnficiation=%s, tile size at thumbnail=%s", requested_tile_size, full_resolution_tile_size, thumbnail_tile_size)
 
-    output_file = os.path.join(output_dir, "tile_scores_and_labels_visualization.png")
+    
 
     # Create thumbnail image for scoring
     rbg_thumbnail  = get_downscaled_thumbnail(slide, to_thumbnail_scale_factor)
     df_scores      = pd.read_csv(scores_file_path).set_index("address")
 
-    thumbnail_overlayed = visualize_tiling_scores(df_scores, rbg_thumbnail, thumbnail_tile_size)
-    thumbnail_overlayed = Image.fromarray(thumbnail_overlayed)
-    thumbnail_overlayed.save(output_file)
 
-    logger.info ("Saved visualization at %s", output_file)
+    # only visualize tile scores that were able to be computed
+    all_score_types = {'otsu_score', 'purple_score', 'regional_label'}
+    score_types_to_visualize = set(list(df_scores.columns)).intersection(all_score_types)
 
-    properties = {
-        "file": output_file,
-    }
+    for score_type_to_visualize in score_types_to_visualize:
+        output_file = os.path.join(output_dir, "tile_scores_and_labels_visualization_{}.png".format(score_type_to_visualize))
+
+        thumbnail_overlayed = visualize_tiling_scores(df_scores, rbg_thumbnail, thumbnail_tile_size, score_type_to_visualize)
+        thumbnail_overlayed = Image.fromarray(thumbnail_overlayed)
+        thumbnail_overlayed.save(output_file)
+
+        logger.info ("Saved %s visualization at %s", score_type_to_visualize, output_file)
+
+    properties = {'path': output_dir}
 
     return properties
 
