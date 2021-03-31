@@ -23,7 +23,7 @@ from skimage.color   import rgb2gray
 from skimage.filters import threshold_otsu
 from skimage.draw import rectangle_perimeter, rectangle
 
-from urllib.request import urlopen
+import requests
 from shapely.geometry import shape, Point, Polygon
 
 from random import randint
@@ -240,8 +240,10 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
 
     requested_tile_size       = params.get("tile_size")
     requested_magnification   = params.get("magnification")
-    slideviewer_dmt           = params.get("slideviewer_dmt")
-    labelset                  = params.get("labelset")
+
+    # non-required arguments related to slideviewer annotations
+    slideviewer_dmt           = params.get("slideviewer_dmt", None)
+    labelset                  = params.get("labelset", None)
 
     logger.info("Processing slide %s", slide_file_path)
     logger.info("Params = %s", params)
@@ -286,15 +288,14 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     # get pathology annotations for slide only if valid parameters
     if slideviewer_dmt != None and slideviewer_dmt != "" and labelset != None and labelset != "":
         annotation_url = os.path.join("http://", os.environ['MIND_API_URI'], "mind/api/v1/getPathologyAnnotation/", slideviewer_dmt, image_id, "regional", labelset)
-        logger.info(annotation_url)
 
-        response = urlopen(annotation_url)
-        response_text = response.read().decode(response.headers.get_content_charset())
+        response = requests.get(annotation_url)
+        response_text = response.text
 
         if response_text == 'No annotations match the provided query.':
             logger.info("No annotation found for slide.")
         else:
-            annotation_geojson = json.loads(response_text)
+            annotation_geojson = response.json()
             annotation_polygons, annotation_labels = build_shapely_polygons_from_geojson(annotation_geojson)
             df.loc[:, "regional_label"] = get_regional_labels (df['coordinates'], annotation_polygons, annotation_labels, full_generator, full_level)
             
@@ -356,7 +357,10 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     rbg_thumbnail  = get_downscaled_thumbnail(slide, to_thumbnail_scale_factor)
     df_scores      = pd.read_csv(scores_file_path).set_index("address")
 
-    score_types_to_visualize = ['otsu_score', 'purple_score', 'regional_label']
+
+    # only visualize tile scores that were able to be computed
+    all_score_types = {'otsu_score', 'purple_score', 'regional_label'}
+    score_types_to_visualize = set(list(df_scores.columns)).intersection(all_score_types)
 
     for score_type_to_visualize in score_types_to_visualize:
         output_file = os.path.join(output_dir, "tile_scores_and_labels_visualization_{}.png".format(score_type_to_visualize))

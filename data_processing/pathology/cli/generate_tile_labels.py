@@ -14,10 +14,10 @@ python3 -m data_processing.pathology.cli.generate_tile_labels \
     -m data_processing/pathology/cli/example_generate_tile_labels.json
 
 Example with annotation:
-python3 -m data_processing.pathology.cli.visualize_tile_labels \
+python3 -m data_processing.pathology.cli.generate_tile_labels \
         -c ov-path-druv  \
         -s 226871 \
-        -m data_processing/pathology/cli/example_visualize_tile_labels.json 
+        -m data_processing/pathology/cli/example_generate_tile_labels.json 
 '''
 
 # General imports
