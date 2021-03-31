@@ -8,7 +8,7 @@ from data_processing.radiology.feature_table.unpack import cli
 
 
 unpacked_pngs_path = "tests/data_processing/testdata/data/unpacked_pngs"
-config_path = "tests/data_processing/testdata/data/test-project/config"
+config_path = "tests/data_processing/testdata/data/test-project/configs"
 app_config_path = config_path + "/FEATURE_unpack/app_config.yaml"
 data_config_path = config_path + "/FEATURE_unpack/data_config.yaml"
 
