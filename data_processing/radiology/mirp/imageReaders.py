@@ -53,8 +53,10 @@ def read_itk_segmentation(path_to_seg_file):
         if label_value == 0: continue
 
         mask = np.where(int_mask==label_value, True, False)
+        
+        if mask.sum() < 5: continue # Accidental segmentations
 
-        print ("Creating RoiClass for label value = ", label_value)
+        print ("Creating RoiClass for label value = ", label_value, mask.sum())
 
         # Create an ImageClass object using the mask.
         roi_mask_obj = ImageClass(voxel_grid=mask,
