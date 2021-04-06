@@ -77,7 +77,8 @@ class Node(object):
 		if not isinstance(data, Path): 
 			raise RuntimeError("set_data() only accepts path-like objects")
 						
-		if not data.exists(): print("This doesn't exist")
+		if not data.exists(): 
+			raise RuntimeError("Tried to set data to a non-existent path!")
 
 		self.properties['data'] = str(data)
 		self.data = str(data)
@@ -92,7 +93,7 @@ class Node(object):
 			raise RuntimeError("set_aux() only accepts path-like objects")
 		
 		if not aux.exists(): 
-			raise RuntimeError("set_aux() only accepts path-like objects")
+			raise RuntimeError("Tried to set aux to a non-existent path!")
 
 		self.properties['aux'] = str(aux)
 		self.aux = str(aux)
