@@ -51,9 +51,9 @@ def collect_csv_with_container(cohort_id, container_id, method_data):
             if node is None: continue
             df_tmp = pd.read_csv(node.static_file).astype('double', errors='ignore')
             df_tmp['meta_cohort_id']    = cohort_id
-            df_tmp['meta_container_id'] = container._container_id
+            df_tmp['meta_container_id'] = container._qualifiedpath
             df_tmp['meta_tag']          = tag
-            df_tmp = df_tmp.set_index("meta_container_id")
+            df_tmp = df_tmp.set_index(["meta_container_id", "meta_tag"])
             df_list.append (df_tmp.loc[:, ~df_tmp.columns.str.contains('Unnamed')])
             
         df = pd.concat(df_list)
