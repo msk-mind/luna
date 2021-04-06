@@ -143,6 +143,7 @@ class Node(object):
 
 		prop_string = self.prop_str(kv.keys(), kv)
 		return f"""{{ {prop_string} }}"""
+		
 	def get_address(self):
 		"""
 		Returns current node address
