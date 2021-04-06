@@ -238,7 +238,7 @@ class Container(object):
     def get(self, type, name):
         """
         Query graph DB container node for dependent data nodes, and return one 
-        Parses the path field URL for various cases, and sets the node.path attribute with a corrected path
+        Parses the path field URL for various cases, and sets the node.data an node.aux attribute with a corrected path
         Note: namespace is not a default filter for get nodes, but is for adding them (i.e., one can write data under a different namespace)
 
         :params: type - the type of data designed 

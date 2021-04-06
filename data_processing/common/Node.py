@@ -2,6 +2,7 @@ from data_processing.common.utils import to_sql_field, to_sql_value, does_not_co
 import warnings, os
 from pathlib import Path
 
+# TODO: Update types to match docs
 CONTAINER_TYPES = ["cohort", "patient", "scan", "slide", "parquet", "accession", "generic"]
 RADIOLOGY_TYPES = ["DicomSeries", "DicomImageSeries", "DicomImage", "VolumetricImage", "RadiologyScan", "VolumetricLabel", "VolumetricLabelSet", "Voxels", "Radiomics"]
 PATHOLOGY_TYPES = ["PathologySlide", "WsiThumbnail", "PathTileScores", "TileImages", "PointAnnotation", "PointAnnotationJson", "RegionalAnnotationBitmap", "RegionalAnnotationJson", "CellMap"]
@@ -51,8 +52,6 @@ class Node(object):
 		self.data = None
 		self.aux  = None
 
-		self.path = None
-
 	def set_namespace(self, namespace_id: str, subspace_id=None):
 		"""
 		Sets the namespace for this Node commits
@@ -68,14 +67,6 @@ class Node(object):
 			self.properties['subspace']  = subspace_id
 			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
 
-
-	def get_path(self, type='string'):
-		"""
-		Returns node's current path
-		"""
-		if self.path is None: raise RuntimeError("Node's path was never set, however was accessed!")
-		elif type=='string':  return str ( self.path )
-		elif type=='pathlib': return Path( self.path )
 
 	def set_data(self, data):
 		if not isinstance(data, str): print("Must be string")
@@ -176,13 +167,4 @@ class Node(object):
 		for name in args: does_not_contain(":", name)
 
 		return "::".join(args).lower()
-	
-
-# For metadata, all will have the same access scheme/structure
-# Ignore case where list of paths for now
-
-
-
-
-
 
