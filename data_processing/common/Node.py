@@ -3,8 +3,8 @@ import warnings, os
 from pathlib import Path
 
 CONTAINER_TYPES = ["cohort", "patient", "scan", "slide", "parquet", "accession", "generic"]
-RADIOLOGY_TYPES = ["DicomSeries", "DicomImageSeries", "DicomImage", "VolumetricImage", "VolumetricLabel", "VolumetricLabelSet", "Voxels", "Radiomics"]
-PATHOLOGY_TYPES = ["WholeSlideImage", "WsiThumbnail", "TileScores", "TileImages", "PointAnnotation", "PointAnnotationJson", "RegionalAnnotationBitmap", "RegionalAnnotationJson", "CellMap"]
+RADIOLOGY_TYPES = ["DicomSeries", "DicomImageSeries", "DicomImage", "VolumetricImage", "RadiologyScan", "VolumetricLabel", "VolumetricLabelSet", "Voxels", "Radiomics"]
+PATHOLOGY_TYPES = ["PathologySlide", "WsiThumbnail", "PathTileScores", "TileImages", "PointAnnotation", "PointAnnotationJson", "RegionalAnnotationBitmap", "RegionalAnnotationJson", "CellMap"]
 ALL_DATA_TYPES  = RADIOLOGY_TYPES + PATHOLOGY_TYPES
 
 class Node(object):
@@ -48,6 +48,9 @@ class Node(object):
 
 		self.properties["type"] = self.type
 
+		self.data = None
+		self.aux  = None
+
 		self.path = None
 
 	def set_namespace(self, namespace_id: str, subspace_id=None):
@@ -74,6 +77,25 @@ class Node(object):
 		elif type=='string':  return str ( self.path )
 		elif type=='pathlib': return Path( self.path )
 
+	def set_data(self, data):
+		if not isinstance(data, str): print("Must be string")
+
+		path = Path(data)
+
+		if not path.is_file(): print("This doesn't exist")
+
+		self.properties['data'] = data
+		self.data = data
+
+	def set_aux(self, aux):
+		if not isinstance(aux, str): print("Must be string")
+
+		path = Path(aux)
+		
+		if not path.is_file(): print("This doesn't exist")
+
+		self.properties['aux'] = aux
+		self.aux = aux
 
 	def __repr__(self):
 		"""
@@ -155,3 +177,12 @@ class Node(object):
 
 		return "::".join(args).lower()
 	
+
+# For metadata, all will have the same access scheme/structure
+# Ignore case where list of paths for now
+
+
+
+
+
+

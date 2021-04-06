@@ -270,45 +270,8 @@ class Container(object):
             self.logger.debug ("Query Successful:")
             self.logger.debug (node)
 
-        
-        # Parse path (filepath) URI: more sophistic path logic to come (pulling from S3, external mounts, etc!!!!)
-        # For instance, if it was like s3://bucket/test.dcm, this should pull the dicom to a temporary directory and set .path to that dir
-        # This also might be dependent on filetype
-        # Checks:
-            # If like file:/path/to.dcm, strip file:
-            # Else, just return path
-        # TODO: change 'path' field to 'filepath_uri"?
-        
-        if "path" in node.properties.keys(): 
-            path = node.properties["path"]
-            if path.split(":")[0] == "file":
-                node.path = pathlib.Path(path.split(":")[-1])
-            else:
-                node.path = pathlib.Path(path)
-            
-            node.static_path = str(node.path)
-        
-            # Output and check
-            self.logger.info ("Resolved %s -> %s", node.properties["path"], node.path)
-
-            # Check that we got it right, and this path is readable on the host system
-            if not os.path.exists(node.path):
-                raise RuntimeError("Invalid pathspec", node.path)
-            self.logger.info ("Filepath is valid: %s", os.path.exists(node.path))
-
-        if "file" in node.properties.keys(): 
-
-            node.file = pathlib.Path(node.properties["file"])
-            
-            node.static_file = str(node.file)
-        
-            # Output and check
-            self.logger.info ("Resolved %s -> %s", node.properties["file"], node.static_file)
-
-            # Check that we got it right, and this path is readable on the host system
-            if not os.path.exists(node.file):
-                raise RuntimeError("Invalid filespec", node.file)
-            self.logger.info ("File object is valid: %s", os.path.exists(node.file))
+        node.set_data(node.properties.get('data', None))
+        node.set_aux (node.properties.get('aux', None))
 
         return node
     
@@ -323,22 +286,34 @@ class Container(object):
         assert isinstance(node, Node)
         assert self.isAttached()
 
+        self.logger.info(f"Adding node: {node}")
+
         # Decorate with the container namespace 
         node.set_namespace( self._namespace_id, self._name )
         node._container_id = self._container_id
 
         # Set node objects only if there is a path and the object store is enabled
         node.objects = []
-        if "path" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
+        if node.data is not None and self.params.get("OBJECT_STORE_ENABLED", False):
             node.properties['object_bucket'] = f"{self._bucket_id}"
             node.properties['object_folder'] = f"{self._name}/{node.name}"
-            for path in pathlib.Path(node.properties['path']).glob("*"): node.objects.append(path)        
+
+            data_path = pathlib.Path( node.data )
+
+            if data_path.is_file(): 
+                node.objects.append( data_path )
+            
+            if data_path.is_dir(): 
+                # TODO: enable extention in glob via something?
+                for path in data_path.glob("*.*"): 
+                    node.objects.append(path)        
+
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
-        if "file" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
+        if node.aux is not None and self.params.get("OBJECT_STORE_ENABLED", False):
             node.properties['object_bucket'] = f"{self._bucket_id}"
             node.properties['object_folder'] = f"{self._name}/{node.name}"
-            node.objects.append(pathlib.Path(node.properties['file']))
+            node.objects.append( pathlib.Path( node.aux ))
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
         # Add to node commit dictonary
