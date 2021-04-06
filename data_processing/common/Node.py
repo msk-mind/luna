@@ -69,24 +69,33 @@ class Node(object):
 
 
 	def set_data(self, data):
-		if not isinstance(data, str): print("Must be string")
+		if data is None: return
 
-		path = Path(data)
+		if isinstance(data, str): 
+			data = Path(data)
 
-		if not path.is_file(): print("This doesn't exist")
+		if not isinstance(data, Path): 
+			raise RuntimeError("set_data() only accepts path-like objects")
+						
+		if not data.exists(): print("This doesn't exist")
 
-		self.properties['data'] = data
-		self.data = data
+		self.properties['data'] = str(data)
+		self.data = str(data)
 
 	def set_aux(self, aux):
-		if not isinstance(aux, str): print("Must be string")
+		if aux is None: return
 
-		path = Path(aux)
+		if isinstance(aux, str): 
+			aux = Path(aux)
+
+		if not isinstance(aux, Path): 
+			raise RuntimeError("set_aux() only accepts path-like objects")
 		
-		if not path.is_file(): print("This doesn't exist")
+		if not aux.exists(): 
+			raise RuntimeError("set_aux() only accepts path-like objects")
 
-		self.properties['aux'] = aux
-		self.aux = aux
+		self.properties['aux'] = str(aux)
+		self.aux = str(aux)
 
 	def __repr__(self):
 		"""
