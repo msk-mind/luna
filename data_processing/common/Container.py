@@ -333,28 +333,27 @@ class Container(object):
         self._attached = False
         self.logger = logging.getLogger(__name__)
 
-
         future_uploads = []
+        executor = ThreadPoolExecutor(max_workers=4)
+
         for n in self._node_commits.values():
             self.logger.info ("Committing %s", n.get_match_str())
-            self._conn.query(f""" 
+            self._conn.query( f""" 
                 MATCH (container) WHERE id(container) = {n._container_id}
                 MERGE (container)-[:HAS_DATA]->(da:{n.get_match_str()})
                     ON MATCH  SET da = {n.get_map_str()}
                     ON CREATE SET da = {n.get_map_str()}
-                """
-            )
+                """ )
 
             if self.params.get("OBJECT_STORE_ENABLED", False):
-                self.logger.info("Started minio executor with 4 threads")
-                executor = ThreadPoolExecutor(max_workers=4)
-
                 object_bucket = n.properties.get("object_bucket")
                 object_folder = n.properties.get("object_folder")
                 for p in n.objects:
                     future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
                     future_uploads.append(future)
         
+        self.logger.info("Committed [%s]", len(self._node_commits.values()))
+   
         n_count_futures = 0
         n_total_futures = len (future_uploads)
         for future in as_completed(future_uploads):
@@ -367,6 +366,7 @@ class Container(object):
                 if n_count_futures < 10: self.logger.info("Upload successful with etag: %s", data[0])
                 if n_count_futures < 1000 and n_count_futures % 100 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
                 if n_count_futures % 1000 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
+
         self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
         self.logger.info("Shutdown executor %s", executor)                
         executor.shutdown()    
