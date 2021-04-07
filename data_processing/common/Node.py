@@ -49,8 +49,8 @@ class Node(object):
 
 		self.properties["type"] = self.type
 
-		self.data = None
-		self.aux  = None
+		self.set_data( self.properties.get("data", None))
+		self.set_aux ( self.properties.get("aux",  None))
 
 	def set_namespace(self, namespace_id: str, subspace_id=None):
 		"""
@@ -69,6 +69,8 @@ class Node(object):
 
 
 	def set_data(self, data):
+		self.data = None
+
 		if data is None: return
 
 		if isinstance(data, str): 
@@ -84,6 +86,8 @@ class Node(object):
 		self.data = str(data)
 
 	def set_aux(self, aux):
+		self.aux = None
+
 		if aux is None: return
 
 		if isinstance(aux, str): 
