@@ -29,9 +29,10 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--container_id', required=True)
-@click.option('-m', '--method_id',    required=True)
-def cli(cohort_id, container_id, method_id):
-    method_data = get_method_data(cohort_id, method_id)
+@click.option('-m', '--method_param_path',    required=True)
+def cli(cohort_id, container_id, method_param_path):
+    with open(method_param_path) as json_file:
+        method_data = json.load(json_file)
     extract_voxels_with_container(cohort_id, container_id, method_data)
 
 def extract_voxels_with_container(cohort_id: str, container_id: str, method_data: dict):
@@ -59,8 +60,8 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         properties = extract_voxels(
-            image_path = str(next(image_node.path.glob("*.mhd"))),
-            label_path = str(label_node.path),
+            image_path = image_node.data,
+            label_path = label_node.data,
             output_dir = output_dir,
             params     = method_data
         )
