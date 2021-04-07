@@ -13,6 +13,7 @@ from medpy.io import load
 from skimage.transform import resize
 import itk
 from pathlib import Path
+from data_processing.common.Node            import Node
 
 def find_centroid(path, image_w, image_h):
     """
@@ -327,11 +328,14 @@ def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
 
     # Prepare metadata and commit
     properties = {
-        'file' : output_dir + "/" + uid + '_volumetric_image.' + params['itkImageType'],
-        'path' : output_dir,
+        'data' : output_dir + "/" + uid + '_volumetric_image.' + params['itkImageType'],
         'zdim' : n_slices,
         'hash':  dirhash(output_dir, "sha256") 
     }
+
+    if params['itkImageType']=='mhd':
+        properties['aux'] =  output_dir + "/" + uid + '_volumetric_image.zraw'
+      
 
     return properties
 
@@ -376,7 +380,7 @@ def extract_voxels(image_path: str, label_path: str, output_dir: str, params: di
     properties = {
         "resampledPixelSpacing":params['resampledPixelSpacing'], 
         "targetShape": target_shape,
-        "path":output_dir, 
+        "data":output_dir, 
         "hash":dirhash(output_dir, "sha256")
     }
 
@@ -433,7 +437,7 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
 
     # Prepare metadata and commit
     properties = {
-        "file":output_filename, 
+        "aux":output_filename, 
         "hash":dirhash(output_dir, "sha256")
     }
 
