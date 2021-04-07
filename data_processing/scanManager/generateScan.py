@@ -29,9 +29,10 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--container_id', required=True)
-@click.option('-m', '--method_id',    required=True)
-def cli(cohort_id, container_id, method_id):
-    method_data = get_method_data(cohort_id, method_id)
+@click.option('-m', '--method_param_path',    required=True)
+def cli(cohort_id, container_id, method_param_path):
+    with open(method_param_path) as json_file:
+        method_data = json.load(json_file)
     generate_scan_with_container(cohort_id, container_id, method_data)
 
 def generate_scan_with_container(cohort_id, container_id, method_data):
@@ -53,7 +54,7 @@ def generate_scan_with_container(cohort_id, container_id, method_data):
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         properties = generate_scan(
-            dicom_path = str(dicom_node.path),
+            dicom_path = dicom_node.data,
             output_dir = output_dir,
             params = method_data
         )
