@@ -238,7 +238,7 @@ class Container(object):
     def get(self, type, name):
         """
         Query graph DB container node for dependent data nodes, and return one 
-        Parses the path field URL for various cases, and sets the node.path attribute with a corrected path
+        Parses the path field URL for various cases, and sets the node.data an node.aux attribute with a corrected path
         Note: namespace is not a default filter for get nodes, but is for adding them (i.e., one can write data under a different namespace)
 
         :params: type - the type of data designed 
@@ -270,45 +270,8 @@ class Container(object):
             self.logger.debug ("Query Successful:")
             self.logger.debug (node)
 
-        
-        # Parse path (filepath) URI: more sophistic path logic to come (pulling from S3, external mounts, etc!!!!)
-        # For instance, if it was like s3://bucket/test.dcm, this should pull the dicom to a temporary directory and set .path to that dir
-        # This also might be dependent on filetype
-        # Checks:
-            # If like file:/path/to.dcm, strip file:
-            # Else, just return path
-        # TODO: change 'path' field to 'filepath_uri"?
-        
-        if "path" in node.properties.keys(): 
-            path = node.properties["path"]
-            if path.split(":")[0] == "file":
-                node.path = pathlib.Path(path.split(":")[-1])
-            else:
-                node.path = pathlib.Path(path)
-            
-            node.static_path = str(node.path)
-        
-            # Output and check
-            self.logger.info ("Resolved %s -> %s", node.properties["path"], node.path)
-
-            # Check that we got it right, and this path is readable on the host system
-            if not os.path.exists(node.path):
-                raise RuntimeError("Invalid pathspec", node.path)
-            self.logger.info ("Filepath is valid: %s", os.path.exists(node.path))
-
-        if "file" in node.properties.keys(): 
-
-            node.file = pathlib.Path(node.properties["file"])
-            
-            node.static_file = str(node.file)
-        
-            # Output and check
-            self.logger.info ("Resolved %s -> %s", node.properties["file"], node.static_file)
-
-            # Check that we got it right, and this path is readable on the host system
-            if not os.path.exists(node.file):
-                raise RuntimeError("Invalid filespec", node.file)
-            self.logger.info ("File object is valid: %s", os.path.exists(node.file))
+        node.set_data(node.properties.get('data', None))
+        node.set_aux (node.properties.get('aux', None))
 
         return node
     
@@ -323,22 +286,34 @@ class Container(object):
         assert isinstance(node, Node)
         assert self.isAttached()
 
+        self.logger.info(f"Adding node: {node}")
+
         # Decorate with the container namespace 
         node.set_namespace( self._namespace_id, self._name )
         node._container_id = self._container_id
 
         # Set node objects only if there is a path and the object store is enabled
         node.objects = []
-        if "path" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
+        if node.data is not None and self.params.get("OBJECT_STORE_ENABLED", False):
             node.properties['object_bucket'] = f"{self._bucket_id}"
             node.properties['object_folder'] = f"{self._name}/{node.name}"
-            for path in pathlib.Path(node.properties['path']).glob("*"): node.objects.append(path)        
+
+            data_path = pathlib.Path( node.data )
+
+            if data_path.is_file(): 
+                node.objects.append( data_path )
+            
+            if data_path.is_dir(): 
+                # TODO: enable extention in glob via something?
+                for path in data_path.glob("*.*"): 
+                    node.objects.append(path)        
+
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
-        if "file" in node.properties.keys() and self.params.get("OBJECT_STORE_ENABLED", False):
+        if node.aux is not None and self.params.get("OBJECT_STORE_ENABLED", False):
             node.properties['object_bucket'] = f"{self._bucket_id}"
             node.properties['object_folder'] = f"{self._name}/{node.name}"
-            node.objects.append(pathlib.Path(node.properties['file']))
+            node.objects.append( pathlib.Path( node.aux ))
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
         # Add to node commit dictonary
@@ -358,28 +333,27 @@ class Container(object):
         self._attached = False
         self.logger = logging.getLogger(__name__)
 
-
         future_uploads = []
+        executor = ThreadPoolExecutor(max_workers=4)
+
         for n in self._node_commits.values():
             self.logger.info ("Committing %s", n.get_match_str())
-            self._conn.query(f""" 
+            self._conn.query( f""" 
                 MATCH (container) WHERE id(container) = {n._container_id}
                 MERGE (container)-[:HAS_DATA]->(da:{n.get_match_str()})
                     ON MATCH  SET da = {n.get_map_str()}
                     ON CREATE SET da = {n.get_map_str()}
-                """
-            )
+                """ )
 
             if self.params.get("OBJECT_STORE_ENABLED", False):
-                self.logger.info("Started minio executor with 4 threads")
-                executor = ThreadPoolExecutor(max_workers=4)
-
                 object_bucket = n.properties.get("object_bucket")
                 object_folder = n.properties.get("object_folder")
                 for p in n.objects:
                     future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
                     future_uploads.append(future)
         
+        self.logger.info("Committed [%s]", len(self._node_commits.values()))
+   
         n_count_futures = 0
         n_total_futures = len (future_uploads)
         for future in as_completed(future_uploads):
@@ -392,6 +366,7 @@ class Container(object):
                 if n_count_futures < 10: self.logger.info("Upload successful with etag: %s", data[0])
                 if n_count_futures < 1000 and n_count_futures % 100 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
                 if n_count_futures % 1000 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
+
         self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
         self.logger.info("Shutdown executor %s", executor)                
         executor.shutdown()    

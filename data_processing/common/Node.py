@@ -2,9 +2,10 @@ from data_processing.common.utils import to_sql_field, to_sql_value, does_not_co
 import warnings, os
 from pathlib import Path
 
+# TODO: Update types to match docs
 CONTAINER_TYPES = ["cohort", "patient", "scan", "slide", "parquet", "accession", "generic"]
-RADIOLOGY_TYPES = ["DicomSeries", "DicomImageSeries", "DicomImage", "VolumetricImage", "VolumetricLabel", "VolumetricLabelSet", "Voxels", "Radiomics"]
-PATHOLOGY_TYPES = ["WholeSlideImage", "WsiThumbnail", "TileScores", "TileImages", "PointAnnotation", "PointAnnotationJson", "RegionalAnnotationBitmap", "RegionalAnnotationJson", "CellMap"]
+RADIOLOGY_TYPES = ["DicomSeries", "DicomImageSeries", "DicomImage", "VolumetricImage", "RadiologyScan", "VolumetricLabel", "VolumetricLabelSet", "Voxels", "Radiomics"]
+PATHOLOGY_TYPES = ["PathologySlide", "WsiThumbnail", "PathTileScores", "TileImages", "PointAnnotation", "PointAnnotationJson", "RegionalAnnotationBitmap", "RegionalAnnotationJson", "CellMap"]
 ALL_DATA_TYPES  = RADIOLOGY_TYPES + PATHOLOGY_TYPES
 
 class Node(object):
@@ -48,7 +49,8 @@ class Node(object):
 
 		self.properties["type"] = self.type
 
-		self.path = None
+		self.data = None
+		self.aux  = None
 
 	def set_namespace(self, namespace_id: str, subspace_id=None):
 		"""
@@ -66,14 +68,35 @@ class Node(object):
 			self.properties["qualified_address"] = self.get_qualified_name(self.properties['namespace'], self.properties['subspace'], self.name)
 
 
-	def get_path(self, type='string'):
-		"""
-		Returns node's current path
-		"""
-		if self.path is None: raise RuntimeError("Node's path was never set, however was accessed!")
-		elif type=='string':  return str ( self.path )
-		elif type=='pathlib': return Path( self.path )
+	def set_data(self, data):
+		if data is None: return
 
+		if isinstance(data, str): 
+			data = Path(data)
+
+		if not isinstance(data, Path): 
+			raise RuntimeError("set_data() only accepts path-like objects")
+						
+		if not data.exists(): 
+			raise RuntimeError("Tried to set data to a non-existent path!")
+
+		self.properties['data'] = str(data)
+		self.data = str(data)
+
+	def set_aux(self, aux):
+		if aux is None: return
+
+		if isinstance(aux, str): 
+			aux = Path(aux)
+
+		if not isinstance(aux, Path): 
+			raise RuntimeError("set_aux() only accepts path-like objects")
+		
+		if not aux.exists(): 
+			raise RuntimeError("Tried to set aux to a non-existent path!")
+
+		self.properties['aux'] = str(aux)
+		self.aux = str(aux)
 
 	def __repr__(self):
 		"""
@@ -120,6 +143,7 @@ class Node(object):
 
 		prop_string = self.prop_str(kv.keys(), kv)
 		return f"""{{ {prop_string} }}"""
+		
 	def get_address(self):
 		"""
 		Returns current node address
@@ -154,4 +178,4 @@ class Node(object):
 		for name in args: does_not_contain(":", name)
 
 		return "::".join(args).lower()
-	
+
