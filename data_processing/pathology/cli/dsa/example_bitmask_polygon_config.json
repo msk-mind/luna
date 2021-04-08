@@ -4,5 +4,7 @@
         "Necrosis": "/path/to/Necrosis.png",
         "Stroma": "/path/to/Stroma.png"},
   "image_name": "123.svs",
-  "output": "Full Res Tile-Based Pixel Classifier Inference"
+  "output": "Full Res Tile-Based Pixel Classifier Inference",
+  "line_colors": {"Stroma": "rgb(0,191,255)", "Tumor": "rgb(0,255,0)", "Fat": "rgb(255,255,0)", "Necrosis": "rgb(255,0,0)" },
+  "fill_colors": {"Stroma": "rgba(0,191,255, alpha)", "Tumor": "rgba(0,255,0, alpha)", "Fat": "rgba(255,255,0, alpha)", "Necrosis": "rgba(255,0,0, alpha)"}
 }

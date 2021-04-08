@@ -90,7 +90,7 @@ def stardist_polygon(ctx, data_config):
         element = copy.deepcopy(base_dsa_polygon_element)
 
         element["label"]["value"] = label_name
-        line_color, fill_color = get_color(label_name, "cell")
+        line_color, fill_color = get_color(label_name, data["line_colors"], data["fill_colors"])
         element["fillColor"] = fill_color
         element["lineColor"] = line_color
         element["points"] = coords
@@ -150,7 +150,7 @@ def stardist_cell(ctx, data_config):
         elements_entry["label"]["value"] = label_name
 
         # get color and add to element
-        line_color, fill_color = get_color(label_name, "cell")
+        line_color, fill_color = get_color(label_name, data["line_colors"], data["fill_colors"])
         elements_entry["fillColor"] = fill_color
         elements_entry["lineColor"] = line_color
 
@@ -202,7 +202,7 @@ def regional_polygon(ctx, data_config):
         element["label"]["value"] = label_name
 
         # get label specific color and add to element
-        line_color, fill_color = get_color(label_name, "regional")
+        line_color, fill_color = get_color(label_name, data["line_colors"], data["fill_colors"])
         element["fillColor"] = fill_color
         element["lineColor"] = line_color
 
@@ -257,7 +257,7 @@ def bitmask_polygon(ctx, data_config):
             element["label"]["value"] = label_name
 
             # get label specific color and add to element
-            line_color, fill_color = get_color(label_name, "regional")
+            line_color, fill_color = get_color(label_name, data["line_colors"], data["fill_colors"])
             element["fillColor"] = fill_color
             element["lineColor"] = line_color
 
@@ -306,7 +306,6 @@ def heatmap(ctx, data_config):
         label_value = row[data["column"]]
         element["label"]["value"] = str(label_value)
 
-
         # get label specific color and add to elements
         line_color, fill_color = get_continuous_color(label_value)
         element["fillColor"] = fill_color
@@ -317,7 +316,6 @@ def heatmap(ctx, data_config):
 
         pixel_x = x * scaled_tile_size
         pixel_y = y * scaled_tile_size
-
 
         coords = [[pixel_x, pixel_y], [pixel_x+scaled_tile_size, pixel_y], [pixel_x+scaled_tile_size, pixel_y+scaled_tile_size], [pixel_x, pixel_y+scaled_tile_size],[pixel_x, pixel_y]]
         for c in coords:

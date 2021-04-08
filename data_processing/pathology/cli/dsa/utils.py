@@ -4,20 +4,8 @@ import numpy as np
 from skimage import measure
 import seaborn as sns
 
-# TODO move to configs...
-line_colors_cell = {'Other': "rgb({}, {}, {})".format(0,255,0), "Lymphocyte": "rgb({}, {}, {})".format(255,0,0) }
-fill_colors_cell = {'Other': "rgba({}, {}, {}, alpha)".format(0,255,0), "Lymphocyte": "rgba({}, {}, {}, alpha)".format(255,0,0) }
 
-line_colors_regional = {'Stroma': "rgb({}, {}, {})".format(0,191,255), "Tumor": "rgb({}, {}, {})".format(0,255,0), 'Fat': "rgb({}, {}, {})".format(255,255,0), 'Necrosis': "rgb({}, {}, {})".format(255,0,0)}
-fill_colors_regional = {'Stroma': "rgba({}, {}, {}, alpha)".format(0,191,255), "Tumor": "rgba({}, {}, {}, alpha)".format(0,255,0), 'Fat': "rgba({}, {}, {}, alpha)".format(255,255,0), 'Necrosis': "rgba({}, {}, {}, alpha)".format(255,0,0)}
-
-line_colors_default = {}
-fill_colors_default = {}
-
-# get colors for cells/regions based on discrete categories
-# set object_type to "cell" for cell specific labeling (red hot lymphocytes in a forest of green)
-# set object_type to "regional" for regional specific labeling (following Kevin's color schema)
-def get_color(name, object_type='default', alpha = 100):
+def get_color(name, line_colors={}, fill_colors={}, alpha = 100):
     """
     Get colors for cells/regions based on discrete categories.
 
@@ -27,20 +15,8 @@ def get_color(name, object_type='default', alpha = 100):
     :param alpha: alpha value for the fill color. 100 by default
     :return: RGBA line and fill colors
     """
-    if object_type == "cell":
-        line_colors = line_colors_cell
-        for key, val in fill_colors_cell.items():
-            fill_colors_cell[key] = val.replace("alpha", str(alpha))
-        fill_colors = fill_colors_cell
-    elif object_type == "regional":
-        line_colors = line_colors_regional
-        for key, val in fill_colors_regional.items():
-            fill_colors_regional[key] = val.replace("alpha", str(alpha))
-        fill_colors = fill_colors_regional
-    else:
-        # print("Object type not excpted. Cell and Regional Objects supported.")
-        line_colors = line_colors_default
-        fill_colors = fill_colors_default
+    for key, val in fill_colors.items():
+        fill_colors[key] = val.replace("alpha", str(alpha))
 
     if name not in line_colors and name not in fill_colors:
         r = randint(0, 255)
