@@ -11,13 +11,13 @@ Example:
 python3 -m data_processing.pathology.cli.generate_tile_labels \
     -c TCGA-BRCA \
     -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
-    -m data_processing/pathology/cli/example_generate_tile_labels.json
+    -m data_processing/pathology/cli/examples/generate_tile_labels.json 
 
 Example with annotation:
 python3 -m data_processing.pathology.cli.generate_tile_labels \
-        -c ov-path-druv  \
-        -s 226871 \
-        -m data_processing/pathology/cli/example_generate_tile_labels.json 
+    -c TCGA-BRCA \
+    -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
+    -m data_processing/pathology/cli/examples/generate_tile_labels_with_ov_labels.json 
 '''
 
 # General imports

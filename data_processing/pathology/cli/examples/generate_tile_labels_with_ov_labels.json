@@ -1,6 +1,6 @@
 {
   "input_wsi_tag": "pathology.etl", 
-  "job_tag": "test_generate_tiles",
+  "job_tag": "test_generate_tile_ov_labels",
   "tile_size": 128,
   "scale_factor": 8,
   "magnification": 20,
