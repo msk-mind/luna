@@ -10,14 +10,11 @@ def get_color(name, line_colors={}, fill_colors={}, alpha = 100):
     Get colors for cells/regions based on discrete categories.
 
     :param name: feature name e.g. Stroma, Tumor
-    :param object_type: "cell" for cell specific labeling, "regional" for regional specific labeling
-        for more information, refer to the config.
+    :param line_colors: json with name:rgb values
+    :param fill_colors: json with name:rgba values
     :param alpha: alpha value for the fill color. 100 by default
     :return: RGBA line and fill colors
     """
-    for key, val in fill_colors.items():
-        fill_colors[key] = val.replace("alpha", str(alpha))
-
     if name not in line_colors and name not in fill_colors:
         r = randint(0, 255)
         g = randint(0, 255)
