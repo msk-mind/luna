@@ -29,9 +29,10 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--container_id', required=True)
-@click.option('-m', '--method_id',    required=True)
-def cli(cohort_id, container_id, method_id):
-    method_data = get_method_data(cohort_id, method_id)
+@click.option('-m', '--method_param_path',    required=True)
+def cli(cohort_id, container_id, method_param_path):
+    with open(method_param_path) as json_file:
+        method_data = json.load(json_file)
     extract_radiomics_with_container(cohort_id, container_id, method_data)
 
 def extract_radiomics_with_container(cohort_id, container_id, method_data):
@@ -43,63 +44,38 @@ def extract_radiomics_with_container(cohort_id, container_id, method_data):
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_id   = method_data.get("job_tag", "none")
 
-    if method_data.get("usingPertubations", False):
-        try:
-            image_node  = container.get("VolumetricImage",    method_data['image_input_tag']) 
+    try:
+        image_node  = container.get("VolumetricImage",    method_data['image_input_tag']) 
+
+        if method_data.get("usingPertubations", False):
             label_node  = container.get("VolumetricLabelSet", method_data['label_input_tag'])
-            if image_node is None:
-                raise ValueError("Image node not found")
-
-            if label_node is None:
-                raise ValueError("Label node not found")
-            
-            # Data just goes under namespace/name
-            # TODO: This path is really not great, but works for now
-            output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
-            if not os.path.exists(output_dir): os.makedirs(output_dir)
-
-            properties = extract_radiomics(
-                image_path = image_node.static_file,
-                label_path = [str(path) for path in label_node.path.glob("*")],
-                output_dir = output_dir,
-                params     = method_data
-            )
-        except Exception:
-            container.logger.exception ("Exception raised, stopping job execution.")
-        else:
-            output_node = Node("Radiomics", method_id, properties)
-            container.add(output_node)
-            container.saveAll()
-    else:
-        try:
-            image_node  = container.get("VolumetricImage", method_data['image_input_tag']) 
+        else: 
             label_node  = container.get("VolumetricLabel", method_data['label_input_tag'])
-            if image_node is None:
-                raise ValueError("Image node not found")
 
-            if label_node is None:
-                raise ValueError("Label node not found")
-            
-            # Data just goes under namespace/name
-            # TODO: This path is really not great, but works for now
-            output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
-            if not os.path.exists(output_dir): os.makedirs(output_dir)
+        if image_node is None:
+            raise ValueError("Image node not found")
 
-            properties = extract_radiomics(
-                image_path = image_node.static_file,
-                label_path = label_node.static_file,
-                output_dir = output_dir,
-                params     = method_data
-            )
-        except Exception:
-            container.logger.exception ("Exception raised, stopping job execution.")
-        else:
-            output_node = Node("Radiomics", method_id, properties)
-            container.add(output_node)
-            container.saveAll()
+        if label_node is None:
+            raise ValueError("Label node not found")
+        
+        # Data just goes under namespace/name
+        # TODO: This path is really not great, but works for now
+        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
+        if not os.path.exists(output_dir): os.makedirs(output_dir)
+
+        properties = extract_radiomics(
+            image_path = image_node.data,
+            label_path = label_node.data,
+            output_dir = output_dir,
+            params     = method_data
+        )
+    except Exception:
+        container.logger.exception ("Exception raised, stopping job execution.")
+    else:
+        output_node = Node("Radiomics", method_id, properties)
+        container.add(output_node)
+        container.saveAll()
    
-
-
 
 if __name__ == "__main__":
     cli()

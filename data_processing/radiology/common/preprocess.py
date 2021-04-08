@@ -402,11 +402,11 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
     """
     logger = logging.getLogger(__name__)
 
-    logger.info("Image file: %s",    image_path)
-    logger.info("Label file(s): %s", label_path)
+    logger.info("Image data: %s", image_path)
+    logger.info("Label data: %s", label_path)
 
-    if isinstance(label_path, list): label_path_list = label_path
-    else: label_path_list = [label_path]
+    if   Path(label_path).is_dir():  label_path_list = [str(path) for path in Path(label_path).glob("*")]
+    elif Path(label_path).is_file(): label_path_list = [label_path]
 
     result_list = []
     for label_path in label_path_list:
@@ -426,7 +426,6 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
 
         result = extractor.execute(image_path, label_path)
 
-
         result_list.append( pd.Series(result).to_frame().transpose() )
 
     output_filename = os.path.join(output_dir, params["job_tag"] + ".csv")
@@ -437,7 +436,7 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
 
     # Prepare metadata and commit
     properties = {
-        "aux":output_filename, 
+        "aux": output_filename, 
         "hash":dirhash(output_dir, "sha256")
     }
 
