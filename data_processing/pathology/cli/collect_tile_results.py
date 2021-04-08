@@ -45,23 +45,23 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
     """
     Using the container API interface, visualize tile-wise scores
     """
-    method_id            = method_data.get("job_tag", "none")
+    input_tile_data      = method_data.get("input_label_tag")
     output_container_id  = method_data.get("output_container")
 
     # Do some setup
     container        = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     output_container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(output_container_id)
 
-    image_node  = container.get("TileImages", method_id) 
+    image_node  = container.get("TileImages", input_tile_data) 
 
     try:
         if image_node is None:
             raise ValueError("Image node not found")
 
         df = pd.read_csv(image_node.aux)
+        df.loc[:,"data_path"]     = image_node.data
         df.loc[:,"object_bucket"] = image_node.properties['object_bucket']
         df.loc[:,"object_path"]   = image_node.properties['object_folder'] + "/tiles.slice.pil"
-        df.loc[:,"data_path"]     = image_node.data
         df.loc[:,"id_slide_container"] = container._name
 
         df = df.set_index(["id_slide_container", "address"])

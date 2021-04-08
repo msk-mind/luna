@@ -161,7 +161,9 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size, score_type_to_visualiz
     thumbnail = array_to_slide(thumbnail_img)
     generator, generator_level = get_full_resolution_generator(thumbnail, tile_size=tile_size)
 
-    for index, row in df.iterrows():
+    df_tiles_to_process = df[ (df["otsu_score"] > 0.5) &  (df["otsu_score"] > 0.1) ]
+
+    for index, row in df_tiles_to_process.iterrows():
         address = address_to_coord(index)
 
         if not row.otsu_score   > 0.5: continue
@@ -275,7 +277,6 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
     logger.info("tiles x %s, tiles y %s", tile_x_count, tile_y_count)
 
-    
     address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(1, tile_x_count-1), range(1, tile_y_count-1))]
     logger.info("Number of tiles in raster: %s", len(address_raster))
 
@@ -283,7 +284,6 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
 
     df.loc[:, "otsu_score"  ] = get_otsu_scores   (df['coordinates'], otsu_thumbnail, thumbnail_tile_size)
     df.loc[:, "purple_score"] = get_purple_scores (df['coordinates'], rbg_thumbnail,  thumbnail_tile_size)
-
 
     # get pathology annotations for slide only if valid parameters
     if slideviewer_dmt != None and slideviewer_dmt != "" and labelset != None and labelset != "":
@@ -398,12 +398,12 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     fp = open(f"{output_dir}/tiles.slice.pil",'wb')
     offset = 0
     counter = 0
-    for index, row in df_scores.iterrows():
-        counter += 1
-        if counter % 10000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_scores))
 
-        if not row.otsu_score   > 0.5: continue
-        if not row.purple_score > 0.1: continue
+    df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["otsu_score"] > 0.1) ]
+
+    for index, row in df_tiles_to_process.iterrows():
+        counter += 1
+        if counter % 10000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_tiles_to_process))
 
         img_pil     = generator.get_tile(level, address_to_coord(index)).resize((requested_tile_size,requested_tile_size))
         img_bytes   = img_pil.tobytes()
@@ -424,10 +424,13 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     properties = {
         "data": f"{output_dir}/tiles.slice.pil",
         "aux" : f"{output_dir}/address.slice.csv",
+        "tiles": len(df_scores.dropna()),
         "pil_image_bytes_mode": img_pil.mode,
         "pil_image_bytes_size": img_pil.size[0],
         "pil_image_bytes_length": len(img_pil.tobytes())
     }
+
+    print (properties)
     return properties
 
       

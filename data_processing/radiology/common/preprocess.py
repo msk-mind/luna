@@ -436,7 +436,7 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
 
     # Prepare metadata and commit
     properties = {
-        "aux": output_filename, 
+        "data": output_filename, 
         "hash":dirhash(output_dir, "sha256")
     }
 

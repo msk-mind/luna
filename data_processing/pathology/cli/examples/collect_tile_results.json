@@ -1,5 +1,4 @@
 {
   "input_label_tag": "test_save_tiles",
-  "job_tag": "test_collect_tiles",
   "output_container": "test_output_dataset"
 }
