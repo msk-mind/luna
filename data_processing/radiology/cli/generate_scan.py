@@ -23,7 +23,7 @@ from data_processing.common.config import ConfigSet
 # From radiology.common
 from data_processing.radiology.common.preprocess import generate_scan
 
-logger = init_logger("generateScan.log")
+logger = init_logger("generate_scan.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()

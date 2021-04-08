@@ -24,15 +24,16 @@ import pandas as pd
 import pyarrow.parquet as pq
 import pyarrow as pa
 
-logger = init_logger("collectCSV.log")
+logger = init_logger("collect_result_segment.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--container_id', required=True)
-@click.option('-m', '--method_id',    required=True)
-def cli(cohort_id, container_id, method_id):
-    method_data = get_method_data(cohort_id, method_id)
+@click.option('-m', '--method_param_path',    required=True)
+def cli(cohort_id, container_id, method_param_path):
+    with open(method_param_path) as json_file:
+        method_data = json.load(json_file)
     collect_result_segment_with_container(cohort_id, container_id, method_data)
 
 def collect_result_segment_with_container(cohort_id, container_id, method_data):
