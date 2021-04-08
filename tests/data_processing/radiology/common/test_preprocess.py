@@ -94,7 +94,7 @@ def test_extract_radiomics_1(tmp_path):
         params     = {"job_tag":"test_1", "RadiomicsFeatureExtractor": {'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 25, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001}}
     )
 
-    assert "3227.840849331449,0.09075042902243616,2.7507247368947003\n" in open(str(properties['aux'])).read() # Check the last
+    assert "3227.840849331449,0.09075042902243616,2.7507247368947003\n" in open(str(properties['data'])).read() # Check the last
 
 
 def test_extract_radiomics_2(tmp_path):
@@ -105,7 +105,7 @@ def test_extract_radiomics_2(tmp_path):
         params     = {"job_tag":"test_1", "RadiomicsFeatureExtractor": {'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 50, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001}}
     )
 
-    assert "0.001316830812757558,447.00957648375726,0.04525463261369965,0.7069386976494938\n" in open(str(properties['aux'])).read()
+    assert "0.001316830812757558,447.00957648375726,0.04525463261369965,0.7069386976494938\n" in open(str(properties['data'])).read()
 
 
 def test_generate_scan_1(tmp_path):
