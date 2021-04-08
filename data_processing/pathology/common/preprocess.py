@@ -368,7 +368,7 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
 
         logger.info ("Saved %s visualization at %s", score_type_to_visualize, output_file)
 
-    properties = {'data': output_file}
+    properties = {'data': output_dir}
 
     return properties
 

@@ -45,14 +45,13 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
     """
     Using the container API interface, visualize tile-wise scores
     """
+    method_id            = method_data.get("job_tag", "none")
+    output_container_id  = method_data.get("output_container")
 
     # Do some setup
     container        = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     output_container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(output_container_id)
 
-    method_id            = method_data.get("job_tag", "none")
-    output_container_id  = method_data.get("output_container")
-    
     image_node  = container.get("TileImages", method_id) 
 
     try:
@@ -63,9 +62,10 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
         df.loc[:,"object_bucket"] = image_node.properties['object_bucket']
         df.loc[:,"object_path"]   = image_node.properties['object_folder'] + "/tiles.slice.pil"
         df.loc[:,"data_path"]     = image_node.data
+        df.loc[:,"id_slide_container"] = container._name
 
+        df = df.set_index(["id_slide_container", "address"])
         logger.info(df)
-
 
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", output_container._namespace_id, output_container._name)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
@@ -79,19 +79,15 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
         properties = {
             "rows": len(df),
             "columns": len(df.columns),
-            "file": output_file
+            "data": output_file
         }
 
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        output_node = Node("Parquet", f"slice-{container._container_id}", properties)
+        output_node = Node("ResultSegment", f"slice-{container._container_id}", properties)
         output_container.add(output_node)
         output_container.saveAll()
-
-
-
-
 
 if __name__ == "__main__":
     cli()
