@@ -22,13 +22,12 @@ from data_processing.common.config          import ConfigSet
 from data_processing.common.custom_logger   import init_logger
 from data_processing.common.Neo4jConnection import Neo4jConnection
 
-from data_processing.scanManager.windowDicoms       import window_dicom_with_container
-from data_processing.scanManager.extractRadiomics   import extract_radiomics_with_container
-from data_processing.scanManager.extractVoxels      import extract_voxels_with_container
-from data_processing.scanManager.generateScan       import generate_scan_with_container
-from data_processing.scanManager.collectCSV         import collect_csv_with_container
-
-from data_processing.radiology.cli.randomize_contours import randomize_contours_with_container
+from data_processing.radiology.cli.window_dicoms            import window_dicom_with_container
+from data_processing.radiology.cli.extract_radiomics        import extract_radiomics_with_container
+from data_processing.radiology.cli.extract_voxels           import extract_voxels_with_container
+from data_processing.radiology.cli.generate_scan            import generate_scan_with_container
+from data_processing.radiology.cli.randomize_contours       import randomize_contours_with_container
+from data_processing.radiology.cli.collect_result_segment   import collect_result_segment_with_container
 
 logger = init_logger("radiology-service.log")
     

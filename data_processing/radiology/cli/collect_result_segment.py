@@ -33,9 +33,9 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 @click.option('-m', '--method_id',    required=True)
 def cli(cohort_id, container_id, method_id):
     method_data = get_method_data(cohort_id, method_id)
-    collect_csv_with_container(cohort_id, container_id, method_data)
+    collect_result_segment_with_container(cohort_id, container_id, method_data)
 
-def collect_csv_with_container(cohort_id, container_id, method_data):
+def collect_result_segment_with_container(cohort_id, container_id, method_data):
     """
     Using the container API interface, collect csv type output into a single container
     """

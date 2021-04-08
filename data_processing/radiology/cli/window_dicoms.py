@@ -55,7 +55,7 @@ def window_dicom_with_container(cohort_id, container_id, method_data):
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         properties = window_dicoms(
-            dicom_paths = list(dicom_node.path.glob("*dcm")),
+            dicom_paths = dicom_node.data,
             output_dir = output_dir,
             params = method_data
         )
