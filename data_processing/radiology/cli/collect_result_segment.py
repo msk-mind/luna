@@ -75,13 +75,13 @@ def collect_result_segment_with_container(cohort_id, container_id, method_data):
         properties = {
             "rows": len(df),
             "columns": len(df.columns),
-            "file": output_file
+            "data": output_file
         }
 
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        output_node = Node("Parquet", f"slice-{container._container_id}", properties)
+        output_node = Node("ResultSegment", f"slice-{container._container_id}", properties)
         output_container.add(output_node)
         output_container.saveAll()
 
