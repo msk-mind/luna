@@ -50,7 +50,7 @@ def collect_result_segment_with_container(cohort_id, container_id, method_data):
         for tag in  method_data['input_tags']:
             node  = container.get("Radiomics", tag) 
             if node is None: continue
-            df_tmp = pd.read_csv(node.static_file).astype('double', errors='ignore')
+            df_tmp = pd.read_csv(node.data).astype('double', errors='ignore')
             df_tmp['meta_cohort_id']    = cohort_id
             df_tmp['meta_container_id'] = container._qualifiedpath
             df_tmp['meta_tag']          = tag
