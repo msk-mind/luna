@@ -60,8 +60,8 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         image_properties, label_properties, pertubation_properties, supervoxel_properties = randomize_contours(
-            image_path = image_node.static_file,
-            label_path = label_node.static_file,
+            image_path = image_node.data,
+            label_path = label_node.data,
             output_dir = output_dir,
             params     = method_data
         )
@@ -73,6 +73,7 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
         new_label_node          = Node("VolumetricLabel",    method_id, label_properties)
         new_pertubation_node    = Node("VolumetricLabelSet", method_id, pertubation_properties)
         new_supervoxel_node     = Node("Voxels", method_id, supervoxel_properties)
+
         container.add(new_image_node)
         container.add(new_label_node)
         container.add(new_pertubation_node)

@@ -1,5 +1,5 @@
 {
-    "image_input_tag": "mhd",
-    "label_input_tag": "user-annotations",
-    "job_tag" : "test_randomize_contours"
+           "image_input_tag": "generate_scan_example",
+           "label_input_tag": "amp-annotations",
+           "job_tag" : "example_randomize_contours"
 }
