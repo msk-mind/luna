@@ -1,0 +1,5 @@
+{
+  "input": "path/to/regional_annotation.json",
+  "image_name": "123.svs",
+  "output": "StarDist Segmentations with Lymphocyte Classifications"
+}

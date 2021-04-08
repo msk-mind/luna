@@ -1,0 +1,5 @@
+{
+  "input": "path/to/object_detection_result.tsv",
+  "image_name": "123.svs",
+  "output": "Points of Classsified StarDist Cells"
+}

@@ -1,0 +1,8 @@
+{
+  "input": {"Tumor": "/path/to/Tumor.png",
+        "Fat": "/path/to/Fat.png",
+        "Necrosis": "/path/to/Necrosis.png",
+        "Stroma": "/path/to/Stroma.png"},
+  "image_name": "123.svs",
+  "output": "Full Res Tile-Based Pixel Classifier Inference"
+}
