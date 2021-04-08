@@ -300,8 +300,6 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
             df.loc[:, "regional_label"] = get_regional_labels (df['coordinates'], annotation_polygons, annotation_labels, full_generator, full_level)
             
        
-
-
     logger.info("Displaying DataFrame for otsu_score > 0.5:")
     logger.info (df [ df["otsu_score"] > 0.5 ])
 
@@ -312,7 +310,7 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     logger.info ("Saved tile scores at %s", output_file)
 
     properties = {
-        "file": output_file,
+        "data": output_file,
         "magnification": requested_magnification,
         "full_resolution_magnification": requested_magnification * to_mag_scale_factor,
         "tile_size": requested_tile_size,
@@ -351,7 +349,6 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     logger.info("Normalized magnification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
     logger.info("Requested tile size=%s, tile size at full magnficiation=%s, tile size at thumbnail=%s", requested_tile_size, full_resolution_tile_size, thumbnail_tile_size)
 
-    
 
     # Create thumbnail image for scoring
     rbg_thumbnail  = get_downscaled_thumbnail(slide, to_thumbnail_scale_factor)
@@ -371,7 +368,7 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
 
         logger.info ("Saved %s visualization at %s", score_type_to_visualize, output_file)
 
-    properties = {'path': output_dir}
+    properties = {'data': output_file}
 
     return properties
 
@@ -425,7 +422,8 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     df_scores.dropna().to_csv(f"{output_dir}/address.slice.csv")
 
     properties = {
-        "path":output_dir,
+        "data": f"{output_dir}/tiles.slice.pil",
+        "aux" : f"{output_dir}/address.slice.csv",
         "pil_image_bytes_mode": img_pil.mode,
         "pil_image_bytes_size": img_pil.size[0],
         "pil_image_bytes_length": len(img_pil.tobytes())
