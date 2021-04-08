@@ -10,7 +10,7 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, sys
+import os, json, sys
 import click
 
 # From common
@@ -56,7 +56,7 @@ def window_dicom_with_container(cohort_id, container_id, method_data):
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         properties = window_dicoms(
-            dicom_paths = dicom_node.data,
+            dicom_path = dicom_node.data,
             output_dir = output_dir,
             params = method_data
         )

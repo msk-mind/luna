@@ -23,7 +23,7 @@ from data_processing.common.config import ConfigSet
 # From radiology.common
 from data_processing.radiology.common.preprocess   import extract_radiomics
 
-logger = init_logger("extractRadiomics.log")
+logger = init_logger("extract_radiomics.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()

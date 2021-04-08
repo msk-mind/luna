@@ -460,15 +460,10 @@ def window_dicoms(dicom_path: str, output_dir: str, params: dict) -> dict:
  
     logger = logging.getLogger(__name__)
 
-    dicom_path_list = [str(path) for path in Path(dicom_path).glob("*")]
-
-    # Scale and clip each dicom, and save in new directory
-    logger.info("Processing %s dicoms!", len(dicom_path_list))
-
     if params.get('window', False):
         logger.info ("Applying window [%s,%s]", params['window_low_level'], params['window_high_level'])
 
-    for dcm in dicom_path_list:
+    for dcm in Path(dicom_path).glob("*"):
         ds = dcmread(dcm)
         hu = ds.RescaleSlope * ds.pixel_array + ds.RescaleIntercept
         if params['window']:
