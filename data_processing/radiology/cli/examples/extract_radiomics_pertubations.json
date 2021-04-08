@@ -1,0 +1,16 @@
+{
+           "image_input_tag": "example_randomize_contours",
+           "label_input_tag": "example_randomize_contours",
+           "job_tag" : "example_radiomics_job_pertubations",
+           "strictGeometry": true,
+           "enableAllImageTypes": true,
+           "usingPertubations": true,
+           "RadiomicsFeatureExtractor": {
+               "interpolator": "sitkBSpline",
+               "resampledPixelSpacing": [2.5,2.5,2.5],
+               "binWidth": 25,
+               "verbose": "True",
+               "label":1,
+               "geometryTolerance":1e-08
+	}
+}
