@@ -129,7 +129,7 @@ class Container(object):
         self.logger.info ("Lookup ID: %s", container_id)
 
         # Figure out how to match the node
-        if isinstance(container_id, str) and not container_id.isdigit(): 
+        if isinstance(container_id, str): 
             match_clause = f"""WHERE container.qualified_address = '{container_id.lower()}'"""
         elif (isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
             match_clause = f"""WHERE id(container) = {container_id} """
