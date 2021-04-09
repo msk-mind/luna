@@ -1,0 +1,7 @@
+{
+    "input_wsi_tag": "pathology.etl", 
+    "input_label_tag": "infer_resent",
+    "job_tag": "test_visualize_tiles_pytorch",
+    "scale_factor": 16 
+  }
+  

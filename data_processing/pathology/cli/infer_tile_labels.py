@@ -32,9 +32,9 @@ from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
 
 # From radiology.common
-from data_processing.pathology.common.preprocess   import pretile_scoring
+from data_processing.pathology.common.preprocess   import run_model
 
-logger = init_logger("generate_tile_labels.log")
+logger = init_logger("infer_tile_labels.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
@@ -44,9 +44,9 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 def cli(cohort_id, container_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    generate_tile_labels_with_container(cohort_id, container_id, method_data)
+    infer_tile_labels_with_container(cohort_id, container_id, method_data)
 
-def generate_tile_labels_with_container(cohort_id: str, container_id: str, method_data: dict):
+def infer_tile_labels_with_container(cohort_id: str, container_id: str, method_data: dict):
     """
     Using the container API interface, score and generate tile addresses
     """
@@ -59,7 +59,6 @@ def generate_tile_labels_with_container(cohort_id: str, container_id: str, metho
     
     # get image_id
     # TODO - allow -s to take in slide (container) id
-    image_id = container._name
 
     try:
         if image_node is None:
