@@ -114,7 +114,6 @@ def stardist_polygon(ctx, data_config):
 
     new_file.close()
     print("Time to build annotation", time.time() - start)
-    print(len(elements)) # 981070
 
     save_push_results(base_dsa_annotation, elements, data["output"], data["image_name"],
                       ctx.obj['uri'], ctx.obj['token'])
