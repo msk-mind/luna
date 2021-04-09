@@ -44,7 +44,7 @@ def push_annotation_to_dsa_image(item_uuid, dsa_annotation_json, uri, token):
     if response.status_code == 200:
         print("Annotation successfully pushed to DSA.")
         print("Time to push annotation", time.time() - start)
-
+        print(f"http://{uri}/histomics#?image={item_uuid}")
     else:
         print("Error in annotation upload:", response.status_code, response.reason)
 
