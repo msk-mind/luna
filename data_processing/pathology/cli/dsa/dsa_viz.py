@@ -10,7 +10,6 @@ from data_processing.pathology.cli.dsa.dsa_api_handler import get_item_uuid, pus
 from data_processing.pathology.cli.dsa.utils import get_color, get_continuous_color, \
     vectorize_np_array_bitmask_by_pixel_value
 
-
 # Base DSA jsons
 base_dsa_polygon_element = {"fillColor": "rgba(0, 0, 0, 0)", "lineColor": "rgb(0, 0, 0)","lineWidth": 2,"type": "polyline","closed": True, "points": [], "label": {"value": ""}}
 base_dsa_point_element = {"fillColor": "rgba(0, 0, 0, 0)", "lineColor": "rgb(0, 0, 0)","lineWidth": 2,"type": "point", "center": [], "label": {"value": ""}}
@@ -18,6 +17,23 @@ base_dsa_annotation  = {"description": "", "elements": [], "name": ""}
 
 # Qupath 20x mag factor
 QUPATH_MAG_FACTOR = 0.5011
+
+def save_push_results(base_annotation, elements, annotation_name, image_name, uri, token):
+    """
+    Populate base annotations, save to json outfile, and push to DSA
+    """
+    dsa_annotation = copy.deepcopy(base_annotation)
+
+    dsa_annotation["elements"] = elements
+    dsa_annotation["name"] = annotation_name
+
+    outfile_name = annotation_name.replace(" ","_") + ".json"
+    with open(outfile_name, 'w') as outfile:
+        json.dump(dsa_annotation, outfile)
+
+    dsa_uuid = get_item_uuid(image_name, uri, token)
+    push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, uri, token)
+
 
 @click.group()
 @click.pass_context
@@ -62,7 +78,6 @@ def stardist_polygon(ctx, data_config):
     print("Starting upload for image: {}".format(data['image_name']))
     start = time.time()
 
-    dsa_annotation = copy.deepcopy(base_dsa_annotation)
     # can't handle NaNs for vectors, do this to replace all NaNs
     # TODO: find better fix
     # for now: https://stackoverflow.com/questions/17140886/how-to-search-and-replace-text-in-a-file
@@ -97,18 +112,12 @@ def stardist_polygon(ctx, data_config):
 
         elements.append(element)
 
-    dsa_annotation["elements"] = elements
-    dsa_annotation["name"] = data["output"]
-
     new_file.close()
     print("Time to build annotation", time.time() - start)
+    print(len(elements)) # 981070
 
-    outfile_name = data["output"].replace(" ","_") + ".json"
-    with open(outfile_name, 'w') as outfile:
-        json.dump(dsa_annotation, outfile)
-
-    dsa_uuid = get_item_uuid(data["image_name"], ctx.obj['uri'], ctx.obj['token'])
-    push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, ctx.obj['uri'], ctx.obj['token'])
+    save_push_results(base_dsa_annotation, elements, data["output"], data["image_name"],
+                      ctx.obj['uri'], ctx.obj['token'])
 
 
 @cli.command()
@@ -127,9 +136,6 @@ def stardist_cell(ctx, data_config):
     print("Starting upload for image: {}".format(data['image_name']))
     start = time.time()
 
-    dsa_annotation = copy.deepcopy(base_dsa_annotation)
-    elements = []
-
     # qupath_stardist_cell_tsv can be quite large to load all columns into memory (contains many feature columns), so only load baisc columns that are needed for now
     cols_to_load = ["Name", "Class", "ROI", "Centroid X µm", "Centroid Y µm", "Parent"]
     df = pd.read_csv(data["input"], sep ="\t", usecols=cols_to_load)
@@ -137,6 +143,8 @@ def stardist_cell(ctx, data_config):
     # do some preprocessing on the tsv -- e.g. stardist sometimes finds cells in glass
     df = df[df["Parent"] != "Glass"]
 
+    # populate json elements
+    elements = []
     for idx, row in df.iterrows():
 
         elements_entry = copy.deepcopy(base_dsa_point_element)
@@ -160,17 +168,10 @@ def stardist_cell(ctx, data_config):
 
         elements.append(elements_entry)
 
-    dsa_annotation["elements"] = elements
-    dsa_annotation["name"] = data["output"]
-
     print("Time to build annotation", time.time() - start)
 
-    outfile_name = data["output"].replace(" ","_") + ".json"
-    with open(outfile_name, 'w') as outfile:
-        json.dump(dsa_annotation, outfile)
-
-    dsa_uuid = get_item_uuid(data["image_name"], ctx.obj['uri'], ctx.obj['token'])
-    push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, ctx.obj['uri'], ctx.obj['token'])
+    save_push_results(base_dsa_annotation, elements, data["output"], data["image_name"],
+                      ctx.obj['uri'], ctx.obj['token'])
 
 
 @cli.command()
@@ -189,7 +190,6 @@ def regional_polygon(ctx, data_config):
     print("Starting upload for image: {}".format(data['image_name']))
     start = time.time()
 
-    dsa_annotation = copy.deepcopy(base_dsa_annotation)
     with open(data["input"]) as regional_file:
         regional_annotation = geojson.load(regional_file)
 
@@ -213,17 +213,10 @@ def regional_polygon(ctx, data_config):
         element["points"] = coords
         elements.append(element)
 
-    dsa_annotation["name"] = data["output"]
-    dsa_annotation["elements"] = elements
-
     print("Time to build annotation", time.time() - start)
 
-    outfile_name = data["output"].replace(" ","_") + ".json"
-    with open(outfile_name, 'w') as outfile:
-        json.dump(dsa_annotation, outfile)
-
-    dsa_uuid = get_item_uuid(data["image_name"], ctx.obj['uri'], ctx.obj['token'])
-    push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, ctx.obj['uri'], ctx.obj['token'])
+    save_push_results(base_dsa_annotation, elements, data["output"], data["image_name"],
+                      ctx.obj['uri'], ctx.obj['token'])
 
 
 @cli.command()
@@ -242,9 +235,7 @@ def bitmask_polygon(ctx, data_config):
     print("Starting upload for image: {}".format(data['image_name']))
     start = time.time()
 
-    dsa_annotation = copy.deepcopy(base_dsa_annotation)
     elements = []
-
     for bitmask_label, bitmask_filepath in data["input"].items():
         Image.MAX_IMAGE_PIXELS = 5000000000
         annotation = Image.open(bitmask_filepath)
@@ -267,17 +258,10 @@ def bitmask_polygon(ctx, data_config):
             element["points"] = coords
             elements.append(element)
 
-    dsa_annotation["name"] = data["output"]
-    dsa_annotation["elements"] = elements
-
     print("Time to build annotation", time.time() - start)
 
-    outfile_name = data["output"].replace(" ","_") + ".json"
-    with open(outfile_name, 'w') as outfile:
-        json.dump(dsa_annotation, outfile)
-
-    dsa_uuid = get_item_uuid(data["image_name"], ctx.obj['uri'], ctx.obj['token'])
-    push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, ctx.obj['uri'], ctx.obj['token'])
+    save_push_results(base_dsa_annotation, elements, data["output"], data["image_name"],
+                      ctx.obj['uri'], ctx.obj['token'])
 
 
 @cli.command()
@@ -297,10 +281,9 @@ def heatmap(ctx, data_config):
     start = time.time()
 
     df = pd.read_csv(data["input"])
-    dsa_annotation = copy.deepcopy(base_dsa_annotation)
-    elements = []
     scaled_tile_size = int(data["tile_size"]) * int(data["scan_mag"])/int(data["tile_mag"])
 
+    elements = []
     for _, row in df.iterrows():
         element = copy.deepcopy(base_dsa_polygon_element)
         label_value = row[data["column"]]
@@ -324,18 +307,9 @@ def heatmap(ctx, data_config):
         elements.append(element)
 
     annotation_name = data["column"] + " tile-based heatmap"
-    dsa_annotation["name"] = annotation_name
-    dsa_annotation["elements"] = elements
 
-    print("Time to build annotation", time.time() - start)
-
-    outfile_name = annotation_name.replace(" ","_") + ".json"
-    with open(outfile_name, 'w') as outfile:
-        json.dump(dsa_annotation, outfile)
-
-
-    dsa_uuid = get_item_uuid(data["image_name"], ctx.obj['uri'], ctx.obj['token'])
-    push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, ctx.obj['uri'], ctx.obj['token'])
+    save_push_results(base_dsa_annotation, elements, annotation_name, data["image_name"],
+                      ctx.obj['uri'], ctx.obj['token'])
 
 
 if __name__ == '__main__':
