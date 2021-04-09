@@ -1,4 +1,4 @@
 {
   "input_label_tag": "test_save_tiles_ov_labels",
-  "output_container": "test_output_dataset"
+  "output_container": "ovarian_clf_v1"
 }

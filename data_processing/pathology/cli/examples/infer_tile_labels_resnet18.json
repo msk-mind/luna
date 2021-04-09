@@ -1,6 +1,6 @@
 {
     "input_wsi_tag": "pathology.etl", 
-    "job_tag": "infer_resent",
+    "job_tag": "infer_ov_clf",
     "tile_size": 128,
     "scale_factor": 16,
     "magnification": 20,

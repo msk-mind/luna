@@ -70,7 +70,7 @@ def generate_tile_labels_with_container(cohort_id: str, container_id: str, metho
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        properties = run_model(image_node.data, output_dir, method_data)
+        properties = pretile_scoring(image_node.data, output_dir, method_data, image_id)
 
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")

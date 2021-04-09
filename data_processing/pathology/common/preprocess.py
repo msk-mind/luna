@@ -395,14 +395,22 @@ def run_model(slide_file_path: str, output_dir: str, params: dict):
 
     counter = 0
     model_scores = []
+    tumor_score  = []
     with torch.no_grad():
-        df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["otsu_score"] > 0.1) ]
+        df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["otsu_score"] > 0.1) ].head(10000)
         for index, row in df_tiles_to_process.iterrows():
             counter += 1
             if counter % 1000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_tiles_to_process))
-            model_scores.append( 'Label-' + str( classifier(transform(generator.get_tile(level, address_to_coord(index)).resize((requested_tile_size,requested_tile_size))).unsqueeze(0).cuda()).argmax(1).item()) )
+
+            output = classifier(transform(generator.get_tile(level, address_to_coord(index)).resize((requested_tile_size,requested_tile_size))).unsqueeze(0).cuda())
+            scores = output.exp() / output.exp().sum()
+
+            model_scores.append( 'Label-' + str( scores.argmax(1).item()) )
+            tumor_score.append( scores.flatten()[0].item() )
+
     
     df_tiles_to_process.loc[:, "model_score"] =  model_scores
+    df_tiles_to_process.loc[:, "tumor_score"] =  tumor_score
     logger.info(df_tiles_to_process)
 
     output_file = os.path.join(output_dir, "tile_scores_and_labels_pytorch_inference.csv")
@@ -456,7 +464,7 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     df_scores      = pd.read_csv(scores_file_path).set_index("address")
 
     # only visualize tile scores that were able to be computed
-    all_score_types = {"model_score"}
+    all_score_types = {"tumor_score", "model_score"}
     score_types_to_visualize = set(list(df_scores.columns)).intersection(all_score_types)
 
     for score_type_to_visualize in score_types_to_visualize:
@@ -499,7 +507,7 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     offset = 0
     counter = 0
 
-    df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["otsu_score"] > 0.1) ]
+    df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["otsu_score"] > 0.1) ].dropna()
 
     for index, row in df_tiles_to_process.iterrows():
         counter += 1
