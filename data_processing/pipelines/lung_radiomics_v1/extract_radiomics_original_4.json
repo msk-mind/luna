@@ -1,0 +1,15 @@
+{
+    "image_input_tag": "original.mhd",
+    "label_input_tag": "amp-annotations",
+    "job_tag" : "radiomics-original-label-4",
+    "strictGeometry": true,
+    "enableAllImageTypes": true,
+    "RadiomicsFeatureExtractor": {
+        "interpolator": "sitkBSpline",
+        "resampledPixelSpacing": [2.5,2.5,2.5],
+        "binWidth": 25,
+        "verbose": "true",
+        "label":4,
+        "geometryTolerance":1e-08
+    }
+}

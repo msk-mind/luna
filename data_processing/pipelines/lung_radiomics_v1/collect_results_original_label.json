@@ -1,0 +1,4 @@
+{
+    "output_container": "radiomics-dev-original-label-1",
+    "input_tags": ["radiomics-original-label-1", "radiomics-original-label-2", "radiomics-original-label-3", "radiomics-original-label-4", "radiomics-original-label-5","radiomics-original-label-6" ]
+}
