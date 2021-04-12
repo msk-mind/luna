@@ -1,0 +1,12 @@
+{
+    "input_wsi_tag": "pathology.etl", 
+    "job_tag": "infer_eng_clf",
+    "tile_size": 128,
+    "scale_factor": 16,
+    "magnification": 20,
+    "model": {
+      "checkpoint_path": "/gpfs/mskmind_ess/kohlia/tile_classifier/ckpts/1.ckpt",
+      "n_classes": 5
+  }
+}
+  
