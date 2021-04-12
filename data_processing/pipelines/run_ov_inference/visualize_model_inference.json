@@ -1,0 +1,7 @@
+{
+    "input_wsi_tag": "pathology.etl", 
+    "input_label_tag": "infer_ov_clf",
+    "job_tag": "visualize_infer_ov_clf",
+    "scale_factor": 8 
+  }
+  

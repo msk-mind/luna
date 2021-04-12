@@ -1,0 +1,5 @@
+{
+  "input_wsi_tag": "pathology.etl", 
+  "input_label_tag": "test_generate_tile_ov_labels",
+  "job_tag": "test_save_tiles_ov_labels"
+}

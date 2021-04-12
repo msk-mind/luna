@@ -1,0 +1,13 @@
+{
+    "input_wsi_tag": "pathology.etl", 
+    "job_tag": "infer_ov_clf",
+    "model_package": "data_processing.pathology.models.ov_tissuenet",
+    "tile_size": 128,
+    "scale_factor": 16,
+    "magnification": 20,
+    "model": {
+      "checkpoint_path": "/gpfs/mskmind_ess/boehmk/histocox/checkpoints/2021-02-06_14.26.33_fold-2_epoch018.torch",
+      "n_classes": 4
+  }
+}
+  

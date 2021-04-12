@@ -25,6 +25,8 @@ from skimage.filters import threshold_otsu
 from skimage.draw import rectangle_perimeter, rectangle
 
 import requests
+import importlib
+
 from shapely.geometry import shape, Point, Polygon
 
 from random import randint
@@ -341,6 +343,7 @@ def run_model(slide_file_path: str, output_dir: str, params: dict):
 
     requested_tile_size       = params.get("tile_size")
     requested_magnification   = params.get("magnification")
+    model_package             = params.get("model_package")
 
     logger.info("Processing slide %s", slide_file_path)
     logger.info("Params = %s", params)
@@ -383,11 +386,11 @@ def run_model(slide_file_path: str, output_dir: str, params: dict):
     logger.info("Displaying DataFrame for otsu_score > 0.5:")
     logger.info (df_scores [ df_scores["otsu_score"] > 0.5 ])
 
-    logger.info("BUILDING MODEL...")
+    logger.info(f"BUILDING MODEL FROM {model_package}..")
     
-    from data_processing.pathology.models.tissuenet import get_classifier, get_transform
-    classifier = get_classifier ( **params['model'] )
-    transform  = get_transform ()
+    tile_model = importlib.import_module(model_package)
+    classifier = tile_model.get_classifier ( **params['model'] )
+    transform  = tile_model.get_transform ()
 
     classifier.eval()
     classifier.cuda()
@@ -414,6 +417,7 @@ def run_model(slide_file_path: str, output_dir: str, params: dict):
     
     df_tiles_to_process.loc[:, "model_score"] =  model_scores
     df_tiles_to_process.loc[:, "tumor_score"] =  tumor_score
+
     logger.info(df_tiles_to_process)
 
     output_file = os.path.join(output_dir, "tile_scores_and_labels_pytorch_inference.csv")
