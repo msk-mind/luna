@@ -1,0 +1,7 @@
+{
+  "input": "path/to/regional_annotation.json",
+  "image_filename": "123.svs",
+  "output": "StarDist Segmentations with Lymphocyte Classifications",
+  "line_colors": {"Other": "rgb(0, 255, 0)", "Lymphocyte": "rgb(255, 0, 0)" },
+  "fill_colors": {"Other": "rgba(0, 255, 0, 0)", "Lymphocyte": "rgba(255, 0, 0, 0)" }
+}

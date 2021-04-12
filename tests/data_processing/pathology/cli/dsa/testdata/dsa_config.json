@@ -1,0 +1,5 @@
+{
+  "host": "localhost",
+  "port": "8080",
+  "token": "token-from-dsa-token-current-api"
+}
