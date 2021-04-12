@@ -41,3 +41,5 @@ class MockResponse:
         self.status_code = status_code
         self.text = json_data
 
+    def json(self):
+        return eval(self.json_data)

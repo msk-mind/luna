@@ -13,8 +13,12 @@ def test_stardist_polygon(monkeypatch):
     monkeypatch.setattr(requests, "get", mock_system_check)
 
     def mock_get_uuid(*args, **kwargs):
-        return MockResponse("{\"name\": \"123.svs\", \"_id\": \"uuid\"}", 200)
+        return MockResponse("[{\"annotation\": {\"name\": \"123.svs\"}, \"_id\": \"uuid\", \"_modelType\":\"annotation\"}]", 200)
     monkeypatch.setattr(requests, "get", mock_get_uuid)
+
+    def mock_get_annotation_uuid(*args, **kwargs):
+        return MockResponse("[{\"annotation\": {\"name\": \"123.svs\"}, \"_id\": \"uuid\", \"_modelType\":\"annotation\"}]", 200)
+    monkeypatch.setattr(requests, "get", mock_get_annotation_uuid)
 
     def mock_push(*args, **kwargs):
         return MockResponse({}, 200)
@@ -36,8 +40,12 @@ def test_stardist_cell(monkeypatch):
     monkeypatch.setattr(requests, "get", mock_system_check)
 
     def mock_get_uuid(*args, **kwargs):
-        return MockResponse("{\"name\": \"123.svs\", \"_id\": \"uuid\"}", 200)
+        return MockResponse("[{\"annotation\": {\"name\": \"123.svs\"}, \"_id\": \"uuid\", \"_modelType\":\"annotation\"}]", 200)
     monkeypatch.setattr(requests, "get", mock_get_uuid)
+
+    def mock_get_annotation_uuid(*args, **kwargs):
+        return MockResponse("[{\"annotation\": {\"name\": \"123.svs\"}, \"_id\": \"uuid\", \"_modelType\":\"annotation\"}]", 200)
+    monkeypatch.setattr(requests, "get", mock_get_annotation_uuid)
 
     def mock_push(*args, **kwargs):
         return MockResponse({}, 200)
@@ -59,8 +67,12 @@ def test_regional_polygon(monkeypatch):
     monkeypatch.setattr(requests, "get", mock_system_check)
 
     def mock_get_uuid(*args, **kwargs):
-        return MockResponse("{\"name\": \"123.svs\", \"_id\": \"uuid\"}", 200)
+        return MockResponse("[{\"annotation\": {\"name\": \"123.svs\"}, \"_id\": \"uuid\", \"_modelType\":\"annotation\"}]", 200)
     monkeypatch.setattr(requests, "get", mock_get_uuid)
+
+    def mock_get_annotation_uuid(*args, **kwargs):
+        return MockResponse("[{\"annotation\": {\"name\": \"456.svs\"}, \"_id\": \"uuid\", \"_modelType\":\"annotation\"}]", 200)
+    monkeypatch.setattr(requests, "get", mock_get_annotation_uuid)
 
     def mock_push(*args, **kwargs):
         return MockResponse({}, 200)
@@ -106,8 +118,12 @@ def test_heatmap(monkeypatch):
     monkeypatch.setattr(requests, "get", mock_system_check)
 
     def mock_get_uuid(*args, **kwargs):
-        return MockResponse("{\"name\": \"123.svs\", \"_id\": \"uuid\"}", 200)
+        return MockResponse("[{\"annotation\": {\"name\": \"123.svs\"}, \"_id\": \"uuid\", \"_modelType\":\"annotation\"}]", 200)
     monkeypatch.setattr(requests, "get", mock_get_uuid)
+
+    def mock_get_annotation_uuid(*args, **kwargs):
+        return MockResponse("[{\"annotation\": {\"name\": \"456.svs\"}, \"_id\": \"uuid\", \"_modelType\":\"annotation\"}]", 200)
+    monkeypatch.setattr(requests, "get", mock_get_annotation_uuid)
 
     def mock_push(*args, **kwargs):
         return MockResponse({}, 200)

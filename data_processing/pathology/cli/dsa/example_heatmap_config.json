@@ -1,6 +1,7 @@
 {
   "input": "path/to/tile_level.csv",
   "image_filename": "123.svs",
+  "output": "tile-based heatmap",
   "column": "otsu_score",
   "tile_size": 128,
   "full_resolution_magnification": 20,

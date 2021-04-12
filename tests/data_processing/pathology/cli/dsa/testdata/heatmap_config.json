@@ -2,6 +2,7 @@
   "input": "tests/data_processing/pathology/cli/dsa/testdata/tile_scores.csv",
   "image_filename": "123.svs",
   "column": "otsu_score",
+  "output": "test",
   "tile_size": 128,
   "full_resolution_magnification": 20,
   "tile_magnification": 20
