@@ -3,6 +3,6 @@
   "image_name": "123.svs",
   "column": "otsu_score",
   "tile_size": 128,
-  "scan_mag": 20,
-  "tile_mag": 20
+  "full_resolution_magnification": 20,
+  "tile_magnification": 20
 }
