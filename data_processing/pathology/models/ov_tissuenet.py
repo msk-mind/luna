@@ -34,5 +34,6 @@ def get_classifier (checkpoint_path='/gpfs/mskmind_ess/boehmk/histocox/checkpoin
     model = TissueTileNet(resnet18(), n_classes, activation=activation)
     model.load_state_dict(torch.load(
         checkpoint_path,
-        map_location='cpu'))
+        map_location='cpu')
+    )
     return model
