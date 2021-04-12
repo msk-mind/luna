@@ -1,6 +1,6 @@
 {
   "input": "path/to/tile_level.csv",
-  "image_name": "123.svs",
+  "image_filename": "123.svs",
   "column": "otsu_score",
   "tile_size": 128,
   "full_resolution_magnification": 20,

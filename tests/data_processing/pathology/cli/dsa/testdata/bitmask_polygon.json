@@ -1,6 +1,6 @@
 {
   "input": {"Tumor": "tests/data_processing/pathology/cli/dsa/testdata/Tumor.png"},
-  "image_name": "123.svs",
+  "image_filename": "123.svs",
   "output": "Full Res Tile-Based Pixel Classifier Inference",
   "line_colors": {"Tumor": "rgb(0,255,0)" },
   "fill_colors": {"Tumor": "rgba(0,255,0,100)"}
