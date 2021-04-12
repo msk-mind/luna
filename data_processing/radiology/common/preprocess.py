@@ -436,18 +436,18 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
 
     # Prepare metadata and commit
     properties = {
-        "aux": output_filename, 
+        "data": output_filename, 
         "hash":dirhash(output_dir, "sha256")
     }
 
     return properties
 
 
-def window_dicoms(dicom_paths: list, output_dir: str, params: dict) -> dict:
+def window_dicoms(dicom_path: str, output_dir: str, params: dict) -> dict:
     """
     Extract radiomics given and image, label to and output_dir, parameterized by params
 
-    :param dicom_paths: list of filepaths to process
+    :param dicom_paths: path to folder of dicoms to process
     :param output_dir: destination directory
     :param params {
         window bool: whether to apply windowing
@@ -460,11 +460,10 @@ def window_dicoms(dicom_paths: list, output_dir: str, params: dict) -> dict:
  
     logger = logging.getLogger(__name__)
 
-    # Scale and clip each dicom, and save in new directory
-    logger.info("Processing %s dicoms!", len(dicom_paths))
     if params.get('window', False):
         logger.info ("Applying window [%s,%s]", params['window_low_level'], params['window_high_level'])
-    for dcm in dicom_paths:
+
+    for dcm in Path(dicom_path).glob("*"):
         ds = dcmread(dcm)
         hu = ds.RescaleSlope * ds.pixel_array + ds.RescaleIntercept
         if params['window']:
@@ -477,7 +476,7 @@ def window_dicoms(dicom_paths: list, output_dir: str, params: dict) -> dict:
         "RescaleSlope": float(ds.RescaleSlope), 
         "RescaleIntercept": float(ds.RescaleIntercept), 
         "units": "HU", 
-        "path": output_dir, 
+        "data": output_dir, 
         "hash": dirhash(output_dir, "sha256")
     }
 

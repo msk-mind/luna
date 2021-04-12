@@ -13,6 +13,7 @@ import pandas as pd
 import seaborn as sns
 
 import json 
+from pathlib import Path
 
 from PIL import Image
 
@@ -27,17 +28,20 @@ import requests
 from shapely.geometry import shape, Point, Polygon
 
 from random import randint
+import torch
 
 
 palette = sns.color_palette("viridis",as_cmap=True)
+categorial = sns.color_palette("Set1", 8)
 categorical_colors = {}
+
 def get_tile_color(score):
     # categorical
     if isinstance(score, str):
         if score in categorical_colors:
             return categorical_colors[score]
         else:
-            tile_color = [randint(0, 255) for i in range(3)]
+            tile_color =  255 * np.array (categorial[len(categorical_colors.keys())])
             categorical_colors[score] = tile_color
             return tile_color
 
@@ -161,11 +165,11 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size, score_type_to_visualiz
     thumbnail = array_to_slide(thumbnail_img)
     generator, generator_level = get_full_resolution_generator(thumbnail, tile_size=tile_size)
 
-    for index, row in df.iterrows():
+    df_tiles_to_process = df[ (df["otsu_score"] > 0.5) &  (df["otsu_score"] > 0.1) ]
+
+    for index, row in df_tiles_to_process.iterrows():
         address = address_to_coord(index)
 
-        if not row.otsu_score   > 0.5: continue
-        if not row.purple_score > 0.1: continue
         if 'regional_label' in row and pd.isna(row.regional_label): continue
 
         extent = generator.get_tile_dimensions(generator_level, address)
@@ -275,7 +279,6 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
     logger.info("tiles x %s, tiles y %s", tile_x_count, tile_y_count)
 
-    
     address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(1, tile_x_count-1), range(1, tile_y_count-1))]
     logger.info("Number of tiles in raster: %s", len(address_raster))
 
@@ -283,7 +286,6 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
 
     df.loc[:, "otsu_score"  ] = get_otsu_scores   (df['coordinates'], otsu_thumbnail, thumbnail_tile_size)
     df.loc[:, "purple_score"] = get_purple_scores (df['coordinates'], rbg_thumbnail,  thumbnail_tile_size)
-
 
     # get pathology annotations for slide only if valid parameters
     if slideviewer_dmt != None and slideviewer_dmt != "" and labelset != None and labelset != "":
@@ -300,8 +302,6 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
             df.loc[:, "regional_label"] = get_regional_labels (df['coordinates'], annotation_polygons, annotation_labels, full_generator, full_level)
             
        
-
-
     logger.info("Displaying DataFrame for otsu_score > 0.5:")
     logger.info (df [ df["otsu_score"] > 0.5 ])
 
@@ -312,16 +312,129 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     logger.info ("Saved tile scores at %s", output_file)
 
     properties = {
-        "file": output_file,
+        "data": output_file,
         "magnification": requested_magnification,
         "full_resolution_magnification": requested_magnification * to_mag_scale_factor,
         "tile_size": requested_tile_size,
         "full_resolution_tile_size": full_resolution_tile_size,
         "total_tiles": len(df),
-        "available_labels": list(df.columns)
+        "available_labels": list(df.columns),
+        "tile_magnification": requested_magnification,
+        "image_filename": Path(slide_file_path).name
     }
 
     return properties
+
+
+### MAIN ENTRY METHOD -> pretile
+def run_model(slide_file_path: str, output_dir: str, params: dict):
+    """
+
+    Notes: 
+    to_mag_scale_factor tells us how much to scale to get from full resolution to desired magnification
+    to_thumbnail_scale_factor tells us how much to scale to get from desired magnification to the desired thumbnail downscale, relative to requested mag
+    
+    The tile size is defined at the requested mag, so it's bigger at full resolution and smaller for the thumbnail
+    to_mag_scale_factor and to_thumbnail_scale_factor both need to be event integers, i.e. the scale factors are multiples of the the scanned magnficiation
+    """
+    logger = logging.getLogger(__name__)
+
+    requested_tile_size       = params.get("tile_size")
+    requested_magnification   = params.get("magnification")
+
+    logger.info("Processing slide %s", slide_file_path)
+    logger.info("Params = %s", params)
+
+    slide = openslide.OpenSlide(slide_file_path)
+
+    logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
+ 
+    scale_factor = params.get("scale_factor", 4) # Instead, we should specifiy a thumbnail zoom, and calculate this using get_scale_factor_at_magnfication()
+    to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)
+    to_thumbnail_scale_factor   = to_mag_scale_factor * scale_factor
+
+    if not to_mag_scale_factor % 1 == 0 or not requested_tile_size % scale_factor == 0: 
+        raise ValueError("You chose a combination of requested tile sizes and magnification that resulted in non-integer tile sizes at different scales")
+
+    full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
+    thumbnail_tile_size       = requested_tile_size // scale_factor
+
+    logger.info("Normalized magnification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
+    logger.info("Requested tile size=%s, tile size at full magnficiation=%s, tile size at thumbnail=%s", requested_tile_size, full_resolution_tile_size, thumbnail_tile_size)
+
+    # Create thumbnail image for scoring
+    rbg_thumbnail  = get_downscaled_thumbnail(slide, to_thumbnail_scale_factor)
+    otsu_thumbnail = make_otsu(rbg_thumbnail)
+
+    # get DeepZoomGenerator, level
+    generator, level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
+
+    tile_x_count, tile_y_count = generator.level_tiles[level]
+    logger.info("tiles x %s, tiles y %s", tile_x_count, tile_y_count)
+
+    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(1, tile_x_count-1), range(1, tile_y_count-1))]
+    logger.info("Number of tiles in raster: %s", len(address_raster))
+
+    df_scores = pd.DataFrame(address_raster).set_index("address")
+
+    df_scores.loc[:, "otsu_score"  ] = get_otsu_scores   (df_scores['coordinates'], otsu_thumbnail, thumbnail_tile_size)
+    df_scores.loc[:, "purple_score"] = get_purple_scores (df_scores['coordinates'], rbg_thumbnail,  thumbnail_tile_size)
+       
+    logger.info("Displaying DataFrame for otsu_score > 0.5:")
+    logger.info (df_scores [ df_scores["otsu_score"] > 0.5 ])
+
+    logger.info("BUILDING MODEL...")
+    
+    from data_processing.pathology.models.tissuenet import get_classifier, get_transform
+    classifier = get_classifier ( **params['model'] )
+    transform  = get_transform ()
+
+    classifier.eval()
+    classifier.cuda()
+
+    logger.info( classifier )
+
+    logger.info("RUNNING MODEL...")
+
+    counter = 0
+    model_scores = []
+    tumor_score  = []
+    with torch.no_grad():
+        df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["otsu_score"] > 0.1) ]
+        for index, row in df_tiles_to_process.iterrows():
+            counter += 1
+            if counter % 1000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_tiles_to_process))
+
+            output = classifier(transform(generator.get_tile(level, address_to_coord(index)).resize((requested_tile_size,requested_tile_size))).unsqueeze(0).cuda())
+            scores = output.exp() / output.exp().sum()
+
+            model_scores.append( 'Label-' + str( scores.argmax(1).item()) )
+            tumor_score.append( scores.flatten()[0].item() )
+
+    
+    df_tiles_to_process.loc[:, "model_score"] =  model_scores
+    df_tiles_to_process.loc[:, "tumor_score"] =  tumor_score
+    logger.info(df_tiles_to_process)
+
+    output_file = os.path.join(output_dir, "tile_scores_and_labels_pytorch_inference.csv")
+    df_tiles_to_process.to_csv(output_file)
+
+    logger.info ("Saved tile inference data at %s", output_file)
+
+    properties = {
+        "data": output_file,
+        "magnification": requested_magnification,
+        "full_resolution_magnification": requested_magnification * to_mag_scale_factor,
+        "tile_size": requested_tile_size,
+        "full_resolution_tile_size": full_resolution_tile_size,
+        "total_tiles": len(df_tiles_to_process),
+        "tile_magnification": requested_magnification,
+        "image_filename": Path(slide_file_path).name,
+        "available_labels": list(df_tiles_to_process.columns)
+    }
+
+    return properties 
+
 
 
 ### MAIN ENTRY METHOD -> vis tiles
@@ -351,15 +464,12 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     logger.info("Normalized magnification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
     logger.info("Requested tile size=%s, tile size at full magnficiation=%s, tile size at thumbnail=%s", requested_tile_size, full_resolution_tile_size, thumbnail_tile_size)
 
-    
-
     # Create thumbnail image for scoring
     rbg_thumbnail  = get_downscaled_thumbnail(slide, to_thumbnail_scale_factor)
     df_scores      = pd.read_csv(scores_file_path).set_index("address")
 
-
     # only visualize tile scores that were able to be computed
-    all_score_types = {'otsu_score', 'purple_score', 'regional_label'}
+    all_score_types = {"tumor_score", "model_score", "purple_score", "otsu_score", "regional_label"}
     score_types_to_visualize = set(list(df_scores.columns)).intersection(all_score_types)
 
     for score_type_to_visualize in score_types_to_visualize:
@@ -371,7 +481,7 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
 
         logger.info ("Saved %s visualization at %s", score_type_to_visualize, output_file)
 
-    properties = {'path': output_dir}
+    properties = {'data': output_dir}
 
     return properties
 
@@ -401,12 +511,12 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     fp = open(f"{output_dir}/tiles.slice.pil",'wb')
     offset = 0
     counter = 0
-    for index, row in df_scores.iterrows():
-        counter += 1
-        if counter % 10000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_scores))
 
-        if not row.otsu_score   > 0.5: continue
-        if not row.purple_score > 0.1: continue
+    df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["otsu_score"] > 0.1) ].dropna()
+
+    for index, row in df_tiles_to_process.iterrows():
+        counter += 1
+        if counter % 10000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_tiles_to_process))
 
         img_pil     = generator.get_tile(level, address_to_coord(index)).resize((requested_tile_size,requested_tile_size))
         img_bytes   = img_pil.tobytes()
@@ -425,11 +535,15 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     df_scores.dropna().to_csv(f"{output_dir}/address.slice.csv")
 
     properties = {
-        "path":output_dir,
+        "data": f"{output_dir}/tiles.slice.pil",
+        "aux" : f"{output_dir}/address.slice.csv",
+        "tiles": len(df_scores.dropna()),
         "pil_image_bytes_mode": img_pil.mode,
         "pil_image_bytes_size": img_pil.size[0],
         "pil_image_bytes_length": len(img_pil.tobytes())
     }
+
+    print (properties)
     return properties
 
       

@@ -68,8 +68,8 @@ def test_extract_voxels_1(tmp_path):
     print (properties)
 
     assert properties['targetShape'] == [280, 280, 11] # Check target shape
-    assert abs(np.load(str(properties['path']) + '/image_voxels.npy').mean() - -1289.5683001548427) < 1e-8 # Mean within some percision 
-    assert np.load(str(properties['path']) + '/label_voxels.npy').sum() == 1139 # ~ number of 1 label voxels
+    assert abs(np.load(str(properties['data']) + '/image_voxels.npy').mean() - -1289.5683001548427) < 1e-8 # Mean within some percision 
+    assert np.load(str(properties['data']) + '/label_voxels.npy').sum() == 1139 # ~ number of 1 label voxels
 
 
 def test_extract_voxels_2(tmp_path):
@@ -82,8 +82,8 @@ def test_extract_voxels_2(tmp_path):
 
     print (properties)
     assert properties['targetShape'] == [140, 140, 5] # Check target shape
-    assert abs(np.load(str(properties['path']) + '/image_voxels.npy').mean() - -1289.2570235496087) < 1e-8 # Mean within some percision 
-    assert np.load(str(properties['path']) + '/label_voxels.npy').sum() == 132 # ~ number of 1 label voxels, less due to different resampling
+    assert abs(np.load(str(properties['data']) + '/image_voxels.npy').mean() - -1289.2570235496087) < 1e-8 # Mean within some percision 
+    assert np.load(str(properties['data']) + '/label_voxels.npy').sum() == 132 # ~ number of 1 label voxels, less due to different resampling
 
 
 def test_extract_radiomics_1(tmp_path):
@@ -94,7 +94,7 @@ def test_extract_radiomics_1(tmp_path):
         params     = {"job_tag":"test_1", "RadiomicsFeatureExtractor": {'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 25, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001}}
     )
 
-    assert "3227.840849331449,0.09075042902243616,2.7507247368947003\n" in open(str(properties['file'])).read() # Check the last
+    assert "3227.840849331449,0.09075042902243616,2.7507247368947003\n" in open(str(properties['data'])).read() # Check the last
 
 
 def test_extract_radiomics_2(tmp_path):
@@ -105,7 +105,7 @@ def test_extract_radiomics_2(tmp_path):
         params     = {"job_tag":"test_1", "RadiomicsFeatureExtractor": {'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 50, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001}}
     )
 
-    assert "0.001316830812757558,447.00957648375726,0.04525463261369965,0.7069386976494938\n" in open(str(properties['file'])).read()
+    assert "0.001316830812757558,447.00957648375726,0.04525463261369965,0.7069386976494938\n" in open(str(properties['data'])).read()
 
 
 def test_generate_scan_1(tmp_path):
@@ -116,7 +116,8 @@ def test_generate_scan_1(tmp_path):
     )
     #assert output_node.properties['hash'] == 'eb8574fa61db82aa085ba7c05739d99519b140ca73da95920b887f6bcdba6a9c'
     assert properties['zdim'] == 9
-    assert len(list(Path(properties['path']).glob("*"))) == 2
+    assert properties['data'] is not None
+    assert properties['aux'] is not None
 
 
 def test_generate_scan_2(tmp_path):
@@ -127,12 +128,12 @@ def test_generate_scan_2(tmp_path):
     )
     #assert output_node.properties['hash'] == '53b504fb8fee82e3065104634965fe517cd27c97da97f60057e872c020656262'
     assert properties['zdim'] == 9
-    assert len(list(Path(properties['path']).glob("*"))) == 1
+    assert properties['data'] is not None
 
 
 def test_window_dicoms_1(tmp_path):
     properties = window_dicoms(
-        dicom_paths = list(pathlib.Path(f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/').glob("*.dcm")),
+        dicom_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
         output_dir = tmp_path,
         params     = {'window':False}
     )
@@ -141,14 +142,14 @@ def test_window_dicoms_1(tmp_path):
     assert properties['RescaleSlope'] == 1.0
     assert properties['RescaleIntercept'] == -1024.0
     assert properties['units'] == 'HU'
-    assert os.path.exists(properties['path'])
-    assert len(list(properties['path'].glob("*cthu.dcm"))) == 9
-    assert np.min(dcmread(str(properties['path']) + '/1-05.cthu.dcm').pixel_array) == -3024
-    assert np.max(dcmread(str(properties['path']) + '/1-05.cthu.dcm').pixel_array) ==  1387
+    assert os.path.exists(properties['data'])
+    assert len(list(properties['data'].glob("*cthu.dcm"))) == 9
+    assert np.min(dcmread(str(properties['data']) + '/1-05.cthu.dcm').pixel_array) == -3024
+    assert np.max(dcmread(str(properties['data']) + '/1-05.cthu.dcm').pixel_array) ==  1387
 
 def test_window_dicoms_2(tmp_path):
     properties = window_dicoms(
-        dicom_paths = list(pathlib.Path(f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/').glob("*.dcm")),
+        dicom_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
         output_dir = tmp_path,
         params     = {'window':True, 'window_low_level': -100, 'window_high_level': 100}
     )
@@ -157,10 +158,10 @@ def test_window_dicoms_2(tmp_path):
     assert properties['RescaleSlope'] == 1.0
     assert properties['RescaleIntercept'] == -1024.0
     assert properties['units'] == 'HU'
-    assert os.path.exists(properties['path'])
-    assert len(list(properties['path'].glob("*cthu.dcm"))) == 9
-    assert np.min(dcmread(str(properties['path']) + '/1-05.cthu.dcm').pixel_array) == -100
-    assert np.max(dcmread(str(properties['path']) + '/1-05.cthu.dcm').pixel_array) ==  100
+    assert os.path.exists(properties['data'])
+    assert len(list(properties['data'].glob("*cthu.dcm"))) == 9
+    assert np.min(dcmread(str(properties['data']) + '/1-05.cthu.dcm').pixel_array) == -100
+    assert np.max(dcmread(str(properties['data']) + '/1-05.cthu.dcm').pixel_array) ==  100
 
 
 

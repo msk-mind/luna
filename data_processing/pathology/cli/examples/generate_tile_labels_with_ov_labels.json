@@ -1,0 +1,9 @@
+{
+  "input_wsi_tag": "pathology.etl", 
+  "job_tag": "test_generate_tile_ov_labels",
+  "tile_size": 128,
+  "scale_factor": 16,
+  "magnification": 20,
+  "slideviewer_dmt": "msk_mind_ov",
+  "labelset": "PIXEL_CLASSIFIER_LABELS"
+}

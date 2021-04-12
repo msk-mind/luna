@@ -1,10 +1,10 @@
 '''
-Created: January 2021
+Created: February 2021
 @author: aukermaa@mskcc.org
 
 Given a scan (container) ID
 1. resolve the path to the dicom folder
-2. generate a volumentric image using ITK
+2. for all dicoms, rescale into HU and optionally window
 3. store results on HDFS and add metadata to the graph
 
 '''
@@ -21,9 +21,9 @@ from data_processing.common.Node            import Node
 from data_processing.common.config import ConfigSet
 
 # From radiology.common
-from data_processing.radiology.common.preprocess import generate_scan
+from data_processing.radiology.common.preprocess import window_dicoms
 
-logger = init_logger("generateScan.log")
+logger = init_logger("window_dicoms.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
@@ -33,39 +33,41 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 def cli(cohort_id, container_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    generate_scan_with_container(cohort_id, container_id, method_data)
+    window_dicom_with_container(cohort_id, container_id, method_data)
 
-def generate_scan_with_container(cohort_id, container_id, method_data):
+def window_dicom_with_container(cohort_id, container_id, method_data):
     """
-    Using the container API interface, generate a volumetric image for a given scan container
+    Using the container API interface, perform dicom CT preprocessing (windowing)
     """
+
+    # Do some setup
+    container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
+    method_id   = method_data.get("job_tag", "none")
+
+    dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
+
     try:
-         # Do some setup
-        container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
-        method_id   = method_data.get("job_tag", "none")
-        
-        dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
         if dicom_node is None:
             raise ValueError("Dicom node not found")
-        
-        # Data just goes under namespace/name
-        # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
+
+        # Currently, store things at MIND_GPFS_DIR/data/<namespace>/<container name>/<method>/<schema>
+        # Such that for every namespace, container, and method, there is one allocated path location
+        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", cohort_id, container._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        properties = generate_scan(
+        properties = window_dicoms(
             dicom_path = dicom_node.data,
             output_dir = output_dir,
             params = method_data
         )
-        
+    
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        output_node = Node("VolumetricImage", method_id, properties)
+
+        output_node = Node("DicomSeries", method_id, properties)
         container.add(output_node)
         container.saveAll()
-
-
+    
 if __name__ == "__main__":
     cli()

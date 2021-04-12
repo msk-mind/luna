@@ -3,8 +3,8 @@ Created: January 2021
 @author: aukermaa@mskcc.org
 
 Given a scan (container) ID
-1. resolve the path to a volumentric image and annotation (label) files
-2. extract radiomics features into a vector (csv)
+1. resolve the path to the dicom folder
+2. generate a volumentric image using ITK
 3. store results on HDFS and add metadata to the graph
 
 '''
@@ -21,9 +21,9 @@ from data_processing.common.Node            import Node
 from data_processing.common.config import ConfigSet
 
 # From radiology.common
-from data_processing.radiology.common.preprocess   import extract_radiomics
+from data_processing.radiology.common.preprocess import generate_scan
 
-logger = init_logger("extractRadiomics.log")
+logger = init_logger("generate_scan.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
@@ -33,49 +33,39 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 def cli(cohort_id, container_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    extract_radiomics_with_container(cohort_id, container_id, method_data)
+    generate_scan_with_container(cohort_id, container_id, method_data)
 
-def extract_radiomics_with_container(cohort_id, container_id, method_data):
+def generate_scan_with_container(cohort_id, container_id, method_data):
     """
-    Using the container API interface, extract radiomics for a given scan container
+    Using the container API interface, generate a volumetric image for a given scan container
     """
-
-    # Do some setup
-    container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
-    method_id   = method_data.get("job_tag", "none")
-
     try:
-        image_node  = container.get("VolumetricImage",    method_data['image_input_tag']) 
-
-        if method_data.get("usingPertubations", False):
-            label_node  = container.get("VolumetricLabelSet", method_data['label_input_tag'])
-        else: 
-            label_node  = container.get("VolumetricLabel", method_data['label_input_tag'])
-
-        if image_node is None:
-            raise ValueError("Image node not found")
-
-        if label_node is None:
-            raise ValueError("Label node not found")
+         # Do some setup
+        container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
+        method_id   = method_data.get("job_tag", "none")
+        
+        dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
+        if dicom_node is None:
+            raise ValueError("Dicom node not found")
         
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        properties = extract_radiomics(
-            image_path = image_node.data,
-            label_path = label_node.data,
+        properties = generate_scan(
+            dicom_path = dicom_node.data,
             output_dir = output_dir,
-            params     = method_data
+            params = method_data
         )
+        
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        output_node = Node("Radiomics", method_id, properties)
+        output_node = Node("VolumetricImage", method_id, properties)
         container.add(output_node)
         container.saveAll()
-   
+
 
 if __name__ == "__main__":
     cli()

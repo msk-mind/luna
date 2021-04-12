@@ -11,13 +11,13 @@ Example:
 python3 -m data_processing.pathology.cli.generate_tile_labels \
     -c TCGA-BRCA \
     -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
-    -m data_processing/pathology/cli/example_generate_tile_labels.json
+    -m data_processing/pathology/cli/examples/generate_tile_labels.json 
 
 Example with annotation:
 python3 -m data_processing.pathology.cli.generate_tile_labels \
-        -c ov-path-druv  \
-        -s 226871 \
-        -m data_processing/pathology/cli/example_generate_tile_labels.json 
+    -c TCGA-BRCA \
+    -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
+    -m data_processing/pathology/cli/examples/generate_tile_labels_with_ov_labels.json 
 '''
 
 # General imports
@@ -70,7 +70,7 @@ def generate_tile_labels_with_container(cohort_id: str, container_id: str, metho
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        properties = pretile_scoring(image_node.get_path(), output_dir, method_data, image_id)
+        properties = pretile_scoring(image_node.data, output_dir, method_data, image_id)
 
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
