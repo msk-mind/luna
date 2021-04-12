@@ -305,7 +305,7 @@ def heatmap(ctx, data_config):
         element["points"] = coords
         elements.append(element)
 
-    annotation_name = data["column"] + data["output"]
+    annotation_name = data["column"] + "_" + data["output"]
 
     save_push_results(base_dsa_annotation, elements, annotation_name, data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
