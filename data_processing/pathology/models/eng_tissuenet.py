@@ -30,11 +30,9 @@ class EngTissueTileNet(torch.nn.Module):
 
 def get_transform():
     """ Transformer which generates a torch tensor compatible with the model """
-    return torchvision.transforms.Compose(
-        [
+    return torchvision.transforms.Compose([
             torchvision.transforms.ToTensor(),
-        ]
-    )
+    ])
 
 
 def get_classifier(
