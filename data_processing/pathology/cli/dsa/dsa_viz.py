@@ -18,7 +18,7 @@ base_dsa_annotation  = {"description": "", "elements": [], "name": ""}
 # Qupath 20x mag factor
 QUPATH_MAG_FACTOR = 0.5011
 
-def save_push_results(base_annotation, elements, annotation_name, image_name, uri, token):
+def save_push_results(base_annotation, elements, annotation_name, image_filename, uri, token):
     """
     Populate base annotations, save to json outfile, and push to DSA
     """
@@ -31,7 +31,7 @@ def save_push_results(base_annotation, elements, annotation_name, image_name, ur
     with open(outfile_name, 'w') as outfile:
         json.dump(dsa_annotation, outfile)
 
-    dsa_uuid = get_item_uuid(image_name, uri, token)
+    dsa_uuid = get_item_uuid(image_filename, uri, token)
     push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, uri, token)
 
 
@@ -75,7 +75,7 @@ def stardist_polygon(ctx, data_config):
     with open(data_config) as config_json:
         data = json.load(config_json)
 
-    print("Starting upload for image: {}".format(data['image_name']))
+    print("Starting upload for image: {}".format(data['image_filename']))
     start = time.time()
 
     # can't handle NaNs for vectors, do this to replace all NaNs
@@ -115,7 +115,7 @@ def stardist_polygon(ctx, data_config):
     new_file.close()
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["output"], data["image_name"],
+    save_push_results(base_dsa_annotation, elements, data["output"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -132,7 +132,7 @@ def stardist_cell(ctx, data_config):
     with open(data_config) as config_json:
         data = json.load(config_json)
 
-    print("Starting upload for image: {}".format(data['image_name']))
+    print("Starting upload for image: {}".format(data['image_filename']))
     start = time.time()
 
     # qupath_stardist_cell_tsv can be quite large to load all columns into memory (contains many feature columns), so only load baisc columns that are needed for now
@@ -169,7 +169,7 @@ def stardist_cell(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["output"], data["image_name"],
+    save_push_results(base_dsa_annotation, elements, data["output"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -186,7 +186,7 @@ def regional_polygon(ctx, data_config):
     with open(data_config) as config_json:
         data = json.load(config_json)
 
-    print("Starting upload for image: {}".format(data['image_name']))
+    print("Starting upload for image: {}".format(data['image_filename']))
     start = time.time()
 
     with open(data["input"]) as regional_file:
@@ -214,7 +214,7 @@ def regional_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["output"], data["image_name"],
+    save_push_results(base_dsa_annotation, elements, data["output"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -231,7 +231,7 @@ def bitmask_polygon(ctx, data_config):
     with open(data_config) as config_json:
         data = json.load(config_json)
 
-    print("Starting upload for image: {}".format(data['image_name']))
+    print("Starting upload for image: {}".format(data['image_filename']))
     start = time.time()
 
     elements = []
@@ -259,7 +259,7 @@ def bitmask_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["output"], data["image_name"],
+    save_push_results(base_dsa_annotation, elements, data["output"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -276,7 +276,7 @@ def heatmap(ctx, data_config):
     with open(data_config) as config_json:
         data = json.load(config_json)
 
-    print("Starting upload for image: {}".format(data['image_name']))
+    print("Starting upload for image: {}".format(data['image_filename']))
     start = time.time()
 
     df = pd.read_csv(data["input"])
@@ -307,7 +307,7 @@ def heatmap(ctx, data_config):
 
     annotation_name = data["column"] + " tile-based heatmap"
 
-    save_push_results(base_dsa_annotation, elements, annotation_name, data["image_name"],
+    save_push_results(base_dsa_annotation, elements, annotation_name, data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
