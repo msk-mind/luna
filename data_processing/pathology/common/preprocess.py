@@ -32,7 +32,7 @@ import torch
 
 
 palette = sns.color_palette("viridis",as_cmap=True)
-categorial = sns.color_palette("hls", 8)
+categorial = sns.color_palette("Set1", 8)
 categorical_colors = {}
 
 def get_tile_color(score):
