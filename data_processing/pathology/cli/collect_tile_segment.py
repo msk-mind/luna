@@ -25,6 +25,7 @@ from data_processing.common.Container       import Container
 from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
 
+import requests
 import pandas as pd
 import pyarrow.parquet as pq
 import pyarrow as pa
@@ -45,14 +46,21 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
     """
     Using the container API interface, visualize tile-wise scores
     """
-    input_tile_data      = method_data.get("input_label_tag")
+    input_tile_data_id   = method_data.get("input_label_tag")
     output_container_id  = method_data.get("output_container")
+
+    api_base_url         = cfg.get_value("APP_CFG::api_base_url")
+    cohort_service_host  = cfg.get_value("APP_CFG::cohortManager_host")
+    cohort_service_port  = cfg.get_value("APP_CFG::cohortManager_port")
+    cohort_uri           = f"http://{cohort_service_host}:{cohort_service_port}{api_base_url}"
+
+    logger.info ("Requesting %s, %s", os.path.join(cohort_uri, "container", "generic", output_container_id), requests.put(os.path.join(cohort_uri, "container", "generic", output_container_id)).text)
 
     # Do some setup
     container        = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     output_container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(output_container_id)
 
-    image_node  = container.get("TileImages", input_tile_data) 
+    image_node  = container.get("TileImages", input_tile_data_id) 
 
     try:
         if image_node is None:

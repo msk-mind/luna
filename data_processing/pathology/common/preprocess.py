@@ -13,6 +13,7 @@ import pandas as pd
 import seaborn as sns
 
 import json 
+from pathlib import Path
 
 from PIL import Image
 
@@ -31,7 +32,7 @@ import torch
 
 
 palette = sns.color_palette("viridis",as_cmap=True)
-categorial = sns.color_palette("hls", 5)
+categorial = sns.color_palette("hls", 8)
 categorical_colors = {}
 
 def get_tile_color(score):
@@ -317,7 +318,9 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
         "tile_size": requested_tile_size,
         "full_resolution_tile_size": full_resolution_tile_size,
         "total_tiles": len(df),
-        "available_labels": list(df.columns)
+        "available_labels": list(df.columns),
+        "tile_magnification": requested_magnification,
+        "image_filename": Path(slide_file_path).name
     }
 
     return properties
@@ -397,7 +400,7 @@ def run_model(slide_file_path: str, output_dir: str, params: dict):
     model_scores = []
     tumor_score  = []
     with torch.no_grad():
-        df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["otsu_score"] > 0.1) ].head(10000)
+        df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["otsu_score"] > 0.1) ]
         for index, row in df_tiles_to_process.iterrows():
             counter += 1
             if counter % 1000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_tiles_to_process))
@@ -425,6 +428,8 @@ def run_model(slide_file_path: str, output_dir: str, params: dict):
         "tile_size": requested_tile_size,
         "full_resolution_tile_size": full_resolution_tile_size,
         "total_tiles": len(df_tiles_to_process),
+        "tile_magnification": requested_magnification,
+        "image_filename": Path(slide_file_path).name,
         "available_labels": list(df_tiles_to_process.columns)
     }
 
@@ -464,7 +469,7 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     df_scores      = pd.read_csv(scores_file_path).set_index("address")
 
     # only visualize tile scores that were able to be computed
-    all_score_types = {"tumor_score", "model_score"}
+    all_score_types = {"tumor_score", "model_score", "purple_score", "otsu_score", "regional_label"}
     score_types_to_visualize = set(list(df_scores.columns)).intersection(all_score_types)
 
     for score_type_to_visualize in score_types_to_visualize:
