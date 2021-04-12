@@ -1,6 +1,7 @@
 {
     "input_wsi_tag": "pathology.etl", 
     "job_tag": "infer_eng_clf",
+    "model_package": "data_processing.pathology.models.eng_tissuenet",
     "tile_size": 128,
     "scale_factor": 16,
     "magnification": 20,
