@@ -15,10 +15,9 @@ import click
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.utils           import get_method_data
 from data_processing.common.Container       import Container
 from data_processing.common.Node            import Node
-from data_processing.common.config import ConfigSet
+from data_processing.common.config          import ConfigSet
 
 # From radiology.common
 from data_processing.radiology.common.preprocess   import extract_voxels
