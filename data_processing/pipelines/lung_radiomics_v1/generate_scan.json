@@ -1,5 +1,5 @@
 {
-    "dicom_input_tag": "radiology.etl", 
+    "dicom_input_tag": "radiology.etl.ct", 
     "job_tag": "original.mhd", 
     "itkImageType": "mhd"
 }
