@@ -13,12 +13,10 @@ import os, time, shutil
 import click
 
 from data_processing.common.CodeTimer import CodeTimer
-from data_processing.common.utils import generate_uuid_binary
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.custom_logger import init_logger
 import data_processing.common.constants as const
-from data_processing.radiology.common.preprocess import overlay_images, create_seg_images
 
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, IntegerType, ArrayType, StructType, StructField, BinaryType
@@ -90,6 +88,12 @@ def generate_image_table():
 
         width = cfg.get_value(path=const.DATA_CFG+'::IMAGE_WIDTH')
         height = cfg.get_value(path=const.DATA_CFG+'::IMAGE_HEIGHT')
+        n_slices = cfg.get_value(path=const.DATA_CFG+'::N_SLICES')
+
+        if str(n_slices).isnumeric():
+             n_slices = int(n_slices)
+        else:
+            n_slices = ""
 
         seg_png_table_path = const.TABLE_LOCATION(cfg)
         
@@ -100,9 +104,9 @@ def generate_image_table():
                                     [StructField("instance_number", IntegerType()),
                                      StructField("scan_annotation_record_uuid", StringType()),
 				     StructField("seg_png", BinaryType())])))
-        
+
         seg_df = seg_df.withColumn("slices_uuid_pngs", 
-            F.lit(create_seg_png_udf("path", "scan_annotation_record_uuid", F.lit(width), F.lit(height))))
+            F.lit(create_seg_png_udf("path", "scan_annotation_record_uuid", F.lit(width), F.lit(height), F.lit(n_slices))))
 
         logger.info("Created segmentation pngs")
 

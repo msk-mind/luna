@@ -150,7 +150,7 @@ def dicom_to_bytes(dicom_path, width, height):
     return im.tobytes()
 
 
-def create_seg_images(src_path, uuid, width, height):
+def create_seg_images(src_path, uuid, width, height, n_slices=None):
     """
     Create images from 3d segmentations.
 
@@ -158,6 +158,8 @@ def create_seg_images(src_path, uuid, width, height):
     :param uuid: scan uuid
     :param width: width of the image
     :param height: height of the image
+    :param n_slices: optionally provide n_slices to return.
+    The subset will be taken from the middle
     :return: an array of (instance_number, uuid, png binary) tuples
     """
     from preprocess import normalize
@@ -192,6 +194,13 @@ def create_seg_images(src_path, uuid, width, height):
             png_binary = rgb.tobytes()
 
             slices.append( (slice_num, uuid, png_binary) )
+
+    # if the user specified n_slices to select, then select the n_slices from the middle.
+    if n_slices and n_slices < len(slices):
+        mid_idx = len(slices)//2
+        before = n_slices//2
+        after = n_slices - before
+        return slices[mid_idx - before: mid_idx + after]
 
     return slices
 
