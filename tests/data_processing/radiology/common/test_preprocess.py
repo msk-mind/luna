@@ -42,6 +42,22 @@ def test_create_seg_images():
     assert 512*512*3 == len(arr[0][2])
 
 
+def test_create_seg_images_subset():
+
+    import data_processing
+    sys.modules['preprocess'] = data_processing.radiology.common.preprocess
+
+    n_slices = 5
+    arr = create_seg_images(image_path, "uuid", 512, 512, n_slices)
+
+    assert n_slices == len(arr)
+    # check indices
+    assert [6, 5, 4, 3, 2] == [a[0] for a in arr]
+    assert "uuid" == arr[0][1]
+    # RGB seg image
+    assert 512*512*3 == len(arr[0][2])
+
+
 def test_crop_images():
 
     ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yaml')
