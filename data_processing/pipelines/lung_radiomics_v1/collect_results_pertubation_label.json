@@ -1,0 +1,4 @@
+{
+    "output_container": "lung_radiomics_v1-pertubation-label",
+    "input_tags": ["radiomics-pertubation-label-1", "radiomics-pertubation-label-2", "radiomics-pertubation-label-3", "radiomics-pertubation-label-4", "radiomics-pertubation-label-5","radiomics-pertubation-label-6" ]
+}

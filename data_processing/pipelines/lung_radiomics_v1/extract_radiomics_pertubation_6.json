@@ -1,15 +1,16 @@
 {
     "image_input_tag": "randomize_contours_s3-125",
     "label_input_tag": "randomize_contours_s3-125",
-    "job_tag" : "radiomics-original-label-1",
+    "job_tag" : "radiomics-pertubation-label-6",
     "strictGeometry": true,
     "enableAllImageTypes": true,
+    "usingPertubations": true,
     "RadiomicsFeatureExtractor": {
         "interpolator": "sitkBSpline",
         "resampledPixelSpacing": [1.25, 1.25, 1.25],
         "binWidth": 10,
         "verbose": "true",
-        "label":1,
+        "label":6,
         "geometryTolerance":1e-08
     }
 }

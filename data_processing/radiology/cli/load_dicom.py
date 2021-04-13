@@ -51,6 +51,12 @@ def load_dicom_with_container(cohort_id, container_id, method_data):
             .where( "metadata.InstanceNumber='1'")\
             .select("path", "metadata")\
             .toPandas()
+        
+        spark.stop()
+        
+        if not len(df) == 1:
+            raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {container.address}")
+            
         record = df.loc[0]
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")
