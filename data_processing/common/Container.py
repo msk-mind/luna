@@ -129,9 +129,11 @@ class Container(object):
         self.logger.info ("Lookup ID: %s", container_id)
 
         # Figure out how to match the node
-        if isinstance(container_id, str): 
+        if isinstance(container_id, str) and not "uid://" in container_id: 
             match_clause = f"""WHERE container.qualified_address = '{container_id.lower()}'"""
-        elif (isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
+        elif isinstance(container_id, str) and "uid://" in container_id: 
+            match_clause = f"""WHERE id(container) = {container_id.replace('uid://', '')} """
+        elif isinstance(container_id, int):
             match_clause = f"""WHERE id(container) = {container_id} """
         else:
             raise RuntimeError("Invalid container_id type not (str, int)")
@@ -154,6 +156,7 @@ class Container(object):
         self._qualifiedpath = res[0]["container.qualified_address"]
         self._type          = res[0]["container.type"]
         self._labels        = res[0]["labels(container)"]
+        self.address        = res[0]["container.qualified_address"]
 
         # Containers need to have a qualified path
         if self._qualifiedpath is None: 
