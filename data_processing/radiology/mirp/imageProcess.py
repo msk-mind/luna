@@ -262,7 +262,7 @@ def get_supervoxels(img_obj, roi_obj, settings, n_segments=None):
 
     outside = binary_dilation(roi_bool_mask, iterations=int (10 // np.min(img_obj.spacing)))
 
-    min_n_voxels = np.max([20.0, 100.0 / np.prod(img_obj.spacing)])
+    min_n_voxels = np.max([20.0, 100.0 / np.prod(img_obj.spacing)]) # Even smaller super voxels....
     segment_guess =  int(np.sum(outside) / min_n_voxels)
     print ("Starting guess: ", segment_guess)
 

@@ -169,6 +169,7 @@ class runPipeline(Resource):
         for container_id in container_ids: 
             executor.submit (subprocess.call, ["python3","-m", f"data_processing.pipelines.{pipeline}.driver", "-c", namespace, "-s", container_id])
 
+        return make_response(f"Submitted {len(container_ids)} containers to pipeline {pipeline}", 200)  
 
 
 @api.route('/mind/api/v1/window_dicom/<cohort_id>/<container_id>/submit', methods=['POST'])
