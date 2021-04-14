@@ -1,6 +1,4 @@
 from enum import Enum
-from data_processing.common.utils import to_sql_field
-from data_processing.common.Node import Node, CONTAINER_TYPES, RADIOLOGY_TYPES, PATHOLOGY_TYPES
 	
 class NodeType(object):
 	"""
@@ -46,7 +44,7 @@ class GraphEnum(Enum):
 	Defines Graph relationships. 
 	We assume that all properties come from the table defined in GraphEnum.name
 
-	name: table name
+	name: data type
 	value: list of Graphs - to accomodate multiple relationship update
 
 	>>> GraphEnum['DICOM'].value[0].src.type
@@ -57,7 +55,7 @@ class GraphEnum(Enum):
 	scan = NodeType("scan", "metadata.SeriesInstanceUID")
 
 	# radiology
-	DICOMSERIES = [Graph(NodeType("patient", "metadata.PatientID"),
+	DICOM = [Graph(NodeType("patient", "metadata.PatientID"),
 				"HAS_CASE", 
 				accession_radiology_dicom),
 			Graph(accession_radiology_dicom,
@@ -67,33 +65,33 @@ class GraphEnum(Enum):
 				"HAS_DATA", 
 				NodeType("DicomSeries", "metadata.SeriesInstanceUID", ["path"]))]
 
-	VOLUMETRICLABEL = [Graph(accession_radiology,
+	MHA = [Graph(accession_radiology,
 				"HAS_DATA",
 				NodeType("VolumetricLabel", "scan_annotation_record_uuid", ["path", "label"]))]
 
-	VOLUMETRICIMAGE = [Graph(accession_radiology,
+	MHD = [Graph(accession_radiology,
 				"HAS_DATA",
 				NodeType("VolumetricImage", "scan_annotation_record_uuid", ["path"]))]
 
-	DICOMIMAGE = [Graph(scan, "HAS_DATA", NodeType("DicomImageSeries", "png_record_uuid",     ["metadata.SeriesInstanceUID", "label"]))]
-	DICOMIMAGESERIES = [Graph(scan, "HAS_DATA", NodeType("DicomImageSeries", "feature_record_uuid", ["metadata.SeriesInstanceUID", "label"]))]
+	PNG = [Graph(scan, "HAS_DATA", NodeType("DicomImageSeries", "png_record_uuid",     ["metadata.SeriesInstanceUID", "label"]))]
+	FEATURE = [Graph(scan, "HAS_DATA", NodeType("DicomImageSeries", "feature_record_uuid", ["metadata.SeriesInstanceUID", "label"]))]
 
 	# pathology
 	slide = NodeType("slide", "slide_id", ["sv_project_id","slideviewer_path"])
-	REGIONALANNOTATIONBITMAP = [Graph(slide,
+	REGIONAL_BITMASK = [Graph(slide,
 					 "HAS_DATA",
 					 NodeType("RegionalAnnotationBitmap", "bmp_record_uuid", ["user","date_updated","latest"]))]
 
 	# regional concat geojson table contains regional geojson table + concatenated jsons
-	REGIONALANNOTATIONJSON = [Graph(slide,
+	REGIONAL_CONCAT_GEOJSON = [Graph(slide,
 								 "HAS_DATA",
-								 NodeType("RegionalAnnotationJson", "geojson_record_uuid", ["labelset","date_updated","latest"]))]
+								 NodeType("RegionalAnnotationJson", "concat_geojson_record_uuid", ["labelset","date_updated","latest"]))]
 
 
-	POINTANNOTATION = [Graph(slide,
+	POINT_RAW_JSON = [Graph(slide,
 					"HAS_DATA",
 					NodeType("PointAnnotation", "sv_json_record_uuid", ["user","date_updated","latest"]))]
 
-	POINTANNOTATIONJSON = [Graph(slide,
+	POINT_GEOJSON = [Graph(slide,
 							"HAS_DATA",
 							NodeType("PointAnnotationJson", "geojson_record_uuid", ["labelset","date_updated","latest"]))]
