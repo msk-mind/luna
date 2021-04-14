@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 
 from PIL import Image
-from medpy.io import load
 import cv2
 from radiomics import featureextractor  # This module is used for interaction with pyradiomics
 from pydicom import dcmread
@@ -13,43 +12,21 @@ from medpy.io import load
 from skimage.transform import resize
 import itk
 from pathlib import Path
-from data_processing.common.Node            import Node
 
-def find_centroid(path, image_w, image_h):
+
+def find_centroid(binary, width, height):
     """
     Find the centroid of the 2d segmentation.
 
-    :param path: filepath to 2d segmentation file
-    :param image_w: width of the image
-    :param image_h: height of the image
+    :param binary: segmentation slice as an RGB bytearray
+    :param width: width of the image
+    :param height: height of the image
     :return: (x, y) center point
     """
+    seg = np.array(Image.frombytes("RGB", (width, height), bytes(binary)))
 
-    # 2d segmentation file path
-    file_path = path.split(':')[-1]
-    data, header = load(file_path)
-
-    h, w, num_images = data.shape
-
-    # Find the annotated slice
-    xcenter, ycenter = 0, 0
-    for i in range(num_images):
-        seg = data[:,:,i]
-        if np.any(seg):
-            print(i)
-            seg = seg.astype(float)
-
-            # find centroid using mean
-            xcenter = np.argmax(np.mean(seg, axis=1))
-            ycenter = np.argmax(np.mean(seg, axis=0))
-            break
-
-    # Check if h,w matches IMAGE_WIDTH, IMAGE_HEIGHT. If not, this is due to png being rescaled. So scale centers.
-    image_w, image_h = int(image_w), int(image_h)
-    if not h == image_h:
-        xcenter = int(xcenter * image_w // w)
-    if not w == image_w:
-        ycenter = int(ycenter * image_h // h)
+    xcenter = np.argmax(np.mean(seg[:,:,0], axis=0))
+    ycenter = np.argmax(np.mean(seg[:,:,0], axis=1))
 
     return (int(xcenter), int(ycenter))
 
@@ -160,7 +137,7 @@ def create_seg_images(src_path, uuid, width, height, n_slices=None):
     :param height: height of the image
     :param n_slices: optionally provide n_slices to return.
     The subset will be taken from the middle
-    :return: an array of (instance_number, uuid, png binary) tuples
+    :return: an array of (instance_number, uuid, png binary, x_centroid, y_centroid) tuples
     """
     from preprocess import normalize
 
@@ -195,17 +172,23 @@ def create_seg_images(src_path, uuid, width, height, n_slices=None):
 
             slices.append( (slice_num, uuid, png_binary) )
 
+    slices_len = len(slices)
+    mid_idx = slices_len//2
+    # find centroid using the mid segmentation and return x,y
+    centroid = find_centroid(slices[mid_idx][2], width, height)
+
+    res = [slice + centroid for slice in slices]
+
     # if the user specified n_slices to select, then select the n_slices from the middle.
-    if n_slices and n_slices < len(slices):
-        mid_idx = len(slices)//2
+    if n_slices and n_slices < slices_len:
         before = n_slices//2
         after = n_slices - before
-        return slices[mid_idx - before: mid_idx + after]
+        return res[mid_idx - before: mid_idx + after]
 
-    return slices
+    return res
 
 
-def overlay_images(dicom_path, seg, width, height):
+def overlay_images(dicom_path, seg, width, height, x_center, y_center, crop_width=None, crop_height=None):
     """
     Create dicom images.
     Create overlay images by blending dicom and segmentation images with 7:3 ratio.
@@ -214,6 +197,10 @@ def overlay_images(dicom_path, seg, width, height):
     :param seg: segmentation image in bytes
     :param width: width of the image
     :param height: height of the image
+    :param x_center: x center of segmentation
+    :param y_center: y center of segmentation
+    :param crop_width: optional crop width
+    :param crop_height: optional crop height
     :return: (dicom, overlay) tuple of binaries
     """
     width, height = int(width), int(height)
@@ -226,6 +213,9 @@ def overlay_images(dicom_path, seg, width, height):
 
     res = Image.blend(dcm_img, seg_img, 0.3)
     overlay = res.tobytes()
+
+    if crop_width and crop_height:
+        return crop_images(x_center, y_center, dicom_binary, overlay, crop_width, crop_height, width, height)
 
     return (dicom_binary, overlay)
 
