@@ -240,5 +240,5 @@ if __name__ == '__main__':
     if sys.argv[1] == "start":
         logger.info(f"Running in API mode")
         logger.info(f"Starting worker on {HOSTNAME}:{PORT}")
-        app.run(host=HOSTNAME,port=PORT, debug=True)
+        app.run(host=HOSTNAME,port=PORT, debug=False)
 

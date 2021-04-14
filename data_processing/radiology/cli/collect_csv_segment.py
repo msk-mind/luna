@@ -86,8 +86,8 @@ def collect_result_segment_with_container(cohort_id, container_id, method_data):
             "data": output_file
         }
 
-    except Exception:
-        container.logger.exception ("Exception raised, stopping job execution.")
+    except Exception as e:
+        container.logger.exception (f"{e}, stopping job execution...")
     else:
         output_node = Node("ResultSegment", f"slice-{container._container_id}", properties)
         output_container.add(output_node)

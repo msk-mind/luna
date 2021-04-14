@@ -54,12 +54,11 @@ def load_dicom_with_container(cohort_id, container_id, method_data):
         
         spark.stop()
         
-        if not len(df) == 1:
-            raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {container.address}")
+        if not len(df) == 1: raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {container.address}")
             
         record = df.loc[0]
-    except Exception:
-        container.logger.exception ("Exception raised, stopping job execution.")
+    except Exception as e:
+        container.logger.exception (f"{e}, stopping job execution...")
     else:
         dicom = Node("DicomSeries", method_id, record['metadata'])
         # Do some path processing...we pulled the first dicom image, but need the parent image folder

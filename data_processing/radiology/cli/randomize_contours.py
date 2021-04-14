@@ -47,11 +47,8 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
     label_node  = container.get("VolumetricLabel", method_data['label_input_tag'])
 
     try:
-        if image_node is None:
-            raise ValueError("Image node not found")
-
-        if label_node is None:
-            raise ValueError("Label node not found")
+        if image_node is None: raise ValueError("Image node not found")
+        if label_node is None: raise ValueError("Label node not found")
 
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
@@ -65,8 +62,8 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
             params     = method_data
         )
 
-    except Exception:
-        container.logger.exception ("Exception raised, stopping job execution.")
+    except Exception as e:
+        container.logger.exception (f"{e}, stopping job execution...")
     else:
         new_image_node          = Node("VolumetricImage",    method_id, image_properties)
         new_label_node          = Node("VolumetricLabel",    method_id, label_properties)

@@ -1,5 +1,5 @@
 {
     "image_input_tag": "original.mhd",
-    "label_input_tag": "amp-annotations",
+    "label_input_tag": "lung.radiologists",
     "job_tag": "randomize_contours_s3-125" 
 }

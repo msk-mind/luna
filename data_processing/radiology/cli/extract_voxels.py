@@ -47,11 +47,8 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
     label_node  = container.get("VolumetricLabel", method_data['label_input_tag'])
 
     try:
-        if image_node is None:
-            raise ValueError("Image node not found")
-
-        if label_node is None:
-            raise ValueError("Label node not found")
+        if image_node is None: raise ValueError("Image node not found")
+        if label_node is None: raise ValueError("Label node not found")
 
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
@@ -65,8 +62,8 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
             params     = method_data
         )
 
-    except Exception:
-        container.logger.exception ("Exception raised, stopping job execution.")
+    except Exception as e:
+        container.logger.exception (f"{e}, stopping job execution...")
     else:
         output_node = Node("Voxels", method_id, properties)
         container.add(output_node)
