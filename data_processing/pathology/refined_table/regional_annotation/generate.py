@@ -168,28 +168,8 @@ def create_geojson_table():
     geojson_df = geojson_df.withColumn("latest", lit(True))        \
                          .withColumn("date_added", current_timestamp())    \
                          .withColumn("date_updated", current_timestamp())
-    # create geojson delta table
-    # update main table if exists, otherwise create new table
-    if not os.path.exists(geojson_table_path):
-        geojson_df.write.format("delta").save(geojson_table_path)
-    else:
-        from delta.tables import DeltaTable
-        existing_geojson_table = DeltaTable.forPath(spark, geojson_table_path)
-        existing_geojson_table.alias("main_geojson_table") \
-            .merge(geojson_df.alias("geojson_annotation_updates"), "main_geojson_table.geojson_record_uuid = geojson_annotation_updates.geojson_record_uuid") \
-            .whenMatchedUpdate(set = { "date_updated" : "geojson_annotation_updates.date_updated" } ) \
-            .whenNotMatchedInsertAll() \
-            .execute()
-
-        # Removed synclatest flag - always update when merging with existing table.
-        # add latest flag
-        windowSpec = Window.partitionBy("user", "slide_id", "labelset").orderBy(desc("date_updated"))
-        # Note that last != opposite of first! Have to use desc ordering with first...
-        spark.read.format("delta").load(geojson_table_path) \
-            .withColumn("date_latest", first("date_updated").over(windowSpec)) \
-            .withColumn("latest", col("date_latest")==col("date_updated")) \
-            .drop("date_latest") \
-            .write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(geojson_table_path)
+    # update geojson delta table
+    geojson_df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(geojson_table_path)
 
     logger.info("Finished building Geojson table.")
 
@@ -240,27 +220,9 @@ def create_concat_geojson_table():
                             .withColumn("date_added", current_timestamp())    \
                             .withColumn("date_updated", current_timestamp())
 
-    # create concatenation geojson delta table
-    # update main table if exists, otherwise create main table
-    if not os.path.exists(concat_geojson_table_path):
-        concatgeojson_df.write.format("delta").save(concat_geojson_table_path)
-    else:
-        from delta.tables import DeltaTable
-        concat_geojson_table = DeltaTable.forPath(spark, concat_geojson_table_path)
-        concat_geojson_table.alias("main_geojson_table") \
-            .merge(concatgeojson_df.alias("geojson_annotation_updates"), "main_geojson_table.concat_geojson_record_uuid = geojson_annotation_updates.concat_geojson_record_uuid") \
-            .whenMatchedUpdate(set = { "date_updated" : "geojson_annotation_updates.date_updated" } ) \
-            .whenNotMatchedInsertAll() \
-            .execute()
-
-        # add latest flag
-        windowSpec = Window.partitionBy("slide_id", "labelset").orderBy(desc("date_updated"))
-        # Note that last != opposite of first! Have to use desc ordering with first...
-        spark.read.format("delta").load(concat_geojson_table_path) \
-            .withColumn("date_latest", first("date_updated").over(windowSpec)) \
-            .withColumn("latest", col("date_latest")==col("date_updated")) \
-            .drop("date_latest") \
-            .write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(concat_geojson_table_path)
+    # update concatenation geojson delta table
+    from delta.tables import DeltaTable
+    concatgeojson_df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(concat_geojson_table_path)
 
     logger.info("Finished building Concatenation table.")
 
