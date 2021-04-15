@@ -5,6 +5,9 @@ PROJECT: test-project
 
 DATASET_NAME: dsn
 
+# to be updated with data type standardization
+SCAN_DATA_TYPE: DICOM
+
 SOURCE_DATA_TYPE: MHD
 
 DATA_TYPE: PNG

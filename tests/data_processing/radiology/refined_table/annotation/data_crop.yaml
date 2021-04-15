@@ -7,6 +7,9 @@ DATASET_NAME: dsn
 
 SOURCE_DATA_TYPE: MHD
 
+# to be updated with data type standardization
+SCAN_DATA_TYPE: DICOM
+
 DATA_TYPE: PNG
 
 # num partition for delta table
