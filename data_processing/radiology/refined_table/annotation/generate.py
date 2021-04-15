@@ -1,8 +1,5 @@
 """
-Generates Refined PNG table for dicom slices in the series that
-
-1) have 3D segmentations
-2) match user's SQL where clause (filter based on dicom metadata)
+Generates Refined PNG table for dicom slices in the series that have 3D segmentations
 
 This process uses dicom and mhd annotation proxy tables.
 
@@ -85,10 +82,10 @@ def generate_image_table():
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='dicom-to-png')
     spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")
 
-    # TODO earlier version.. dicom table path can be removed once clean up is done.
-    dicom_table_path = cfg.get_value(path=const.DATA_CFG+'::DICOM_TABLE_PATH')
-    seg_table_path = os.path.join(project_path, const.TABLE_DIR, 
-                     "{0}_{1}".format("MHD", cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')))
+    dicom_table_path = os.path.join(project_path, const.TABLE_DIR,
+                                    "{0}_{1}".format("DICOM", cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')))
+
+    seg_table_path = const.TABLE_LOCATION(cfg, is_source=True)
 
     dicom_df = spark.read.format("delta").load(dicom_table_path)
 

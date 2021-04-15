@@ -5,6 +5,10 @@ PROJECT: DMT_IRB
 
 DATASET_NAME: DMT_IRB_DATE
 
+# volumetric segmentation data type
+SOURCE_DATA_TYPE: MHD
+
+# output radiology images type
 DATA_TYPE: PNG
 
 # num partition for delta table

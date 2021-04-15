@@ -1,11 +1,11 @@
 
 ROOT_PATH: tests/data_processing/radiology/testdata
 
-DICOM_TABLE_PATH: tests/data_processing/radiology/testdata/test-project/tables/DICOM_ds
-
 PROJECT: test-project
 
 DATASET_NAME: dsn
+
+SOURCE_DATA_TYPE: MHD
 
 DATA_TYPE: PNG
 

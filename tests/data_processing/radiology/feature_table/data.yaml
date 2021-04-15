@@ -1,6 +1,6 @@
 # path to mind data
 # hdfs:// or absolute or relative datapath
-ROOT_PATH: tests/data_processing/testdata/data
+ROOT_PATH: tests/data_processing/radiology/testdata
 
 PROJECT: test-project
 
