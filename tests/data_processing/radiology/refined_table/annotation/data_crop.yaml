@@ -5,10 +5,10 @@ PROJECT: test-project
 
 DATASET_NAME: dsn
 
+SOURCE_DATA_TYPE: MHD
+
 # to be updated with data type standardization
 SCAN_DATA_TYPE: DICOM
-
-SOURCE_DATA_TYPE: MHD
 
 DATA_TYPE: PNG
 
@@ -21,6 +21,6 @@ IMAGE_HEIGHT: 512
 
 N_SLICES:
 
-CROP_WIDTH:
+CROP_WIDTH: 256
 
-CROP_HEIGHT:
+CROP_HEIGHT: 256

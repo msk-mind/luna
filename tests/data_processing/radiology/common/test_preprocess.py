@@ -1,5 +1,7 @@
 import pytest, os, pathlib
 import sys
+from medpy.io import load
+import numpy as np
 from data_processing.radiology.common.preprocess import *
 
 from data_processing.common.sparksession import SparkConfig
@@ -15,7 +17,26 @@ label_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/vol
 
 def test_find_centroid():
 
-    xy = find_centroid(label_path, 512, 512)
+    data, header = load(label_path)
+    for i in range(data.shape[2]):
+        slice = data[:,:,i]
+        if np.any(slice):
+            image_2d = slice.astype(float).T
+
+            image_2d_scaled = normalize(image_2d)
+            image_2d_scaled = np.uint8(image_2d_scaled)
+
+            im = Image.fromarray(image_2d_scaled)
+
+            # save segmentation in red color.
+            rgb = im.convert('RGB')
+            red_channel = rgb.getdata(0)
+            rgb.putdata(red_channel)
+            png_binary = rgb.tobytes()
+            break
+
+    xy = find_centroid(png_binary, 512, 512)
+
     assert 271 == xy[0]
     assert 128 == xy[1]
 

@@ -21,7 +21,7 @@ import data_processing.common.constants as const
 
 
 logger = init_logger()
-logger.info("Starting data_processing.radiology.feature_table.unpack")
+logger.info("Starting data_processing.radiology.unpack_images.unpack")
 
 
 @click.command()
@@ -47,7 +47,7 @@ def cli(data_config_file, app_config_file):
     cfg = ConfigSet(name=const.DATA_CFG, config_file=data_config_file)
 
     # copy app and data configuration to destination config dir
-    config_location = const.CONFIG_LOCATION(cfg)
+    config_location = cfg.get_value(path=const.DATA_CFG+"::DESTINATION_PATH")
     os.makedirs(config_location, exist_ok=True)
 
     shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
@@ -71,9 +71,6 @@ def binary_to_png(cfg):
     COLUMN_NAME = cfg.get_value(path=const.DATA_CFG+"::COLUMN_NAME")
     IMAGE_WIDTH = int(cfg.get_value(path=const.DATA_CFG+"::IMAGE_WIDTH"))
     IMAGE_HEIGHT = int(cfg.get_value(path=const.DATA_CFG+"::IMAGE_HEIGHT"))
-
-    # create destination directory
-    os.makedirs(DESTINATION_PATH, exist_ok=True)
 
     # find edge cases with more than 1 annotations
     # (sometimes both L/R organs have tumor, and we end up with 2 annotations per accesion.)

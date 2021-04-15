@@ -1,8 +1,5 @@
 """
-Generates Refined PNG table for dicom slices in the series that
-
-1) have 3D segmentations
-2) match user's SQL where clause (filter based on dicom metadata)
+Generates Refined PNG table for dicom slices in the series that have 3D segmentations
 
 This process uses dicom and mhd annotation proxy tables.
 
@@ -59,6 +56,17 @@ def cli(data_config_file, app_config_file):
     logger.info("--- Finished in %s seconds ---" % (time.time() - start_time))
 
 
+def validate_integer_param(param):
+    """
+    if param is not empty and numeric, return integer. otherwise return an empty string
+    """
+    if str(param).isnumeric():
+        param = int(param)
+    else:
+        param = ""
+    return param
+
+
 def generate_image_table():
     """
     Create pngs for all dicoms in a series that have corresponding annotations.
@@ -74,10 +82,11 @@ def generate_image_table():
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='dicom-to-png')
     spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")
 
-    # TODO earlier version.. dicom table path can be removed once clean up is done.
-    dicom_table_path = cfg.get_value(path=const.DATA_CFG+'::DICOM_TABLE_PATH')
-    seg_table_path = os.path.join(project_path, const.TABLE_DIR, 
-                     "{0}_{1}".format("MHD", cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')))
+    dicom_table_path = os.path.join(project_path, const.TABLE_DIR,
+                                    "{0}_{1}".format(cfg.get_value(path=const.DATA_CFG+'::SCAN_DATA_TYPE'),
+						cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')))
+
+    seg_table_path = const.TABLE_LOCATION(cfg, is_source=True)
 
     dicom_df = spark.read.format("delta").load(dicom_table_path)
 
@@ -88,12 +97,9 @@ def generate_image_table():
 
         width = cfg.get_value(path=const.DATA_CFG+'::IMAGE_WIDTH')
         height = cfg.get_value(path=const.DATA_CFG+'::IMAGE_HEIGHT')
-        n_slices = cfg.get_value(path=const.DATA_CFG+'::N_SLICES')
-
-        if str(n_slices).isnumeric():
-             n_slices = int(n_slices)
-        else:
-            n_slices = ""
+        n_slices = validate_integer_param(cfg.get_value(path=const.DATA_CFG+'::N_SLICES'))
+        crop_width = validate_integer_param(cfg.get_value(path=const.DATA_CFG+'::CROP_WIDTH'))
+        crop_height = validate_integer_param(cfg.get_value(path=const.DATA_CFG+'::CROP_HEIGHT'))
 
         seg_png_table_path = const.TABLE_LOCATION(cfg)
         
@@ -103,23 +109,29 @@ def generate_image_table():
         create_seg_png_udf = F.udf(create_seg_images, ArrayType(StructType(
                                     [StructField("instance_number", IntegerType()),
                                      StructField("scan_annotation_record_uuid", StringType()),
-				     StructField("seg_png", BinaryType())])))
+                                     StructField("seg_png", BinaryType()),
+                                     StructField("x", IntegerType()),
+                                     StructField("y", IntegerType())])))
 
-        seg_df = seg_df.withColumn("slices_uuid_pngs", 
+        seg_df = seg_df.withColumn("slices_uuid_pngs_xy",
             F.lit(create_seg_png_udf("path", "scan_annotation_record_uuid", F.lit(width), F.lit(height), F.lit(n_slices))))
 
         logger.info("Created segmentation pngs")
 
-        seg_df = seg_df.withColumn("slices_uuid_pngs", F.explode("slices_uuid_pngs")) \
-                       .select(F.col("slices_uuid_pngs.instance_number").alias("instance_number"), F.col("slices_uuid_pngs.seg_png").alias("seg_png"),
-                                F.col("slices_uuid_pngs.scan_annotation_record_uuid").alias("scan_annotation_record_uuid"),
+        seg_df = seg_df.withColumn("slices_uuid_pngs_xy", F.explode("slices_uuid_pngs_xy")) \
+                       .select(F.col("slices_uuid_pngs_xy.instance_number").alias("instance_number"),
+                               F.col("slices_uuid_pngs_xy.seg_png").alias("seg_png"),
+                               F.col("slices_uuid_pngs_xy.scan_annotation_record_uuid").alias("scan_annotation_record_uuid"),
+                               F.col("slices_uuid_pngs_xy.x").alias("x_center"),
+                               F.col("slices_uuid_pngs_xy.y").alias("y_center"),
                                "accession_number", "series_number", "path", "label")
 
         logger.info("Exploded rows")
 
         # create overlay images: blend seg and the dicom images
         seg_df = seg_df.select("accession_number", seg_df.path.alias("seg_path"), "label",
-                               "instance_number", "seg_png", "scan_annotation_record_uuid", "series_number")
+                               "instance_number", "seg_png", "scan_annotation_record_uuid", "series_number",
+                               "x_center", "y_center")
 
         cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number,
                 dicom_df.metadata.SeriesNumber == seg_df.series_number,
@@ -127,10 +139,12 @@ def generate_image_table():
 
         seg_df = seg_df.join(dicom_df, cond)
 
-        overlay_image_udf = F.udf(overlay_images, StructType([StructField("dicom", BinaryType()), StructField("overlay", BinaryType())]))
+        overlay_image_udf = F.udf(overlay_images, StructType([StructField("dicom", BinaryType()),
+                                                              StructField("overlay", BinaryType())]))
 
         seg_df = seg_df.withColumn("dicom_overlay",
-            F.lit(overlay_image_udf("path", "seg_png", F.lit(width), F.lit(height))))
+            F.lit(overlay_image_udf("path", "seg_png", F.lit(width), F.lit(height), "x_center", "y_center",
+                                    F.lit(crop_width), F.lit(crop_height))))
  
         # unpack dicom_overlay struct into 2 columns
         seg_df = seg_df.select(F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"),

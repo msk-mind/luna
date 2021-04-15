@@ -1,6 +1,6 @@
 # path to mind data
 # hdfs:// or absolute or relative datapath
-ROOT_PATH: tests/data_processing/testdata/data
+ROOT_PATH: tests/data_processing/radiology/testdata
 
 PROJECT: test-project
 
@@ -9,7 +9,7 @@ DATA_TYPE: FEATURE
 DATASET_NAME: unpack
 
 # local path to unpack pngs.
-DESTINATION_PATH: tests/data_processing/testdata/data/unpacked_pngs
+DESTINATION_PATH: tests/data_processing/radiology/testdata/unpacked_pngs
 
 # field to unpack dicom or overlay
 COLUMN_NAME: dicom
