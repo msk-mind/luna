@@ -43,7 +43,7 @@ executor = ProcessPoolExecutor(NUM_PROCS)
 conn   = Neo4jConnection(uri=cfg.get_value("APP_CFG::GRAPH_URI"), user=cfg.get_value("APP_CFG::GRAPH_USER"), pwd=cfg.get_value("APP_CFG::GRAPH_PASSWORD"))
 
 # general models
-pipeline_model = api.model("Pipeline MOdel", 
+pipeline_model = api.model("Pipeline Model", 
     {
         "query":  fields.String(description="Query for qualified addresses", required=True, example='MATCH (n) WHERE id(n)=1 RETURN n.qualified_address'),
         "namespace": fields.String(description="Cohort/Namespace", required=True)
