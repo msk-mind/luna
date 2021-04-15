@@ -3,6 +3,7 @@ import os, shutil
 from pyspark import SQLContext
 from click.testing import CliRunner
 import os
+from PIL import Image
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
@@ -43,6 +44,31 @@ def test_cli(spark):
     assert os.path.exists(data_config_path)
 
     df = spark.read.format("delta").load(png_table_path)
-    df.show(10)
     assert df.count() == 1
+    dicom_binary = df.select("dicom").head()["dicom"]
+
+    # check that image binary can be loaded with expected width/height
+    Image.frombytes("L", (512, 512), bytes(dicom_binary))
+
+    df.unpersist()
+
+
+def test_cli_crop(spark):
+
+    runner = CliRunner()
+    result = runner.invoke(cli,
+                           ['-d', 'tests/data_processing/radiology/refined_table/annotation/data_crop.yaml',
+                            '-a', 'tests/test_config.yaml'])
+
+    assert result.exit_code == 0
+
+    assert os.path.exists(app_config_path)
+    assert os.path.exists(data_config_path)
+
+    df = spark.read.format("delta").load(png_table_path)
+    dicom_binary = df.select("dicom").head()["dicom"]
+
+    # check that image binary can be loaded with expected width/height
+    Image.frombytes("L", (256, 256), bytes(dicom_binary))
+
     df.unpersist()

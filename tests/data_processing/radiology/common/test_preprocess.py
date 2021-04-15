@@ -36,7 +36,7 @@ def test_find_centroid():
             break
 
     xy = find_centroid(png_binary, 512, 512)
-    print(xy) # (128, 271)
+
     assert 271 == xy[0]
     assert 128 == xy[1]
 
