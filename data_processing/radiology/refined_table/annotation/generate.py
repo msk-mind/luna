@@ -83,7 +83,8 @@ def generate_image_table():
     spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")
 
     dicom_table_path = os.path.join(project_path, const.TABLE_DIR,
-                                    "{0}_{1}".format("DICOM", cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')))
+                                    "{0}_{1}".format(cfg.get_value(path=const.DATA_CFG+'::SCAN_DATA_TYPE'),
+						cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')))
 
     seg_table_path = const.TABLE_LOCATION(cfg, is_source=True)
 

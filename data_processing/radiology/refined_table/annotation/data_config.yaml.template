@@ -5,6 +5,9 @@ PROJECT: DMT_IRB
 
 DATASET_NAME: DMT_IRB_DATE
 
+# to be updated with data type standardization
+SCAN_DATA_TYPE: MR
+
 # volumetric segmentation data type
 SOURCE_DATA_TYPE: MHD
 
