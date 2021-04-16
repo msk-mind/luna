@@ -46,6 +46,5 @@ class SparkConfig:
 			.config("fs.defaultFS", "file:///") \
 			.config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
-			.config("spark.ui.enabled", "false") \
 			.getOrCreate()
 							
