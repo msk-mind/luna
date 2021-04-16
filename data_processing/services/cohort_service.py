@@ -135,7 +135,7 @@ class createContainer(Resource):
             if ":" in container_id: 
                 return make_response("Invalid patient name, only use alphanumeric characters", 400)
 
-            create_res = conn.query(f""" CREATE (container:{container.get_create_str()}) RETURN container""")
+            create_res = conn.query(f""" MERGE (container:{container.get_create_str()}) RETURN container""")
             if not create_res is None: 
                 return make_response("Created successfully", 201)
             else:

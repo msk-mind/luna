@@ -15,7 +15,6 @@ import click
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.utils           import get_method_data
 from data_processing.common.Container       import Container
 from data_processing.common.Node            import Node
 from data_processing.common.config import ConfigSet
@@ -45,8 +44,8 @@ def generate_scan_with_container(cohort_id, container_id, method_data):
         method_id   = method_data.get("job_tag", "none")
         
         dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
-        if dicom_node is None:
-            raise ValueError("Dicom node not found")
+        
+        if dicom_node is None: raise ValueError("Dicom node not found")
         
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
@@ -59,8 +58,8 @@ def generate_scan_with_container(cohort_id, container_id, method_data):
             params = method_data
         )
         
-    except Exception:
-        container.logger.exception ("Exception raised, stopping job execution.")
+    except Exception as e:
+        container.logger.exception (f"{e}, stopping job execution...")
     else:
         output_node = Node("VolumetricImage", method_id, properties)
         container.add(output_node)

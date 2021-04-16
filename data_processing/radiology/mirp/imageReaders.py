@@ -49,6 +49,7 @@ def read_itk_segmentation(path_to_seg_file):
     mask_orientation = np.array(sitk_img.GetDirection())[::-1]
 
     roi_list = []
+   
     for label_value in np.unique(int_mask):
         if label_value == 0: continue
 
@@ -69,5 +70,8 @@ def read_itk_segmentation(path_to_seg_file):
 
         roi_obj = RoiClass(name=f'labeled', contour=None, roi_mask=roi_mask_obj, label_value=label_value)
         roi_list.append(roi_obj)
+ 
+    if len(roi_list) == 0: # Fixes 
+        raise ValueError(f"Completely empty segmentation {path_to_seg_file}")
 
     return roi_list

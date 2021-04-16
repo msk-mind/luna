@@ -15,10 +15,9 @@ import click
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.utils           import get_method_data
 from data_processing.common.Container       import Container
 from data_processing.common.Node            import Node
-from data_processing.common.config import ConfigSet
+from data_processing.common.config          import ConfigSet
 
 # From radiology.common
 from data_processing.radiology.common.preprocess   import extract_voxels
@@ -48,11 +47,8 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
     label_node  = container.get("VolumetricLabel", method_data['label_input_tag'])
 
     try:
-        if image_node is None:
-            raise ValueError("Image node not found")
-
-        if label_node is None:
-            raise ValueError("Label node not found")
+        if image_node is None: raise ValueError("Image node not found")
+        if label_node is None: raise ValueError("Label node not found")
 
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
@@ -66,8 +62,8 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
             params     = method_data
         )
 
-    except Exception:
-        container.logger.exception ("Exception raised, stopping job execution.")
+    except Exception as e:
+        container.logger.exception (f"{e}, stopping job execution...")
     else:
         output_node = Node("Voxels", method_id, properties)
         container.add(output_node)

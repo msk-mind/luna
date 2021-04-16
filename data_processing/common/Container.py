@@ -1,6 +1,7 @@
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.Node import Node
 from data_processing.common.config import ConfigSet
+from data_processing.common.custom_logger   import init_logger
 
 import os, socket, pathlib, logging
 from minio import Minio
@@ -72,24 +73,23 @@ class Container(object):
         :params: params - dictonary of important configuration, right now, only the graph URI connection parameters are needed.
         """
 
-        #self.logger = init_logger("common-container.log", "Container [empty]")
         self.logger = logging.getLogger(__name__)
 
         if isinstance(params, ConfigSet):
             params=params.get_config_set("APP_CFG")
 
         # Connect to graph DB
-        self.logger.info ("Connecting to: %s", params['GRAPH_URI'])
+        self.logger.debug ("Connecting to: %s", params['GRAPH_URI'])
         self._conn = Neo4jConnection(uri=params['GRAPH_URI'], user=params['GRAPH_USER'], pwd=params['GRAPH_PASSWORD'])
-        self.logger.info ("Connection test: %s", self._conn.test_connection())
+        self.logger.debug ("Connection test: %s", self._conn.test_connection())
 
         if params.get('OBJECT_STORE_ENABLED',  False):
-            self.logger.info ("Connecting to: %s", params['MINIO_URI'])
+            self.logger.debug ("Connecting to: %s", params['MINIO_URI'])
             self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
             try:
                 for bucket in self._client.list_buckets():
                     self.logger.debug("Found bucket %s", bucket.name )
-                self.logger.info("OBJECT_STORE_ENABLED=True")
+                self.logger.debug("OBJECT_STORE_ENABLED=True")
                 params['OBJECT_STORE_ENABLED'] = True
             except:
                 self.logger.warning("Could not connect to object store")
@@ -97,7 +97,7 @@ class Container(object):
                 params['OBJECT_STORE_ENABLED'] = False
 
         self._host = socket.gethostname() # portable to *docker* containers
-        self.logger.info ("Running on: %s", self._host)
+        self.logger.debug ("Running on: %s", self._host)
 
         self.params = params
         self._node_commits    = {}
@@ -111,7 +111,7 @@ class Container(object):
         """
         self._namespace_id = namespace_id
         self._bucket_id    = namespace_id.lower().replace('_','-')
-        self.logger.info ("Container namespace: %s", self._namespace_id)
+        self.logger.debug ("Container namespace: %s", self._namespace_id)
 
         if self.params.get('OBJECT_STORE_ENABLED',  False):
             if not self._client.bucket_exists(self._bucket_id):
@@ -129,9 +129,11 @@ class Container(object):
         self.logger.info ("Lookup ID: %s", container_id)
 
         # Figure out how to match the node
-        if isinstance(container_id, str): 
+        if isinstance(container_id, str) and not "uid://" in container_id: 
             match_clause = f"""WHERE container.qualified_address = '{container_id.lower()}'"""
-        elif (isinstance(container_id, str) and container_id.isdigit()) or (isinstance(container_id, int)):
+        elif isinstance(container_id, str) and "uid://" in container_id: 
+            match_clause = f"""WHERE id(container) = {container_id.replace('uid://', '')} """
+        elif isinstance(container_id, int):
             match_clause = f"""WHERE id(container) = {container_id} """
         else:
             raise RuntimeError("Invalid container_id type not (str, int)")
@@ -154,6 +156,7 @@ class Container(object):
         self._qualifiedpath = res[0]["container.qualified_address"]
         self._type          = res[0]["container.type"]
         self._labels        = res[0]["labels(container)"]
+        self.address        = res[0]["container.qualified_address"]
 
         # Containers need to have a qualified path
         if self._qualifiedpath is None: 
@@ -170,7 +173,7 @@ class Container(object):
             return self
 
         # Let us know attaching was a success! :)
-        self.logger = logging.getLogger(f'Container [{self._container_id}]')
+        self.logger = init_logger(f'logs/container-{self.address}.log')
         self.logger.info ("Successfully attached to: %s %s %s", self._type, self._container_id, self._qualifiedpath)
         self._attached = True
         return self
@@ -179,7 +182,7 @@ class Container(object):
         """
         Returns true if container was properly attached (i.e. checks in lookupAndAttach succeeded), else False
         """
-        self.logger.info ("Attached: %s", self._attached)
+        self.logger.debug ("Attached: %s", self._attached)
         return self._attached
 
 
@@ -257,13 +260,13 @@ class Container(object):
         # Catches bad queries
         # If successfull query, reconstruct a Node object
         if res is None:
-            self.logger.error(f"get() query failed, data.name='{type}-{name}' returning None")
+            self.logger.warning(f"get() query failed, data.name='{type}-{name}' returning None")
             return None
         elif len(res) == 0: 
-            self.logger.error(f"get() found no nodes, data.name='{type}-{name}' returning None")
+            self.logger.warning(f"get() found no nodes, data.name='{type}-{name}' returning None")
             return None
         elif len(res) > 1: 
-            self.logger.error(f"get() found many nodes (?), data.name='{type}-{name}' returning None")
+            self.logger.warning(f"get() found many nodes (?), data.name='{type}-{name}' returning None")
             return None
         else:
             node = Node(res[0]['data']['type'], res[0]['data']['name'], dict(res[0]['data'].items()))

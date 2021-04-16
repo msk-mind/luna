@@ -20,22 +20,25 @@ def init_logger(filename='data-processing.log'):
     log_file = filename
 
     logger = logging.getLogger()
+    formatter = MultilineFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    fh = logging.FileHandler(log_file)
+    fh.setLevel(logging.INFO)
+    fh.setFormatter(formatter)
+    
     if not logger.handlers:
         logger.setLevel(logging.INFO)
         # create file handler which logs even debug messages
-        fh = logging.FileHandler(log_file)
-        fh.setLevel(logging.INFO)
         # create console handler with a higher log level
         ch = logging.StreamHandler()
         ch.setLevel(logging.INFO)
         # create formatter and add it to the handlers
-        formatter = MultilineFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
-        fh.setFormatter(formatter)
         # add the handlers to logger
         logger.addHandler(ch)
         logger.addHandler(fh)
-
+    if logger.handlers:
+        logger.addHandler(fh)
     print(">>>>>>>> log file at: " + log_file )
     return logger
 

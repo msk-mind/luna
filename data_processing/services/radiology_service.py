@@ -13,6 +13,9 @@ import os, sys, subprocess, uuid, requests, socket
 import click
 from concurrent.futures import ProcessPoolExecutor
 
+# Set important ITK variables before specific imports!
+os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS'] = '4'
+
 # Server imports
 from flask import Flask, request, jsonify, render_template, make_response
 from flask_restx import Api, Resource, fields
@@ -27,7 +30,7 @@ from data_processing.radiology.cli.extract_radiomics        import extract_radio
 from data_processing.radiology.cli.extract_voxels           import extract_voxels_with_container
 from data_processing.radiology.cli.generate_scan            import generate_scan_with_container
 from data_processing.radiology.cli.randomize_contours       import randomize_contours_with_container
-from data_processing.radiology.cli.collect_result_segment   import collect_result_segment_with_container
+from data_processing.radiology.cli.collect_csv_segment      import collect_result_segment_with_container
 
 logger = init_logger("radiology-service.log")
     
@@ -42,6 +45,13 @@ api = Api(app, version=VERSION, title='MIND Radiology Processing Service', descr
 executor = ProcessPoolExecutor(NUM_PROCS) 
 conn   = Neo4jConnection(uri=cfg.get_value("APP_CFG::GRAPH_URI"), user=cfg.get_value("APP_CFG::GRAPH_USER"), pwd=cfg.get_value("APP_CFG::GRAPH_PASSWORD"))
 
+# general models
+pipeline_model = api.model("Pipeline Model", 
+    {
+        "query":  fields.String(description="Query for qualified addresses", required=True, example='MATCH (n) WHERE id(n)=1 RETURN n.qualified_address'),
+        "namespace": fields.String(description="Cohort/Namespace", required=True)
+    }
+)
 # general models
 general_model = api.model("Query+Job Model", 
     {
@@ -135,6 +145,34 @@ class runMethods(Resource):
 
         for container_id in container_ids: requests.post(f"http://{HOSTNAME}:{PORT}/mind/api/v1/{function}/{cohort_id}/{container_id}/submit", json=params)
 
+
+@api.route('/mind/api/v1/pipelines/<pipeline>/submit', methods=['POST'])
+class runPipeline(Resource):
+    @api.expect(pipeline_model, validate=True)
+    def post(self, pipeline):
+        """ Execution pipleine for container IDs matching a graph query """
+        data = request.json
+        query  = data.get("query")
+        namespace = data.get("namespace")
+
+        container_ids = [rec.data() for rec in conn.query(query)]
+
+        # Check for cohort existence
+        if not len(container_ids) >= 1: 
+            return make_response("No matching containers found!", 400)
+         # Check for cohort existence
+        if not len(container_ids[0].keys()) == 1: 
+            return make_response("Too many return keys, please only return (node).qualified_address", 400)   
+        if not "qualified_address" in list(container_ids[0].keys())[0]: 
+            return make_response("Cannot find qualified address, please return (node).qualified_address", 400)  
+
+        container_ids = [list(rec.values())[0] for rec in container_ids]
+        print (container_ids)
+
+        for container_id in container_ids: 
+            executor.submit (subprocess.call, ["python3","-m", f"data_processing.pipelines.{pipeline}.driver", "-c", namespace, "-s", container_id])
+
+        return make_response(f"Submitted {len(container_ids)} containers to pipeline {pipeline}", 200)  
 
 
 @api.route('/mind/api/v1/window_dicom/<cohort_id>/<container_id>/submit', methods=['POST'])

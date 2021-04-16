@@ -262,7 +262,7 @@ def get_supervoxels(img_obj, roi_obj, settings, n_segments=None):
 
     outside = binary_dilation(roi_bool_mask, iterations=int (10 // np.min(img_obj.spacing)))
 
-    min_n_voxels = np.max([20.0, 200.0 / np.prod(img_obj.spacing)])
+    min_n_voxels = np.max([20.0, 100.0 / np.prod(img_obj.spacing)]) # Even smaller super voxels....
     segment_guess =  int(np.sum(outside) / min_n_voxels)
     print ("Starting guess: ", segment_guess)
 
@@ -614,8 +614,10 @@ def combine_pertubation_rois(roi_list, settings):
 
         roi_vox_new = np.zeros(shape=repl_roi.roi.size, dtype=np.uint8)
 
-        for roi in roi_list_by_pertubation:
-            roi_vox_new += np.multiply(roi.label_value,  roi.roi.get_voxel_grid(), dtype=np.uint8)
+        label_grid_mapping = { roi.label_value : roi.roi.get_voxel_grid() for roi in roi_list_by_pertubation}
+
+        for label_value in sorted(label_grid_mapping.keys(), reverse=True):
+            roi_vox_new[np.where(label_grid_mapping[label_value] != 0)] = label_value
 
         repl_roi.roi.set_voxel_grid(roi_vox_new)
         repl_roi.name += "_COMBINED"          # Adapt roi name
@@ -627,8 +629,10 @@ def combine_all_rois(roi_list, settings):
 
     roi_vox_new = np.zeros(shape=repl_roi.roi.size, dtype=np.uint8)
 
-    for roi in roi_list:
-        roi_vox_new += np.multiply(roi.label_value,  roi.roi.get_voxel_grid(), dtype=np.uint8)
+    label_grid_mapping = { roi.label_value : roi.roi.get_voxel_grid() for roi in roi_list}
+
+    for label_value in sorted(label_grid_mapping.keys(), reverse=True):
+        roi_vox_new[np.where(label_grid_mapping[label_value] != 0)] = label_value
 
     repl_roi.roi.set_voxel_grid(roi_vox_new)
     repl_roi.name += "_COMBINED"          # Adapt roi name

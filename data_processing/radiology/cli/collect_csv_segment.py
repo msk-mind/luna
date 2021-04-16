@@ -15,10 +15,9 @@ import click
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.utils           import get_method_data
 from data_processing.common.Container       import Container
 from data_processing.common.Node            import Node
-from data_processing.common.config import ConfigSet
+from data_processing.common.config          import ConfigSet
 
 import requests 
 import pandas as pd
@@ -87,8 +86,8 @@ def collect_result_segment_with_container(cohort_id, container_id, method_data):
             "data": output_file
         }
 
-    except Exception:
-        container.logger.exception ("Exception raised, stopping job execution.")
+    except Exception as e:
+        container.logger.exception (f"{e}, stopping job execution...")
     else:
         output_node = Node("ResultSegment", f"slice-{container._container_id}", properties)
         output_container.add(output_node)
