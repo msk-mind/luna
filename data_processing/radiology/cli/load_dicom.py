@@ -3,9 +3,7 @@ Created: February 2021
 @author: aukermaa@mskcc.org
 
 Given a scan (container) ID
-1. resolve the path to the dicom folder
-2. for all dicoms, rescale into HU and optionally window
-3. store results on HDFS and add metadata to the graph
+1. load DicomSeries object given a delta table path 
 
 '''
 
