@@ -13,6 +13,9 @@ import os, sys, subprocess, uuid, requests, socket
 import click
 from concurrent.futures import ProcessPoolExecutor
 
+# Set important ITK variables before specific imports!
+os.environ['ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS'] = '4'
+
 # Server imports
 from flask import Flask, request, jsonify, render_template, make_response
 from flask_restx import Api, Resource, fields

@@ -4,8 +4,6 @@ import subprocess, click, json
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--container_id', required=True)
 def cli(cohort_id, container_id):
-    subprocess.call(["python3","-m","data_processing.radiology.cli.load_dicom",            "-c",cohort_id,"-s",container_id,"-m","data_processing/pipelines/lung_radiomics_v1/load_dicom.json"])
-    subprocess.call(["python3","-m","data_processing.radiology.cli.window_dicom",          "-c",cohort_id,"-s",container_id,"-m","data_processing/pipelines/lung_radiomics_v1/load_dicom.json"])
     subprocess.call(["python3","-m","data_processing.radiology.cli.generate_scan",         "-c",cohort_id,"-s",container_id,"-m","data_processing/pipelines/lung_radiomics_v1/generate_scan.json"])
     subprocess.call(["python3","-m","data_processing.radiology.cli.randomize_contours",    "-c",cohort_id,"-s",container_id,"-m","data_processing/pipelines/lung_radiomics_v1/randomize_contours.json"])
 
