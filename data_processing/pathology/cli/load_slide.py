@@ -3,7 +3,7 @@ Created: February 2021
 @author: aukermaa@mskcc.org
 
 Given a scan (container) ID
-1. load DicomSeries object given a delta table path 
+1. load WholeSlideImage object given a delta table path 
 
 '''
 
@@ -22,7 +22,7 @@ from data_processing.common.config          import ConfigSet
 from data_processing.common.sparksession     import SparkConfig
 
 
-logger = init_logger("load_dicom.log")
+logger = init_logger("load_slide.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
@@ -32,21 +32,20 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 def cli(cohort_id, container_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    load_dicom_with_container(cohort_id, container_id, method_data)
+    load_slide_with_container(cohort_id, container_id, method_data)
 
-def load_dicom_with_container(cohort_id, container_id, method_data):
+def load_slide_with_container(cohort_id, container_id, method_data):
     """
-    Using the container API interface, fill scan with original dicoms from table
+    Using the container API interface, fill scan with original slide from table
     """
     # Do some setup
     container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
     method_id   = method_data["job_tag"]
 
     try:
-        spark  = SparkConfig().spark_session("APP_CFG", "query_dicom")
+        spark  = SparkConfig().spark_session("APP_CFG", "query_slide")
         df = spark.read.format("delta").load(method_data['table_path'])\
-            .where(f"metadata.SeriesInstanceUID='{container.address}'")\
-            .where( "metadata.InstanceNumber='1'")\
+            .where(f"slide_id='{container.address}'")\
             .select("path", "metadata")\
             .toPandas()
         
@@ -58,11 +57,11 @@ def load_dicom_with_container(cohort_id, container_id, method_data):
     except Exception as e:
         container.logger.exception (f"{e}, stopping job execution...")
     else:
-        dicom = Node("DicomSeries", method_id, record['metadata'])
+        slide = Node("WholeSlideImage", method_id, record['metadata'])
         # Do some path processing...we pulled the first dicom image, but need the parent image folder
-        data_path = Path(record['path'].split(':')[-1]).parent
-        dicom.set_data(data_path)
-        container.add(dicom)
+        data_path = Path(record['path'].split(':')[-1])
+        slide.set_data(data_path)
+        container.add(slide)
         container.saveAll()
     
 if __name__ == "__main__":
