@@ -57,8 +57,8 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
     logger.info ("Requesting %s, %s", os.path.join(cohort_uri, "container", "generic", output_container_id), requests.put(os.path.join(cohort_uri, "container", "generic", output_container_id)).text)
 
     # Do some setup
-    container        = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
-    output_container = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(output_container_id)
+    container        = Container( cfg ).setNamespace(cohort_id).setContainer(container_id)
+    output_container = Container( cfg ).setNamespace(cohort_id).setContainer(output_container_id)
 
     image_node  = container.get("TileImages", input_tile_data_id) 
 
