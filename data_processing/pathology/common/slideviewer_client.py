@@ -5,7 +5,7 @@ Created on January 31, 2021
 
 Functions for downloading annotations from SlideViewer
 '''
-import os
+import os, shutil
 import zipfile
 import requests
 
@@ -40,22 +40,26 @@ def fetch_slide_ids(url, project_id, dest_dir, csv_file=None):
     # run on all slides from specified SLIDEVIEWER_CSV file.
     # if file is not specified, then download file using slideviewer API
     # download entire slide set using project id
-    # the file is then written to the landing directory
+    # the file is then written to the dest directory
+    new_csv_file = os.path.join(dest_dir, 'project_' + str(project_id) + '.csv')
+
     if csv_file == None or \
             csv_file == '' or not \
             os.path.exists(csv_file):
 
-        csv_file = os.path.join(dest_dir, 'project_' + str(project_id) + '.csv')
-
         url = url + 'exportProjectCSV?pid={pid}'.format(pid=str(project_id))
         res = requests.get(url)
 
-        with open(csv_file, "wb") as slideoutfile:
+        with open(new_csv_file, "wb") as slideoutfile:
             slideoutfile.write(res.content)
+
+    else:
+        # copy given csv_file to dest directory
+        shutil.copy(csv_file, new_csv_file)
 
     # read slide ids
     slides = []
-    with open(csv_file) as slideoutfile:
+    with open(new_csv_file) as slideoutfile:
         # skip first 4 lines
         count = 0
         for line in slideoutfile:

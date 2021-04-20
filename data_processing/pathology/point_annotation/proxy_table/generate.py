@@ -94,7 +94,9 @@ def create_proxy_table():
     SLIDEVIEWER_URL = cfg.get_value(path=const.DATA_CFG+'::SLIDEVIEWER_URL')
 
     # Get slide list to use
-    slides = fetch_slide_ids(SLIDEVIEWER_URL, PROJECT_ID, '.', cfg.get_value(path=const.DATA_CFG+'::SLIDEVIEWER_CSV_FILE'))
+    # Download CSV file in the project configs dir
+    slides = fetch_slide_ids(SLIDEVIEWER_URL, PROJECT_ID, const.CONFIG_LOCATION(cfg),
+                             cfg.get_value(path=const.DATA_CFG+'::SLIDEVIEWER_CSV_FILE'))
     logger.info(slides)
 
     schema = StructType([StructField("slideviewer_path", StringType()),

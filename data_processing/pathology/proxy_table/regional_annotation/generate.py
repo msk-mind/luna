@@ -152,7 +152,8 @@ def create_proxy_table():
     SLIDEVIEWER_CSV_FILE = cfg.get_value(path=const.DATA_CFG + '::SLIDEVIEWER_CSV_FILE')
     PROJECT_ID = cfg.get_value(path=const.DATA_CFG + '::PROJECT_ID')
     LANDING_PATH = cfg.get_value(path=const.DATA_CFG + '::LANDING_PATH')
-    slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, LANDING_PATH, SLIDEVIEWER_CSV_FILE)
+    # Download CSV file in the project configs dir
+    slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, const.CONFIG_LOCATION(cfg), SLIDEVIEWER_CSV_FILE)
 
     schema = StructType([
         StructField('slideviewer_path', StringType()),
