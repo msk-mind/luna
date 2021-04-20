@@ -49,18 +49,10 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
     input_tile_data_id   = method_data.get("input_label_tag")
     output_container_id  = method_data.get("output_container")
 
-    api_base_url         = cfg.get_value("APP_CFG::api_base_url")
-    cohort_service_host  = cfg.get_value("APP_CFG::cohortManager_host")
-    cohort_service_port  = cfg.get_value("APP_CFG::cohortManager_port")
-    cohort_uri           = f"http://{cohort_service_host}:{cohort_service_port}{api_base_url}"
+    output_container = Container( cfg ).setNamespace(cohort_id).createContainer(output_container_id, "parquet").setContainer(output_container_id)
+    input_container  = Container( cfg ).setNamespace(cohort_id).setContainer(container_id)
 
-    logger.info ("Requesting %s, %s", os.path.join(cohort_uri, "container", "generic", output_container_id), requests.put(os.path.join(cohort_uri, "container", "generic", output_container_id)).text)
-
-    # Do some setup
-    container        = Container( cfg ).setNamespace(cohort_id).setContainer(container_id)
-    output_container = Container( cfg ).setNamespace(cohort_id).setContainer(output_container_id)
-
-    image_node  = container.get("TileImages", input_tile_data_id) 
+    image_node  = input_container.get("TileImages", input_tile_data_id) 
 
     try:
         if image_node is None:
@@ -70,7 +62,7 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
         df.loc[:,"data_path"]     = image_node.data
         df.loc[:,"object_bucket"] = image_node.properties['object_bucket']
         df.loc[:,"object_path"]   = image_node.properties['object_folder'] + "/tiles.slice.pil"
-        df.loc[:,"id_slide_container"] = container._name
+        df.loc[:,"id_slide_container"] = input_container._name
 
         df = df.set_index(["id_slide_container", "address"])
         logger.info(df)
@@ -78,7 +70,7 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", output_container._namespace_id, output_container._name)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        output_file = os.path.join(output_dir, f"{container._container_id}.parquet")
+        output_file = os.path.join(output_dir, f"{input_container._container_id}.parquet")
 
         pq.write_table(pa.Table.from_pandas(df), output_file)
 
@@ -91,9 +83,9 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
         }
 
     except Exception:
-        container.logger.exception ("Exception raised, stopping job execution.")
+        input_container.logger.exception ("Exception raised, stopping job execution.")
     else:
-        output_node = Node("ResultSegment", f"slice-{container._container_id}", properties)
+        output_node = Node("ResultSegment", f"slice-{input_container._container_id}", properties)
         output_container.add(output_node)
         output_container.saveAll()
 
