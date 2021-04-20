@@ -40,7 +40,7 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
     """
 
     # Do some setup
-    container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
+    container   = Container( cfg ).setNamespace(cohort_id).setContainer(container_id)
     method_id   = method_data.get("job_tag", "none")
 
     image_node  = container.get("VolumetricImage", method_data['image_input_tag']) 

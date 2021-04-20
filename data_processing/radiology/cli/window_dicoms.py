@@ -40,7 +40,7 @@ def window_dicom_with_container(cohort_id, container_id, method_data):
     """
 
     # Do some setup
-    container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
+    container   = Container( cfg ).setNamespace(cohort_id).setContainer(container_id)
     method_id   = method_data.get("job_tag", "none")
 
     dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
