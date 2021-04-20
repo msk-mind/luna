@@ -7,7 +7,12 @@ import os, socket, pathlib, logging
 from minio import Minio
 
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-import subprocess
+from dask.distributed   import Client
+
+def bootstrap (container_id): 
+    logger = logging.getLogger(__name__)
+    logger.info(f"Bootstrapping pipeline for {container_id}")
+    return 1
 
 class Container(object):
     """
@@ -36,18 +41,6 @@ class Container(object):
     $ container.saveAll()
         > Committing dicom:globals{ hash: 'abc123' name: 'my-dicom', qualified_address: 'test::1.2.840::my-dicom', namespace: 'test', type: 'dicom' , path: 'file:/some/path/1.dcm'}
 
-    $ node = container.listData("dicom")
-        > ----------------------------------------------------------------------------------------------------
-          name: DCM-0123
-          type: dicom
-          properties: 
-          - type: 'dicom'
-          - qualified_address: 'est::1.2.840::my-dicom'
-          - path: 'file:/some/path/1.dcm'
-          - namespace: '3'
-          - Modality: 'CT'
-          - name: 'my-dicom'
-          ----------------------------------------------------------------------------------------------------
     $ container.get("dicom", "my-dicom").path
         > /some/path/1.dcm
 
@@ -100,21 +93,21 @@ class Container(object):
         self.logger.debug ("Running on: %s", self._host)
 
         self.params = params
-        self._node_commits    = {}
+        self._node_commits = {}
 
     def createNamespace(self, namespace_id: str):
-            """
-            Creates a namesapce, if it doesn't exist, else, tells you it exists
+        """
+        Creates a namesapce, if it doesn't exist, else, tells you it exists
 
-            :params: namespace_id - namespace value 
-            """
-            cohort = Node("cohort", namespace_id)
-            create_res = self._conn.query(f""" MERGE (co:{cohort.get_create_str()}) RETURN co""")
+        :params: namespace_id - namespace value 
+        """
+        cohort = Node("cohort", namespace_id)
+        create_res = self._conn.query(f""" MERGE (co:{cohort.get_create_str()}) RETURN co""")
 
-            if len(create_res) == 1:
-                self.logger.info(f"Namespace [{namespace_id}] created successfully")
+        if len(create_res) == 1:
+            self.logger.info(f"Namespace [{namespace_id}] created successfully")
 
-            return self
+        return self
 
     def setNamespace(self, namespace_id: str):
         """
@@ -164,8 +157,6 @@ class Container(object):
             self.logger.error("The container does not exists")
         
         return self
-
-
     
     def setContainer(self, container_id):
         """
@@ -224,7 +215,7 @@ class Container(object):
 
         # Let us know attaching was a success! :)
         self.logger = init_logger(f'logs/container-{self.address}.log')
-        self.logger.info ("Successfully attached to: %s %s %s", self._type, self._container_id, self._qualifiedpath)
+        self.logger.info ("Successfully attached to %s container id=%s @ %s", self._type, self._container_id, self.address)
         self._attached = True
 
         return self
@@ -279,14 +270,49 @@ class Container(object):
     
     @staticmethod
     def run(namespace, container_id, pipeline):
-        for func in pipeline: func[0]( namespace, container_id, func[1])
-    
+        """
+        Runner for pipelined jobs
+        """
+        for func in pipeline: 
+            module = func[0]
+            params = func[1]
+            module (cohort_id=namespace, container_id=container_id, method_data=params)
+
     def runLocal(self, pipeline):
+        """ 
+        Run a pipeline in the main thread, blocking.
+
+        :params: pipeline - an ordered list of (function, params) tuples to execute
+        """
         self.run (self._namespace_id, self._name, pipeline)
 
     def runProcessPoolExecutor(self, pipeline, executor):
+        """ 
+        Use a process pool executor to run full pipelines in background
+
+        :params: pipeline - an ordered list of (function, params) tuples to execute
+        :params: executor - a ProcessPoolExecutor passed from a parent script
+        """
+
         assert isinstance(executor, ProcessPoolExecutor)
         return executor.submit(self.run, self._namespace_id, self._name, pipeline)
+
+    def runDaskDistributed(self, pipeline, client):
+        """ 
+        Submit functions to dask workers.
+        Dask can track dependencies via a semaphore future, so we pass that explicitly and submit each function individually 
+
+        :params: pipeline - an ordered list of (function, params) tuples to execute
+        :params: client - a dask client
+        """
+        assert isinstance(client, Client)
+        future = client.submit (bootstrap, self._name)
+        for func in pipeline: 
+            module = func[0]
+            params = func[1]
+            future = client.submit (module, self._namespace_id, self._name, params, semaphore=future)
+        return future
+
 
     def add(self, node: Node):
         """
