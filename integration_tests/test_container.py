@@ -11,7 +11,7 @@ from data_processing.radiology.cli.collect_csv_segment import collect_result_seg
 from concurrent.futures import ProcessPoolExecutor
 from dask.distributed import Client
 
-dask_client = Client("pllimsksparky1:8786")
+dask_client = Client()
 dask_client.upload_file('data_processing/radiology/cli/collect_csv_segment.py')
 dask_client.upload_file('data_processing/radiology/cli/extract_radiomics.py')
 dask_client.upload_file('data_processing/radiology/cli/randomize_contours.py')
@@ -31,7 +31,7 @@ container.createNamespace("my-analysis")
 
 futures = []
 
-for patient in ['QIN-BREAST-01-0001', 'QIN-BREAST-01-0002']:
+for patient in ['QIN-BREAST-01-0001', 'QIN-BREAST-01-0002','QIN-BREAST-01-0001', 'QIN-BREAST-01-0002','QIN-BREAST-01-0001', 'QIN-BREAST-01-0002','QIN-BREAST-01-0001', 'QIN-BREAST-01-0002','QIN-BREAST-01-0001', 'QIN-BREAST-01-0002','QIN-BREAST-01-0001', 'QIN-BREAST-01-0002','QIN-BREAST-01-0001', 'QIN-BREAST-01-0002']:
     container = Container(cfg).setNamespace   ("my-analysis")
     container.createContainer(patient, 'patient')
     container.setContainer   (patient)
