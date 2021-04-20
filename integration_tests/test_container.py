@@ -13,9 +13,6 @@ if __name__=='__main__':
     backend = sys.argv[1]
     print ("Submitting to", backend)
 
-    if backend=='local':
-        container.runLocal(pipeline)
-
     elif backend=='pool':
         from concurrent.futures import ProcessPoolExecutor
         executor = ProcessPoolExecutor(20)
