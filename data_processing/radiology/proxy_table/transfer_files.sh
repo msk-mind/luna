@@ -19,6 +19,7 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: SOURCE_PATH = $SOURCE_PATH" >> $LOG_FIL
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: RAW_DATA_PATH = $RAW_DATA_PATH" >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: FILE_COUNT = $FILE_COUNT" >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: DATA_SIZE = $DATA_SIZE" >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: FILE_TYPE = FILE_TYPE" >> $LOG_FILE;
 
 
 # validate env vars - check if they exist
@@ -37,6 +38,8 @@ let exit_code=$?+$exit_code
 [ "${FILE_COUNT}" ]
 let exit_code=$?+$exit_code
 [ "${DATA_SIZE}" ]
+let exit_code=$?+$exit_code
+[ "${FILE_TYPE}" ]
 let exit_code=$?+$exit_code
 
 if [ $exit_code -eq 0 ]
@@ -82,7 +85,7 @@ fi
 ########################### verify post-conditions ###########################
 
 # verify and log and log file counts
-file_count=$(find $RAW_DATA_PATH -type f -name "*" | wc -l)
+file_count=$(find $RAW_DATA_PATH -type f -name "*.$FILE_TYPE" | wc -l)
 [ $FILE_COUNT -eq $file_count ];
 
 let exit_code=$?+$exit_code

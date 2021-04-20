@@ -127,6 +127,7 @@ def transfer_files():
         os.environ['RAW_DATA_PATH'] = cfg.get_value(path=DATA_CFG+'::RAW_DATA_PATH')
         os.environ['FILE_COUNT'] = str(cfg.get_value(path=DATA_CFG+'::FILE_COUNT'))
         os.environ['DATA_SIZE'] = str(cfg.get_value(path=DATA_CFG+'::DATA_SIZE'))
+        os.environ['FILE_TYPE'] = str(cfg.get_value(path=DATA_CFG+'::FILE_TYPE'))
 
         transfer_cmd = ["time", "./data_processing/radiology/proxy_table/transfer_files.sh"]
 
@@ -145,6 +146,7 @@ def transfer_files():
             del os.environ['RAW_DATA_PATH']
             del os.environ['FILE_COUNT']
             del os.environ['DATA_SIZE']
+            del os.environ['FILE_TYPE']
 
 
         if exit_code != 0:
