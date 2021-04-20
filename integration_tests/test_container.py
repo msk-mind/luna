@@ -38,7 +38,8 @@ if __name__=='__main__':
     futures = []
 
     for patient in ['QIN-BREAST-01-0001', 'QIN-BREAST-01-0002']:
-        container = Container(cfg).setNamespace   ("my-analysis")
+        container = Container(cfg).setNamespace("my-analysis")
+
         container.createContainer(patient, 'patient')
         container.setContainer   (patient)
 
