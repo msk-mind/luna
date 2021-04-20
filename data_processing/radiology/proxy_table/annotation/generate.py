@@ -127,6 +127,10 @@ def create_proxy_table(data_config):
                 and cfg.has_value(path=const.DATA_CFG+'::METADATA_COLUMNS') \
                 and cfg.has_value(path=const.DATA_CFG+'::METADATA_JOIN_ON'):
 
+            # copy csv to configs
+            shutil.copy(cfg.get_value(path=const.DATA_CFG+'::METADATA_CSV'),
+                        const.CONFIG_LOCATION(cfg))
+
             # TODO: once radiology segmentation information is on REDCap join with that table.
             annotation_metadata = spark.read.load(cfg.get_value(path=const.DATA_CFG+'::METADATA_CSV'),
                                                   format="csv", header="true", inferSchema="true")
