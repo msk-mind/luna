@@ -34,7 +34,7 @@ def cli(cohort_id, container_id, method_param_path):
         method_data = json.load(json_file)
     extract_voxels_with_container(cohort_id, container_id, method_data)
 
-def extract_voxels_with_container(cohort_id: str, container_id: str, method_data: dict):
+def extract_voxels_with_container(cohort_id: str, container_id: str, method_data: dict, semaphore=0):
     """
     Using the container API interface, extract voxels for a given scan container
     """
@@ -68,7 +68,8 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
         output_node = Node("Voxels", method_id, properties)
         container.add(output_node)
         container.saveAll()
-
+    finally:
+        return semaphore + 1   
 
 if __name__ == "__main__":
     cli()

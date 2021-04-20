@@ -34,7 +34,7 @@ def cli(cohort_id, container_id, method_param_path):
         method_data = json.load(json_file)
     generate_scan_with_container(cohort_id, container_id, method_data)
 
-def generate_scan_with_container(cohort_id, container_id, method_data):
+def generate_scan_with_container(cohort_id, container_id, method_data, semaphore=0):
     """
     Using the container API interface, generate a volumetric image for a given scan container
     """
@@ -64,7 +64,8 @@ def generate_scan_with_container(cohort_id, container_id, method_data):
         output_node = Node("VolumetricImage", method_id, properties)
         container.add(output_node)
         container.saveAll()
-
+    finally:
+        return semaphore + 1   
 
 if __name__ == "__main__":
     cli()

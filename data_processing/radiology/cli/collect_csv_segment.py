@@ -36,7 +36,7 @@ def cli(cohort_id, container_id, method_param_path):
         method_data = json.load(json_file)
     collect_result_segment_with_container(cohort_id, container_id, method_data)
 
-def collect_result_segment_with_container(cohort_id, container_id, method_data):
+def collect_result_segment_with_container(cohort_id, container_id, method_data, semaphore=0):
     """
     Using the container API interface, collect csv type output into a single container
     """
@@ -79,11 +79,13 @@ def collect_result_segment_with_container(cohort_id, container_id, method_data):
         }
 
     except Exception as e:
-        container.logger.exception (f"{e}, stopping job execution...")
+        input_container.logger.exception (f"{e}, stopping job execution...")
     else:
         output_node = Node("ResultSegment", f"slice-{input_container._container_id}", properties)
         output_container.add(output_node)
         output_container.saveAll()
+    finally:
+        return semaphore + 1   
 
 
 

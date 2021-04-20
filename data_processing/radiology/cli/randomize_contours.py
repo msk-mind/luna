@@ -34,7 +34,7 @@ def cli(cohort_id, container_id, method_param_path):
         method_data = json.load(json_file)
     randomize_contours_with_container(cohort_id, container_id, method_data)
 
-def randomize_contours_with_container(cohort_id: str, container_id: str, method_data: dict):
+def randomize_contours_with_container(cohort_id: str, container_id: str, method_data: dict, semaphore=0):
     """
     Using the container API interface, perform MIRP contour randomization
     """
@@ -75,7 +75,8 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
         container.add(new_pertubation_node)
         container.add(new_supervoxel_node)
         container.saveAll()
-
+    finally:
+        return semaphore + 1   
 
 if __name__ == "__main__":
     cli()

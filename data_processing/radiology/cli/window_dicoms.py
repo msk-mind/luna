@@ -34,7 +34,7 @@ def cli(cohort_id, container_id, method_param_path):
         method_data = json.load(json_file)
     window_dicom_with_container(cohort_id, container_id, method_data)
 
-def window_dicom_with_container(cohort_id, container_id, method_data):
+def window_dicom_with_container(cohort_id, container_id, method_data, semaphore=0):
     """
     Using the container API interface, perform dicom CT preprocessing (windowing)
     """
@@ -67,6 +67,8 @@ def window_dicom_with_container(cohort_id, container_id, method_data):
         output_node = Node("DicomSeries", method_id, properties)
         container.add(output_node)
         container.saveAll()
-    
+    finally:
+        return semaphore + 1   
+
 if __name__ == "__main__":
     cli()
