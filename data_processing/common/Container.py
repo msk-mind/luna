@@ -6,7 +6,7 @@ from data_processing.common.custom_logger   import init_logger
 import os, socket, pathlib, logging
 from minio import Minio
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import subprocess
 
 class Container(object):
@@ -18,7 +18,7 @@ class Container(object):
     Handles the matching and creation of metadata
 
     Example usage:
-    $ container = data_processing.common.GraphEnum.Container( params ).setNamespace("test").lookupAndAttach("1.2.840...")
+    $ container = data_processing.common.GraphEnum.Container( params ).setNamespace("test").setContainer("1.2.840...")
         > Connecting to: neo4j://localhost:7687
         > Connection successfull: True
         > Running on: localhost
@@ -102,24 +102,72 @@ class Container(object):
         self.params = params
         self._node_commits    = {}
 
-    
+    def createNamespace(self, namespace_id: str):
+            """
+            Creates a namesapce, if it doesn't exist, else, tells you it exists
+
+            :params: namespace_id - namespace value 
+            """
+            cohort = Node("cohort", namespace_id)
+            create_res = self._conn.query(f""" MERGE (co:{cohort.get_create_str()}) RETURN co""")
+
+            if len(create_res) == 1:
+                self.logger.info(f"Namespace [{namespace_id}] created successfully")
+
+            return self
+
     def setNamespace(self, namespace_id: str):
         """
-        Sets the namespace for this container's commits
+        Sets the namespace for this container's commits, if it exists
 
         :params: namespace_id - namespace value 
         """
-        self._namespace_id = namespace_id
-        self._bucket_id    = namespace_id.lower().replace('_','-')
-        self.logger.debug ("Container namespace: %s", self._namespace_id)
+        self._namespace_id   = namespace_id
+        self._namespace_node = Node("cohort", namespace_id)
+        self._bucket_id      = namespace_id.lower().replace('_','-')
+        
+        self.logger.debug(f"Checking if [{namespace_id}] exists...")
+        
+        match_res = self._conn.query(f""" MATCH (co:{self._namespace_node.get_match_str()}) RETURN co""")
+
+        if not len(match_res) == 1:
+            raise RuntimeError( f"Namespace [{namespace_id}] does not exist, call .createNamespace() first!")
 
         if self.params.get('OBJECT_STORE_ENABLED',  False):
             if not self._client.bucket_exists(self._bucket_id):
                 self._client.make_bucket(self._bucket_id)
 
         return self
+
+    def createContainer(self, container_id, container_type):
+        """
+        Checks if the node referenced by container_id is a valid container, queries the metastore for relevant metadata
+
+        :params: container_id - unique container ID
+        "params: type - the type of the container
+        """
+
+        if not container_type in ['generic', 'patient', 'accession', 'scan', 'slide', 'parquet']: 
+            self.logger.warning (f"Container type [{container_type}] invalid, please choose from ['generic', 'patient', 'accession', 'scan', 'slide', 'parquet']" )
+
+        if ":" in container_id: 
+            self.logger.warning (f"Invalid container_id [{container_id}], only use alphanumeric characters")
+        
+        node = Node(container_type, container_id)
+        node.set_namespace( self._namespace_id )
+
+        create_res = self._conn.query(f""" MERGE (container:{node.get_create_str()}) RETURN container""")
+
+        if len(create_res)==1: 
+            self.logger.info(f"Container [{container_id}] of type [{container_type}] created or matched successfully!")
+        else:
+            self.logger.error("The container does not exists")
+        
+        return self
+
+
     
-    def lookupAndAttach(self, container_id):
+    def setContainer(self, container_id):
         """
         Checks if the node referenced by container_id is a valid container, queries the metastore for relevant metadata
 
@@ -130,7 +178,9 @@ class Container(object):
 
         # Figure out how to match the node
         if isinstance(container_id, str) and not "uid://" in container_id: 
-            match_clause = f"""WHERE container.qualified_address = '{container_id.lower()}'"""
+            node = Node("generic", container_id)
+            node.set_namespace( self._namespace_id )
+            match_clause = f"""WHERE container.qualified_address = '{node.get_address()}' """
         elif isinstance(container_id, str) and "uid://" in container_id: 
             match_clause = f"""WHERE id(container) = {container_id.replace('uid://', '')} """
         elif isinstance(container_id, int):
@@ -146,11 +196,11 @@ class Container(object):
         
         # Check if the results are singleton (they should be... since we only query unique IDs!!!) 
         if res is None or len(res) == 0: 
-            self.logger.warning ("Not found")
+            self.logger.warning (f"Container [{container_id}] does not exist, you can try creating it first with createContainer()")
+            self._attached = True
             return self
 
         # Set some potentially import parameters
-        self.logger.info ("Found: %s", res)
         self._container_id  = res[0]["id(container)"]
         self._name          = res[0]["container.name"]
         self._qualifiedpath = res[0]["container.qualified_address"]
@@ -176,66 +226,15 @@ class Container(object):
         self.logger = init_logger(f'logs/container-{self.address}.log')
         self.logger.info ("Successfully attached to: %s %s %s", self._type, self._container_id, self._qualifiedpath)
         self._attached = True
+
         return self
 
     def isAttached(self):
         """
-        Returns true if container was properly attached (i.e. checks in lookupAndAttach succeeded), else False
+        Returns true if container was properly attached (i.e. checks in setContainer succeeded), else False
         """
         self.logger.debug ("Attached: %s", self._attached)
         return self._attached
-
-
-    def listTypes(self):
-        """
-        Query graph DB container node for dependent data nodes, and list them  
-
-        :example: listTypes()
-            > INFO - Available types: {'radiomics', 'dicom', 'mha', 'globals', 'dataset', 'nrrd', 'mhd'}
-        """
-
-        assert self.isAttached()
-
-        res = self._conn.query(f"""
-            MATCH (container)-[:HAS_DATA]-(data) 
-            WHERE id(container) = {self._container_id}
-            RETURN labels(data)"""
-        )
-        types = set()
-        [types.update(rec['labels(data)']) for rec in res ]
-        self.logger.info("Available types: %s", types)
-
-    def listData(self, type, view=""):
-        """
-        Query graph DB container node for dependent data nodes, and list them  
-
-        :params: type - the type of data designed 
-            e.g. radiomics, mha, dicom, png, svs, geojson, etc.
-        :params: view - can be used to filter nodes
-            e.g. data.source='generateMHD'
-            e.g. data.label='Right'
-            e.g. data.namespace in ['default', 'my_cohort']
-
-        :example: ls("png") gets data nodes of type "png" and prints the repr of each node
-        """
-        assert self.isAttached()
-
-        # Prepend AND since the query runs with a WHERE on the container ID by default
-        if view is not "": view = "AND " + view
-
-        # Run query, subject to SQL injection attacks (but right now, our entire system is)
-        res = self._conn.query(f"""
-            MATCH (container)-[:HAS_DATA]-(data:{type}) 
-            WHERE id(container) = {self._container_id}
-            {view}
-            RETURN data"""
-        )
-        # Catches bad queries
-        # If successfull query, reconstruct a Node object
-        if res is None or len(res) == 0: 
-            return None
-        else:
-            [self.logger.info(Node(rec['data']['type'], rec['data']['name'], dict(rec['data'].items()))) for rec in res]
 
 
     def get(self, type, name):
@@ -278,6 +277,17 @@ class Container(object):
 
         return node
     
+    @staticmethod
+    def run(namespace, container_id, pipeline):
+        for func in pipeline: func[0]( namespace, container_id, func[1])
+    
+    def runLocal(self, pipeline):
+        self.run (self._namespace_id, self._name, pipeline)
+
+    def runProcessPoolExecutor(self, pipeline, executor):
+        assert isinstance(executor, ProcessPoolExecutor)
+        return executor.submit(self.run, self._namespace_id, self._name, pipeline)
+
     def add(self, node: Node):
         """
         Adds a node to a temporary dictonary that will be used to save/commit nodes to the relevant databases
@@ -332,12 +342,12 @@ class Container(object):
         """
         # Loop through all nodes in commit dictonary, and run query
         # Will fully overwrite existing nodes, since we assume changes in the FS already occured
-        self.logger.info("Detaching container...")
-        self._attached = False
         self.logger = logging.getLogger(__name__)
 
         future_uploads = []
-        executor = ThreadPoolExecutor(max_workers=4)
+
+        if self.params.get("OBJECT_STORE_ENABLED", False):
+            executor = ThreadPoolExecutor(max_workers=4)
 
         for n in self._node_commits.values():
             self.logger.info ("Committing %s", n.get_match_str())
@@ -371,6 +381,7 @@ class Container(object):
                 if n_count_futures % 1000 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
 
         self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
-        self.logger.info("Shutdown executor %s", executor)                
-        executor.shutdown()    
+        if self.params.get("OBJECT_STORE_ENABLED", False):
+            self.logger.info("Shutdown executor %s", executor)                
+            executor.shutdown()    
         self.logger.info("Done saving all records!!")

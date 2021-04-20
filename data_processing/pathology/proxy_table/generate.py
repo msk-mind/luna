@@ -181,7 +181,7 @@ def update_graph(config_file):
         container = Container( cfg ).setNamespace(namespace)
         for _, row in tuple_to_add.iterrows():
             logger.info ("Requesting %s, %s", os.path.join(cohort_uri, "container", "slide", row.slide_id), requests.put(os.path.join(cohort_uri, "container", "slide", row.slide_id)).text)
-            container.lookupAndAttach(row.slide_id)
+            container.setContainer(row.slide_id)
             properties = row.metadata
             properties['file'] = row.path.split(':')[-1]
             node = Node("WholeSlideImage", "pathology.etl", properties)
