@@ -13,7 +13,7 @@ if __name__=='__main__':
     backend = sys.argv[1]
     print ("Submitting to", backend)
 
-    elif backend=='pool':
+    if backend=='pool':
         from concurrent.futures import ProcessPoolExecutor
         executor = ProcessPoolExecutor(20)
 
