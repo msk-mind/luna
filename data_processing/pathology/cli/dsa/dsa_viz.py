@@ -280,11 +280,9 @@ def qupath_polygon(ctx, data_config):
 
     elements = []
     for polygon in pixel_clf_polygons:
-
-        
+           
         props = polygon.properties
         if 'classification' not in props:
-            print(polygon)
             continue
 
         label_name = polygon.properties['classification']['name']
