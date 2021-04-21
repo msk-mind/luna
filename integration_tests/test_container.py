@@ -20,6 +20,8 @@ if __name__=='__main__':
     elif backend=='dask':
         from dask.distributed import Client
         dask_client = Client()
+        
+        # This souldn't be neccessary once we have stable releases of data_processing
         dask_client.upload_file('data_processing/radiology/cli/collect_csv_segment.py')
         dask_client.upload_file('data_processing/radiology/cli/extract_radiomics.py')
         dask_client.upload_file('data_processing/radiology/cli/randomize_contours.py')
@@ -57,7 +59,7 @@ if __name__=='__main__':
             "label_input_tag": "annotation_ata"
         }
 
-        radiomics_job_config = {
+        radiomics_job_config_original = {
                 "image_input_tag": "main_scan",
                 "label_input_tag": "annotation_ata",
                 "job_tag" : "my_radiomics_original",
@@ -73,7 +75,7 @@ if __name__=='__main__':
             }
         }
 
-        pertubation_job_config = {
+        radiomics_job_config_pertubation = {
                 "image_input_tag": "mirp_pertubation",
                 "label_input_tag": "mirp_pertubation",
                 "job_tag" : "my_radiomics_pertubation",
@@ -97,8 +99,8 @@ if __name__=='__main__':
 
         pipeline = [
             (randomize_contours_with_container,     pertubation_job_config),
-            (extract_radiomics_with_container,      radiomics_job_config),
-            (extract_radiomics_with_container,      pertubation_job_config),
+            (extract_radiomics_with_container,      radiomics_job_config_original),
+            (extract_radiomics_with_container,      radiomics_job_config_pertubation),
             (collect_result_segment_with_container, collect_job_config),
         ]
 
