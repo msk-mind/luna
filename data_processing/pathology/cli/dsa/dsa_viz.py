@@ -28,7 +28,7 @@ def check_filepaths_valid(filepaths):
             all_files_found = False 
     return all_files_found
 
-def save_push_results(base_annotation, elements, annotation_name, image_filename, uri, token):
+def save_push_results(base_annotation, elements, annotation_name, output_folder, image_filename, uri, token):
     """ 
     Populate base annotations, save to json outfile, and push to DSA
     """
@@ -36,10 +36,9 @@ def save_push_results(base_annotation, elements, annotation_name, image_filename
 
     dsa_annotation["elements"] = elements
 
-    # added so annotation name in DSA doesn't include parent directories if present in "output" of config file
-    dsa_annotation["name"] = os.path.basename(annotation_name)
+    dsa_annotation["name"] = annotation_name
 
-    outfile_name = annotation_name.replace(" ","_") + ".json"
+    outfile_name = os.path.join(output_folder, annotation_name.replace(" ","_") + ".json")
     print('Writing annotation to ', outfile_name)
 
     try:
@@ -143,7 +142,7 @@ def stardist_polygon(ctx, data_config):
     new_file.close()
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["output"], data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"],  data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -202,7 +201,7 @@ def stardist_cell(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["output"], data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -251,7 +250,7 @@ def regional_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["output"], data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -280,7 +279,7 @@ def qupath_polygon(ctx, data_config):
 
     elements = []
     for polygon in pixel_clf_polygons:
-           
+
         props = polygon.properties
         if 'classification' not in props:
             continue
@@ -316,7 +315,7 @@ def qupath_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["output"], data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 @cli.command()
@@ -364,7 +363,7 @@ def bitmask_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["output"], data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -413,9 +412,9 @@ def heatmap(ctx, data_config):
         element["points"] = coords
         elements.append(element)
 
-    annotation_name = data["column"] + "_" + data["output"]
+    annotation_name = data["column"] + "_" + data["annotation_name"]
 
-    save_push_results(base_dsa_annotation, elements, annotation_name, data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, annotation_name, data['output_folder'], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
