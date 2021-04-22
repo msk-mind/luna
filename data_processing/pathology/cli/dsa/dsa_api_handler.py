@@ -40,7 +40,7 @@ def check_annotation_uuid(item_uuid, dsa_annotation_json, uri, token):
 
     uuid = None
     for annotation in annotations:
-        if annotation['_modelType'] == 'annotation':
+        if isinstance(annotation, dict) and annotation['_modelType'] == 'annotation':
             if annotation['annotation']['name'] == dsa_annotation_json["name"]:
                 uuid = annotation['_id']
 
