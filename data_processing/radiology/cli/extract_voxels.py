@@ -15,7 +15,7 @@ import click
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.Container       import Container
+from data_processing.common.DataStore       import DataStore
 from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
 
@@ -34,13 +34,13 @@ def cli(cohort_id, container_id, method_param_path):
         method_data = json.load(json_file)
     extract_voxels_with_container(cohort_id, container_id, method_data)
 
-def extract_voxels_with_container(cohort_id: str, container_id: str, method_data: dict):
+def extract_voxels_with_container(cohort_id: str, container_id: str, method_data: dict, semaphore=0):
     """
     Using the container API interface, extract voxels for a given scan container
     """
 
     # Do some setup
-    container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
+    container   = DataStore( cfg ).setNamespace(cohort_id).setContainer(container_id)
     method_id   = method_data.get("job_tag", "none")
 
     image_node  = container.get("VolumetricImage", method_data['image_input_tag']) 
@@ -68,7 +68,8 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
         output_node = Node("Voxels", method_id, properties)
         container.add(output_node)
         container.saveAll()
-
+    finally:
+        return semaphore + 1   
 
 if __name__ == "__main__":
     cli()

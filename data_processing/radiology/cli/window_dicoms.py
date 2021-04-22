@@ -15,7 +15,7 @@ import click
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.Container       import Container
+from data_processing.common.DataStore       import DataStore
 from data_processing.common.Node            import Node
 from data_processing.common.config import ConfigSet
 
@@ -34,13 +34,13 @@ def cli(cohort_id, container_id, method_param_path):
         method_data = json.load(json_file)
     window_dicom_with_container(cohort_id, container_id, method_data)
 
-def window_dicom_with_container(cohort_id, container_id, method_data):
+def window_dicom_with_container(cohort_id, container_id, method_data, semaphore=0):
     """
     Using the container API interface, perform dicom CT preprocessing (windowing)
     """
 
     # Do some setup
-    container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
+    container   = DataStore( cfg ).setNamespace(cohort_id).setContainer(container_id)
     method_id   = method_data.get("job_tag", "none")
 
     dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
@@ -67,6 +67,8 @@ def window_dicom_with_container(cohort_id, container_id, method_data):
         output_node = Node("DicomSeries", method_id, properties)
         container.add(output_node)
         container.saveAll()
-    
+    finally:
+        return semaphore + 1   
+
 if __name__ == "__main__":
     cli()

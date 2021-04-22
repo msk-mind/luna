@@ -14,7 +14,7 @@ from pathlib import Path
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.Container       import Container
+from data_processing.common.DataStore       import DataStore
 from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
 
@@ -39,7 +39,7 @@ def load_slide_with_container(cohort_id, container_id, method_data):
     Using the container API interface, fill scan with original slide from table
     """
     # Do some setup
-    container   = Container( cfg ).setNamespace(cohort_id).lookupAndAttach(container_id)
+    container   = DataStore( cfg ).setNamespace(cohort_id).setContainer(container_id)
     method_id   = method_data["job_tag"]
 
     try:

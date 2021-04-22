@@ -14,8 +14,8 @@ from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
 from data_processing.common.utils import generate_uuid
-from data_processing.common.Container import Container 
-from data_processing.common.Container import Node 
+from data_processing.common.DataStore import DataStore 
+from data_processing.common.DataStore import Node 
 
 from pyspark.sql.functions import udf, lit, col, array
 from pyspark.sql.types import StringType, MapType
@@ -178,10 +178,10 @@ def update_graph(config_file):
         tuple_to_add = spark.read.format("delta").load(table_path).select("slide_id", "path", "metadata").toPandas()
 
     with CodeTimer(logger, 'synchronize lake'):
-        container = Container( cfg ).setNamespace(namespace)
+        container = DataStore( cfg ).setNamespace(namespace)
         for _, row in tuple_to_add.iterrows():
             logger.info ("Requesting %s, %s", os.path.join(cohort_uri, "container", "slide", row.slide_id), requests.put(os.path.join(cohort_uri, "container", "slide", row.slide_id)).text)
-            container.lookupAndAttach(row.slide_id)
+            container.setContainer(row.slide_id)
             properties = row.metadata
             properties['file'] = row.path.split(':')[-1]
             node = Node("WholeSlideImage", "pathology.etl", properties)
