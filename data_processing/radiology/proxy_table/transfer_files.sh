@@ -19,7 +19,7 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: SOURCE_PATH = $SOURCE_PATH" >> $LOG_FIL
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: RAW_DATA_PATH = $RAW_DATA_PATH" >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: FILE_COUNT = $FILE_COUNT" >> $LOG_FILE;
 echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: DATA_SIZE = $DATA_SIZE" >> $LOG_FILE;
-echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: FILE_TYPE = FILE_TYPE" >> $LOG_FILE;
+echo "$(date '+%Y-%m-%d %H:%M:%S') INFO: FILE_TYPE = $FILE_TYPE" >> $LOG_FILE;
 
 
 # validate env vars - check if they exist
