@@ -59,6 +59,8 @@ def push_annotation_to_dsa_image(item_uuid, dsa_annotation_json, uri, token):
     uuid = check_annotation_uuid(item_uuid, dsa_annotation_json["name"], uri, token)
 
     if uuid:
+        ## Note. Updating AnnotationElements in a large mongo document with PUT can result in timeout
+        # ref: https://github.com/girder/large_image/blob/cbe308120ff194904654cbd05839267d1a0ba78b/girder_annotation/girder_large_image_annotation/rest/annotation.py#L303
         request_url = f"http://{uri}/api/v1/annotation/{uuid}?itemId={item_uuid}"
         response = requests.put(request_url, data=orjson.dumps(dsa_annotation_json).decode(), headers=headers)
     else:
