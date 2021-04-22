@@ -2,7 +2,6 @@
   "input": "path/to/tile_level.csv",
   "image_filename": "123.svs",
   "annotation_name": "tile-based heatmap",
-  "output_folder":"path/to/where/dsa/annotations/will/be/written",
   "column": "otsu_score",
   "tile_size": 128,
   "full_resolution_magnification": 20,

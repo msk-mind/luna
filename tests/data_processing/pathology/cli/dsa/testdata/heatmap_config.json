@@ -3,7 +3,6 @@
   "image_filename": "123.svs",
   "column": "otsu_score",
   "annotation_name": "test",
-  "output_folder": "tests/data_processing/pathology/cli/dsa/testouts",
   "tile_size": 128,
   "full_resolution_magnification": 20,
   "tile_magnification": 20
