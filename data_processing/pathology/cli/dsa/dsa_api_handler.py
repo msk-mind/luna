@@ -1,4 +1,4 @@
-import  json
+import json, orjson
 import requests
 import re
 import time
@@ -16,8 +16,8 @@ def get_item_uuid(image_name, uri, token):
     get_dsa_uuid_url = f"http://{uri}/api/v1/item?text={image_id}&limit=50&sort=lowerName&sortdir=1"
     headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Girder-Token': f'{token}'}
     get_dsa_uuid_response = requests.get(get_dsa_uuid_url, headers=headers)
-    uuid_response = json.loads(get_dsa_uuid_response.text)
-
+    uuid_response = json.loads(get_dsa_uuid_response.text) 
+    
     if len(uuid_response) > 0 :
         # multiple entries can come up based on substring matches, return the correct item id by checking name field in dictionary.
         for uuid_response_dict in uuid_response:
@@ -28,7 +28,7 @@ def get_item_uuid(image_name, uri, token):
     return None
 
 
-def check_annotation_uuid(item_uuid, dsa_annotation_json, uri, token):
+def check_annotation_uuid(item_uuid, dsa_annotation_name, uri, token):
     """
     If annotaiton with the same name exists, update annotation.
     Otherwise push a new annotation.
@@ -41,7 +41,7 @@ def check_annotation_uuid(item_uuid, dsa_annotation_json, uri, token):
     uuid = None
     for annotation in annotations:
         if isinstance(annotation, dict) and annotation['_modelType'] == 'annotation':
-            if annotation['annotation']['name'] == dsa_annotation_json["name"]:
+            if annotation['annotation']['name'] == dsa_annotation_name:
                 uuid = annotation['_id']
 
     return uuid
@@ -56,14 +56,14 @@ def push_annotation_to_dsa_image(item_uuid, dsa_annotation_json, uri, token):
     headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Girder-Token': f'{token}'}
 
     # annotation with the same name exists for the item, then update existing annotation.
-    uuid = check_annotation_uuid(item_uuid, dsa_annotation_json, uri, token)
+    uuid = check_annotation_uuid(item_uuid, dsa_annotation_json["name"], uri, token)
 
     if uuid:
         request_url = f"http://{uri}/api/v1/annotation/{uuid}?itemId={item_uuid}"
-        response = requests.put(request_url, data=json.dumps(dsa_annotation_json), headers=headers)
+        response = requests.put(request_url, data=orjson.dumps(dsa_annotation_json).decode(), headers=headers)
     else:
         request_url = f"http://{uri}/api/v1/annotation?itemId={item_uuid}"
-        response = requests.post(request_url, data=json.dumps(dsa_annotation_json), headers=headers)
+        response = requests.post(request_url, data=orjson.dumps(dsa_annotation_json).decode(), headers=headers)
 
     if response.status_code == 200:
         print("Annotation successfully pushed to DSA.")
