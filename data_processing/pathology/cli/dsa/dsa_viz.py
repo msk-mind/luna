@@ -37,20 +37,22 @@ def save_push_results(base_annotation, elements, annotation_name, output_folder,
     dsa_annotation["elements"] = elements
 
     dsa_annotation["name"] = annotation_name
-
+    """
     outfile_name = os.path.join(output_folder, annotation_name.replace(" ","_") + ".json")
     print('Writing annotation to ', outfile_name)
 
+    start = time.time()
     try:
         with open(outfile_name, 'w') as outfile:
             json.dump(dsa_annotation, outfile)
     except Exception as e:
         print("ERROR: write permissions needs to be enabled for: ", os.path.dirname(outfile_name))
         return
-
+    print("Time to write annotation json ", time.time() - start)
+    """
     dsa_uuid = get_item_uuid(image_filename, uri, token)
 
-    if not get_item_uuid:
+    if not dsa_uuid:
         print("ERROR: could not find item in DSA matching image name:" , image_filename)
         return
 
