@@ -28,25 +28,6 @@ def get_item_uuid(image_name, uri, token):
     return None
 
 
-def check_annotation_uuid(item_uuid, dsa_annotation_name, uri, token):
-    """
-    If annotaiton with the same name exists, update annotation.
-    Otherwise push a new annotation.
-    """
-    headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Girder-Token': f'{token}'}
-    request_url = f"http://{uri}/api/v1/annotation/item/{item_uuid}"
-    response = requests.get(request_url, headers=headers)
-    annotations = response.json()
-
-    uuid = None
-    for annotation in annotations:
-        if isinstance(annotation, dict) and annotation['_modelType'] == 'annotation':
-            if annotation['annotation']['name'] == dsa_annotation_name:
-                uuid = annotation['_id']
-
-    return uuid
-
-
 def push_annotation_to_dsa_image(item_uuid, dsa_annotation_json, uri, token):
     """
     Pushes DSA annotation to DSA, adding given item_uuid (slide-specific id)
@@ -55,17 +36,10 @@ def push_annotation_to_dsa_image(item_uuid, dsa_annotation_json, uri, token):
 
     headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Girder-Token': f'{token}'}
 
-    # annotation with the same name exists for the item, then update existing annotation.
-    uuid = check_annotation_uuid(item_uuid, dsa_annotation_json["name"], uri, token)
-
-    if uuid:
-        ## Note. Updating AnnotationElements in a large mongo document with PUT can result in timeout
-        # ref: https://github.com/girder/large_image/blob/cbe308120ff194904654cbd05839267d1a0ba78b/girder_annotation/girder_large_image_annotation/rest/annotation.py#L303
-        request_url = f"http://{uri}/api/v1/annotation/{uuid}?itemId={item_uuid}"
-        response = requests.put(request_url, data=orjson.dumps(dsa_annotation_json).decode(), headers=headers)
-    else:
-        request_url = f"http://{uri}/api/v1/annotation?itemId={item_uuid}"
-        response = requests.post(request_url, data=orjson.dumps(dsa_annotation_json).decode(), headers=headers)
+    # always post a new annotation.
+    # updating or deleting an existing annotation for a large annotation document results in timeout.
+    request_url = f"http://{uri}/api/v1/annotation?itemId={item_uuid}"
+    response = requests.post(request_url, data=orjson.dumps(dsa_annotation_json).decode(), headers=headers)
 
     if response.status_code == 200:
         print("Annotation successfully pushed to DSA.")
