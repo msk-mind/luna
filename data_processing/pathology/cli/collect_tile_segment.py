@@ -21,7 +21,7 @@ import click
 # From common
 from data_processing.common.custom_logger   import init_logger
 from data_processing.common.utils           import get_method_data
-from data_processing.common.Container       import Container
+from data_processing.common.DataStore       import DataStore
 from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
 
@@ -49,8 +49,8 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
     input_tile_data_id   = method_data.get("input_label_tag")
     output_container_id  = method_data.get("output_container")
 
-    output_container = Container( cfg ).setNamespace(cohort_id).createContainer(output_container_id, "parquet").setContainer(output_container_id)
-    input_container  = Container( cfg ).setNamespace(cohort_id).setContainer(container_id)
+    output_container = DataStore( cfg ).setNamespace(cohort_id).createContainer(output_container_id, "parquet").setContainer(output_container_id)
+    input_container  = DataStore( cfg ).setNamespace(cohort_id).setContainer(container_id)
 
     image_node  = input_container.get("TileImages", input_tile_data_id) 
 

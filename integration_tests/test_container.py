@@ -1,7 +1,7 @@
 import sys
 
-from data_processing.common.Container import Container
-from data_processing.common.Container import Node
+from data_processing.common.DataStore import DataStore
+from data_processing.common.DataStore import Node
 from data_processing.common.config import ConfigSet
 
 from data_processing.radiology.cli.randomize_contours  import randomize_contours_with_container
@@ -23,19 +23,19 @@ if __name__=='__main__':
         dask_client.upload_file('data_processing/radiology/cli/collect_csv_segment.py')
         dask_client.upload_file('data_processing/radiology/cli/extract_radiomics.py')
         dask_client.upload_file('data_processing/radiology/cli/randomize_contours.py')
-        dask_client.upload_file('data_processing/common/Container.py')
+        dask_client.upload_file('data_processing/common/DataStore.py')
         dask_client.upload_file('data_processing/common/Node.py')
 
 
     cfg = ConfigSet("APP_CFG", "config.yaml")
 
-    container = Container(cfg)
+    container = DataStore(cfg)
     container.createNamespace("my-analysis")
 
     futures = []
 
     for patient in ['QIN-BREAST-01-0001', 'QIN-BREAST-01-0002']:
-        container = Container(cfg).setNamespace("my-analysis")
+        container = DataStore(cfg).setNamespace("my-analysis")
 
         container.createContainer(patient, 'patient')
         container.setContainer   (patient)

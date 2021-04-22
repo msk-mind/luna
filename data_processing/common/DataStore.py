@@ -7,23 +7,23 @@ import os, socket, pathlib, logging
 from minio import Minio
 
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-from dask.distributed   import Client
+
 
 def bootstrap (container_id): 
     logger = logging.getLogger(__name__)
     logger.info(f"Bootstrapping pipeline for {container_id}")
     return 1
 
-class Container(object):
+class DataStore(object):
     """
-    Container: an abstraction with an id, name, namespace, type, and a list of associated data nodes
+    DataStore: an abstraction with an id, name, namespace, type, and a list of associated data nodes
 
     Interfaces with a metadata store (graph DB) and raw file stores (gpfs, potentially others)
 
     Handles the matching and creation of metadata
 
     Example usage:
-    $ container = data_processing.common.GraphEnum.Container( params ).setNamespace("test").setContainer("1.2.840...")
+    $ container = data_processing.common.GraphEnum.DataStore( params ).setNamespace("test").setContainer("1.2.840...")
         > Connecting to: neo4j://localhost:7687
         > Connection successfull: True
         > Running on: localhost
@@ -36,7 +36,7 @@ class Container(object):
 
     $ container.add(node)
         > Adding: test-0000
-          Container has 1 pending commits
+          DataStore has 1 pending commits
 
     $ container.saveAll()
         > Committing dicom:globals{ hash: 'abc123' name: 'my-dicom', qualified_address: 'test::1.2.840::my-dicom', namespace: 'test', type: 'dicom' , path: 'file:/some/path/1.dcm'}
@@ -49,7 +49,7 @@ class Container(object):
     
     The container includes a logging method:
     $ container.logger.info("I am processing the CT")
-        > 'yyyy-mm-dd h:m:s,ms - Container [1] - INFO - I am processing the CT'
+        > 'yyyy-mm-dd h:m:s,ms - DataStore [1] - INFO - I am processing the CT'
 
     
     """
@@ -141,7 +141,7 @@ class Container(object):
         """
 
         if not container_type in ['generic', 'patient', 'accession', 'scan', 'slide', 'parquet']: 
-            self.logger.warning (f"Container type [{container_type}] invalid, please choose from ['generic', 'patient', 'accession', 'scan', 'slide', 'parquet']" )
+            self.logger.warning (f"DataStore type [{container_type}] invalid, please choose from ['generic', 'patient', 'accession', 'scan', 'slide', 'parquet']" )
 
         if ":" in container_id: 
             self.logger.warning (f"Invalid container_id [{container_id}], only use alphanumeric characters")
@@ -152,7 +152,7 @@ class Container(object):
         create_res = self._conn.query(f""" MERGE (container:{node.get_create_str()}) RETURN container""")
 
         if len(create_res)==1: 
-            self.logger.info(f"Container [{container_id}] of type [{container_type}] created or matched successfully!")
+            self.logger.info(f"DataStore [{container_id}] of type [{container_type}] created or matched successfully!")
         else:
             self.logger.error("The container does not exists")
         
@@ -187,7 +187,7 @@ class Container(object):
         
         # Check if the results are singleton (they should be... since we only query unique IDs!!!) 
         if res is None or len(res) == 0: 
-            self.logger.warning (f"Container [{container_id}] does not exist, you can try creating it first with createContainer()")
+            self.logger.warning (f"DataStore [{container_id}] does not exist, you can try creating it first with createContainer()")
             self._attached = True
             return self
 
@@ -305,6 +305,8 @@ class Container(object):
         :params: pipeline - an ordered list of (function, params) tuples to execute
         :params: client - a dask client
         """
+        from dask.distributed   import Client
+        
         assert isinstance(client, Client)
         future = client.submit (bootstrap, self._name)
         for func in pipeline: 
@@ -359,7 +361,7 @@ class Container(object):
         self.logger.info ("Adding: %s", node.get_address())
         self._node_commits[node.get_address()] = node
         
-        self.logger.info ("Container has %s pending node commits",  len(self._node_commits))
+        self.logger.info ("DataStore has %s pending node commits",  len(self._node_commits))
 
       
     def saveAll(self):

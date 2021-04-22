@@ -15,7 +15,7 @@ import click
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.Container       import Container
+from data_processing.common.DataStore       import DataStore
 from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
 
@@ -40,7 +40,7 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
     """
 
     # Do some setup
-    container   = Container( cfg ).setNamespace(cohort_id).setContainer(container_id)
+    container   = DataStore( cfg ).setNamespace(cohort_id).setContainer(container_id)
     method_id   = method_data.get("job_tag", "none")
 
     image_node  = container.get("VolumetricImage", method_data['image_input_tag']) 

@@ -15,7 +15,7 @@ import click
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.Container       import Container
+from data_processing.common.DataStore       import DataStore
 from data_processing.common.Node            import Node
 from data_processing.common.config import ConfigSet
 
@@ -40,7 +40,7 @@ def generate_scan_with_container(cohort_id, container_id, method_data, semaphore
     """
     try:
          # Do some setup
-        container   = Container( cfg ).setNamespace(cohort_id).setContainer(container_id)
+        container   = DataStore( cfg ).setNamespace(cohort_id).setContainer(container_id)
         method_id   = method_data.get("job_tag", "none")
         
         dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from

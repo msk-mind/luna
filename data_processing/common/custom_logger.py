@@ -15,7 +15,7 @@ class MultilineFormatter(logging.Formatter):
         return output
 
 
-def init_logger(filename='data-processing.log'):
+def init_logger(filename='data-processing.log', level=logging.INFO):
     # Logging configuration
     log_file = filename
 
@@ -23,15 +23,15 @@ def init_logger(filename='data-processing.log'):
     formatter = MultilineFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     fh = logging.FileHandler(log_file)
-    fh.setLevel(logging.INFO)
+    fh.setLevel(level)
     fh.setFormatter(formatter)
     
     if not logger.handlers:
-        logger.setLevel(logging.INFO)
+        logger.setLevel(level)
         # create file handler which logs even debug messages
         # create console handler with a higher log level
         ch = logging.StreamHandler()
-        ch.setLevel(logging.INFO)
+        ch.setLevel(level)
         # create formatter and add it to the handlers
         ch.setFormatter(formatter)
         # add the handlers to logger
@@ -41,4 +41,6 @@ def init_logger(filename='data-processing.log'):
         logger.addHandler(fh)
     print(">>>>>>>> log file at: " + log_file )
     return logger
+
+
 
