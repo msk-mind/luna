@@ -21,6 +21,8 @@ from tests.data_processing.pathology.common.request_mock import CSVMockResponse,
 
 spark = None
 LANDING_PATH = None
+ROOT_PATH = None
+PROJECT_PATH = None
 
 def setup_module(module):
     """ setup any state specific to the execution of the given module."""
@@ -31,11 +33,15 @@ def setup_module(module):
 
     cfg = ConfigSet()
     module.LANDING_PATH = cfg.get_value(path=const.DATA_CFG + '::LANDING_PATH')
+    module.ROOT_PATH = cfg.get_value(path=const.DATA_CFG + '::ROOT_PATH')
 
     if os.path.exists(LANDING_PATH):
         shutil.rmtree(LANDING_PATH)
     os.makedirs(LANDING_PATH)
-
+    module.PROJECT_PATH = os.path.join(ROOT_PATH, "OV_16-158/configs/H&E_OV_16-158_CT_20201028")
+    if os.path.exists(PROJECT_PATH):
+        shutil.rmtree(PROJECT_PATH)
+    os.makedirs(PROJECT_PATH)
 
 def teardown_module(module):
     """ teardown any state that was previously setup with a setup_module
@@ -120,5 +126,6 @@ def test_create_proxy_table(monkeypatch):
 
     monkeypatch.setattr(generate, "process_regional_annotation_slide_row_pandas",
                         mock_process)
+
 
     assert create_proxy_table() == 0  # exit code

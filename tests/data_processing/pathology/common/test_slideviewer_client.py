@@ -7,7 +7,7 @@ import os, sys
 import shutil
 import requests
 from data_processing.common.config import ConfigSet
-from data_processing.common.constants import DATA_CFG
+from data_processing.common.constants import DATA_CFG, CONFIG_LOCATION, PROJECT_LOCATION
 from data_processing.pathology.common.slideviewer_client import get_slide_id, fetch_slide_ids, \
     download_zip, unzip, download_sv_point_annotation
 from tests.data_processing.pathology.common.request_mock import CSVMockResponse, \
@@ -17,7 +17,10 @@ SLIDEVIEWER_API_URL = None
 SLIDEVIEWER_CSV_FILE = None
 LANDING_PATH = None
 PROJECT_ID = None
+PROJECT = None
 zipfile_path = None
+PROJECT_PATH = None
+ROOT_PATH = None
 
 def setup_module(module):
     """ setup any state specific to the execution of the given module."""
@@ -28,12 +31,19 @@ def setup_module(module):
     module.SLIDEVIEWER_API_URL = cfg.get_value(path=DATA_CFG + '::SLIDEVIEWER_API_URL')
     module.LANDING_PATH = cfg.get_value(path=DATA_CFG + '::LANDING_PATH')
     module.PROJECT_ID = cfg.get_value(path=DATA_CFG + '::PROJECT_ID')
+    module.PROJECT = cfg.get_value(path=DATA_CFG + '::PROJECT')
+    module.ROOT_PATH = cfg.get_value(path=DATA_CFG + '::ROOT_PATH')
     module.SLIDEVIEWER_CSV_FILE = cfg.get_value(path=DATA_CFG + '::SLIDEVIEWER_CSV_FILE')
     module.zipfile_path = os.path.join(LANDING_PATH, '24bpp-topdown-320x240.bmp.zip')
 
     if os.path.exists(LANDING_PATH):
         shutil.rmtree(LANDING_PATH)
     os.makedirs(LANDING_PATH)
+
+    module.PROJECT_PATH = os.path.join(ROOT_PATH, "OV_16-158/configs/H&E_OV_16-158_CT_20201028")
+    if os.path.exists(module.PROJECT_PATH):
+        shutil.rmtree(module.PROJECT_PATH)
+    os.makedirs(module.PROJECT_PATH)
 
 
 def teardown_module(module):
@@ -58,8 +68,11 @@ def test_fetch_slide_ids_with_csv(monkeypatch):
 
     monkeypatch.setattr(ConfigSet, "get_value", mock_get_value)
 
-    slides = fetch_slide_ids(None, PROJECT_ID, LANDING_PATH, SLIDEVIEWER_CSV_FILE)
+    config_dir = f"{ROOT_PATH}/{PROJECT}/configs"
 
+    slides = fetch_slide_ids(None, PROJECT_ID, config_dir, SLIDEVIEWER_CSV_FILE)
+
+    assert os.path.exists(f"{config_dir}/project_{PROJECT_ID}.csv")
     assert slides == [['2013;HobS13-283072057510;145197.svs', '145197', 155],
                       ['2013;HobS13-283072057511;145198.svs', '145198', 155],
                       ['2013;HobS13-283072057512;145199.svs', '145199', 155]]
@@ -73,8 +86,10 @@ def test_fetch_slide_ids_without_csv(monkeypatch):
 
     monkeypatch.setattr(requests, "get", mock_get)
 
-    slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, LANDING_PATH)
+    config_dir = f"{ROOT_PATH}/{PROJECT}/configs"
+    slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, config_dir)
 
+    assert os.path.exists(f"{config_dir}/project_{PROJECT_ID}.csv")
     assert slides == [['2013;HobS13-283072057510;1435197.svs', '1435197', 155],
                       ['2013;HobS13-283072057511;1435198.svs', '1435198', 155],
                       ['2013;HobS13-283072057512;1435199.svs', '1435199', 155]]

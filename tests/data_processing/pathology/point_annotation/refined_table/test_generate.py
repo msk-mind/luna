@@ -34,6 +34,7 @@ def test_cli(spark):
         ['-d', 'tests/data_processing/pathology/point_annotation/testdata/point_geojson_config.yaml',
          '-a', 'tests/test_config.yaml'])
 
+    print(result.exc_info)
     assert result.exit_code == 0
 
     assert os.path.exists(app_config_path)

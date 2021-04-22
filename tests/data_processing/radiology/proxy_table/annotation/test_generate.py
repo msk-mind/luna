@@ -12,10 +12,12 @@ project_path = "tests/data_processing/radiology/testdata/test-project"
 mha_table_path = project_path + "/tables/MHA_datasetname"
 mha_app_config_path = project_path + "/configs/MHA_datasetname/app_config.yaml"
 mha_data_config_path = project_path + "/configs/MHA_datasetname/data_config.yaml"
+mha_data_csv_path = project_path + "/configs/MHA_datasetname/metadata.csv"
 
 mhd_table_path = project_path + "/tables/MHD_datasetname"
 mhd_app_config_path = project_path + "/configs/MHD_datasetname/app_config.yaml"
 mhd_data_config_path = project_path + "/configs/MHD_datasetname/data_config.yaml"
+mhd_data_csv_path = project_path + "/configs/MHD_datasetname/metadata.csv"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -44,6 +46,7 @@ def test_cli_mha(spark):
 
     assert os.path.exists(mha_app_config_path)
     assert os.path.exists(mha_data_config_path)
+    assert os.path.exists(mha_data_csv_path)
 
     df = spark.read.format("delta").load(os.path.join(os.getcwd(), mha_table_path))
     df.show(10, False)
@@ -65,6 +68,7 @@ def test_cli_mhd(spark):
 
     assert os.path.exists(mhd_app_config_path)
     assert os.path.exists(mhd_data_config_path)
+    assert os.path.exists(mhd_data_csv_path)
 
     df = spark.read.format("delta").load(os.path.join(os.getcwd(), mhd_table_path))
     df.show(10, False)

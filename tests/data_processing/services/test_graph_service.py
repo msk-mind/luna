@@ -118,7 +118,7 @@ def test_cli_point_raw_json_table(mocker):
 
     assert result.exit_code == 0
 
-def test_cli_point_raw_json_table(mocker):
+def test_cli_point_geojson_table(mocker):
 
     # mock graph connection
     mocker.patch.object(Neo4jConnection, 'query')
