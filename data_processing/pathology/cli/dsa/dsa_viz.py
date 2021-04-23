@@ -96,21 +96,13 @@ def stardist_polygon(ctx, data_config):
     # can't handle NaNs for vectors, do this to replace all NaNs
     # TODO: find better fix
     # for now: https://stackoverflow.com/questions/17140886/how-to-search-and-replace-text-in-a-file
-    new_filepath = data["input"].replace(".geojson", "_NAN_modified.geojson")
-    
-    try:
-        with open(data["input"], 'r') as input_file:
-            filedata = input_file.read()
-        newdata = filedata.replace("NaN","-1")
-        with open(new_filepath,'w') as new_file:
-            new_file.write(newdata)
-    except Exception as e:
-        print("ERROR: write permissions needs to be enabled for: ", os.path.dirname(new_filepath))
-        return
-    
-    new_file = open(new_filepath, 'r')
+
+    with open(data["input"], 'r') as input_file:
+        filedata = input_file.read()
+    newdata = filedata.replace("NaN","-1")
+
     elements = []
-    for cell in ijson.items(new_file, "item"):
+    for cell in ijson.items(newdata, "item"):
         label_name = cell['properties']['classification']['name']
         coord_list = list(cell['geometry']['coordinates'][0])
 
@@ -129,7 +121,6 @@ def stardist_polygon(ctx, data_config):
 
         elements.append(element)
 
-    new_file.close()
     print("Time to build annotation", time.time() - start)
 
     save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["image_filename"],
