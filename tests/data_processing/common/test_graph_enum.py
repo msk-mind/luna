@@ -43,7 +43,7 @@ def test_metadata_create():
 
     create_string = Node("VolumetricImage", "SCAN-001", properties=properties).get_create_str()
     assert "VolumetricImage:globals" in create_string    
-    assert "qualified_address: 'my_cohort::volumetricimage-scan-001'"  in create_string
+    assert "qualified_address: 'my_cohort::VolumetricImage-SCAN-001'"  in create_string
     assert "dim"  in create_string
 
 def test_metadata_match():
@@ -52,7 +52,7 @@ def test_metadata_match():
     properties['dim'] = 3
 
     match_string = Node("VolumetricImage", "SCAN-002", properties=properties).get_match_str()
-    assert "qualified_address: 'my_cohort::volumetricimage-scan-002"  in match_string
+    assert "qualified_address: 'my_cohort::VolumetricImage-SCAN-002"  in match_string
     assert "dim"  not in match_string
 
 
@@ -90,4 +90,4 @@ def test_container_types(node_type):
 def test_container_types(node_type):
     node = Node(node_type, "my_node")
     assert node.properties["type"] == node_type
-    assert node.properties["qualified_address"] == node_type.lower() + '-' + "my_node"
+    assert node.properties["qualified_address"] == node_type + '-' + "my_node"
