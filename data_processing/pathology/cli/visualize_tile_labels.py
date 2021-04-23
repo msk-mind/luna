@@ -75,10 +75,9 @@ def visualize_tile_labels_with_container(cohort_id: str, container_id: str, meth
         if method_data.get("dsa_config", None):
             params = label_node.properties
 
-            params["column"]            = "tumor_score"
-            params["input"]             = label_node.properties["data"]
-            params["output_folder"]     = output_dir
-            params["output"]   = method_id
+            params["column"]   = "tumor_score"
+            params["input"]    = label_node.properties["data"]
+            params["annotation_name"]   = method_id
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 print (tmpdir)
