@@ -27,7 +27,8 @@ jobs:
       - run: export PYSPARK_PYTHON=`which python`
       - run: echo $PATH
       - run: python --version
-      - run: pip install --upgrade --user pip
+      - run: sudo pip install --upgrade pip
+      - run: pip --version
       - run: sudo pip install -r requirements.txt
       - run: pip list
       - run: pip check

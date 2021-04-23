@@ -28,7 +28,7 @@ def check_filepaths_valid(filepaths):
             all_files_found = False 
     return all_files_found
 
-def save_push_results(base_annotation, elements, annotation_name, output_folder, image_filename, uri, token):
+def save_push_results(base_annotation, elements, annotation_name, image_filename, uri, token):
     """ 
     Populate base annotations, save to json outfile, and push to DSA
     """
@@ -38,19 +38,9 @@ def save_push_results(base_annotation, elements, annotation_name, output_folder,
 
     dsa_annotation["name"] = annotation_name
 
-    outfile_name = os.path.join(output_folder, annotation_name.replace(" ","_") + ".json")
-    print('Writing annotation to ', outfile_name)
-
-    try:
-        with open(outfile_name, 'w') as outfile:
-            json.dump(dsa_annotation, outfile)
-    except Exception as e:
-        print("ERROR: write permissions needs to be enabled for: ", os.path.dirname(outfile_name))
-        return
-
     dsa_uuid = get_item_uuid(image_filename, uri, token)
 
-    if not get_item_uuid:
+    if not dsa_uuid:
         print("ERROR: could not find item in DSA matching image name:" , image_filename)
         return
 
@@ -106,21 +96,13 @@ def stardist_polygon(ctx, data_config):
     # can't handle NaNs for vectors, do this to replace all NaNs
     # TODO: find better fix
     # for now: https://stackoverflow.com/questions/17140886/how-to-search-and-replace-text-in-a-file
-    new_filepath = data["input"].replace(".geojson", "_NAN_modified.geojson")
-    
-    try:
-        with open(data["input"], 'r') as input_file:
-            filedata = input_file.read()
-        newdata = filedata.replace("NaN","-1")
-        with open(new_filepath,'w') as new_file:
-            new_file.write(newdata)
-    except Exception as e:
-        print("ERROR: write permissions needs to be enabled for: ", os.path.dirname(new_filepath))
-        return
-    
-    new_file = open(new_filepath, 'r')
+
+    with open(data["input"], 'r') as input_file:
+        filedata = input_file.read()
+    newdata = filedata.replace("NaN","-1")
+
     elements = []
-    for cell in ijson.items(new_file, "item"):
+    for cell in ijson.items(newdata, "item"):
         label_name = cell['properties']['classification']['name']
         coord_list = list(cell['geometry']['coordinates'][0])
 
@@ -139,10 +121,9 @@ def stardist_polygon(ctx, data_config):
 
         elements.append(element)
 
-    new_file.close()
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"],  data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -201,7 +182,7 @@ def stardist_cell(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -250,7 +231,7 @@ def regional_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -315,7 +296,7 @@ def qupath_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 @cli.command()
@@ -363,7 +344,7 @@ def bitmask_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
@@ -414,7 +395,7 @@ def heatmap(ctx, data_config):
 
     annotation_name = data["column"] + "_" + data["annotation_name"]
 
-    save_push_results(base_dsa_annotation, elements, annotation_name, data['output_folder'], data["image_filename"],
+    save_push_results(base_dsa_annotation, elements, annotation_name, data["image_filename"],
                       ctx.obj['uri'], ctx.obj['token'])
 
 
