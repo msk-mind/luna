@@ -23,6 +23,8 @@ python3 -m data_processing.pathology.cli.visualize_tile_labels \
 # General imports
 import os, json, sys
 import click
+import tempfile
+import subprocess
 
 # From common
 from data_processing.common.custom_logger   import init_logger
@@ -69,7 +71,22 @@ def visualize_tile_labels_with_container(cohort_id: str, container_id: str, meth
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        properties = visualize_scoring(image_node.data, label_node.data, output_dir, method_data)
+        # properties = visualize_scoring(image_node.data, label_node.data, output_dir, method_data)
+        if method_data.get("dsa_config", None):
+            params = label_node.properties
+
+            params["column"]   = "tumor_score"
+            params["input"]    = label_node.properties["data"]
+            params["annotation_name"]   = method_id
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                print (tmpdir)
+                with open(f"{tmpdir}/model_inference_config.json", "w") as f: json.dump(params, f)
+                with open(f"{tmpdir}/dsa_config.json", "w") as f: json.dump(method_data["dsa_config"], f)
+                subprocess.call(["dsa", "-c", f"{tmpdir}/dsa_config.json", "heatmap", "-d", f"{tmpdir}/model_inference_config.json"])
+
+                
+
 
     except Exception:
         container.logger.exception ("Exception raised, stopping job execution.")

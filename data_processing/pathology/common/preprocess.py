@@ -254,7 +254,7 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     logger.info("Processing slide %s", slide_file_path)
     logger.info("Params = %s", params)
 
-    slide = openslide.OpenSlide(slide_file_path)
+    slide = openslide.OpenSlide(str(slide_file_path))
 
     logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
  
@@ -348,7 +348,7 @@ def run_model(slide_file_path: str, output_dir: str, params: dict):
     logger.info("Processing slide %s", slide_file_path)
     logger.info("Params = %s", params)
 
-    slide = openslide.OpenSlide(slide_file_path)
+    slide = openslide.OpenSlide(str(slide_file_path))
 
     logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
  
@@ -451,7 +451,7 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     logger.info("Processing slide %s", slide_file_path)
     logger.info("Params = %s", params)
 
-    slide = openslide.OpenSlide(slide_file_path)
+    slide = openslide.OpenSlide(str(slide_file_path))
 
     logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
  
@@ -500,7 +500,7 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     requested_tile_size       = params.get("tile_size")
     requested_magnification   = params.get("magnification")
 
-    slide = openslide.OpenSlide(slide_file_path)
+    slide = openslide.OpenSlide(str(slide_file_path))
     df_scores = pd.read_csv(scores_file_path).set_index("address")
 
     to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)

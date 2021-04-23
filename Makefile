@@ -55,5 +55,5 @@ coverage:
 grpt:
 	time python3 -m data_processing.radiology.proxy_table.generate -t $(template-file) -f $(config-file) -p $(process-string)
 gppt:
-	time python3 -m data_processing.pathology.proxy_table.generate -t $(template-file) -f $(config-file) -p $(process-string)
+	time python3 -m data_processing.pathology.proxy_table.generate -d $(template-file) -a $(config-file) -p $(process-string)
 
