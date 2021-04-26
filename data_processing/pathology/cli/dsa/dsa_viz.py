@@ -1,4 +1,5 @@
 import click
+from decimal import Decimal
 import pandas as pd
 import json, geojson, ijson
 import copy
@@ -107,7 +108,8 @@ def stardist_polygon(ctx, data_config):
         coord_list = list(cell['geometry']['coordinates'][0])
 
         # uneven nested list when iterative parsing of json --> make sure to get the list of coords
-        while isinstance(coord_list, list) and len(coord_list) <= 1:
+        # this can come as mixed types as well, so type checking needed
+        while isinstance(coord_list, list) and isinstance(coord_list[0], list) and not isinstance(coord_list[0][0], (int,float,Decimal)):
             coord_list = coord_list[0]
 
         coords = [ [float(coord[0]), float(coord[1]), 0] for coord in coord_list]
