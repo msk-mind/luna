@@ -1,0 +1,38 @@
+stages:
+  - job: randomize_contours
+    image_input_tag: main_scan
+    label_input_tag: annotation_ata
+    job_tag: randomize_contours_s3-125
+
+  - job: extract_radiomics
+    image_input_tag: main_scan
+    label_input_tag: annotation_ata
+    job_tag : radiomics-original-label-1
+    strictGeometry: true
+    enableAllImageTypes: false
+    RadiomicsFeatureExtractor:
+        interpolator: sitkBSpline
+        resampledPixelSpacing: [1.25, 1.25, 1.25]
+        binWidth: 10
+        verbose: true
+        label: 1
+
+  - job: extract_radiomics
+    image_input_tag: randomize_contours_s3-125
+    label_input_tag: randomize_contours_s3-125
+    job_tag : radiomics-pertubation-label-1
+    strictGeometry: true
+    enableAllImageTypes: false
+    usingPertubations: true
+    RadiomicsFeatureExtractor:
+        interpolator: sitkBSpline
+        resampledPixelSpacing: [1.25, 1.25, 1.25]
+        binWidth: 10
+        verbose: true
+        label: 1
+
+  - job: collect_results
+    output_container: lung_radiomics_v1-original-label
+    input_tags: [radiomics-original-label-1, radiomics-pertubation-label-1]
+
+
