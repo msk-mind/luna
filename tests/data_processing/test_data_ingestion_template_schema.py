@@ -8,10 +8,12 @@ import os
 import pytest
 from yamale import YamaleTestCase, YamaleError
 
+from data_processing.common.utils import get_absolute_path
+
 
 class TestValidYaml(YamaleTestCase):
     base_dir = os.path.dirname(os.path.realpath(__file__))
-    schema = '../../data_ingestion_template_schema.yml'
+    schema = get_absolute_path(__file__, '../../data_processing/data_ingestion_template_schema.yml')
     yaml = 'data_ingestion_template_valid.yml'
 
     def runTest(self):
@@ -20,7 +22,7 @@ class TestValidYaml(YamaleTestCase):
 
 class TestInvalidYaml(YamaleTestCase):
     base_dir = os.path.dirname(os.path.realpath(__file__))
-    schema = '../../data_ingestion_template_schema.yml'
+    schema = get_absolute_path(__file__, '../../data_processing/data_ingestion_template_schema.yml')
     yaml = 'data_ingestion_template_invalid.yml'
 
     def runTest(self):

@@ -7,6 +7,8 @@ import os
 # Application Constants
 
 #### Table Names ####
+from data_processing.common.utils import get_absolute_path
+
 TABLE_DIR			='tables/'
 # clinical
 DIAGNOSIS_TABLE		=TABLE_DIR + 'diagnosis'
@@ -29,7 +31,7 @@ FEATURES			='features'
 # Configurations
 APP_CFG				='APP_CFG'
 DATA_CFG			='DATA_CFG'
-SCHEMA_FILE			='data_ingestion_template_schema.yml'
+SCHEMA_FILE			=get_absolute_path(__file__, '../data_ingestion_template_schema.yml')
 PUBLIC_DIR          ='/gpfs/mskmind_ess/mind_public'
 
 # Annotation API Data Mappings

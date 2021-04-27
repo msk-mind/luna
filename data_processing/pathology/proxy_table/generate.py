@@ -13,7 +13,7 @@ from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
-from data_processing.common.utils import generate_uuid
+from data_processing.common.utils import generate_uuid, get_absolute_path
 from data_processing.common.DataStore import DataStore 
 from data_processing.common.DataStore import Node 
 
@@ -29,7 +29,7 @@ import requests
 logger = init_logger()
 
 TRY_S3=False
-SCHEMA_FILE='data_ingestion_template_schema.yml'
+SCHEMA_FILE=get_absolute_path(__file__, '../../data_ingestion_template_schema.yml')
 DATA_CFG = 'DATA_CFG'
 APP_CFG = 'APP_CFG'
 

@@ -22,9 +22,11 @@ import shutil, sys, importlib
 import yaml, os
 import subprocess
 
+from data_processing.common.utils import get_absolute_path
+
 logger = init_logger()
 
-SCHEMA_FILE='data_ingestion_template_schema.yml'
+SCHEMA_FILE=get_absolute_path(__file__, '../../data_ingestion_template_schema.yml')
 DATA_CFG = 'DATA_CFG'
 APP_CFG = 'APP_CFG'
 
