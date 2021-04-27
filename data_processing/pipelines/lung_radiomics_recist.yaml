@@ -1,6 +1,6 @@
 stages:
   - job: generate_scan
-    dicom_input_tag: radiology.etl.ct
+    dicom_input_tag: base-etl 
     job_tag: original.mhd
     itkImageType: mhd
 
@@ -21,7 +21,6 @@ stages:
         binWidth: 10
         verbose: true
         label: 1
-        geometryTolerance: 1e-08
 
   - job: extract_radiomics
     image_input_tag: original.mhd
@@ -35,7 +34,6 @@ stages:
         binWidth: 10
         verbose: true
         label: 2
-        geometryTolerance: 1e-08
   
   - job: extract_radiomics
     image_input_tag: original.mhd
@@ -49,7 +47,6 @@ stages:
         binWidth: 10
         verbose: true
         label: 3
-        geometryTolerance: 1e-08
   
   - job: extract_radiomics
     image_input_tag: original.mhd
@@ -63,7 +60,6 @@ stages:
         binWidth: 10
         verbose: true
         label: 4
-        geometryTolerance: 1e-08
   
   - job: extract_radiomics
     image_input_tag: original.mhd
@@ -77,7 +73,6 @@ stages:
         binWidth: 10
         verbose: true
         label: 5
-        geometryTolerance: 1e-08
   
   - job: extract_radiomics
     image_input_tag: original.mhd
@@ -91,7 +86,6 @@ stages:
         binWidth: 10
         verbose: true
         label: 6
-        geometryTolerance: 1e-08
   
   - job: collect_results
     output_container: lung_radiomics_v1-original-label

@@ -409,12 +409,16 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
 
     result_list = []
     for label_path in label_path_list:
+        image, image_header = load(image_path)
+        label, label_header = load(label_path)
+
+        if params['RadiomicsFeatureExtractor']['label'] not in label: 
+            logger.warning(f"No mask pixels labeled [{params['RadiomicsFeatureExtractor']['label']}] found, returning None")
+            return None 
 
         extractor = featureextractor.RadiomicsFeatureExtractor(**params.get('RadiomicsFeatureExtractor', {}))
 
         if params.get("strictGeometry", False): 
-            image, image_header = load(image_path)
-            label, label_header = load(label_path)
             if not image_header.get_voxel_spacing() == label_header.get_voxel_spacing():
                 raise RuntimeError(f"Voxel spacing mismatch, image.spacing={image_header.get_voxel_spacing()}, label.spacing={label_header.get_voxel_spacing()}" )
             if not image.shape == label.shape:

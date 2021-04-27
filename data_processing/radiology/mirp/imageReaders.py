@@ -50,6 +50,9 @@ def read_itk_segmentation(path_to_seg_file):
 
     roi_list = []
    
+    if len(np.unique(int_mask)) > 256:
+        raise RuntimeWarning("More than 256 unique values in mask, perhaps this is an image, or something went really wrong?")
+
     for label_value in np.unique(int_mask):
         if label_value == 0: continue
 
