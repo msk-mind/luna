@@ -19,6 +19,8 @@ from pyspark.sql.types import StringType, MapType
 
 from medpy.io import load
 
+from data_processing.common.utils import get_absolute_path
+
 logger = init_logger()
 
 
@@ -108,7 +110,7 @@ def create_proxy_table(data_config):
 
         spark.conf.set("spark.sql.parquet.compression.codec", "uncompressed")
  
-        spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+        spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
         from utils import generate_uuid
         generate_uuid_udf = udf(generate_uuid, StringType())
         parse_accession_number_udf = udf(parse_accession_number, StringType())

@@ -16,6 +16,7 @@ from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
+from data_processing.common.utils import get_absolute_path
 from data_processing.pathology.common.slideviewer_client import fetch_slide_ids
 import data_processing.common.constants as const
 
@@ -114,7 +115,7 @@ def create_proxy_table():
     point_json_struct = ArrayType(
         MapType(StringType(), StringType())
     )
-    spark.sparkContext.addPyFile("./data_processing/pathology/common/slideviewer_client.py")
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/slideviewer_client.py"))
     download_point_annotation_udf = udf(download_point_annotation,  point_json_struct)
 
     df = df.withColumn("sv_json",
@@ -124,8 +125,8 @@ def create_proxy_table():
     df = df.dropna(subset=["sv_json"])
 
     # populate "date_added", "date_updated","latest", "sv_json_record_uuid"
-    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-    spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
     from utils import generate_uuid_dict
     sv_json_record_uuid_udf = udf(generate_uuid_dict, StringType())
 

@@ -8,6 +8,7 @@ import yaml
 import yamale
 from jsonpath_ng import parse
 from data_processing.common.custom_logger import init_logger
+from data_processing.common.utils import get_absolute_path
 
 logger = init_logger()
 
@@ -231,8 +232,10 @@ if __name__ == '__main__':
     except ValueError as ve:
         print("got expected value error: "+str(ve))
 
+    schema_file = get_absolute_path(__file__, '../data_ingestion_template_schema.yml')
+
     c4 = ConfigSet(name='data_config',
                    config_file="tests/data_processing/common/test_data_ingestion_template.yml",
-                   schema_file="data_ingestion_template_schema.yml")
+                   schema_file=schema_file)
 
     print(str(c4) + ' ' + str(c4.get_value('data_config::$.REQUESTOR')))

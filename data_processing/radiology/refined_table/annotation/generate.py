@@ -18,6 +18,8 @@ import data_processing.common.constants as const
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, IntegerType, ArrayType, StructType, StructField, BinaryType
 
+from data_processing.common.utils import get_absolute_path
+
 logger = init_logger()
 logger.info("Starting data_processing.radiology.refined_table.annotation.generate")
 
@@ -104,7 +106,7 @@ def generate_image_table():
         seg_png_table_path = const.TABLE_LOCATION(cfg)
         
         # find images with tumor
-        spark.sparkContext.addPyFile("./data_processing/radiology/common/preprocess.py")
+        spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/preprocess.py"))
         from preprocess import create_seg_images, overlay_images
         create_seg_png_udf = F.udf(create_seg_images, ArrayType(StructType(
                                     [StructField("instance_number", IntegerType()),
@@ -151,8 +153,8 @@ def generate_image_table():
                                 "metadata", "scan_annotation_record_uuid", "label")
 
         # generate uuid
-        spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-        spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+        spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
+        spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
         from utils import generate_uuid_binary
         generate_uuid_udf = F.udf(generate_uuid_binary, StringType())
         seg_df = seg_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf(seg_df.overlay, F.array([F.lit("PNG")]))))
