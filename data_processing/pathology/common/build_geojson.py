@@ -178,8 +178,7 @@ def build_geojson_from_annotation(df):
             annotation_geojson = add_contours_for_label(annotation_geojson, annotation, label_num, mappings, float(contour_level), float(polygon_tolerance))
     except TimeoutError as err:
         print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
-
-        return df
+        raise
 
     # disables alarm
     signal.alarm(0)
