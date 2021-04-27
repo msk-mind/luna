@@ -1,0 +1,94 @@
+stages:
+  - job: generate_scan
+    dicom_input_tag: base-etl 
+    job_tag: original.mhd
+    itkImageType: mhd
+
+  - job: randomize_contours
+    image_input_tag: original.mhd
+    label_input_tag: lung.radiologists
+    job_tag: randomize_contours_s3-125
+
+  - job: extract_radiomics
+    image_input_tag: original.mhd
+    label_input_tag: lung.radiologists
+    job_tag : radiomics-original-label-1
+    strictGeometry: true
+    enableAllImageTypes: false
+    RadiomicsFeatureExtractor:
+        interpolator: sitkBSpline
+        resampledPixelSpacing: [1.25, 1.25, 1.25]
+        binWidth: 10
+        verbose: true
+        label: 1
+
+  - job: extract_radiomics
+    image_input_tag: original.mhd
+    label_input_tag: lung.radiologists
+    job_tag : radiomics-original-label-2
+    strictGeometry: true
+    enableAllImageTypes: false
+    RadiomicsFeatureExtractor:
+        interpolator: sitkBSpline
+        resampledPixelSpacing: [1.25, 1.25, 1.25]
+        binWidth: 10
+        verbose: true
+        label: 2
+  
+  - job: extract_radiomics
+    image_input_tag: original.mhd
+    label_input_tag: lung.radiologists
+    job_tag : radiomics-original-label-3
+    strictGeometry: true
+    enableAllImageTypes: false
+    RadiomicsFeatureExtractor:
+        interpolator: sitkBSpline
+        resampledPixelSpacing: [1.25, 1.25, 1.25]
+        binWidth: 10
+        verbose: true
+        label: 3
+  
+  - job: extract_radiomics
+    image_input_tag: original.mhd
+    label_input_tag: lung.radiologists
+    job_tag : radiomics-original-label-4
+    strictGeometry: true
+    enableAllImageTypes: false
+    RadiomicsFeatureExtractor:
+        interpolator: sitkBSpline
+        resampledPixelSpacing: [1.25, 1.25, 1.25]
+        binWidth: 10
+        verbose: true
+        label: 4
+  
+  - job: extract_radiomics
+    image_input_tag: original.mhd
+    label_input_tag: lung.radiologists
+    job_tag : radiomics-original-label-5
+    strictGeometry: true
+    enableAllImageTypes: false
+    RadiomicsFeatureExtractor:
+        interpolator: sitkBSpline
+        resampledPixelSpacing: [1.25, 1.25, 1.25]
+        binWidth: 10
+        verbose: true
+        label: 5
+  
+  - job: extract_radiomics
+    image_input_tag: original.mhd
+    label_input_tag: lung.radiologists
+    job_tag : radiomics-original-label-6
+    strictGeometry: true
+    enableAllImageTypes: false
+    RadiomicsFeatureExtractor:
+        interpolator: sitkBSpline
+        resampledPixelSpacing: [1.25, 1.25, 1.25]
+        binWidth: 10
+        verbose: true
+        label: 6
+  
+  - job: collect_results
+    output_container: lung_radiomics_v1-original-label
+    input_tags: [radiomics-original-label-1, radiomics-original-label-2, radiomics-original-label-3, radiomics-original-label-4, radiomics-original-label-5, radiomics-original-label-6]
+
+

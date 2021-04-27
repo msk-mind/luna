@@ -68,9 +68,10 @@ def extract_radiomics_with_container(cohort_id, container_id, method_data, semap
     except Exception as e:
         container.logger.exception (f"{e}, stopping job execution...")
     else:
-        output_node = Node("Radiomics", method_id, properties)
-        container.add(output_node)
-        container.saveAll()
+        if properties:
+            output_node = Node("Radiomics", method_id, properties)
+            container.add(output_node)
+            container.saveAll()
     finally:
         return semaphore + 1   
 
