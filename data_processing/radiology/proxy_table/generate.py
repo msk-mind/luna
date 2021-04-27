@@ -164,8 +164,8 @@ def create_proxy_table(config_file):
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.radiology.proxy_table.generate")
 
     # setup for using external py in udf
-    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-    spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/EnsureByteContext.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/utils.py"))
     # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
 

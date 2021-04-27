@@ -17,6 +17,7 @@ from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
+from data_processing.common.utils import get_absolute_path
 from data_processing.pathology.common.utils import get_labelset_keys
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -98,14 +99,14 @@ def create_refined_table():
     # build geojsons
     label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
 
-    spark.sparkContext.addPyFile("./data_processing/pathology/common/build_geojson.py")
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/build_geojson.py"))
     from build_geojson import build_geojson_from_pointclick_json
     build_geojson_from_pointclick_json_udf = udf(build_geojson_from_pointclick_json,  geojson_struct)
     df = df.withColumn("geojson", build_geojson_from_pointclick_json_udf(lit(str(label_config)), "labelset", "sv_json")).cache()
 
     # populate "date_added", "date_updated","latest", "sv_json_record_uuid"
-    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
-    spark.sparkContext.addPyFile("./data_processing/common/utils.py")
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
     from utils import generate_uuid_dict
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
 

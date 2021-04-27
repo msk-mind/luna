@@ -16,6 +16,8 @@ from filehash import FileHash
 from distutils.util import strtobool
 from flask_swagger_ui import get_swaggerui_blueprint
 
+from data_processing.common.utils import get_absolute_path
+
 app = Flask(__name__)
 print(app.root_path)
 logger = init_logger("flask-mind-server.log")
@@ -109,7 +111,7 @@ def create_proxy_table(config_file):
     # setup for using external py in udf
     sys.path.append("data_processing/common")
     importlib.import_module("data_processing.common.EnsureByteContext")
-    spark.sparkContext.addPyFile("./data_processing/common/EnsureByteContext.py")
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../common/EnsureByteContext.py"))
     # use spark to read data from file system and write to parquet format_type
     logger.info("generating binary proxy table... ")
 

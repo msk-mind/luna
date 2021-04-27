@@ -22,6 +22,7 @@ import numpy as np
 
 import os
 
+from data_processing.common.utils import get_absolute_path
 from data_processing.pathology.common.slideviewer_client import fetch_slide_ids
 
 logger = init_logger()
@@ -190,7 +191,7 @@ def create_proxy_table():
                    'SLIDEVIEWER_API_URL'
                    )
 
-    spark.sparkContext.addPyFile("./data_processing/pathology/common/slideviewer_client.py")
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/slideviewer_client.py"))
     df = df.groupby(['slideviewer_path', 'user']) \
         .applyInPandas(process_regional_annotation_slide_row_pandas, schema=df.schema)
     df.show()
