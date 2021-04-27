@@ -136,3 +136,20 @@ def get_method_data(cohort_id, method_id):
         method_config = json.load(json_file)['params']
     return method_config
 
+def get_absolute_path(module_path, relative_path):
+	""" Given the path to a module file and the path, relative to the module file, of another file
+	that needs to be referenced in the module, this method returns the absolute path of the file
+	that needs to be referenced.
+
+	This method makes it possible to resolve absolute paths to files in any environment a
+	module and the referenced files are deployed to.
+
+	:param module_path path to the module. Use '__file__' from the module.
+	:param relative_path path to the file that needs to be referenced by the module. The path must
+	be relative to the module.
+	:return absolute path to file with the specified relative_path
+	"""
+	path = os.path.join(os.path.dirname(module_path), relative_path)
+
+	# resolve any back-paths with ../ to simplify absolute path
+	return os.path.realpath(path)
