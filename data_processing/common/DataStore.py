@@ -171,6 +171,7 @@ class DataStore(object):
         if isinstance(container_id, str) and not "uid://" in container_id: 
             node = Node("generic", container_id)
             node.set_namespace( self._namespace_id )
+            print (node.get_address())
             match_clause = f"""WHERE container.qualified_address = '{node.get_address()}' """
         elif isinstance(container_id, str) and "uid://" in container_id: 
             match_clause = f"""WHERE id(container) = {container_id.replace('uid://', '')} """
@@ -316,7 +317,7 @@ class DataStore(object):
         return future
 
 
-    def add(self, node: Node):
+    def put(self, node: Node):
         """
         Adds a node to a temporary dictonary that will be used to save/commit nodes to the relevant databases
         If you add the same node under the same name, no change as the 
@@ -333,7 +334,7 @@ class DataStore(object):
         node.set_namespace( self._namespace_id, self._name )
         node._container_id = self._container_id
 
-        # Set node objects only if there is a path and the object store is enabled
+        # Set node data object(s) only if there is a path and the object store is enabled
         node.objects = []
         if node.data is not None and self.params.get("OBJECT_STORE_ENABLED", False):
             node.properties['object_bucket'] = f"{self._bucket_id}"
@@ -351,6 +352,7 @@ class DataStore(object):
 
             self.logger.info ("Node has %s pending object commits",  len(node.objects))
 
+        # Set node aux object only if a path and the object store is enabled
         if node.aux is not None and self.params.get("OBJECT_STORE_ENABLED", False):
             node.properties['object_bucket'] = f"{self._bucket_id}"
             node.properties['object_folder'] = f"{self._name}/{node.name}"
@@ -359,39 +361,23 @@ class DataStore(object):
 
         # Add to node commit dictonary
         self.logger.info ("Adding: %s", node.get_address())
-        self._node_commits[node.get_address()] = node
-        
-        self.logger.info ("DataStore has %s pending node commits",  len(self._node_commits))
-
-      
-    def saveAll(self):
-        """
-        Tries to create nodes for all committed nodes
-        """
-        # Loop through all nodes in commit dictonary, and run query
-        # Will fully overwrite existing nodes, since we assume changes in the FS already occured
-        self.logger = logging.getLogger(__name__)
-
-        future_uploads = []
-
+                
+        self._conn.query( f""" 
+            MATCH (container) WHERE id(container) = {node._container_id}
+            MERGE (container)-[:HAS_DATA]->(da:{node.get_match_str()})
+                ON MATCH  SET da = {node.get_map_str()}
+                ON CREATE SET da = {node.get_map_str()} 
+            """ )
+                
         if self.params.get("OBJECT_STORE_ENABLED", False):
+            future_uploads = []
             executor = ThreadPoolExecutor(max_workers=4)
 
-        for n in self._node_commits.values():
-            self.logger.info ("Committing %s", n.get_match_str())
-            self._conn.query( f""" 
-                MATCH (container) WHERE id(container) = {n._container_id}
-                MERGE (container)-[:HAS_DATA]->(da:{n.get_match_str()})
-                    ON MATCH  SET da = {n.get_map_str()}
-                    ON CREATE SET da = {n.get_map_str()}
-                """ )
-
-            if self.params.get("OBJECT_STORE_ENABLED", False):
-                object_bucket = n.properties.get("object_bucket")
-                object_folder = n.properties.get("object_folder")
-                for p in n.objects:
-                    future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
-                    future_uploads.append(future)
+            object_bucket = node.properties.get("object_bucket")
+            object_folder = node.properties.get("object_folder")
+            for p in node.objects:
+                future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
+                future_uploads.append(future)
         
         self.logger.info("Committed [%s]", len(self._node_commits.values()))
    
@@ -413,3 +399,6 @@ class DataStore(object):
             self.logger.info("Shutdown executor %s", executor)                
             executor.shutdown()    
         self.logger.info("Done saving all records!!")
+
+    def add(self, *args): self.logger.warning ("Datastore.add() has been depreciated")
+    def saveAll(self, *args): self.logger.warning ("Datastore.saveAll() has been depreciated")
