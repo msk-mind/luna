@@ -1,6 +1,7 @@
 {
   "input": "path/to/object_detection_result.tsv",
   "image_filename": "123.svs",
+  "output_folder": "path/to/folder/to/write/annotations",
   "annotation_name": "Points of Classsified StarDist Cells",
   "line_colors": {"Other": "rgb(0, 255, 0)", "Lymphocyte": "rgb(255, 0, 0)" },
   "fill_colors": {"Other": "rgba(0, 255, 0, 0)", "Lymphocyte": "rgba(255, 0, 0, 0)" }
