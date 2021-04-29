@@ -70,11 +70,11 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
         new_pertubation_node    = Node("VolumetricLabelSet", method_id, pertubation_properties)
         new_supervoxel_node     = Node("Voxels", method_id, supervoxel_properties)
 
-        container.put(new_image_node)
-        container.put(new_label_node)
-        container.put(new_pertubation_node)
-        container.put(new_supervoxel_node)
-        
+        container.add(new_image_node)
+        container.add(new_label_node)
+        container.add(new_pertubation_node)
+        container.add(new_supervoxel_node)
+        container.saveAll()
     finally:
         return semaphore + 1   
 

@@ -86,8 +86,8 @@ def collect_tile_results_with_container(cohort_id: str, container_id: str, metho
         input_container.logger.exception ("Exception raised, stopping job execution.")
     else:
         output_node = Node("ResultSegment", f"slice-{input_container._container_id}", properties)
-        output_container.put(output_node)
-        output_
+        output_container.add(output_node)
+        output_container.saveAll()
 
 if __name__ == "__main__":
     cli()

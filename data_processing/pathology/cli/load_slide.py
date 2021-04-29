@@ -61,8 +61,8 @@ def load_slide_with_container(cohort_id, container_id, method_data):
         # Do some path processing...we pulled the first dicom image, but need the parent image folder
         data_path = Path(record['path'].split(':')[-1])
         slide.set_data(data_path)
-        container.put(slide)
-        
+        container.add(slide)
+        container.saveAll()
     
 if __name__ == "__main__":
     cli()

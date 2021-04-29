@@ -76,8 +76,8 @@ def generate_tile_labels_with_container(cohort_id: str, container_id: str, metho
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
         output_node = Node("TileScores", method_id, properties)
-        container.put(output_node)
-        
+        container.add(output_node)
+        container.saveAll()
 
 
 if __name__ == "__main__":

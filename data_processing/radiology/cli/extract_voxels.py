@@ -66,8 +66,8 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
         container.logger.exception (f"{e}, stopping job execution...")
     else:
         output_node = Node("Voxels", method_id, properties)
-        container.put(output_node)
-        
+        container.add(output_node)
+        container.saveAll()
     finally:
         return semaphore + 1   
 

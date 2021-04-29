@@ -180,8 +180,8 @@ def update_graph(config_file):
             properties = row.metadata
             node = Node("WholeSlideImage", "pathology.etl", properties)
             node.set_data( row.path.split(':')[-1] )
-            container.put(node)
-        
+            container.add(node)
+        container.saveAll()
 
     return exit_code
 
