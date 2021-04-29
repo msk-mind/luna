@@ -397,5 +397,7 @@ class DataStore(object):
             executor.shutdown()    
         self.logger.info("Done saving all records!!")
 
-    def add(self, *args): self.logger.warning ("Datastore.add() has been depreciated")
-    def saveAll(self, *args): self.logger.warning ("Datastore.saveAll() has been depreciated")
+    def add(self, *args): 
+        self.logger.warning ("Datastore.add() has been depreciated")
+    def saveAll(self, *args): 
+        self.logger.warning ("Datastore.saveAll() has been depreciated")
