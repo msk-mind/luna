@@ -62,8 +62,8 @@ def load_dicom_with_container(cohort_id, container_id, method_data):
         # Do some path processing...we pulled the first dicom image, but need the parent image folder
         data_path = Path(record['path'].split(':')[-1]).parent
         dicom.set_data(data_path)
-        container.add(dicom)
-        container.saveAll()
+        container.put(dicom)
+        
     
 if __name__ == "__main__":
     cli()

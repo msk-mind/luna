@@ -34,11 +34,11 @@ class DataStore(object):
 
     $ node = Node("dicom", "DCM-0123", {"Modality":"CT", "path":"file:/some/path/1.dcm"})
 
-    $ container.add(node)
+    $ container.put(node)
         > Adding: test-0000
           DataStore has 1 pending commits
 
-    $ container.saveAll()
+    $ 
         > Committing dicom:globals{ hash: 'abc123' name: 'my-dicom', qualified_address: 'test::1.2.840::my-dicom', namespace: 'test', type: 'dicom' , path: 'file:/some/path/1.dcm'}
 
     $ container.get("dicom", "my-dicom").path

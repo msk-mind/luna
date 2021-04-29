@@ -65,8 +65,8 @@ def window_dicom_with_container(cohort_id, container_id, method_data, semaphore=
     else:
 
         output_node = Node("DicomSeries", method_id, properties)
-        container.add(output_node)
-        container.saveAll()
+        container.put(output_node)
+        
     finally:
         return semaphore + 1   
 
