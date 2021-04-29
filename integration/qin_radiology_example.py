@@ -45,13 +45,13 @@ if __name__=='__main__':
             image = Node("VolumetricImage", "main_scan")
             image.set_data(f"qin-test-data/{patient}.mhd")
             image.set_aux (f"qin-test-data/{patient}.raw")
-            container.add(image)
+            container.put(image)
 
             label = Node("VolumetricLabel", "annotation_ata")
             label.set_data(f"qin-test-data/{patient}.mha")
-            container.add(label)
+            container.put(label)
 
-            container.saveAll()
+            
 
             if backend=='local':
                 container.runLocal(pipeline)

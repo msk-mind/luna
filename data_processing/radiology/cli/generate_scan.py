@@ -62,8 +62,8 @@ def generate_scan_with_container(cohort_id, container_id, method_data, semaphore
         container.logger.exception (f"{e}, stopping job execution...")
     else:
         output_node = Node("VolumetricImage", method_id, properties)
-        container.add(output_node)
-        container.saveAll()
+        container.put(output_node)
+        
     finally:
         return semaphore + 1   
 

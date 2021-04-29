@@ -92,8 +92,8 @@ def visualize_tile_labels_with_container(cohort_id: str, container_id: str, meth
         container.logger.exception ("Exception raised, stopping job execution.")
     else:
         output_node = Node("TileScores", method_id, properties)
-        container.add(output_node)
-        container.saveAll()
+        container.put(output_node)
+        
 
 
 if __name__ == "__main__":

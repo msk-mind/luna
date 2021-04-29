@@ -82,8 +82,8 @@ def collect_result_segment_with_container(cohort_id, container_id, method_data, 
         input_container.logger.exception (f"{e}, stopping job execution...")
     else:
         output_node = Node("ResultSegment", f"slice-{input_container._container_id}", properties)
-        output_container.add(output_node)
-        output_container.saveAll()
+        output_container.put(output_node)
+        output_
     finally:
         return semaphore + 1   
 

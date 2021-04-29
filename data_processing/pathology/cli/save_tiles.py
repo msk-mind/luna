@@ -71,8 +71,8 @@ def save_tiles_with_container(cohort_id: str, container_id: str, method_data: di
     else:
 
         output_node = Node("TileImages", method_id, properties)
-        container.add(output_node)
-        container.saveAll()
+        container.put(output_node)
+        
 
 
 if __name__ == "__main__":

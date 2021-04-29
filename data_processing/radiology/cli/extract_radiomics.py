@@ -70,8 +70,8 @@ def extract_radiomics_with_container(cohort_id, container_id, method_data, semap
     else:
         if properties:
             output_node = Node("Radiomics", method_id, properties)
-            container.add(output_node)
-            container.saveAll()
+            container.put(output_node)
+            
     finally:
         return semaphore + 1   
 
