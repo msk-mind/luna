@@ -6,12 +6,11 @@ Created on January 31, 2021
 import os, sys
 import shutil
 import requests
+from pathlib import Path
 from data_processing.common.config import ConfigSet
 from data_processing.common.constants import DATA_CFG, CONFIG_LOCATION, PROJECT_LOCATION
 from data_processing.pathology.common.slideviewer_client import get_slide_id, fetch_slide_ids, \
     download_zip, unzip, download_sv_point_annotation
-from tests.data_processing.pathology.common.request_mock import CSVMockResponse, \
-    ZIPMockResponse, PointJsonResponse
 
 SLIDEVIEWER_API_URL = None
 SLIDEVIEWER_CSV_FILE = None
@@ -79,12 +78,16 @@ def test_fetch_slide_ids_with_csv(monkeypatch):
 
 
 # when optional field SLIDEVIEWER_CSV_FILE is not specified in the data config yaml
-def test_fetch_slide_ids_without_csv(monkeypatch):
-    # works for any url argument
-    def mock_get(*args, **kwargs):
-        return CSVMockResponse()
+def test_fetch_slide_ids_without_csv(requests_mock):
 
-    monkeypatch.setattr(requests, "get", mock_get)
+    requests_mock.get("https://fake-slides-res.mskcc.org/exportProjectCSV?pid=155",
+                      content=b'Title: IRB #16-1144 Subset\n' \
+                           b'Description: Subset of cases from related master project #141\n' \
+                           b'Users: jane@mskcc.org, jo@mskcc.org\n' \
+                           b'CoPathTest: false\n' \
+                           b'2013;HobS13-283072057510;1435197.svs\n' \
+                           b'2013;HobS13-283072057511;1435198.svs\n' \
+                           b'2013;HobS13-283072057512;1435199.svs\n')
 
     config_dir = f"{ROOT_PATH}/{PROJECT}/configs"
     slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, config_dir)
@@ -95,13 +98,10 @@ def test_fetch_slide_ids_without_csv(monkeypatch):
                       ['2013;HobS13-283072057512;1435199.svs', '1435199', 155]]
 
 
-def test_downlaod_zip(monkeypatch):
-    # works for any url argument
-    def mock_get(*args, **kwargs):
-        return ZIPMockResponse()
+def test_downlaod_zip(requests_mock):
 
-    monkeypatch.setattr(requests, "get", mock_get)
-
+    requests_mock.get(SLIDEVIEWER_API_URL,
+        content=Path('tests/data_processing/pathology/proxy_table/regional_annotation/test_data/input/CMU-1.zip').read_bytes())
     download_zip(SLIDEVIEWER_API_URL, zipfile_path, chunk_size=128)
 
 
@@ -117,13 +117,11 @@ def test_unzip():
 
     assert len(unzipped_file_descriptor.read('labels.bmp')) == 230454
 
-def test_download_sv_point_annotation(monkeypatch):
+def test_download_sv_point_annotation(requests_mock):
 
-    # works for any url argument
-    def mock_get(*args, **kwargs):
-        return PointJsonResponse()
-
-    monkeypatch.setattr(requests, "get", mock_get)
+    requests_mock.get("http://test/user@8;123.svs/get",
+                      text='[{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"Tissue 1"}, '+\
+                           '{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1424","y":"774","class":"3","classname":"Tissue 4"}]')
 
     import data_processing
     sys.modules['slideviewer_client'] = data_processing.pathology.common.slideviewer_client

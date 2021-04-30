@@ -8,6 +8,7 @@ import shutil
 from pyspark import SQLContext
 from click.testing import CliRunner
 import os, sys
+from pathlib import Path
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
@@ -15,9 +16,6 @@ from data_processing.pathology.proxy_table.regional_annotation import generate
 from data_processing.pathology.proxy_table.regional_annotation.generate import cli, convert_bmp_to_npy, \
     create_proxy_table, process_regional_annotation_slide_row_pandas
 import data_processing.common.constants as const
-from tests.data_processing.pathology.common.request_mock import CSVMockResponse, \
-    ZIPMockResponse
-
 
 spark = None
 LANDING_PATH = None
@@ -60,23 +58,24 @@ def test_convert_bmp_to_npy():
     assert os.path.exists(expected_path)
 
 
-def test_process_regional_annotation_slide_row_pandas(monkeypatch):
+def test_process_regional_annotation_slide_row_pandas(monkeypatch, requests_mock):
     monkeypatch.setenv("MIND_GPFS_DIR", "")
     monkeypatch.setenv("HDFS_URI", "")
 
     import data_processing
     sys.modules['slideviewer_client'] = data_processing.pathology.common.slideviewer_client
 
-    # mock request to slideviewer api
-    def mock_get(*args, **kwargs):
-        if 'exportProjectCSV' in args[0]:
-            return CSVMockResponse()
-        elif 'getLabelFileBMP' in args[0]:
-            return ZIPMockResponse()
-        else:
-            return None
+    requests_mock.get("https://fakeslides-res.mskcc.org/slides/someuser@mskcc.org/projects;155;CMU-1.svs/getLabelFileBMP",
+                      content=Path('tests/data_processing/pathology/proxy_table/regional_annotation/test_data/input/CMU-1.zip').read_bytes())
 
-    monkeypatch.setattr(requests, "get", mock_get)
+    requests_mock.get("https://fake-slides-res.mskcc.org/exportProjectCSV?pid=155",
+                      content=b'Title: IRB #16-1144 Subset\n' \
+                              b'Description: Subset of cases from related master project #141\n' \
+                              b'Users: jane@mskcc.org, jo@mskcc.org\n' \
+                              b'CoPathTest: false\n' \
+                              b'2013;HobS13-283072057510;1435197.svs\n' \
+                              b'2013;HobS13-283072057511;1435198.svs\n' \
+                              b'2013;HobS13-283072057512;1435199.svs\n')
 
     data = {'slideviewer_path': ['CMU-1.svs'],
             'slide_id': ['CMU-1'],
