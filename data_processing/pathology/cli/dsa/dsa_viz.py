@@ -5,6 +5,7 @@ import json, geojson, ijson
 import copy
 import time, os
 from PIL import Image
+import re
 import numpy as np
 
 from data_processing.pathology.cli.dsa.dsa_api_handler import get_item_uuid, push_annotation_to_dsa_image, system_check
@@ -18,6 +19,7 @@ base_dsa_annotation  = {"description": "", "elements": [], "name": ""}
 
 # Qupath 20x mag factor
 QUPATH_MAG_FACTOR = 0.5011
+image_id_regex = "(.*).svs"
 
 # accepts list of filepaths to check if path exists
 def check_filepaths_valid(filepaths):
@@ -29,7 +31,7 @@ def check_filepaths_valid(filepaths):
             all_files_found = False 
     return all_files_found
 
-def save_push_results(base_annotation, elements, annotation_name, image_filename, uri, token):
+def save_dsa_annotation(base_annotation, elements, annotation_name, output_folder, image_filename) :
     """ 
     Populate base annotations, save to json outfile, and push to DSA
     """
@@ -39,49 +41,49 @@ def save_push_results(base_annotation, elements, annotation_name, image_filename
 
     dsa_annotation["name"] = annotation_name
 
-    dsa_uuid = get_item_uuid(image_filename, uri, token)
+    image_id = re.search(image_id_regex, image_filename).group(1)
+    annotation_name_replaced = annotation_name.replace(" ","_")
 
-    if not dsa_uuid:
-        print("ERROR: could not find item in DSA matching image name:" , image_filename)
-        return
+    outfile_name = os.path.join(output_folder, f"{annotation_name_replaced}_{image_id}.json")
 
-    push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, uri, token)
-
-
-@click.group()
-@click.pass_context
-@click.option('-c', '--config',
-              help="json including DSA host, port and token info",
-              type=click.Path(exists=True),
-              required=True)
-def cli(ctx, config):
-    """
-    DSA visualization CLI
-    """
-    ctx.ensure_object(dict)
-
-    with open(config) as config_json:
-        config_data = json.load(config_json)
-
-    # Girder Token can be found in the DSA API Swagger Docs under 'token': (http://{host}:8080/api/v1#!/token/token_currentSession)
-    ctx.obj["uri"] = config_data["host"] + ":" + config_data["port"]
-    ctx.obj["token"] = config_data["token"]
-    # print(ctx.obj)
-
-    # TODO use girder client
-    # https://girder.readthedocs.io/en/latest/python-client.html#the-python-client-library
-
-    # check DSA connection
-    system_check(ctx.obj["uri"], ctx.obj["token"])
+    try:
+        with open(outfile_name, 'w') as outfile:
+            json.dump(dsa_annotation, outfile)
+        return outfile_name
+    except Exception as e:
+        print("ERROR: write permissions needs to be enabled for: ", os.path.dirname(outfile_name))
+        return None
 
 
-@cli.command()
-@click.pass_context
+@click.command()
 @click.option("-d", "--data_config",
               help="path to data config file",
               required=True,
               type=click.Path(exists=True))
-def stardist_polygon(ctx, data_config):
+@click.option("-s", "--source_type",
+              help="string describing data source that is to be transformed into a dsa json. \
+               supports stardist-polygon, stardist-cell, regional-polygon, qupath-polygon, bitmask-polygon, heatmap",
+              required=True)
+def cli(data_config, source_type):
+    """
+    DSA annotation builder
+    """
+
+    functions = {"stardist-polygon": stardist_polygon, 
+                "stardist-cell": stardist_cell, 
+                "regional-polygon": regional_polygon, 
+                "qupath-polygon": qupath_polygon, 
+                "bitmask-polygon": bitmask_polygon,
+                "heatmap": heatmap}
+    
+    if source_type not in functions:
+            print(f"ERROR: source_type {source_type} is not supported")
+    else:   
+        annotation_filepath = functions[source_type](data_config)
+        print(f"Annotation written to {annotation_filepath}")
+
+
+def stardist_polygon(data_config):
     """
     Upload stardist geojson classification results
     """
@@ -91,7 +93,7 @@ def stardist_polygon(ctx, data_config):
     if not check_filepaths_valid([data['input']]):
         return 
 
-    print("Starting upload for image: {}".format(data['image_filename']))
+    print("Building annotation for image: {}".format(data['image_filename']))
     start = time.time()
 
     # can't handle NaNs for vectors, do this to replace all NaNs
@@ -125,17 +127,10 @@ def stardist_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["image_filename"],
-                      ctx.obj['uri'], ctx.obj['token'])
+    annotatation_filepath = save_dsa_annotation(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"])
+    return annotatation_filepath
 
-
-@cli.command()
-@click.pass_context
-@click.option("-d", "--data_config",
-              help="path to data config file",
-              required=True,
-              type=click.Path(exists=True))
-def stardist_cell(ctx, data_config):
+def stardist_cell(data_config):
     """
     Upload TSV classification data
     """
@@ -147,7 +142,7 @@ def stardist_cell(ctx, data_config):
         return 
 
 
-    print("Starting upload for image: {}".format(data['image_filename']))
+    print("Building annotation for image: {}".format(data['image_filename']))
     start = time.time()
 
     # qupath_stardist_cell_tsv can be quite large to load all columns into memory (contains many feature columns), so only load baisc columns that are needed for now
@@ -184,17 +179,10 @@ def stardist_cell(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["image_filename"],
-                      ctx.obj['uri'], ctx.obj['token'])
+    annotatation_filepath = save_dsa_annotation(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"])
+    return annotatation_filepath
 
-
-@cli.command()
-@click.pass_context
-@click.option("-d", "--data_config",
-              help="path to data config file",
-              required=True,
-              type=click.Path(exists=True))
-def regional_polygon(ctx, data_config):
+def regional_polygon(data_config):
     """
     Upload regional annotation data
     """
@@ -205,7 +193,7 @@ def regional_polygon(ctx, data_config):
     if not check_filepaths_valid([data['input']]):
         return 
 
-    print("Starting upload for image: {}".format(data['image_filename']))
+    print("Building annotation for image: {}".format(data['image_filename']))
     start = time.time()
 
     with open(data["input"]) as regional_file:
@@ -233,18 +221,10 @@ def regional_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["image_filename"],
-                      ctx.obj['uri'], ctx.obj['token'])
+    annotatation_filepath = save_dsa_annotation(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"])
+    return annotatation_filepath
 
-
-
-@cli.command()
-@click.pass_context
-@click.option("-d", "--data_config",
-              help="path to data config file",
-              required=True,
-              type=click.Path(exists=True))
-def qupath_polygon(ctx, data_config):
+def qupath_polygon(data_config):
     """
     Upload regional annotation data
     """
@@ -254,7 +234,7 @@ def qupath_polygon(ctx, data_config):
     if not check_filepaths_valid([data['input']]):
         return 
 
-    print("Starting upload for image: {}".format(data['image_filename']))
+    print("Building annotation for image: {}".format(data['image_filename']))
     start = time.time()
 
     with open(data["input"]) as regional_file:
@@ -298,16 +278,11 @@ def qupath_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["image_filename"],
-                      ctx.obj['uri'], ctx.obj['token'])
+    annotatation_filepath = save_dsa_annotation(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"])
+    return annotatation_filepath
 
-@cli.command()
-@click.pass_context
-@click.option("-d", "--data_config",
-              help="path to tile level csv",
-              type=click.Path(exists=True),
-              required=True)
-def bitmask_polygon(ctx, data_config):
+
+def bitmask_polygon(data_config):
     """
     Upload bitmask PNGs
     """
@@ -318,7 +293,7 @@ def bitmask_polygon(ctx, data_config):
     if not check_filepaths_valid(bitmask_filepaths):
         return 
 
-    print("Starting upload for image: {}".format(data['image_filename']))
+    print("Building annotation for image: {}".format(data['image_filename']))
     start = time.time()
 
     elements = []
@@ -346,17 +321,10 @@ def bitmask_polygon(ctx, data_config):
 
     print("Time to build annotation", time.time() - start)
 
-    save_push_results(base_dsa_annotation, elements, data["annotation_name"], data["image_filename"],
-                      ctx.obj['uri'], ctx.obj['token'])
+    annotatation_filepath = save_dsa_annotation(base_dsa_annotation, elements, data["annotation_name"], data["output_folder"], data["image_filename"])
+    return annotatation_filepath
 
-
-@cli.command()
-@click.pass_context
-@click.option("-d", "--data_config",
-              help="path to tile level csv",
-              type=click.Path(exists=True),
-              required=True)
-def heatmap(ctx, data_config):
+def heatmap(data_config):
     """
     Upload heatmap based on tile scores
     """
@@ -366,7 +334,7 @@ def heatmap(ctx, data_config):
     if not check_filepaths_valid([data['input']]):
         return 
 
-    print("Starting upload for image: {}".format(data['image_filename']))
+    print("Building annotation for image: {}".format(data['image_filename']))
     start = time.time()
 
     df = pd.read_csv(data["input"])
@@ -397,8 +365,8 @@ def heatmap(ctx, data_config):
 
     annotation_name = data["column"] + "_" + data["annotation_name"]
 
-    save_push_results(base_dsa_annotation, elements, annotation_name, data["image_filename"],
-                      ctx.obj['uri'], ctx.obj['token'])
+    annotatation_filepath = save_dsa_annotation(base_dsa_annotation, elements, annotation_name, data["output_folder"], data["image_filename"])
+    return annotatation_filepath
 
 
 if __name__ == '__main__':
