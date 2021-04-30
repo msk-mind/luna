@@ -32,7 +32,7 @@ def get_item_uuid(image_name, uri, token, collection_name):
     """
 
     collection_uuid = get_collection_uuid(uri, token, collection_name)
-    if not collection_id:
+    if not collection_uuid:
         return None
 
     image_id = re.search(image_id_regex, image_name).group(1)
