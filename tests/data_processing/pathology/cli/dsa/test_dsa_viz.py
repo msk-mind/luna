@@ -1,11 +1,12 @@
 import pytest
 from click.testing import CliRunner
+import os
 
 from data_processing.pathology.cli.dsa.dsa_viz import cli
 from data_processing.pathology.cli.dsa.dsa_upload import cli as upload
 
 
-def test_stardist_polygon(monkeypatch):
+def test_stardist_polygon():
 
     runner = CliRunner()
     result = runner.invoke(cli,
@@ -13,9 +14,12 @@ def test_stardist_polygon(monkeypatch):
                             "-d","tests/data_processing/pathology/cli/dsa/testdata/stardist_polygon.json"])
 
     assert result.exit_code == 0
+    output_file = "tests/data_processing/pathology/cli/dsa/testouts/StarDist_Segmentations_with_Lymphocyte_Classifications_123.json"
+    assert os.path.exists(output_file)
+    # cleanup
+    os.remove(output_file)
 
-
-def test_stardist_cell(monkeypatch):
+def test_stardist_cell():
 
     runner = CliRunner()
     result = runner.invoke(cli,
@@ -24,8 +28,13 @@ def test_stardist_cell(monkeypatch):
 
     assert result.exit_code == 0
 
+    output_file = "tests/data_processing/pathology/cli/dsa/testouts/Points_of_Classsified_StarDist_Cells_123.json"
+    assert os.path.exists(output_file)
+    # cleanup
+    os.remove(output_file)
 
-def test_regional_polygon(monkeypatch):
+
+def test_regional_polygon():
 
     runner = CliRunner()
     result = runner.invoke(cli,
@@ -33,6 +42,11 @@ def test_regional_polygon(monkeypatch):
                             "-d","tests/data_processing/pathology/cli/dsa/testdata/regional_polygon.json"])
 
     assert result.exit_code == 0
+
+    output_file = "tests/data_processing/pathology/cli/dsa/testouts/Slideviewer_Regional_Annotations_123.json"
+    assert os.path.exists(output_file)
+    # cleanup
+    os.remove(output_file)
 
 
 def test_heatmap():
@@ -43,6 +57,24 @@ def test_heatmap():
                             "-d","tests/data_processing/pathology/cli/dsa/testdata/heatmap_config.json"])
 
     assert result.exit_code == 0
+    output_file = "tests/data_processing/pathology/cli/dsa/testouts/otsu_score_test_123.json"
+    assert os.path.exists(output_file)
+    # cleanup
+    os.remove(output_file)
+
+def test_qupath_polygon():
+
+    runner = CliRunner()
+    result = runner.invoke(cli,
+                           ["-s", "qupath-polygon",
+                            "-d","tests/data_processing/pathology/cli/dsa/testdata/qupath_polygon.json"])
+
+    print(result.exc_info)
+    assert result.exit_code == 0
+    output_file = "tests/data_processing/pathology/cli/dsa/testouts/Qupath_Pixel_Classifier_Polygons_123.json"
+    assert os.path.exists(output_file)
+    # cleanup
+    os.remove(output_file)
 
 def test_upload(requests_mock):
 
