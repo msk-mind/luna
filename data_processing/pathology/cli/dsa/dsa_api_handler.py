@@ -32,6 +32,9 @@ def get_item_uuid(image_name, uri, token, collection_name):
     """
 
     collection_uuid = get_collection_uuid(uri, token, collection_name)
+    if not collection_id:
+        return None
+
     image_id = re.search(image_id_regex, image_name).group(1)
 
     get_dsa_uuid_url = f"http://{uri}/api/v1/item?text={image_id}&limit=50&sort=lowerName&sortdir=1"
