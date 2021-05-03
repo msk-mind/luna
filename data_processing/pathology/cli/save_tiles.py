@@ -36,9 +36,9 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 def cli(cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    save_tiles_with_container(cohort_id, datastore_id, method_data)
+    save_tiles_with_datastore(cohort_id, datastore_id, method_data)
 
-def save_tiles_with_container(cohort_id: str, container_id: str, method_data: dict):
+def save_tiles_with_datastore(cohort_id: str, container_id: str, method_data: dict):
     """
     Using the container API interface, visualize tile-wise scores
     """

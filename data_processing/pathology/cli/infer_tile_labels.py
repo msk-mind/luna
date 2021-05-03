@@ -43,9 +43,9 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 def cli(cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    infer_tile_labels_with_container(cohort_id, datastore_id, method_data)
+    infer_tile_labels_with_datastore(cohort_id, datastore_id, method_data)
 
-def infer_tile_labels_with_container(cohort_id: str, container_id: str, method_data: dict):
+def infer_tile_labels_with_datastore(cohort_id: str, container_id: str, method_data: dict):
     """
     Using the container API interface, score and generate tile addresses
     """

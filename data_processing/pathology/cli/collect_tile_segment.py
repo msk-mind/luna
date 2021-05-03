@@ -38,9 +38,9 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 def cli(cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    collect_tile(cohort_id, datastore_id, method_data)
+    collect_tile_with_datastore(cohort_id, datastore_id, method_data)
 
-def collect_tile(cohort_id: str, container_id: str, method_data: dict):
+def collect_tile_with_datastore(cohort_id: str, container_id: str, method_data: dict):
     """
     Using the container API interface, visualize tile-wise scores
     """
@@ -90,7 +90,7 @@ def collect_tile(cohort_id: str, container_id: str, method_data: dict):
         return
 
     # Put results in the data store
-    output_node = Node("ResultSegment", f"slice-{input_datastore._datastore_id}", properties)
+    output_node = Node("ResultSegment", f"slide-{input_datastore._datastore_id}", properties)
     output_datastore.put(output_node)
         
 

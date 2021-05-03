@@ -30,9 +30,9 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 def cli(cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    load_slide_with_container(cohort_id, datastore_id, method_data)
+    load_slide_with_datastore(cohort_id, datastore_id, method_data)
 
-def load_slide_with_container(cohort_id, container_id, method_data):
+def load_slide_with_datastore(cohort_id, container_id, method_data):
     """
     Using the container API interface, fill scan with original slide from table
     """
