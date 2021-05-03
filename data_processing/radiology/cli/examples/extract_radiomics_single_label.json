@@ -11,5 +11,6 @@
                "verbose": "True",
                "label":1,
                "geometryTolerance":1e-08
-	}
+	},
+    "env": "data_staging"
 }

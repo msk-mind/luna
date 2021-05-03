@@ -26,7 +26,6 @@ import click
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.utils           import get_method_data
 from data_processing.common.DataStore       import DataStore
 from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
@@ -39,12 +38,12 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--container_id', required=True)
+@click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, container_id, method_param_path):
+def cli(cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    infer_tile_labels_with_container(cohort_id, container_id, method_data)
+    infer_tile_labels_with_container(cohort_id, datastore_id, method_data)
 
 def infer_tile_labels_with_container(cohort_id: str, container_id: str, method_data: dict):
     """
@@ -52,10 +51,10 @@ def infer_tile_labels_with_container(cohort_id: str, container_id: str, method_d
     """
 
     # Do some setup
-    container   = DataStore( cfg ).setNamespace(cohort_id).setContainer(container_id)
+    datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
     method_id   = method_data.get("job_tag", "none")
 
-    image_node  = container.get("WholeSlideImage", method_data['input_wsi_tag']) 
+    image_node  = datastore.get("WholeSlideImage", method_data['input_wsi_tag'])
     
     # get image_id
     # TODO - allow -s to take in slide (container) id
@@ -66,16 +65,19 @@ def infer_tile_labels_with_container(cohort_id: str, container_id: str, method_d
 
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
+        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], method_data.get("env", "data"),
+                                  datastore._namespace_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         properties = run_model(image_node.data, output_dir, method_data)
 
     except Exception:
-        container.logger.exception ("Exception raised, stopping job execution.")
-    else:
-        output_node = Node("TileScores", method_id, properties)
-        container.put(output_node)
+        datastore.logger.exception ("Exception raised, stopping job execution.")
+        return
+
+    # Put results in the data store
+    output_node = Node("TileScores", method_id, properties)
+    datastore.put(output_node)
         
 
 

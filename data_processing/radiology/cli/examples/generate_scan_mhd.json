@@ -1,5 +1,6 @@
 {
 	"dicom_input_tag": "radiology.etl",
 	"job_tag": "generate_scan_example",
-	"itkImageType": "mhd"
+	"itkImageType": "mhd",
+	"env": "data_staging"
 }

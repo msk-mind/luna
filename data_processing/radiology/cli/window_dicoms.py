@@ -27,12 +27,12 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--container_id', required=True)
+@click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, container_id, method_param_path):
+def cli(cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    window_dicom_with_container(cohort_id, container_id, method_data)
+    window_dicom_with_container(cohort_id, datastore_id, method_data)
 
 def window_dicom_with_container(cohort_id, container_id, method_data, semaphore=0):
     """
@@ -40,10 +40,10 @@ def window_dicom_with_container(cohort_id, container_id, method_data, semaphore=
     """
 
     # Do some setup
-    container   = DataStore( cfg ).setNamespace(cohort_id).setContainer(container_id)
+    datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
     method_id   = method_data.get("job_tag", "none")
 
-    dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
+    dicom_node  = datastore.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
 
     try:
         if dicom_node is None:
@@ -51,7 +51,8 @@ def window_dicom_with_container(cohort_id, container_id, method_data, semaphore=
 
         # Currently, store things at MIND_GPFS_DIR/data/<namespace>/<container name>/<method>/<schema>
         # Such that for every namespace, container, and method, there is one allocated path location
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", cohort_id, container._name, method_id)
+        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], method_data.get("env", "data"),
+                                  cohort_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         properties = window_dicoms(
@@ -61,11 +62,11 @@ def window_dicom_with_container(cohort_id, container_id, method_data, semaphore=
         )
     
     except Exception:
-        container.logger.exception ("Exception raised, stopping job execution.")
+        datastore.logger.exception ("Exception raised, stopping job execution.")
     else:
 
         output_node = Node("DicomSeries", method_id, properties)
-        container.put(output_node)
+        datastore.put(output_node)
         
     finally:
         return semaphore + 1   

@@ -5,5 +5,6 @@
   "scale_factor": 16,
   "magnification": 20,
   "slideviewer_dmt": "msk_mind_ov",
-  "labelset": "PIXEL_CLASSIFIER_LABELS"
+  "labelset": "PIXEL_CLASSIFIER_LABELS",
+  "env": "data_staging"
 }

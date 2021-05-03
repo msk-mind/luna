@@ -27,12 +27,12 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--container_id', required=True)
+@click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, container_id, method_param_path):
+def cli(cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    generate_scan_with_container(cohort_id, container_id, method_data)
+    generate_scan_with_container(cohort_id, datastore_id, method_data)
 
 def generate_scan_with_container(cohort_id, container_id, method_data, semaphore=0):
     """
@@ -40,16 +40,17 @@ def generate_scan_with_container(cohort_id, container_id, method_data, semaphore
     """
     try:
          # Do some setup
-        container   = DataStore( cfg ).setNamespace(cohort_id).setContainer(container_id)
+        datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
         method_id   = method_data.get("job_tag", "none")
         
-        dicom_node  = container.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
+        dicom_node  = datastore.get("DicomSeries", method_data['dicom_input_tag']) # Only get origional dicoms from
         
         if dicom_node is None: raise ValueError("Dicom node not found")
         
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
+        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], method_data.get("env", "data"),
+                                  datastore._namespace_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         properties = generate_scan(
@@ -59,10 +60,10 @@ def generate_scan_with_container(cohort_id, container_id, method_data, semaphore
         )
         
     except Exception as e:
-        container.logger.exception (f"{e}, stopping job execution...")
+        datastore.logger.exception (f"{e}, stopping job execution...")
     else:
         output_node = Node("VolumetricImage", method_id, properties)
-        container.put(output_node)
+        datastore.put(output_node)
         
     finally:
         return semaphore + 1   
