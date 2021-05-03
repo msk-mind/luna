@@ -65,6 +65,13 @@ def array_to_slide(arr):
     
 # USED -> utils
 def get_scale_factor_at_magnfication(slide, requested_magnification):
+    """
+    Return a scale factor if slide scanned magnification and
+    requested magnification are different.
+    :param slide: Openslide slide object
+    :param requested_magnification: int
+    :return: scale factor
+    """
     
     # First convert to float to handle true integers encoded as string floats (e.g. '20.000')
     mag_value = float(slide.properties['aperio.AppMag'])
@@ -136,6 +143,12 @@ def address_to_coord(s):
 
 # USED -> utils
 def get_downscaled_thumbnail(slide, scale_factor):
+    """
+    Return downscaled thumbnail
+    :param slide: OpenSlide slide object
+    :param scale_factor: scale factor
+    :return: downscaled np.ndarray
+    """
     new_width  = slide.dimensions[0] // scale_factor
     new_height = slide.dimensions[1] // scale_factor
     img = slide.get_thumbnail((new_width, new_height))
@@ -154,12 +167,13 @@ def make_otsu(img, scale=1):
     return (_img < (threshold * scale)).astype(float)
 
 # USED -> vis tiles
+'''
 def visualize_tiling_scores(df, thumbnail_img, tile_size, score_type_to_visualize):
     """
     Draw colored boxes around tiles 
-    :param _thumbnail: np.ndarray
+    :param thumbnail_img: np.ndarray
     :param tile_size: int
-    :param tile_addresses:
+    :param score_type_to_visualize: column name
     :return: new thumbnail image with black boxes around tiles passing threshold
     """
 
@@ -185,9 +199,15 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size, score_type_to_visualiz
         thumbnail_img[rr, cc] = get_tile_color(score)
     
     return thumbnail_img
+'''
 
 def build_shapely_polygons_from_geojson(annotation_geojson):
+    """
+    Build shapely polygons from geojson
 
+    :param annotation_geojson: geojson
+    :return: polygon and annotation label lists
+    """
     annotation_polygons = []
     annotation_labels = []
     for feature in annotation_geojson['features']:
@@ -204,7 +224,17 @@ def build_shapely_polygons_from_geojson(annotation_geojson):
 
 
 def get_regional_labels(address_raster, annotation_polygons, annotation_labels, full_generator, full_level):
+    """
+    Return annotation labels for tiles that contain annotations
+    If the tile doesn't contain annotation, set label to None.
 
+    :param address_raster: coordinates
+    :param annotation_polygons: shapely Polygon
+    :param annotation_labels: annotation label name
+    :param full_generator: full res generator
+    :param full_level: full res level
+    :return: annotation labels
+    """
     regional_label_results = []
 
     for address in address_raster:
@@ -214,13 +244,13 @@ def get_regional_labels(address_raster, annotation_polygons, annotation_labels, 
         tile_x, tile_y = tile
         tile_size_x, tile_size_y = tile_size
 
-        tile_polygon = Polygon([ 
+        tile_polygon = Polygon([
             (tile_x,               tile_y),
             (tile_x,               tile_y+tile_size_y),
             (tile_x+tile_size_x,   tile_size_y + tile_y),
             (tile_x + tile_size_x, tile_y),
-            ]) 
-            
+            ])
+
         for annotation_polygon, annotation_label in zip(annotation_polygons,annotation_labels):
             if annotation_polygon.contains(tile_polygon):
                 tile_contains_annotation = True
@@ -234,6 +264,7 @@ def get_regional_labels(address_raster, annotation_polygons, annotation_labels, 
 ### MAIN ENTRY METHOD -> pretile
 def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_id: str):
     """
+    Generate tiles and scores.
 
     Notes: 
     to_mag_scale_factor tells us how much to scale to get from full resolution to desired magnification
@@ -281,7 +312,9 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
     logger.info("tiles x %s, tiles y %s", tile_x_count, tile_y_count)
 
-    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(1, tile_x_count-1), range(1, tile_y_count-1))]
+    # populate address, coordinates
+    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address}
+                      for address in itertools.product(range(1, tile_x_count-1), range(1, tile_y_count-1))]
     logger.info("Number of tiles in raster: %s", len(address_raster))
 
     df = pd.DataFrame(address_raster).set_index("address")
@@ -291,7 +324,8 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
 
     # get pathology annotations for slide only if valid parameters
     if slideviewer_dmt != None and slideviewer_dmt != "" and labelset != None and labelset != "":
-        annotation_url = os.path.join("http://", os.environ['MIND_API_URI'], "mind/api/v1/getPathologyAnnotation/", slideviewer_dmt, image_id, "regional", labelset)
+        annotation_url = os.path.join("http://", os.environ['MIND_API_URI'], "mind/api/v1/getPathologyAnnotation/",
+                                      slideviewer_dmt, image_id, "regional", labelset)
 
         response = requests.get(annotation_url)
         response_text = response.text
@@ -442,6 +476,8 @@ def run_model(slide_file_path: str, output_dir: str, params: dict):
 
 
 ### MAIN ENTRY METHOD -> vis tiles
+"""
+Not used atm
 def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: str, params: dict):
     logger = logging.getLogger(__name__)
 
@@ -488,10 +524,19 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     properties = {'data': output_dir}
 
     return properties
-
+"""
 
 ### MAIN ENTRY METHOD -> save tiles
 def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, params: dict):
+    """
+    Given slide and tile scores, filter tiles for analysis
+
+    :param slide_file_path: path to svs file
+    :param scores_file_path: path to csv file
+    :param output_dir: directory to save tiles (.pil) and scores (.csv)
+    :param params: job params
+    :return: properties with results
+    """
     logger = logging.getLogger(__name__)
 
     logger.info("Processing slide %s", slide_file_path)
@@ -516,6 +561,7 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     offset = 0
     counter = 0
 
+    # TODO filter function (column, filter_criteria)
     df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["otsu_score"] > 0.1) ].dropna()
 
     for index, row in df_tiles_to_process.iterrows():
@@ -544,7 +590,7 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
         "tiles": len(df_scores.dropna()),
         "pil_image_bytes_mode": img_pil.mode,
         "pil_image_bytes_size": img_pil.size[0],
-        "pil_image_bytes_length": len(img_pil.tobytes())
+        "pil_image_bytes_length": len(img_bytes)
     }
 
     print (properties)
