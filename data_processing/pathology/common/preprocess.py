@@ -86,7 +86,7 @@ def get_scale_factor_at_magnfication(slide, requested_magnification):
     scale_factor = 1
     if scanned_magnfication != requested_magnification:
         if scanned_magnfication < requested_magnification:
-            raise ValueError(f'Expected magnification >={requested_magnification} but got {scanned_magnfication}')
+            raise ValueError(f'Expected magnification <={scanned_magnfication} but got {requested_magnification}')
         elif (scanned_magnfication % requested_magnification) == 0:
             scale_factor = scanned_magnfication // requested_magnification
         else:
@@ -95,6 +95,12 @@ def get_scale_factor_at_magnfication(slide, requested_magnification):
 
 # USED -> utils
 def get_full_resolution_generator(slide, tile_size):
+    """
+    Return deepzoom generator and generator level
+    :param slide: Openslide object
+    :param tile_size: for the DeepZoomGenerator
+    :return:
+    """
     assert isinstance(slide, openslide.OpenSlide) or isinstance(slide, openslide.ImageSlide)
     generator = DeepZoomGenerator(slide, overlap=0, tile_size=tile_size, limit_bounds=False)
     generator_level = generator.level_count - 1
@@ -561,8 +567,8 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     offset = 0
     counter = 0
 
-    # TODO filter function (column, filter_criteria)
-    df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["otsu_score"] > 0.1) ].dropna()
+    # TODO filter function [{column_name, filter_criteria}]
+    df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["purple_score"] > 0.1) ].dropna()
 
     for index, row in df_tiles_to_process.iterrows():
         counter += 1
