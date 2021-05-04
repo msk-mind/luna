@@ -21,22 +21,23 @@ from data_processing.common.sparksession     import SparkConfig
 
 
 logger = init_logger("load_slide.log")
-cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
+@click.option('-a', '--app_config', required=True)
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, datastore_id, method_param_path):
+def cli(app_config, cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    load_slide_with_datastore(cohort_id, datastore_id, method_data)
+    load_slide_with_datastore(app_config, cohort_id, datastore_id, method_data)
 
-def load_slide_with_datastore(cohort_id, container_id, method_data):
+def load_slide_with_datastore(app_config, cohort_id, container_id, method_data):
     """
     Using the container API interface, fill scan with original slide from table
     """
     # Do some setup
+    cfg = ConfigSet("APP_CFG",  config_file=app_config)
     datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
     method_id   = method_data["job_tag"]
 
@@ -46,7 +47,7 @@ def load_slide_with_datastore(cohort_id, container_id, method_data):
             .where(f"slide_id='{datastore.address}'")\
             .select("path", "metadata")\
             .toPandas()
-        
+
         spark.stop()
         
         if not len(df) == 1: raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {datastore.address}")

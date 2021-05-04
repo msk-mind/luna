@@ -34,23 +34,24 @@ from data_processing.common.config          import ConfigSet
 from data_processing.pathology.common.preprocess   import pretile_scoring
 
 logger = init_logger("generate_tile_labels.log")
-cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
+@click.option('-a', '--app_config', required=True)
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, datastore_id, method_param_path):
+def cli(app_config, cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    generate_tile_labels_with_datastore(cohort_id, datastore_id, method_data)
+    generate_tile_labels_with_datastore(app_config, cohort_id, datastore_id, method_data)
 
-def generate_tile_labels_with_datastore(cohort_id: str, container_id: str, method_data: dict):
+def generate_tile_labels_with_datastore(app_config: str, cohort_id: str, container_id: str, method_data: dict):
     """
     Using the container API interface, score and generate tile addresses
     """
 
     # Do some setup
+    cfg = ConfigSet("APP_CFG", config_file=app_config)
     datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
     method_id   = method_data.get("job_tag", "none")
 

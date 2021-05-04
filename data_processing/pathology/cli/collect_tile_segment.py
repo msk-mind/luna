@@ -29,21 +29,24 @@ import pyarrow.parquet as pq
 import pyarrow as pa
 
 logger = init_logger("collect_tiles.log")
-cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
+@click.option('-a', '--app_config', required=True)
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, datastore_id, method_param_path):
+def cli(app_config, cohort_id, datastore_id, method_param_path):
+
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    collect_tile_with_datastore(cohort_id, datastore_id, method_data)
+    collect_tile_with_datastore(app_config, cohort_id, datastore_id, method_data)
 
-def collect_tile_with_datastore(cohort_id: str, container_id: str, method_data: dict):
+def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: str, method_data: dict):
     """
     Using the container API interface, visualize tile-wise scores
     """
+    cfg = ConfigSet("APP_CFG", config_file=app_config)
+
     input_tile_data_id   = method_data.get("input_label_tag")
     output_datastore_id  = method_data.get("output_datastore")
 
@@ -71,6 +74,7 @@ def collect_tile_with_datastore(cohort_id: str, container_id: str, method_data: 
 
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], method_data.get("env", "data"),
                                   output_datastore._namespace_id, output_datastore._name)
+
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         output_file = os.path.join(output_dir, f"{input_datastore._datastore_id}.parquet")
@@ -84,6 +88,7 @@ def collect_tile_with_datastore(cohort_id: str, container_id: str, method_data: 
             "columns": len(df.columns),
             "data": output_file
         }
+        print(properties)
 
     except Exception:
         input_datastore.logger.exception ("Exception raised, stopping job execution.")

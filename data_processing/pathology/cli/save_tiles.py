@@ -27,23 +27,24 @@ from data_processing.common.config          import ConfigSet
 from data_processing.pathology.common.preprocess import save_tiles
 
 logger = init_logger("save_tiles.log")
-cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
+@click.option('-a', '--app_config', required=True)
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, datastore_id, method_param_path):
+def cli(app_config, cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    save_tiles_with_datastore(cohort_id, datastore_id, method_data)
+    save_tiles_with_datastore(app_config, cohort_id, datastore_id, method_data)
 
-def save_tiles_with_datastore(cohort_id: str, container_id: str, method_data: dict):
+def save_tiles_with_datastore(app_config: str, cohort_id: str, container_id: str, method_data: dict):
     """
     Using the container API interface, visualize tile-wise scores
     """
 
     # Do some setup
+    cfg = ConfigSet("APP_CFG",  config_file=app_config)
     datastore = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
 
     method_id  = method_data.get("job_tag", "none")

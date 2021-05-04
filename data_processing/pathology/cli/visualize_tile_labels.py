@@ -34,23 +34,24 @@ from data_processing.common.config          import ConfigSet
 
 
 logger = init_logger("visualize_tile_labels.log")
-cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
+@click.option('-a', '--app_config', required=True)
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, datastore_id, method_param_path):
+def cli(app_config, cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    visualize_tile_labels_with_datastore(cohort_id, datastore_id, method_data)
+    visualize_tile_labels_with_datastore(app_config, cohort_id, datastore_id, method_data)
 
-def visualize_tile_labels_with_datastore(cohort_id: str, container_id: str, method_data: dict):
+def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, container_id: str, method_data: dict):
     """
     Using the container API interface, visualize tile-wise scores
     """
 
     # Do some setup
+    cfg = ConfigSet("APP_CFG",  config_file=app_config)
     datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
     method_id   = method_data.get("job_tag", "none")
     

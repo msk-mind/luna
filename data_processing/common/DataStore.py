@@ -215,7 +215,7 @@ class DataStore(object):
             return self
 
         # Let us know attaching was a success! :)
-        self.logger = init_logger(f'logs/container-{self.address}.log')
+        self.logger = init_logger(f'container-{self.address}.log')
         self.logger.info ("Successfully attached to %s container id=%s @ %s", self._type, self._datastore_id, self.address)
         self._attached = True
 
