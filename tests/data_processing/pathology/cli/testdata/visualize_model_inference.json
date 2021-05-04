@@ -1,0 +1,13 @@
+{
+    "input_wsi_tag": "pathology.etl", 
+    "input_label_tag": "infer_ov_clf",
+    "job_tag": "visualize_infer_ov_clf",
+    "scale_factor": 8,
+    "dsa_config": {
+      "host": "localhost",
+      "port": "8080",
+      "token": "abc123"
+    },
+    "env": "data_staging"
+}
+  

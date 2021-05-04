@@ -24,6 +24,16 @@ def test_get_scale_factor_at_magnification_error():
     with pytest.raises(ValueError):
         get_scale_factor_at_magnfication(slide, 40)
 
+def test_get_tile_color():
+
+    res = get_tile_color(0.1)
+    assert 3 == len(res)
+
+def test_get_tile_color_str():
+
+    res = get_tile_color("blue")
+    assert 3 == len(res)
+
 def test_get_full_resolution_generator():
 
     generator, level = get_full_resolution_generator(slide, 128)

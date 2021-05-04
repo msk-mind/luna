@@ -1,0 +1,4 @@
+{
+    "job_tag": "pathology.etl",
+    "table_path": "tests/data_processing/pathology/cli/testdata/WSI_dsn/"
+}

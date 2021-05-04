@@ -1,0 +1,5 @@
+{
+  "input_label_tag": "test_save_tiles_ov_labels",
+  "output_datastore": "ovarian_clf_v1",
+  "env": "data_staging"
+}
