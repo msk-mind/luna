@@ -84,13 +84,18 @@ def test_save_tiles():
     # setup
     os.makedirs(output_dir, exist_ok=True)
 
-    params = {"tile_size":128, "magnification":20}
+    params = {"tile_size":128,
+              "magnification":20,
+              "filter": {"otsu_score": 0.5,
+                         "purple_score":0.1}
+              }
     res = save_tiles(slide_path, scores_csv_path, output_dir, params)
-
+    print(res)
     assert 'tests/data_processing/pathology/common/testdata/output-123/tiles.slice.pil' == res['data']
     assert 'tests/data_processing/pathology/common/testdata/output-123/address.slice.csv' == res['aux']
     assert 128 == res['pil_image_bytes_size']
     assert 49152 == res['pil_image_bytes_length']
+    assert 352 == res['tiles']
 
     # clean up
     shutil.rmtree(output_dir)

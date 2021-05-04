@@ -550,6 +550,7 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
 
     requested_tile_size       = params.get("tile_size")
     requested_magnification   = params.get("magnification")
+    filter                    = params.get("filter")
 
     slide = openslide.OpenSlide(str(slide_file_path))
     df_scores = pd.read_csv(scores_file_path).set_index("address")
@@ -567,10 +568,12 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     offset = 0
     counter = 0
 
-    # TODO filter function [{column_name, filter_criteria}]
-    df_tiles_to_process = df_scores[ (df_scores["otsu_score"] > 0.5) &  (df_scores["purple_score"] > 0.1) ].dropna()
+    # filter tiles based on user provided criteria
+    df_tiles_to_process = df_scores
+    for column, threshold in filter.items():
+        df_tiles_to_process = df_tiles_to_process[df_tiles_to_process[column] >= threshold]
 
-    for index, row in df_tiles_to_process.iterrows():
+    for index, row in df_scores.iterrows():
         counter += 1
         if counter % 10000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_tiles_to_process))
 
@@ -588,7 +591,9 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     
     fp.close()
 
-    df_scores.dropna().to_csv(f"{output_dir}/address.slice.csv")
+    # drop null columns
+    df_scores.dropna()\
+        .to_csv(f"{output_dir}/address.slice.csv")
 
     properties = {
         "data": f"{output_dir}/tiles.slice.pil",
