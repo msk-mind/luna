@@ -100,18 +100,19 @@ def test_save_tiles():
     # clean up
     shutil.rmtree(output_dir)
 
-"""need cuda enabled env
+"""
+# works on a cuda enabled env
 def test_run_model():
 
     params = {
         "model_package": "data_processing.pathology.models.eng_tissuenet",
         "model": {
-            "checkpoint_path": "/Users/rosed2/Downloads/4.ckpt",
+            "checkpoint_path": "/gpfs/mskmindhdp_emc/user/shared_data_folder/kohlia/tile_classifier/ckpts/4.ckpt",
             "n_classes": 5
         }
     }
-    res = run_model('/Users/rosed2/Downloads/tiles.slice.pil',
-                    '/Users/rosed2/Downloads/address.slice.csv',
+    res = run_model('/gpfs/mskmindhdp_emc/data/TCGA-BRCA/TCGA-D8-A4Z1-01Z-00-DX1.D39D38B5-FC9F-4298-8720-016407DC6591/test_collect_tiles/tiles.slice.pil',
+                    '/gpfs/mskmindhdp_emc/data/TCGA-BRCA/TCGA-D8-A4Z1-01Z-00-DX1.D39D38B5-FC9F-4298-8720-016407DC6591/test_collect_tiles/address.slice.csv',
                     'tests/data_processing/pathology/common/testdata', params)
 
     print(res)
