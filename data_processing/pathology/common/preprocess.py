@@ -573,7 +573,7 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     for column, threshold in filter.items():
         df_tiles_to_process = df_tiles_to_process[df_tiles_to_process[column] >= threshold]
 
-    for index, row in df_scores.iterrows():
+    for index, row in df_tiles_to_process.iterrows():
         counter += 1
         if counter % 10000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_tiles_to_process))
 
@@ -582,9 +582,9 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
 
         fp.write( img_bytes )
 
-        df_scores.loc[index, "tile_image_offset"]   = int(offset)
-        df_scores.loc[index, "tile_image_length"]   = int(len(img_bytes))
-        df_scores.loc[index, "tile_image_size_xy"]  = int(img_pil.size[0])
+        df_tiles_to_process.loc[index, "tile_image_offset"]   = int(offset)
+        df_tiles_to_process.loc[index, "tile_image_length"]   = int(len(img_bytes))
+        df_tiles_to_process.loc[index, "tile_image_size_xy"]  = int(img_pil.size[0])
         df_scores.loc[index, "tile_image_mode"]     = img_pil.mode
 
         offset += len(img_bytes)
@@ -592,13 +592,13 @@ def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, par
     fp.close()
 
     # drop null columns
-    df_scores.dropna()\
+    df_tiles_to_process.dropna()\
         .to_csv(f"{output_dir}/address.slice.csv")
 
     properties = {
         "data": f"{output_dir}/tiles.slice.pil",
         "aux" : f"{output_dir}/address.slice.csv",
-        "tiles": len(df_scores.dropna()),
+        "tiles": len(df_tiles_to_process.dropna()),
         "pil_image_bytes_mode": img_pil.mode,
         "pil_image_bytes_size": img_pil.size[0],
         "pil_image_bytes_length": len(img_bytes)

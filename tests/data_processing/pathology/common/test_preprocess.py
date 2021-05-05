@@ -95,7 +95,7 @@ def test_save_tiles():
     assert 'tests/data_processing/pathology/common/testdata/output-123/address.slice.csv' == res['aux']
     assert 128 == res['pil_image_bytes_size']
     assert 49152 == res['pil_image_bytes_length']
-    assert 352 == res['tiles']
+    assert 132 == res['tiles'] # total 352 tiles, filtered by scores
 
     # clean up
     shutil.rmtree(output_dir)
