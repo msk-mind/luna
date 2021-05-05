@@ -347,49 +347,7 @@ def run_model(pil_file_path: str, csv_file_path: str, output_dir: str, params: d
     to_mag_scale_factor and to_thumbnail_scale_factor both need to be event integers, i.e. the scale factors are multiples of the the scanned magnficiation
     """
     logger = logging.getLogger(__name__)
-    """
-
-    logger.info("Processing slide %s", slide_file_path)
-    logger.info("Params = %s", params)
-
-    slide = openslide.OpenSlide(str(slide_file_path))
-
-    logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
  
-    scale_factor = params.get("scale_factor", 4) # Instead, we should specifiy a thumbnail zoom, and calculate this using get_scale_factor_at_magnfication()
-    to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)
-    to_thumbnail_scale_factor   = to_mag_scale_factor * scale_factor
-
-    if not to_mag_scale_factor % 1 == 0 or not requested_tile_size % scale_factor == 0: 
-        raise ValueError("You chose a combination of requested tile sizes and magnification that resulted in non-integer tile sizes at different scales")
-
-    full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
-    thumbnail_tile_size       = requested_tile_size // scale_factor
-
-    logger.info("Normalized magnification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
-    logger.info("Requested tile size=%s, tile size at full magnficiation=%s, tile size at thumbnail=%s", requested_tile_size, full_resolution_tile_size, thumbnail_tile_size)
-
-    # Create thumbnail image for scoring
-    rbg_thumbnail  = get_downscaled_thumbnail(slide, to_thumbnail_scale_factor)
-    otsu_thumbnail = make_otsu(rbg_thumbnail)
-
-    # get DeepZoomGenerator, level
-    generator, level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
-
-    tile_x_count, tile_y_count = generator.level_tiles[level]
-    logger.info("tiles x %s, tiles y %s", tile_x_count, tile_y_count)
-
-    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address} for address in itertools.product(range(1, tile_x_count-1), range(1, tile_y_count-1))]
-    logger.info("Number of tiles in raster: %s", len(address_raster))
-
-    df_scores = pd.DataFrame(address_raster).set_index("address")
-
-    df_scores.loc[:, "otsu_score"  ] = get_otsu_scores   (df_scores['coordinates'], otsu_thumbnail, thumbnail_tile_size)
-    df_scores.loc[:, "purple_score"] = get_purple_scores (df_scores['coordinates'], rbg_thumbnail,  thumbnail_tile_size)
-       
-    logger.info("Displaying DataFrame for otsu_score > 0.5:")
-    logger.info (df_scores [ df_scores["otsu_score"] > 0.5 ])
-    """
     model_package             = params.get("model_package")
 
     # load csv
