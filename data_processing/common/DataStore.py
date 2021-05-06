@@ -93,7 +93,7 @@ class DataStore(object):
         self.logger.debug ("Running on: %s", self._host)
 
         self.params = params
-        self._node_commits = {}
+        self._attached = False
 
     def createNamespace(self, namespace_id: str):
         """
@@ -189,7 +189,6 @@ class DataStore(object):
         # Check if the results are singleton (they should be... since we only query unique IDs!!!) 
         if res is None or len(res) == 0: 
             self.logger.warning (f"DataStore [{container_id}] does not exist, you can try creating it first with createContainer()")
-            self._attached = True
             return self
 
         # Set some potentially import parameters
@@ -378,9 +377,7 @@ class DataStore(object):
             for p in node.objects:
                 future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
                 future_uploads.append(future)
-        
-        self.logger.info("Committed [%s]", len(self._node_commits.values()))
-   
+           
         n_count_futures = 0
         n_total_futures = len (future_uploads)
         for future in as_completed(future_uploads):
@@ -400,5 +397,7 @@ class DataStore(object):
             executor.shutdown()    
         self.logger.info("Done saving all records!!")
 
-    def add(self, *args): self.logger.warning ("Datastore.add() has been depreciated")
-    def saveAll(self, *args): self.logger.warning ("Datastore.saveAll() has been depreciated")
+    def add(self, *args): 
+        self.logger.warning ("Datastore.add() has been depreciated")
+    def saveAll(self, *args): 
+        self.logger.warning ("Datastore.saveAll() has been depreciated")
