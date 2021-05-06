@@ -172,8 +172,6 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, SLIDE_NPY_DIR, conto
 
         if not default_annotation_geojson:
             raise RuntimeError("Error while building default geojson!!!")
-            return None 
-
 
         user_annotation['geojson'] = default_annotation_geojson
 

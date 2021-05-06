@@ -106,9 +106,13 @@ def create_geojson_table():
             json_jobs.append ( json_future )
 
     for json_future in as_completed(json_jobs):
-        if json_future.result() is not None:
-            slide_id, data = json_future.result()
-            pd.DataFrame(data).to_csv(f"{TABLE_OUT_DIR}/regional_annot_slice_slide={slide_id}.csv")
+        try:
+            if json_future.result() is not None:
+                slide_id, data = json_future.result()
+                print (pd.DataFrame(data))
+                pd.DataFrame(data).to_csv(f"{TABLE_OUT_DIR}/regional_annot_slice_slide={slide_id}.csv")
+        except:
+            print ("Something was wrong with future {json_future}, skipping.")
 
     client.shutdown()
     del client
