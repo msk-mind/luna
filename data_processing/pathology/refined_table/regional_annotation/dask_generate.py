@@ -98,7 +98,6 @@ def create_geojson_table():
     for _, row in df.iterrows():
         bmp_future = client.submit (check_slideviewer_and_download_bmp, row.sv_project_id, row.slideviewer_path, row.slide_id, all_users_list, SLIDE_BMP_DIR, SLIDEVIEWER_API_URL, TMP_ZIP_DIR)
         bmp_jobs.append( bmp_future )
-        if len(bmp_jobs) >= 2000: break
 
     json_jobs = []
     for bmp_future in as_completed(bmp_jobs):
