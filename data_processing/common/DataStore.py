@@ -132,7 +132,7 @@ class DataStore(object):
 
         return self
 
-    def createContainer(self, container_id, container_type):
+    def createDatastore(self, container_id, container_type):
         """
         Checks if the node referenced by container_id is a valid container, queries the metastore for relevant metadata
 
@@ -158,9 +158,9 @@ class DataStore(object):
         
         return self
     
-    def setContainer(self, container_id):
+    def setDatastore(self, container_id):
         """
-        Checks if the node referenced by container_id is a valid container, queries the metastore for relevant metadata
+        Checks if the node referenced by container_id is a valid datastore, queries the metastore for relevant metadata
 
         :params: container_id - the unique container ID, either as an integer (neo4j autopopulated ID) or as a string (the Qualified Path)
         """
@@ -192,7 +192,7 @@ class DataStore(object):
             return self
 
         # Set some potentially import parameters
-        self._container_id  = res[0]["id(container)"]
+        self._datastore_id  = res[0]["id(container)"]
         self._name          = res[0]["container.name"]
         self._qualifiedpath = res[0]["container.qualified_address"]
         self._type          = res[0]["container.type"]
@@ -205,24 +205,24 @@ class DataStore(object):
             return self
         
         # Set match clause to id
-        self.logger.debug ("Match on: %s", self._container_id)
+        self.logger.debug ("Match on: %s", self._datastore_id)
 
         # Attach
         cohort = Node("cohort", self._namespace_id)
-        if not len(self._conn.query(f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._container_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """ ))==1: 
-            self.logger.warning ( "Cannot attach, tried [%s]", f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._container_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)
+        if not len(self._conn.query(f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._datastore_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)) == 1:
+            self.logger.warning ( "Cannot attach, tried [%s]", f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._datastore_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)
             return self
 
         # Let us know attaching was a success! :)
-        self.logger = init_logger(f'logs/container-{self.address}.log')
-        self.logger.info ("Successfully attached to %s container id=%s @ %s", self._type, self._container_id, self.address)
+        self.logger = init_logger(f'container-{self.address}.log')
+        self.logger.info ("Successfully attached to %s container id=%s @ %s", self._type, self._datastore_id, self.address)
         self._attached = True
 
         return self
 
     def isAttached(self):
         """
-        Returns true if container was properly attached (i.e. checks in setContainer succeeded), else False
+        Returns true if container was properly attached (i.e. checks in setDatastore succeeded), else False
         """
         self.logger.debug ("Attached: %s", self._attached)
         return self._attached
@@ -242,7 +242,7 @@ class DataStore(object):
         """
         assert self.isAttached()
 
-        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type}) WHERE id(container) = {self._container_id} AND data.name='{type}-{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
+        query = f"""MATCH (container)-[:HAS_DATA]-(data:{type}) WHERE id(container) = {self._datastore_id} AND data.name='{type}-{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
 
         self.logger.debug(query)
         res = self._conn.query(query)
@@ -331,7 +331,7 @@ class DataStore(object):
 
         # Decorate with the container namespace 
         node.set_namespace( self._namespace_id, self._name )
-        node._container_id = self._container_id
+        node._datastore_id = self._datastore_id
 
         # Set node data object(s) only if there is a path and the object store is enabled
         node.objects = []
@@ -362,7 +362,7 @@ class DataStore(object):
         self.logger.info ("Adding: %s", node.get_address())
                 
         self._conn.query( f""" 
-            MATCH (container) WHERE id(container) = {node._container_id}
+            MATCH (container) WHERE id(container) = {node._datastore_id}
             MERGE (container)-[:HAS_DATA]->(da:{node.get_match_str()})
                 ON MATCH  SET da = {node.get_map_str()}
                 ON CREATE SET da = {node.get_map_str()} 

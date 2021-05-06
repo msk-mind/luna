@@ -175,8 +175,8 @@ def update_graph(config_file):
         container.createNamespace( namespace )
         container.setNamespace( namespace )
         for _, row in tuple_to_add.iterrows():
-            container.createContainer(row.slide_id, "slide")
-            container.setContainer(row.slide_id)
+            container.createDatastore(row.slide_id, "slide")
+            container.setDatastore(row.slide_id)
             properties = row.metadata
             node = Node("WholeSlideImage", "pathology.etl", properties)
             node.set_data( row.path.split(':')[-1] )

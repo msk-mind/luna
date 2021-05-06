@@ -27,12 +27,12 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
 @click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--container_id', required=True)
+@click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, container_id, method_param_path):
+def cli(cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    randomize_contours_with_container(cohort_id, container_id, method_data)
+    randomize_contours_with_container(cohort_id, datastore_id, method_data)
 
 def randomize_contours_with_container(cohort_id: str, container_id: str, method_data: dict, semaphore=0):
     """
@@ -40,11 +40,11 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
     """
 
     # Do some setup
-    container   = DataStore( cfg ).setNamespace(cohort_id).setContainer(container_id)
+    datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
     method_id   = method_data.get("job_tag", "none")
 
-    image_node  = container.get("VolumetricImage", method_data['image_input_tag']) 
-    label_node  = container.get("VolumetricLabel", method_data['label_input_tag'])
+    image_node  = datastore.get("VolumetricImage", method_data['image_input_tag'])
+    label_node  = datastore.get("VolumetricLabel", method_data['label_input_tag'])
 
     try:
         if image_node is None: raise ValueError("Image node not found")
@@ -52,7 +52,8 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
 
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
+        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], method_data.get("env", "data"),
+                                  datastore._namespace_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         image_properties, label_properties, pertubation_properties, supervoxel_properties = randomize_contours(
@@ -63,17 +64,17 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
         )
 
     except Exception as e:
-        container.logger.exception (f"{e}, stopping job execution...")
+        datastore.logger.exception (f"{e}, stopping job execution...")
     else:
         new_image_node          = Node("VolumetricImage",    method_id, image_properties)
         new_label_node          = Node("VolumetricLabel",    method_id, label_properties)
         new_pertubation_node    = Node("VolumetricLabelSet", method_id, pertubation_properties)
         new_supervoxel_node     = Node("Voxels", method_id, supervoxel_properties)
 
-        container.put(new_image_node)
-        container.put(new_label_node)
-        container.put(new_pertubation_node)
-        container.put(new_supervoxel_node)
+        datastore.put(new_image_node)
+        datastore.put(new_label_node)
+        datastore.put(new_pertubation_node)
+        datastore.put(new_supervoxel_node)
         
     finally:
         return semaphore + 1   

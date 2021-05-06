@@ -3,5 +3,6 @@
   "input_label_tag": "test_generate_tile_ov_labels",
   "job_tag": "test_visualize_tiles",
   "scale_factor": 16,
-  "env": "data_staging"
+  "env": "data_staging",
+  "dsa_config": "yes"
 }

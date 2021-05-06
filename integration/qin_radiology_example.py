@@ -39,8 +39,8 @@ if __name__=='__main__':
         for patient in ['QIN-BREAST-01-0001', 'QIN-BREAST-01-0002']:
             container = DataStore(cfg).setNamespace("my-analysis")
 
-            container.createContainer(patient, 'patient')
-            container.setContainer   (patient)
+            container.createDatastore(patient, 'patient')
+            container.setDatastore   (patient)
 
             image = Node("VolumetricImage", "main_scan")
             image.set_data(f"qin-test-data/{patient}.mhd")

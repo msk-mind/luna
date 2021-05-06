@@ -28,37 +28,35 @@ import subprocess
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.utils           import get_method_data
 from data_processing.common.DataStore       import DataStore
 from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
 
-# From radiology.common
-from data_processing.pathology.common.preprocess   import visualize_scoring
 
 logger = init_logger("visualize_tile_labels.log")
-cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
+@click.option('-a', '--app_config', required=True)
 @click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--container_id', required=True)
+@click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, container_id, method_param_path):
+def cli(app_config, cohort_id, datastore_id, method_param_path):
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    visualize_tile_labels_with_container(cohort_id, container_id, method_data)
+    visualize_tile_labels_with_datastore(app_config, cohort_id, datastore_id, method_data)
 
-def visualize_tile_labels_with_container(cohort_id: str, container_id: str, method_data: dict):
+def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, container_id: str, method_data: dict):
     """
     Using the container API interface, visualize tile-wise scores
     """
 
     # Do some setup
-    container   = DataStore( cfg ).setNamespace(cohort_id).setContainer(container_id)
+    cfg = ConfigSet("APP_CFG",  config_file=app_config)
+    datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
     method_id   = method_data.get("job_tag", "none")
     
-    image_node  = container.get("WholeSlideImage", method_data['input_wsi_tag']) 
-    label_node  = container.get("TileScores",      method_data['input_label_tag']) 
+    image_node  = datastore.get("WholeSlideImage", method_data['input_wsi_tag'])
+    label_node  = datastore.get("TileScores",      method_data['input_label_tag'])
 
     method_data.update(label_node.properties)
 
@@ -68,31 +66,45 @@ def visualize_tile_labels_with_container(cohort_id: str, container_id: str, meth
 
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", container._namespace_id, container._name, method_id)
+        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], method_data.get("env", "data"),
+                                  datastore._namespace_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         # properties = visualize_scoring(image_node.data, label_node.data, output_dir, method_data)
-        if method_data.get("dsa_config", None):
-            params = label_node.properties
 
-            params["column"]   = "tumor_score"
-            params["input"]    = label_node.properties["data"]
-            params["annotation_name"]   = method_id
+        # push results to DSA
+        if method_data.get("dsa_config", None):
+            properties = label_node.properties
+
+            properties["column"]   = "tumor_score"
+            properties["input"]    = label_node.properties["data"]
+            properties["annotation_name"]   = method_id
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 print (tmpdir)
-                with open(f"{tmpdir}/model_inference_config.json", "w") as f: json.dump(params, f)
-                with open(f"{tmpdir}/dsa_config.json", "w") as f: json.dump(method_data["dsa_config"], f)
-                subprocess.call(["dsa", "-c", f"{tmpdir}/dsa_config.json", "heatmap", "-d", f"{tmpdir}/model_inference_config.json"])
+                with open(f"{tmpdir}/model_inference_config.json", "w") as f:
+                    json.dump(properties, f)
+                with open(f"{tmpdir}/dsa_config.json", "w") as f:
+                    json.dump(method_data["dsa_config"], f)
 
-                
+                # build viz
+                result = subprocess.run(["python3","-m","data_processing.pathology.cli.dsa.dsa_viz",
+                                         "-c", f"{tmpdir}/dsa_config.json", "heatmap",
+                                         "-d", f"{tmpdir}/model_inference_config.json"],
+                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+                print(result.returncode, result.stdout, result.stderr)
 
+                # push results to DSA
+                subprocess.run(["python3","-m","data_processing.pathology.cli.dsa.dsa_upload",
+                                 "-c", f"{tmpdir}/dsa_config.json", "-d", result.stdout])
 
     except Exception:
-        container.logger.exception ("Exception raised, stopping job execution.")
-    else:
-        output_node = Node("TileScores", method_id, properties)
-        container.put(output_node)
+        datastore.logger.exception ("Exception raised, stopping job execution.")
+        return
+
+    # Put results in the data store
+    output_node = Node("TileScores", method_id, properties)
+    datastore.put(output_node)
         
 
 
