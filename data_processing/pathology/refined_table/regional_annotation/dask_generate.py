@@ -6,7 +6,7 @@ from data_processing.common.config          import ConfigSet
 from data_processing.common.custom_logger   import init_logger
 import data_processing.common.constants as const
 
-from data_processing.pathology.common.annotation_utils   import process_slide
+from data_processing.pathology.common.annotation_utils   import convert_slide_bitmap_to_geojson, check_slideviewer_and_download_bmp
 from data_processing.pathology.common.slideviewer_client import fetch_slide_ids
 
 import pandas as pd
@@ -41,8 +41,8 @@ def cli(data_config_file, app_config_file, process_string):
         logger.info('config_file: ' + app_config_file)
 
         # load configs
-        cfg = ConfigSet(name='DATA_CFG', config_file='test_dask_config.yaml')
-        cfg = ConfigSet(name='APP_CFG',  config_file='../configs/config.yaml')
+        cfg = ConfigSet(name='DATA_CFG', config_file=data_config_file)
+        cfg = ConfigSet(name='APP_CFG',  config_file=app_config_file)
 
         # copy app and data configuration to destination config dir
         config_location = const.CONFIG_LOCATION(cfg)
@@ -59,7 +59,7 @@ def cli(data_config_file, app_config_file, process_string):
 
 
 def create_geojson_table():
-    client = Client(n_workers=25, threads_per_worker=1, memory_limit=0.1)
+    client = Client(n_workers=20, threads_per_worker=1, memory_limit=0.1)
     print (client)
 
     """
@@ -94,14 +94,21 @@ def create_geojson_table():
     all_users_list = cfg.get_value('DATA_CFG::USERS')
     all_labelsets  = cfg.get_value('DATA_CFG::LABEL_SETS')
 
-    jobs = []
+    bmp_jobs = []
     for _, row in df.iterrows():
-        future = client.submit (process_slide, row.slideviewer_path, row.slide_id, all_users_list, all_labelsets, SLIDE_NPY_DIR, SLIDE_BMP_DIR, SLIDEVIEWER_API_URL, TMP_ZIP_DIR, row.sv_project_id, contour_level, polygon_tolerance)
-        jobs.append ( future )
-    
-    for job in as_completed(jobs):
-        if job.result() is not None:
-            slide_id, data = job.result()
+        bmp_future = client.submit (check_slideviewer_and_download_bmp, row.sv_project_id, row.slideviewer_path, row.slide_id, all_users_list, SLIDE_BMP_DIR, SLIDEVIEWER_API_URL, TMP_ZIP_DIR)
+        bmp_jobs.append( bmp_future )
+        if len(bmp_jobs) >= 2000: break
+
+    json_jobs = []
+    for bmp_future in as_completed(bmp_jobs):
+        if bmp_future.result() is not None:
+            json_future = client.submit (convert_slide_bitmap_to_geojson, bmp_future, all_labelsets, SLIDE_NPY_DIR, contour_level, polygon_tolerance)
+            json_jobs.append ( json_future )
+
+    for json_future in as_completed(json_jobs):
+        if json_future.result() is not None:
+            slide_id, data = json_future.result()
             pd.DataFrame(data).to_csv(f"{TABLE_OUT_DIR}/regional_annot_slice_slide={slide_id}.csv")
 
     client.shutdown()

@@ -28,11 +28,20 @@ from skimage import measure
 from filehash import FileHash
 
 
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+logger = init_logger()
+
+# Base template for geoJSON file
+geojson_base = {
+    "type": "FeatureCollection",
+    "features": []
+}
+
+# max amount of time for a geojson to be generated. if generation surpasses this limit, it is likely the annotation file is
+# too large or they may be annotation artifacts present in the slide. currently set at 30 minute timeout
+TIMEOUT_SECONDS = 1800
 
 def get_slide_bitmap(full_filename, user, slide_id, SLIDE_BMP_DIR, SLIDEVIEWER_API_URL, TMP_ZIP_DIR, sv_project_id):
-
-    print(f" >>>>>>> Processing [{full_filename}] <<<<<<<<")
-
     full_filename_without_ext = full_filename.replace(".svs", "")
 
     bmp_dirname = os.path.join(SLIDE_BMP_DIR, full_filename_without_ext.replace(";", "_"))
@@ -117,162 +126,12 @@ def convert_bmp_to_npy(bmp_file, output_folder):
     return output_filepath
 
 
-# from pyspark.sql.functions import udf, lit, col, first, last, desc, array, to_json, collect_list, current_timestamp, explode
-# from pyspark.sql.window import Window
-# from pyspark.sql.types import StringType, IntegerType, ArrayType, MapType, StructType, StructField
 
-
-os.environ['OPENBLAS_NUM_THREADS'] = '1'
-logger = init_logger()
-
-
-# Base template for geoJSON file
-geojson_base = {
-    "type": "FeatureCollection",
-    "features": []
-}
-
-# max amount of time for a geojson to be generated. if generation surpasses this limit, it is likely the annotation file is
-# too large or they may be annotation artifacts present in the slide. currently set at 30 minute timeout
-TIMEOUT_SECONDS = 1800
-
-
-# @click.command()
-# @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
-#               help="path to yaml file containing data input and output parameters. "
-#                    "See ./data_config.yaml.template")
-# @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
-#               help="path to yaml file containing application runtime parameters. "
-#                    "See ./app_config.yaml.template")
-# @click.option('-p', '--process_string', default='geojson',
-#               help='process to run or replay: e.g. geojson OR concat')
-# def cli(data_config_file, app_config_file, process_string):
-#     """
-#         This module generates a delta table with geojson pathology data based on the input and output parameters
-#          specified in the data_config_file.
-
-#         Example:
-#             python3 -m data_processing.pathology.refined_table.regional_annotation.generate \
-#                      --data_config_file <path to data config file> \
-#                      --app_config_file <path to app config file> \
-#                      --process_string geojson
-#     """
-#     with CodeTimer(logger, f"generate {process_string} table"):
-#         logger.info('data template: ' + data_config_file)
-#         logger.info('config_file: ' + app_config_file)
-
-#         # load configs
-
-
-#         # copy app and data configuration to destination config dir
-#         config_location = const.CONFIG_LOCATION(cfg)
-#         os.makedirs(config_location, exist_ok=True)
-
-#         # shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
-#         # shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
-#         # logger.info("config files copied to %s", config_location)
-
-#         if 'geojson' == process_string:
-#             exit_code = create_geojson_table()
-#             if exit_code != 0:
-#                 logger.error("GEOJSON table creation had errors. Exiting.")
-#                 return
-
-#         # if 'concat' == process_string:
-#         #     exit_code = create_concat_geojson_table()
-#         #     if exit_code != 0:
-#         #         logger.error("CONCAT-GEOJSON table creation had errors. Exiting.")
-#         #         return
-
-
-def create_geojson_table():
-    cfg = ConfigSet(name=const.DATA_CFG, config_file='test_dask_config.yaml')
-    cfg = ConfigSet(name=const.APP_CFG,  config_file='../configs/config.yaml')
-
-    """
-    Vectorizes npy array annotation file into polygons and builds GeoJson with the polygon features.
-    Creates a geojson file per labelset.
-    """
-    
-
-    # get application and data config variables
-    cfg = ConfigSet()
-    SLIDEVIEWER_API_URL = cfg.get_value(path=const.DATA_CFG + '::SLIDEVIEWER_API_URL')
-    SLIDEVIEWER_CSV_FILE = cfg.get_value(path=const.DATA_CFG + '::SLIDEVIEWER_CSV_FILE')
-    PROJECT_ID = cfg.get_value(path=const.DATA_CFG + '::PROJECT_ID')
-    LANDING_PATH = cfg.get_value(path=const.DATA_CFG + '::LANDING_PATH')
-    SLIDE_BMP_DIR = os.path.join(LANDING_PATH, 'regional_bmps')
-    TMP_ZIP_DIR_NAME = cfg.get_value(const.DATA_CFG + '::REQUESTOR_DEPARTMENT') + '_tmp_zips'
-    TMP_ZIP_DIR = os.path.join(LANDING_PATH, TMP_ZIP_DIR_NAME)
-    SLIDE_NPY_DIR = os.path.join(LANDING_PATH, 'regional_npys')
-
-    # setup variables needed for build geojson UDF
-    contour_level = cfg.get_value(path=const.DATA_CFG+'::CONTOUR_LEVEL')
-    polygon_tolerance = cfg.get_value(path=const.DATA_CFG+'::POLYGON_TOLERANCE')
-    
-
-    # fetch full set of slideviewer slides for project
-    # slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, const.CONFIG_LOCATION(cfg), SLIDEVIEWER_CSV_FILE)
-    # df = pd.DataFrame(data=np.array(slides),columns=["slideviewer_path", "slide_id", "sv_project_id"])
-
-    # FOR TESTTING, REMOVE
-    df = pd.read_csv('/home/pateld6/data-processing/test_slides.csv')
-    df = df.head(2)
-
-    # get users and labelsets for df explosion
-    users = cfg.get_value(const.DATA_CFG + '::USERS')
-    all_labelsets = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
-    
-    df['users'] = [users] * len(df)
-    # df = df.explode('user')
-
-    df['all_labelsets'] = [all_labelsets] * len(df)
-    # df = df.explode('labelset')
-
-    # reindexing
-    df = df.reset_index(drop=True)
-
-    # adding universal columns
-    now = datetime.now() 
-    date_time = now.strftime("%Y-%m-%d %H:%M:%S")
-
-    df['date_updated'] = date_time
-    df['SLIDE_BMP_DIR'] = SLIDE_BMP_DIR
-    df['TMP_ZIP_DIR'] = TMP_ZIP_DIR
-    df['SLIDEVIEWER_API_URL'] = SLIDEVIEWER_API_URL
-    df['contour_level'] = contour_level
-    df['polygon_tolerance'] = polygon_tolerance
-    df['SLIDE_NPY_DIR'] = SLIDE_NPY_DIR 
-
-
-
-
-    # define client
-    # 
-    # remove
-
-    # projects;134;2018;HobS18-062598116001;1216705.svs/getLabelFileBMP
-    # df = df[df['slide_id'] == '2550967']
-    # process_slide()
-
-    client = Client("tcp://10.254.130.16:8786")
-    futures = client.map(process_slide, df['slideviewer_path'], df['slide_id'], df['users'], df['all_labelsets'], df['SLIDE_NPY_DIR'], df['SLIDE_BMP_DIR'], df['SLIDEVIEWER_API_URL'], df['TMP_ZIP_DIR'], df['sv_project_id'], df['contour_level'], df['polygon_tolerance'])
-
-    results = client.gather(futures)
-    df[["bmp_record_uuid","bmp_filepath","npy_filepath","geojson"]] = list(results)
-    print(df)
-    # df["geojson_uuid"]
-
-    
-
-
-def process_slide(slideviewer_path, slide_id, users, all_labelsets, SLIDE_NPY_DIR, SLIDE_BMP_DIR, SLIDEVIEWER_API_URL, TMP_ZIP_DIR, sv_project_id, contour_level, polygon_tolerance):
+def check_slideviewer_and_download_bmp(sv_project_id, slideviewer_path, slide_id, users, SLIDE_BMP_DIR, SLIDEVIEWER_API_URL, TMP_ZIP_DIR):
     slide_id = str(slide_id)    
 
     outputs = []
     output_dict_base = {"slide_id": slide_id, "user": "n/a", "bmp_filepath": 'n/a', "npy_filepath": 'n/a', "geojson": 'n/a'}
-    geojson_table_outs = []
-    concat_geojson_table_outs = []
 
     for user in users:
         # download bitmap
@@ -284,10 +143,22 @@ def process_slide(slideviewer_path, slide_id, users, all_labelsets, SLIDE_NPY_DI
             output_dict['user'] = user
             output_dict["bmp_filepath"] = bmp_filepath
             outputs.append(output_dict)
-            
     # at this point if outputs is empty, return early
     if len(outputs) == 0:
         return None
+    else:
+        return outputs
+
+
+def convert_slide_bitmap_to_geojson(outputs, all_labelsets, SLIDE_NPY_DIR, contour_level, polygon_tolerance):
+    outputs = copy.deepcopy(outputs)
+
+    slide_id = outputs[0]['slide_id']   
+    geojson_table_outs = []
+    concat_geojson_table_outs = []
+    output_dict_base = {"slide_id": slide_id, "user": "n/a", "bmp_filepath": 'n/a', "npy_filepath": 'n/a', "geojson": 'n/a'}
+
+    print(f" >>>>>>> Processing [{slide_id}] <<<<<<<<")
 
     for user_annotation in outputs:
         bmp_filepath = user_annotation['bmp_filepath']
@@ -300,7 +171,7 @@ def process_slide(slideviewer_path, slide_id, users, all_labelsets, SLIDE_NPY_DI
         default_annotation_geojson = build_default_geojson_from_annotation(npy_filepath, all_labelsets, contour_level, polygon_tolerance)
 
         if not default_annotation_geojson:
-            print("Error when building geojson")
+            raise RuntimeError("Error while building default geojson!!!")
             return None 
 
 
@@ -329,152 +200,3 @@ def process_slide(slideviewer_path, slide_id, users, all_labelsets, SLIDE_NPY_DI
         concat_geojson_table_outs.append(concat_geojson_table_out_entry)
     
     return slide_id, geojson_table_outs + concat_geojson_table_outs
-
-
-    # build concat geojson
-
-    
-    # return (bmp_record_uuid,bmp_filepath,npy_filepath,geojson)
-    # print( " >>>>>>> Finished annotation processing, printing resulting geojson...", geojson[:200])
-    
-    #     return (bmp_filepath, npy_filepath, geojson)
-
-
-
-
-    # populate columns, bmp_filepath, npy_filepath, geojson
-    # df = df.withColumn('bmp_filepath', lit('')) \
-    #     .withColumn('users', array([lit(user) for user in cfg.get_value(const.DATA_CFG + '::USERS')])) \
-    #     .withColumn('date_updated', current_timestamp()) \
-    #     .withColumn('geojson_record_uuid', lit('')) \
-    #     .withColumn('SLIDE_BMP_DIR', lit(os.path.join(LANDING_PATH, 'regional_bmps'))) \
-    #     .withColumn('TMP_ZIP_DIR', lit(os.path.join(LANDING_PATH, TMP_ZIP_DIR))) \
-    #     .withColumn('SLIDEVIEWER_API_URL', lit(cfg.get_value(const.DATA_CFG + '::SLIDEVIEWER_API_URL'))) \
-
-
-    # old
-
-
-    exit_code = 0
-
-    cfg = ConfigSet()
-    spark = SparkConfig().spark_session(config_name=const.APP_CFG,
-                                        app_name="data_processing.pathology.refined_table.annotation.generate")
-    # disable broadcast join to avoid timeout
-    spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")
-
-    # load paths from configs
-    bitmask_table_path = const.TABLE_LOCATION(cfg, is_source=True)
-    geojson_table_path = const.TABLE_LOCATION(cfg)
-
-    df = spark.read.format("delta").load(bitmask_table_path)
-
-    # explode table by labelsets
-    labelsets = get_labelset_keys()
-    labelset_column = array([lit(key) for key in labelsets])
-
-    df = df.withColumn("labelset_list", labelset_column)
-    # explode labelsets
-    df = df.select("slideviewer_path", "slide_id", "sv_project_id", "bmp_record_uuid", "user", "npy_filepath", explode("labelset_list").alias("labelset"))
-
-    # setup variables needed for build geojson UDF
-    contour_level = cfg.get_value(path=const.DATA_CFG+'::CONTOUR_LEVEL')
-    polygon_tolerance = cfg.get_value(path=const.DATA_CFG+'::POLYGON_TOLERANCE')
-
-    # populate geojson and geojson_record_uuid
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/build_geojson.py"))
-    
-    label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
-
-    df = df.withColumn("label_config", lit(str(label_config))) \
-            .withColumn("contour_level", lit(contour_level)) \
-            .withColumn("polygon_tolerance", lit(polygon_tolerance)) \
-            .withColumn("geojson", lit(""))
-
-    print(df.select("label_config").collect())
-
-    df = df.groupby(["bmp_record_uuid", "labelset"]).applyInPandas(build_geojson_from_annotation, schema = df.schema)
-
-    # drop empty geojsons that may have been created
-    df = df.filter("geojson != ''")
-
-    # populate uuid
-
-    geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
-    df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf("geojson", array(lit("SVGEOJSON"), "labelset")))
-
-    # build refined table by selecting columns from output table
-    geojson_df = df.select("sv_project_id", "slideviewer_path", "slide_id", "bmp_record_uuid", "user", "labelset", "geojson", "geojson_record_uuid")
-    geojson_df = geojson_df.withColumn("latest", lit(True))        \
-                         .withColumn("date_added", current_timestamp())    \
-                         .withColumn("date_updated", current_timestamp())
-    # update geojson delta table
-    geojson_df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(geojson_table_path)
-
-    logger.info("Finished building Geojson table.")
-
-    return exit_code
-
-
-# def create_concat_geojson_table():
-#     """
-#     Aggregate geojson features for each labelset, in case there are annotations from multiple users.
-#     """
-#     exit_code = 0
-
-#     cfg = ConfigSet()
-#     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="data_processing.pathology.refined_table.annotation.generate")
-#     spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "false")
-
-#     # load paths from config
-#     geojson_table_path = const.TABLE_LOCATION(cfg, is_source=True)
-#     concat_geojson_table_path = const.TABLE_LOCATION(cfg)
-
-#     concatgeojson_df = spark.read.format("delta").load(geojson_table_path)
-#     # only use latest annotations for concatenating.
-#     concatgeojson_df = concatgeojson_df.filter("latest")
-
-#     # make geojson string list for slide + labelset
-#     concatgeojson_df = concatgeojson_df \
-#         .select("sv_project_id", "slideviewer_path", "slide_id", "labelset", "geojson") \
-#         .groupby(["sv_project_id", "slideviewer_path", "slide_id", "labelset"]) \
-#         .agg(collect_list("geojson").alias("geojson_list"))
-
-#     # set up udfs
-#     spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
-#     spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
-#     spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/build_geojson.py"))
-#     from utils import generate_uuid_dict
-#     from build_geojson import concatenate_regional_geojsons
-#     concatenate_regional_geojsons_udf = udf(concatenate_regional_geojsons, geojson_struct)
-#     concat_geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
-
-#     # cache to not have udf called multiple times
-#     concatgeojson_df = concatgeojson_df.withColumn("concat_geojson", concatenate_regional_geojsons_udf("geojson_list")).cache()
-
-#     concatgeojson_df = concatgeojson_df \
-#         .drop("geojson_list") \
-#         .withColumn("concat_geojson_record_uuid", concat_geojson_record_uuid_udf(to_json("concat_geojson"), array(lit("SVCONCATGEOJSON"), "labelset")))
-    
-#     concatgeojson_df = concatgeojson_df.withColumn("latest", lit(True))   \
-#                             .withColumn("date_added", current_timestamp())    \
-#                             .withColumn("date_updated", current_timestamp())
-
-#     # update concatenation geojson delta table
-#     from delta.tables import DeltaTable
-#     concatgeojson_df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(concat_geojson_table_path)
-
-#     logger.info("Finished building Concatenation table.")
-
-#     return exit_code
-
-
-if __name__ == "__main__":
-    
-    # future = client.submit(print, "Test")
-    # future.result()
-    # cli()
-    create_geojson_table()
