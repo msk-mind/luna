@@ -110,7 +110,7 @@ def get_full_resolution_generator(slide, tile_size):
 # USED -> generate cli
 def get_otsu_scores(address_raster, otsu_img, otsu_tile_size):
     otsu_slide = array_to_slide(otsu_img)
-    otsu_generator, otsu_generator_level = get_full_resolution_generator(otsu_slide, tile_size=otsu_tile_size)   
+    otsu_generator, otsu_generator_level = get_full_resolution_generator(otsu_slide, tile_size=otsu_tile_size)
     otsu_score_results = []
     for address in address_raster:
         otsu_tile = np.array(otsu_generator.get_tile(otsu_generator_level, address))
@@ -252,6 +252,7 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     # non-required arguments related to slideviewer annotations
     slideviewer_dmt           = params.get("slideviewer_dmt", None)
     labelset                  = params.get("labelset", None)
+    filter                    = params.get("filter")
 
     logger.info("Processing slide %s", slide_file_path)
     logger.info("Params = %s", params)
@@ -290,7 +291,6 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
 
     df = pd.DataFrame(address_raster).set_index("address")
 
-    # TODO stain normalization
     # TODO custom scoring
     df.loc[:, "otsu_score"  ] = get_otsu_scores   (df['coordinates'], otsu_thumbnail, thumbnail_tile_size)
     df.loc[:, "purple_score"] = get_purple_scores (df['coordinates'], rbg_thumbnail,  thumbnail_tile_size)
@@ -309,28 +309,55 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
             annotation_geojson = response.json()
             annotation_polygons, annotation_labels = build_shapely_polygons_from_geojson(annotation_geojson)
             df.loc[:, "regional_label"] = get_regional_labels (df['coordinates'], annotation_polygons, annotation_labels, full_generator, full_level)
-            
-       
-    logger.info("Displaying DataFrame for otsu_score > 0.5:")
-    logger.info (df [ df["otsu_score"] > 0.5 ])
 
-    output_file = os.path.join(output_dir, "tile_scores_and_labels.csv")
 
-    df.to_csv(output_file)
+    fp = open(f"{output_dir}/tiles.slice.pil",'wb')
+    offset = 0
+    counter = 0
 
-    logger.info ("Saved tile scores at %s", output_file)
+    # filter tiles based on user provided criteria
+    df_tiles_to_process = df
+    for column, threshold in filter.items():
+        df_tiles_to_process = df_tiles_to_process[df_tiles_to_process[column] >= threshold]
+
+    for index, row in df_tiles_to_process.iterrows():
+        counter += 1
+        if counter % 10000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_tiles_to_process))
+
+        img_pil     = full_generator.get_tile(full_level, address_to_coord(index)).resize((requested_tile_size,requested_tile_size))
+        img_bytes   = img_pil.tobytes()
+
+        fp.write( img_bytes )
+
+        df_tiles_to_process.loc[index, "tile_image_offset"]   = int(offset)
+        df_tiles_to_process.loc[index, "tile_image_length"]   = int(len(img_bytes))
+        df_tiles_to_process.loc[index, "tile_image_size_xy"]  = int(img_pil.size[0])
+        df_tiles_to_process.loc[index, "tile_image_mode"]     = img_pil.mode
+
+        offset += len(img_bytes)
+
+    fp.close()
+
+    # drop null columns
+    df_tiles_to_process.dropna() \
+        .to_csv(f"{output_dir}/address.slice.csv")
 
     properties = {
-        "data": output_file,
-        "magnification": requested_magnification,
+        "data": f"{output_dir}/tiles.slice.pil",
+        "aux" : f"{output_dir}/address.slice.csv",
+        "tiles": len(df_tiles_to_process.dropna()),
+        "tile_magnification": requested_magnification,
         "full_resolution_magnification": requested_magnification * to_mag_scale_factor,
         "tile_size": requested_tile_size,
         "full_resolution_tile_size": full_resolution_tile_size,
-        "total_tiles": len(df),
+        "image_filename": Path(slide_file_path).name,
         "available_labels": list(df.columns),
-        "tile_magnification": requested_magnification,
-        "image_filename": Path(slide_file_path).name
+        "pil_image_bytes_mode": img_pil.mode,
+        "pil_image_bytes_size": img_pil.size[0],
+        "pil_image_bytes_length": len(img_bytes)
     }
+
+    logger.info ("Saved tile scores and images at %s", output_dir)
 
     return properties
 
@@ -409,86 +436,6 @@ def run_model(pil_file_path: str, csv_file_path: str, output_dir: str, params: d
     }
 
     return properties 
-
-
-### MAIN ENTRY METHOD -> save tiles
-def save_tiles(slide_file_path: str, scores_file_path: str, output_dir: str, params: dict):
-    """
-    Given slide and tile scores, filter tiles for analysis
-
-    :param slide_file_path: path to svs file
-    :param scores_file_path: path to csv file
-    :param output_dir: directory to save tiles (.pil) and scores (.csv)
-    :param params: job params
-    :return: properties with results
-    """
-    logger = logging.getLogger(__name__)
-
-    logger.info("Processing slide %s", slide_file_path)
-    logger.info("Params = %s", params)
-
-    requested_tile_size       = params.get("tile_size")
-    requested_magnification   = params.get("magnification")
-    filter                    = params.get("filter")
-
-    slide = openslide.OpenSlide(str(slide_file_path))
-    df_scores = pd.read_csv(scores_file_path).set_index("address")
-
-    to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)
-
-    if not to_mag_scale_factor % 1 == 0: 
-        raise ValueError("You chose a combination of requested tile sizes and magnifications that resulted in non-integer tile sizes at different scales")
-
-    full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
-
-    generator, level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
-
-    fp = open(f"{output_dir}/tiles.slice.pil",'wb')
-    offset = 0
-    counter = 0
-
-    # filter tiles based on user provided criteria
-    df_tiles_to_process = df_scores
-    for column, threshold in filter.items():
-        df_tiles_to_process = df_tiles_to_process[df_tiles_to_process[column] >= threshold]
-
-    for index, row in df_tiles_to_process.iterrows():
-        counter += 1
-        if counter % 10000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df_tiles_to_process))
-
-        img_pil     = generator.get_tile(level, address_to_coord(index)).resize((requested_tile_size,requested_tile_size))
-        img_bytes   = img_pil.tobytes()
-
-        fp.write( img_bytes )
-
-        df_tiles_to_process.loc[index, "tile_image_offset"]   = int(offset)
-        df_tiles_to_process.loc[index, "tile_image_length"]   = int(len(img_bytes))
-        df_tiles_to_process.loc[index, "tile_image_size_xy"]  = int(img_pil.size[0])
-        df_tiles_to_process.loc[index, "tile_image_mode"]     = img_pil.mode
-
-        offset += len(img_bytes)
-    
-    fp.close()
-
-    # drop null columns
-    df_tiles_to_process.dropna()\
-        .to_csv(f"{output_dir}/address.slice.csv")
-
-    properties = {
-        "data": f"{output_dir}/tiles.slice.pil",
-        "aux" : f"{output_dir}/address.slice.csv",
-        "tiles": len(df_tiles_to_process.dropna()),
-        "magnification": requested_magnification,
-        "full_resolution_magnification": requested_magnification * to_mag_scale_factor,
-        "tile_size": requested_tile_size,
-        "full_resolution_tile_size": full_resolution_tile_size,
-        "pil_image_bytes_mode": img_pil.mode,
-        "pil_image_bytes_size": img_pil.size[0],
-        "pil_image_bytes_length": len(img_bytes)
-    }
-
-    print (properties)
-    return properties
 
 
 '''

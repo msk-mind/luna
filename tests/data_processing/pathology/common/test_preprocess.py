@@ -68,34 +68,23 @@ def test_pretile_scoring(requests_mock):
     requests_mock.get("http://localhost/mind/api/v1/getPathologyAnnotation/8/123/regional/default",
                       json=regional_annotation)
 
-    params = {"tile_size":128, "magnification":20, "slideviewer_dmt": "8", "labelset": "default"}
-    res = pretile_scoring(slide_path, output_dir, params, "123")
-
-    assert 'tests/data_processing/pathology/common/testdata/output-123/tile_scores_and_labels.csv' == res['data']
-    assert 20 == res['full_resolution_magnification']
-    assert ['coordinates', 'otsu_score', 'purple_score', 'regional_label'] == res['available_labels']
-    assert '123.svs' == res['image_filename']
-
-    # clean up
-    shutil.rmtree(output_dir)
-
-
-def test_save_tiles():
-    # setup
-    os.makedirs(output_dir, exist_ok=True)
-
     params = {"tile_size":128,
               "magnification":20,
-              "filter": {"otsu_score": 0.5,
-                         "purple_score":0.1}
+              "slideviewer_dmt": "8",
+              "labelset": "default",
+              "filter": {
+                  "otsu_score": 0.5
               }
-    res = save_tiles(slide_path, scores_csv_path, output_dir, params)
+              }
+    res = pretile_scoring(slide_path, output_dir, params, "123")
+
     print(res)
     assert 'tests/data_processing/pathology/common/testdata/output-123/tiles.slice.pil' == res['data']
     assert 'tests/data_processing/pathology/common/testdata/output-123/address.slice.csv' == res['aux']
-    assert 128 == res['pil_image_bytes_size']
-    assert 49152 == res['pil_image_bytes_length']
-    assert 132 == res['tiles'] # total 352 tiles, filtered by scores
+    assert 'RGB' == res['pil_image_bytes_mode']
+    assert 20 == res['full_resolution_magnification']
+    assert ['coordinates', 'otsu_score', 'purple_score', 'regional_label'] == res['available_labels']
+    assert '123.svs' == res['image_filename']
 
     # clean up
     shutil.rmtree(output_dir)

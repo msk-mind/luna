@@ -78,7 +78,7 @@ def generate_tile_labels_with_datastore(app_config: str, cohort_id: str, contain
         return
 
     # Put results in the data store
-    output_node = Node("TileScores", method_id, properties)
+    output_node = Node("TileImages", method_id, properties)
     datastore.put(output_node)
         
 
