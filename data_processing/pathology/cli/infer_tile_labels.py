@@ -55,7 +55,7 @@ def infer_tile_labels_with_datastore(app_config: str, cohort_id: str, container_
     datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
     method_id   = method_data.get("job_tag", "none")
 
-    image_node  = datastore.get("WholeSlideImage", method_data['input_wsi_tag'])
+    image_node  = datastore.get("TileImages", method_data['input_label_tag'])
     
     # get image_id
     # TODO - allow -s to take in slide (container) id
@@ -70,7 +70,7 @@ def infer_tile_labels_with_datastore(app_config: str, cohort_id: str, container_
                                   datastore._namespace_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        properties = run_model(image_node.data, output_dir, method_data)
+        properties = run_model(image_node.data, image_node.aux, output_dir, method_data)
 
     except Exception:
         datastore.logger.exception ("Exception raised, stopping job execution.")

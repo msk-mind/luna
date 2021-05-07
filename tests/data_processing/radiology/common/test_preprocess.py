@@ -10,9 +10,9 @@ import data_processing.common.constants as const
 from pathlib import Path
 cwd = os.getcwd()
 
-dicom_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/1-01.dcm'
-image_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd'
-label_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'
+dicom_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/1-01.dcm'
+image_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd'
+label_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'
 
 
 def test_find_centroid():
@@ -96,8 +96,8 @@ def test_crop_images():
 
 def test_extract_voxels_1(tmp_path):
     properties = extract_voxels(
-        image_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
-        label_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
+        image_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
+        label_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
         output_dir = str(tmp_path),
         params     = {"resampledPixelSpacing": [2.5,2.5,2.5]}
     )
@@ -111,8 +111,8 @@ def test_extract_voxels_1(tmp_path):
 
 def test_extract_voxels_2(tmp_path):
     properties = extract_voxels(
-        image_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
-        label_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
+        image_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
+        label_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
         output_dir = str(tmp_path),
         params     = {"resampledPixelSpacing": [5,5,5]}
     )
@@ -125,8 +125,8 @@ def test_extract_voxels_2(tmp_path):
 
 def test_extract_radiomics_1(tmp_path):
     properties = extract_radiomics(
-        image_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
-        label_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
+        image_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
+        label_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
         output_dir = str(tmp_path),
         params     = {"job_tag":"test_1", "RadiomicsFeatureExtractor": {'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 25, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001}}
     )
@@ -136,8 +136,8 @@ def test_extract_radiomics_1(tmp_path):
 
 def test_extract_radiomics_2(tmp_path):
     properties = extract_radiomics(
-        image_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
-        label_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
+        image_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
+        label_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
         output_dir = str(tmp_path),
         params     = {"job_tag":"test_1", "RadiomicsFeatureExtractor": {'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 50, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001}}
     )
@@ -147,7 +147,7 @@ def test_extract_radiomics_2(tmp_path):
 
 def test_generate_scan_1(tmp_path):
     properties = generate_scan(
-        dicom_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
+        dicom_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
         output_dir = str(tmp_path),
         params     = {'itkImageType':'mhd'}
     )
@@ -159,7 +159,7 @@ def test_generate_scan_1(tmp_path):
 
 def test_generate_scan_2(tmp_path):
     properties = generate_scan(
-        dicom_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
+        dicom_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
         output_dir = str(tmp_path),
         params     = {'itkImageType':'nrrd'}
     )
@@ -170,7 +170,7 @@ def test_generate_scan_2(tmp_path):
 
 def test_window_dicoms_1(tmp_path):
     properties = window_dicoms(
-        dicom_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
+        dicom_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
         output_dir = tmp_path,
         params     = {'window':False}
     )
@@ -186,7 +186,7 @@ def test_window_dicoms_1(tmp_path):
 
 def test_window_dicoms_2(tmp_path):
     properties = window_dicoms(
-        dicom_path = f'{cwd}/tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
+        dicom_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/',
         output_dir = tmp_path,
         params     = {'window':True, 'window_low_level': -100, 'window_high_level': 100}
     )

@@ -68,10 +68,20 @@ def test_pretile_scoring(requests_mock):
     requests_mock.get("http://localhost/mind/api/v1/getPathologyAnnotation/8/123/regional/default",
                       json=regional_annotation)
 
-    params = {"tile_size":128, "magnification":20, "slideviewer_dmt": "8", "labelset": "default"}
+    params = {"tile_size":128,
+              "magnification":20,
+              "slideviewer_dmt": "8",
+              "labelset": "default",
+              "filter": {
+                  "otsu_score": 0.5
+              }
+              }
     res = pretile_scoring(slide_path, output_dir, params, "123")
 
-    assert 'tests/data_processing/pathology/common/testdata/output-123/tile_scores_and_labels.csv' == res['data']
+    print(res)
+    assert 'tests/data_processing/pathology/common/testdata/output-123/tiles.slice.pil' == res['data']
+    assert 'tests/data_processing/pathology/common/testdata/output-123/address.slice.csv' == res['aux']
+    assert 'RGB' == res['pil_image_bytes_mode']
     assert 20 == res['full_resolution_magnification']
     assert ['coordinates', 'otsu_score', 'purple_score', 'regional_label'] == res['available_labels']
     assert '123.svs' == res['image_filename']
@@ -79,23 +89,20 @@ def test_pretile_scoring(requests_mock):
     # clean up
     shutil.rmtree(output_dir)
 
+"""
+# works on a cuda enabled env
+def test_run_model():
 
-def test_save_tiles():
-    # setup
-    os.makedirs(output_dir, exist_ok=True)
+    params = {
+        "model_package": "data_processing.pathology.models.eng_tissuenet",
+        "model": {
+            "checkpoint_path": "/gpfs/mskmindhdp_emc/user/shared_data_folder/kohlia/tile_classifier/ckpts/4.ckpt",
+            "n_classes": 5
+        }
+    }
+    res = run_model('/gpfs/mskmindhdp_emc/data/TCGA-BRCA/TCGA-D8-A4Z1-01Z-00-DX1.D39D38B5-FC9F-4298-8720-016407DC6591/test_collect_tiles/tiles.slice.pil',
+                    '/gpfs/mskmindhdp_emc/data/TCGA-BRCA/TCGA-D8-A4Z1-01Z-00-DX1.D39D38B5-FC9F-4298-8720-016407DC6591/test_collect_tiles/address.slice.csv',
+                    'tests/data_processing/pathology/common/testdata', params)
 
-    params = {"tile_size":128,
-              "magnification":20,
-              "filter": {"otsu_score": 0.5,
-                         "purple_score":0.1}
-              }
-    res = save_tiles(slide_path, scores_csv_path, output_dir, params)
     print(res)
-    assert 'tests/data_processing/pathology/common/testdata/output-123/tiles.slice.pil' == res['data']
-    assert 'tests/data_processing/pathology/common/testdata/output-123/address.slice.csv' == res['aux']
-    assert 128 == res['pil_image_bytes_size']
-    assert 49152 == res['pil_image_bytes_length']
-    assert 132 == res['tiles'] # total 352 tiles, filtered by scores
-
-    # clean up
-    shutil.rmtree(output_dir)
+"""
