@@ -30,7 +30,6 @@ def build_geojson_from_pointclick_json(labelsets, labelset, sv_json):
     :param sv_json: list of dictionaries, from slideviewer
     :return: geojson list
     """
-    print("Building geojson for labelset " + str(labelset))
 
     labelsets = ast.literal_eval(labelsets)
     mappings = labelsets[labelset]
@@ -91,6 +90,7 @@ def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, 
     :param polygon_tolerance: polygon resolution
     :return: geojson result
     """
+    
     if label_num in annotation:
         print("Building contours for label " + str(label_num))
         
@@ -99,7 +99,7 @@ def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, 
 
         mask = np.where(annotation==label_num,1,0).astype(np.int8)
         contours = measure.find_contours(mask, level = contour_level)
-        print("num contours", len(contours))
+        print("num_contours", len(contours))
 
         polygons = [Polygon(np.squeeze(c)) for c in contours]
         parent_nums = find_parents(polygons)
@@ -154,16 +154,13 @@ def call__labelset_specific_geojson():
 def build_labelset_specific_geojson(default_annotation_geojson, labelset):
 
     annotation_geojson = copy.deepcopy(geojson_base)
-    labelset_keys = set(labelset.keys())
 
     for feature in default_annotation_geojson['features']:
 
         # number is fixed
         label_num = feature['properties']['label_num']
-        print (labelset_keys, label_num, type (label_num))
         # add polygon to json, change name potentially needed
         if label_num in labelset:
-            print ("Remapping for" , label_num)
             new_feature_polygon = copy.deepcopy(feature)
 
             # get new name and change
@@ -185,17 +182,14 @@ def build_all_geojsons_from_default(default_annotation_geojson, all_labelsets, c
     labelset_name_to_labelset_specific_geojson = {}
     
     for labelset_name, labelset in all_labelsets.items():
-        print (labelset_name, labelset)
         if labelset_name != DEFAULT_LABELSET_NAME:
             # use default labelset geojson to build labelset specific geojson
-            print ("Remapping Default -->", labelset_name)
             annotation_geojson = build_labelset_specific_geojson(default_annotation_geojson, labelset)
         else:
             annotation_geojson = default_annotation_geojson
 
         # only add if geojson not none (built correctly and contains >= 1 polygon)
         if annotation_geojson:
-            print ("Adding...")
             labelset_name_to_labelset_specific_geojson[labelset_name] = json.dumps(annotation_geojson)
         
     return labelset_name_to_labelset_specific_geojson
@@ -211,20 +205,23 @@ def build_default_geojson_from_annotation(annotation_npy_filepath, all_labelsets
 
     default_labelset = all_labelsets[DEFAULT_LABELSET_NAME]
 
+    if not (annotation > 0).any():
+        raise ValueError(f"No annotated pixels detected in bitmap loaded from {annotation_npy_filepath}")
+
     # vectorize all
     try:
         for label_num in default_labelset:
             default_annotation_geojson = add_contours_for_label(default_annotation_geojson, annotation, label_num, default_labelset, float(contour_level), float(polygon_tolerance))
     except TimeoutError as err:
         print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
-        # raise
+        raise err
 
     # disables alarm
     # signal.alarm(0)
 
     # empty geojson created, return nan and delete from geojson table
     if len(default_annotation_geojson['features']) == 0:
-        return None
+        raise RuntimeError(f"Something went wrong with building default geojson from {annotation_npy_filepath}, quitting")
 
     return default_annotation_geojson
 
@@ -236,7 +233,6 @@ def build_geojson_from_annotation(df):
     :param df: Pandas dataframe
     :return: Pandas dataframe with geojson field populated
     """
-    from build_geojson import add_contours_for_label, handler
 
     labelsets = df.label_config.values[0]
     annotation_npy_filepath = df.npy_filepath.values[0]
@@ -293,4 +289,3 @@ def concatenate_regional_geojsons(geojson_list):
         concat_geojson['features'].extend(json_dict['features'])
 
     return concat_geojson
-

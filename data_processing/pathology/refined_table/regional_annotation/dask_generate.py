@@ -1,5 +1,6 @@
 import click
 import os
+import shutil
 
 from data_processing.common.CodeTimer       import CodeTimer
 from data_processing.common.config          import ConfigSet
@@ -48,8 +49,8 @@ def cli(data_config_file, app_config_file, process_string):
         config_location = const.CONFIG_LOCATION(cfg)
         os.makedirs(config_location, exist_ok=True)
 
-        # shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
-        # shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
+        shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
+        shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
         logger.info("config files copied to %s", config_location)
 
         exit_code = create_geojson_table()
@@ -102,7 +103,7 @@ def create_geojson_table():
     json_jobs = []
     for bmp_future in as_completed(bmp_jobs):
         if bmp_future.result() is not None:
-            json_future = client.submit (convert_slide_bitmap_to_geojson, bmp_future, all_labelsets, SLIDE_NPY_DIR, contour_level, polygon_tolerance)
+            json_future = client.submit (convert_slide_bitmap_to_geojson, bmp_future, all_labelsets, contour_level, polygon_tolerance, SLIDE_NPY_DIR)
             json_jobs.append ( json_future )
 
     for json_future in as_completed(json_jobs):
@@ -112,12 +113,12 @@ def create_geojson_table():
                 print (pd.DataFrame(data))
                 pd.DataFrame(data).to_csv(f"{TABLE_OUT_DIR}/regional_annot_slice_slide={slide_id}.csv")
         except:
-            print ("Something was wrong with future {json_future}, skipping.")
+            print (f"Something was wrong with future {json_future}, skipping.")
 
     client.shutdown()
-    del client
 
     return 0
+
 
 if __name__ == "__main__":
     cli()

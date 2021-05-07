@@ -3,10 +3,36 @@ from data_processing.common.Node import Node
 from data_processing.common.config import ConfigSet
 from data_processing.common.custom_logger   import init_logger
 
-import os, socket, pathlib, logging
+import os, socket, pathlib, logging, shutil
 from minio import Minio
 
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+
+
+class DataStore_v2:
+    def __init__(self):
+        self.backend = '/gpfs/mskmindhdp_emc/data_dev/'
+        os.makedirs(self.backend, exist_ok=True)
+        print ("File backend=", self.backend)
+
+    def _generate_qualified_path(self, store_id, namespace_id, data_type, data_tag):
+        return os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
+
+    def put(self, filepath, store_id, namespace_id, data_type, data_tag='data'):
+        dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
+        os.makedirs(dest_dir, exist_ok=True)
+        print ("Save", filepath, "->", dest_dir)
+        shutil.copy(filepath, dest_dir )
+    
+    def write(self, iostream, store_id, namespace_id, data_type, data_tag, dtype='w'):
+        dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type)
+        os.makedirs(dest_dir, exist_ok=True)
+        print ("Save ->", dest_dir + '/' + data_tag)
+        with open(dest_dir + '/' + data_tag, dtype) as fp:
+            fp.write(iostream)
+
+
+
 
 
 def bootstrap (container_id): 
