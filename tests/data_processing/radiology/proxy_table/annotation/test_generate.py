@@ -14,10 +14,10 @@ mha_app_config_path = project_path + "/configs/MHA_datasetname/app_config.yaml"
 mha_data_config_path = project_path + "/configs/MHA_datasetname/data_config.yaml"
 mha_data_csv_path = project_path + "/configs/MHA_datasetname/metadata.csv"
 
-mhd_table_path = project_path + "/tables/MHD_datasetname"
-mhd_app_config_path = project_path + "/configs/MHD_datasetname/app_config.yaml"
-mhd_data_config_path = project_path + "/configs/MHD_datasetname/data_config.yaml"
-mhd_data_csv_path = project_path + "/configs/MHD_datasetname/metadata.csv"
+mhd_table_path = project_path + "/tables/RadiologyAnnotation_datasetname"
+mhd_app_config_path = project_path + "/configs/RadiologyAnnotation_datasetname/app_config.yaml"
+mhd_data_config_path = project_path + "/configs/RadiologyAnnotation_datasetname/data_config.yaml"
+mhd_data_csv_path = project_path + "/configs/RadiologyAnnotation_datasetname/metadata.csv"
 
 @pytest.fixture(autouse=True)
 def spark():
@@ -57,11 +57,11 @@ def test_cli_mha(spark):
 
     df.unpersist()
 
-def test_cli_mhd(spark):
+def test_cli_both(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
-        ['-d', 'tests/data_processing/radiology/proxy_table/annotation/mhd_data_config.yaml',
+        ['-d', 'tests/data_processing/radiology/proxy_table/annotation/data_config.yaml',
         '-a', 'tests/test_config.yaml',
         '-p', 'delta'])
     assert result.exit_code == 0
@@ -72,7 +72,7 @@ def test_cli_mhd(spark):
 
     df = spark.read.format("delta").load(os.path.join(os.getcwd(), mhd_table_path))
     df.show(10, False)
-    assert df.count() == 1
+    assert df.count() == 2
     columns = ['modificationTime', 'length','scan_annotation_record_uuid', 'path', 'accession_number', 'series_number', 'label', 'metadata']
     assert set(columns) \
             == set(df.columns)

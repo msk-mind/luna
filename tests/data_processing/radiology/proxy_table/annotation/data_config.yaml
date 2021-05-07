@@ -1,11 +1,13 @@
 # annotation file type extension like MHA, MHD..
-FILE_TYPE: mhd
+FILE_TYPE:
+  - mhd
+  - mha
 
 # path to data directory
 ROOT_PATH: tests/data_processing/radiology/testdata
 
 # annotation data type - used to create table names
-DATA_TYPE: MHD
+DATA_TYPE: RadiologyAnnotation
 
 # project name
 PROJECT: test-project
