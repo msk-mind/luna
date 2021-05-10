@@ -25,11 +25,18 @@ class DataStore_v2:
         shutil.copy(filepath, dest_dir )
     
     def write(self, iostream, store_id, namespace_id, data_type, data_tag, dtype='w'):
-        dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type)
+        dest_path_dir  = os.path.join (store_id, namespace_id, data_type)
+        dest_path_file = os.path.join (dest_path_dir, data_tag)
+
+        dest_dir  = os.path.join (self.backend, dest_path_dir)
+        dest_file = os.path.join (self.backend, dest_path_file)
+
         os.makedirs(dest_dir, exist_ok=True)
-        print ("Save ->", dest_dir + '/' + data_tag)
-        with open(dest_dir + '/' + data_tag, dtype) as fp:
+        print ("Save ->", dest_file)
+        with open(dest_file, dtype) as fp:
             fp.write(iostream)
+
+        return dest_path_file
 
 
 

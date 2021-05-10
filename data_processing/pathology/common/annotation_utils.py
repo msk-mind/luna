@@ -29,6 +29,8 @@ from skimage import measure
 
 from filehash import FileHash
 
+from datetime import datetime
+
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 logger = init_logger()
@@ -133,7 +135,18 @@ def check_slideviewer_and_download_bmp(sv_project_id, slideviewer_path, slide_id
     slide_id = str(slide_id)    
 
     outputs = []
-    output_dict_base = {"slide_id": slide_id, "user": "n/a", "bmp_filepath": 'n/a', "npy_filepath": 'n/a', "geojson": 'n/a'}
+    output_dict_base = { 
+        "sv_project_id":sv_project_id, 
+        "slideviewer_path": slideviewer_path, 
+        "slide_id": slide_id, 
+        "user": "n/a", 
+        "bmp_filepath": 'n/a', 
+        "npy_filepath": 'n/a', 
+        "geojson": 'n/a', 
+        "geojson_path": 'n/a',
+        "date": datetime.now()
+    }
+    outputs.append(output_dict_base)
 
     for user in users:
         # download bitmap
@@ -146,7 +159,7 @@ def check_slideviewer_and_download_bmp(sv_project_id, slideviewer_path, slide_id
             output_dict["bmp_filepath"] = bmp_filepath
             outputs.append(output_dict)
     # at this point if outputs is empty, return early
-    if len(outputs) == 0:
+    if len(outputs) <= 1:
         return None
     else:
         return outputs
@@ -158,7 +171,7 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, polyg
     slide_id = outputs[0]['slide_id']   
     geojson_table_outs = []
     concat_geojson_table_outs = []
-    output_dict_base = {"slide_id": slide_id, "user": "n/a", "bmp_filepath": 'n/a', "npy_filepath": 'n/a', "geojson": 'n/a'}
+    output_dict_base = outputs.pop(0)
 
     print(f" >>>>>>> Processing [{slide_id}] <<<<<<<<")
 
@@ -189,9 +202,11 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, polyg
             geojson_table_out_entry = copy.deepcopy(user_annotation)
             geojson_table_out_entry['labelset'] = labelset_name
             geojson_table_out_entry['geojson'] = geojson
+        
+            path = store.write (json.dumps(geojson, indent=4), store_id=user_annotation['slide_id'], namespace_id=user_annotation['user'], data_type='RegionalAnnotationJSON', data_tag=labelset_name)
+            geojson_table_out_entry['geojson_path'] = path
+
             geojson_table_outs.append(geojson_table_out_entry)
-            
-            store.write(json.dumps(geojson, indent=4), store_id=user_annotation['slide_id'], namespace_id=user_annotation['user'], data_type='RegionalAnnotationJSON', data_tag=labelset_name)
 
 
     
@@ -203,9 +218,10 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, polyg
         concat_geojson_table_out_entry['user'] = "CONCAT"
         concat_geojson_table_out_entry['labelset'] = labelset_name
         concat_geojson_table_out_entry['geojson'] = geojson
+
+        path = store.write(json.dumps(geojson, indent=4), store_id=concat_geojson_table_out_entry['slide_id'], namespace_id=concat_geojson_table_out_entry['user'], data_type='RegionalAnnotationJSON', data_tag=labelset_name)
+        concat_geojson_table_out_entry['geojson_path'] = path
+
         concat_geojson_table_outs.append(concat_geojson_table_out_entry)
 
-        store.write(json.dumps(geojson, indent=4), store_id=concat_geojson_table_out_entry['slide_id'], namespace_id=concat_geojson_table_out_entry['user'], data_type='RegionalAnnotationJSON', data_tag=labelset_name)
-
-    
     return slide_id, geojson_table_outs + concat_geojson_table_outs

@@ -110,8 +110,9 @@ def create_geojson_table():
         try:
             if json_future.result() is not None:
                 slide_id, data = json_future.result()
-                print (pd.DataFrame(data))
-                pd.DataFrame(data).to_csv(f"{TABLE_OUT_DIR}/regional_annot_slice_slide={slide_id}.csv")
+                result_df = pd.DataFrame(data)
+                print (result_df)
+                result_df.drop(columns='geojson').to_parquet(f"{TABLE_OUT_DIR}/regional_annot_slice_slide={slide_id}.parquet")
         except:
             print (f"Something was wrong with future {json_future}, skipping.")
 
