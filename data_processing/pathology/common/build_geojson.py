@@ -10,11 +10,13 @@ import signal
 import shapely 
 from shapely.geometry import Polygon, MultiPolygon, shape, mapping
 
+from dask.distributed import secede, rejoin
+
 # max amount of time for a geojson to be generated. if generation surpasses this limit, it is likely the annotation file is
 # too large or they may be annotation artifacts present in the slide. currently set at 30 minute timeout
 TIMEOUT_SECONDS = 1800
 
-
+DEFAULT_LABELSET_NAME = 'DEFAULT_LABELS'
 # Base template for geoJSON file
 geojson_base = {
     "type": "FeatureCollection",
@@ -30,7 +32,6 @@ def build_geojson_from_pointclick_json(labelsets, labelset, sv_json):
     :param sv_json: list of dictionaries, from slideviewer
     :return: geojson list
     """
-    print("Building geojson for labelset " + str(labelset))
 
     labelsets = ast.literal_eval(labelsets)
     mappings = labelsets[labelset]
@@ -91,15 +92,16 @@ def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, 
     :param polygon_tolerance: polygon resolution
     :return: geojson result
     """
+    
     if label_num in annotation:
         print("Building contours for label " + str(label_num))
-
+        
         num_pixels = np.count_nonzero(annotation == label_num)
         print("num_pixels with label", num_pixels)
 
         mask = np.where(annotation==label_num,1,0).astype(np.int8)
         contours = measure.find_contours(mask, level = contour_level)
-        print("num contours", len(contours))
+        print("num_contours", len(contours))
 
         polygons = [Polygon(np.squeeze(c)) for c in contours]
         parent_nums = find_parents(polygons)
@@ -120,7 +122,7 @@ def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, 
             # this polygon does not have parent, so this is a parent object (top level)
             if parent == -1:
                 polygon = {"type":"Feature", "properties":{}, "geometry":{"type":"Polygon", "coordinates": []}}
-                polygon['properties']['label_num'] = str(label_num)
+                polygon['properties']['label_num'] = int(label_num)
                 polygon['properties']['label_name'] = mappings[label_num]
                 polygon['geometry']['coordinates'].append(contour_list)
                 polygon_by_index_number[index] = polygon
@@ -146,7 +148,72 @@ def handler(signum, frame):
     raise TimeoutError("Geojson generation timed out.")
 
 
-#def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, contour_level, polygon_tolerance):
+def build_labelset_specific_geojson(default_annotation_geojson, labelset):
+
+    annotation_geojson = copy.deepcopy(geojson_base)
+
+    for feature in default_annotation_geojson['features']:
+
+        # number is fixed
+        label_num = feature['properties']['label_num']
+        # add polygon to json, change name potentially needed
+        if label_num in labelset:
+            new_feature_polygon = copy.deepcopy(feature)
+
+            # get new name and change
+            new_label_name = labelset[label_num]
+            new_feature_polygon['properties']['label_name'] = new_label_name
+
+            # add to annotation_geojson being built
+            annotation_geojson['features'].append(new_feature_polygon)
+
+    # no polygons containing labels in labelset
+    if len(annotation_geojson['features']) == 0:
+        return None
+
+    return annotation_geojson
+
+
+def build_all_geojsons_from_default(default_annotation_geojson, all_labelsets, contour_level, polygon_tolerance):
+
+    labelset_name_to_labelset_specific_geojson = {}
+    
+    for labelset_name, labelset in all_labelsets.items():
+        if labelset_name != DEFAULT_LABELSET_NAME:
+            # use default labelset geojson to build labelset specific geojson
+            annotation_geojson = build_labelset_specific_geojson(default_annotation_geojson, labelset)
+        else:
+            annotation_geojson = default_annotation_geojson
+
+        # only add if geojson not none (built correctly and contains >= 1 polygon)
+        if annotation_geojson:
+            labelset_name_to_labelset_specific_geojson[labelset_name] = json.dumps(annotation_geojson)
+        
+    return labelset_name_to_labelset_specific_geojson
+
+
+def build_default_geojson_from_annotation(annotation_npy_filepath, all_labelsets, contour_level, polygon_tolerance):
+
+    annotation = np.load(annotation_npy_filepath)
+    default_annotation_geojson = copy.deepcopy(geojson_base)
+
+    # signal logic doesn't work in dask distributed setup
+
+    default_labelset = all_labelsets[DEFAULT_LABELSET_NAME]
+
+    if not (annotation > 0).any():
+        raise ValueError(f"No annotated pixels detected in bitmap loaded from {annotation_npy_filepath}")
+
+    # vectorize all
+    for label_num in default_labelset:
+        default_annotation_geojson = add_contours_for_label(default_annotation_geojson, annotation, label_num, default_labelset, float(contour_level), float(polygon_tolerance))
+
+    # empty geojson created, return nan and delete from geojson table
+    if len(default_annotation_geojson['features']) == 0:
+        raise RuntimeError(f"Something went wrong with building default geojson from {annotation_npy_filepath}, quitting")
+
+    return default_annotation_geojson
+
 def build_geojson_from_annotation(df):
     """
     Builds geojson for all annotation labels in the specified labelset.
@@ -154,7 +221,6 @@ def build_geojson_from_annotation(df):
     :param df: Pandas dataframe
     :return: Pandas dataframe with geojson field populated
     """
-    from build_geojson import add_contours_for_label, handler
 
     labelsets = df.label_config.values[0]
     annotation_npy_filepath = df.npy_filepath.values[0]
@@ -178,7 +244,7 @@ def build_geojson_from_annotation(df):
             annotation_geojson = add_contours_for_label(annotation_geojson, annotation, label_num, mappings, float(contour_level), float(polygon_tolerance))
     except TimeoutError as err:
         print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
-        raise
+        raise err
 
     # disables alarm
     signal.alarm(0)
@@ -211,4 +277,3 @@ def concatenate_regional_geojsons(geojson_list):
         concat_geojson['features'].extend(json_dict['features'])
 
     return concat_geojson
-
