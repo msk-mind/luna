@@ -142,8 +142,8 @@ def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, 
     return annotation_geojson
 
 
-# def handler(signum, frame):
-#     raise TimeoutError("Geojson generation timed out.")
+def handler(signum, frame):
+    raise TimeoutError("Geojson generation timed out.")
 
 def call__labelset_specific_geojson():
     with open("default_annotation_geojson.json", 'r') as fp:
