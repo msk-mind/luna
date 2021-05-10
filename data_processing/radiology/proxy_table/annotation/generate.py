@@ -161,7 +161,8 @@ def create_proxy_table(data_config):
                          on=cfg.get_value(path=const.DATA_CFG+'::METADATA_JOIN_ON'),
                          how="left")
 
-        df = df.withColumn("scan_annotation_record_uuid", generate_uuid_udf(df.path, array([lit("SCAN_ANNOTATION")]))) \
+        df = df.dropDuplicates(["path"]) \
+            .withColumn("scan_annotation_record_uuid", generate_uuid_udf(df.path, array([lit("SCAN_ANNOTATION")]))) \
             .withColumn("metadata", parse_metadata_udf(df.path))
 
     # parse all dicoms and save

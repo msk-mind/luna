@@ -137,7 +137,7 @@ def create_seg_images(src_path, uuid, width, height, n_slices=None):
     :param height: height of the image
     :param n_slices: optionally provide n_slices to return.
     The subset will be taken from the middle
-    :return: an array of (instance_number, uuid, png binary, x_centroid, y_centroid) tuples
+    :return: an array of (instance_number, uuid, png binary, n_tumor_slices, x_centroid, y_centroid) tuples
     """
     from preprocess import normalize
 
@@ -177,7 +177,7 @@ def create_seg_images(src_path, uuid, width, height, n_slices=None):
     # find centroid using the mid segmentation and return x,y
     centroid = find_centroid(slices[mid_idx][2], width, height)
 
-    res = [slice + centroid for slice in slices]
+    res = [slice + (slices_len, centroid) for slice in slices]
 
     # if the user specified n_slices to select, then select the n_slices from the middle.
     if n_slices and n_slices < slices_len:
