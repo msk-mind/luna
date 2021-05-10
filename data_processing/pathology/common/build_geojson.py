@@ -145,11 +145,6 @@ def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, 
 def handler(signum, frame):
     raise TimeoutError("Geojson generation timed out.")
 
-def call__labelset_specific_geojson():
-    with open("default_annotation_geojson.json", 'r') as fp:
-        build_labelset_specific_geojson( json.loads( fp.read() ),  {1: 'Stroma', 2: 'Stroma', 3: 'Tumor', 4: 'Tumor', 5: 'Adipocytes', 6: 'Arteries', 7: 'Veins', 10: 'Necrosis', 11: 'Glass'} )
-
-
 
 def build_labelset_specific_geojson(default_annotation_geojson, labelset):
 
@@ -199,9 +194,7 @@ def build_default_geojson_from_annotation(annotation_npy_filepath, all_labelsets
 
     annotation = np.load(annotation_npy_filepath)
     default_annotation_geojson = copy.deepcopy(geojson_base)
-
-    # signal.signal(signal.SIGALRM, handler)
-    # signal.alarm(TIMEOUT_SECONDS)
+    # signal logic doesn't work in dask distributed setup
 
     default_labelset = all_labelsets[DEFAULT_LABELSET_NAME]
 
@@ -209,15 +202,8 @@ def build_default_geojson_from_annotation(annotation_npy_filepath, all_labelsets
         raise ValueError(f"No annotated pixels detected in bitmap loaded from {annotation_npy_filepath}")
 
     # vectorize all
-    try:
-        for label_num in default_labelset:
-            default_annotation_geojson = add_contours_for_label(default_annotation_geojson, annotation, label_num, default_labelset, float(contour_level), float(polygon_tolerance))
-    except TimeoutError as err:
-        print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
-        raise err
-
-    # disables alarm
-    # signal.alarm(0)
+    for label_num in default_labelset:
+        default_annotation_geojson = add_contours_for_label(default_annotation_geojson, annotation, label_num, default_labelset, float(contour_level), float(polygon_tolerance))
 
     # empty geojson created, return nan and delete from geojson table
     if len(default_annotation_geojson['features']) == 0:
@@ -225,7 +211,6 @@ def build_default_geojson_from_annotation(annotation_npy_filepath, all_labelsets
 
     return default_annotation_geojson
 
-#def build_geojson_from_annotation(labelsets, annotation_npy_filepath, labelset, contour_level, polygon_tolerance):
 def build_geojson_from_annotation(df):
     """
     Builds geojson for all annotation labels in the specified labelset.
