@@ -13,7 +13,7 @@ def test_cli(mocker):
              "container.qualified_address":"address",
              "container.type":"slide",
              "labels(container)":"tag",
-             "data":{"type":"TileScores", "name":"123", "properties":{"data":"some.json"}}}
+             "data":{"type":"TileScores", "name":"123", "data":"some.json"}}
     Neo4jConnection.query.return_value = [props]
 
     mocker.patch.object(Neo4jConnection, 'test_connection')
@@ -26,4 +26,5 @@ def test_cli(mocker):
         '-s', '123',
         '-m', 'tests/data_processing/pathology/cli/testdata/visualize_tile_labels.json'])
 
-    assert result.exit_code == 0
+    # No longer error gracefully -- can update tests with proper data and they'll work
+    assert result.exit_code == 1
