@@ -1,13 +1,13 @@
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.Node import Node
 from data_processing.common.config import ConfigSet
-from data_processing.common.custom_logger   import init_logger
 
 import os, socket, pathlib, logging, shutil
 from minio import Minio
 
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 
+logger = logging.getLogger(__name__)
 
 class DataStore_v2:
     def __init__(self):
@@ -40,10 +40,7 @@ class DataStore_v2:
 
 
 
-
-
 def bootstrap (container_id): 
-    logger = logging.getLogger(__name__)
     logger.info(f"Bootstrapping pipeline for {container_id}")
     return 1
 
@@ -98,32 +95,29 @@ class DataStore(object):
 
         :params: params - dictonary of important configuration, right now, only the graph URI connection parameters are needed.
         """
-
-        self.logger = logging.getLogger(__name__)
-
         if isinstance(params, ConfigSet):
             params=params.get_config_set("APP_CFG")
 
         # Connect to graph DB
-        self.logger.debug ("Connecting to: %s", params['GRAPH_URI'])
+        logger.debug ("Connecting to: %s", params['GRAPH_URI'])
         self._conn = Neo4jConnection(uri=params['GRAPH_URI'], user=params['GRAPH_USER'], pwd=params['GRAPH_PASSWORD'])
-        self.logger.debug ("Connection test: %s", self._conn.test_connection())
+        logger.debug ("Connection test: %s", self._conn.test_connection())
 
         if params.get('OBJECT_STORE_ENABLED',  False):
-            self.logger.debug ("Connecting to: %s", params['MINIO_URI'])
+            logger.debug ("Connecting to: %s", params['MINIO_URI'])
             self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
             try:
                 for bucket in self._client.list_buckets():
-                    self.logger.debug("Found bucket %s", bucket.name )
-                self.logger.debug("OBJECT_STORE_ENABLED=True")
+                    logger.debug("Found bucket %s", bucket.name )
+                logger.debug("OBJECT_STORE_ENABLED=True")
                 params['OBJECT_STORE_ENABLED'] = True
             except:
-                self.logger.warning("Could not connect to object store")
-                self.logger.warning("Set OBJECT_STORE_ENABLED=False")
+                logger.warning("Could not connect to object store")
+                logger.warning("Set OBJECT_STORE_ENABLED=False")
                 params['OBJECT_STORE_ENABLED'] = False
 
         self._host = socket.gethostname() # portable to *docker* containers
-        self.logger.debug ("Running on: %s", self._host)
+        logger.debug ("Running on: %s", self._host)
 
         self.params = params
         self._attached = False
@@ -138,7 +132,7 @@ class DataStore(object):
         create_res = self._conn.query(f""" MERGE (co:{cohort.get_create_str()}) RETURN co""")
 
         if len(create_res) == 1:
-            self.logger.info(f"Namespace [{namespace_id}] created successfully")
+            logger.info(f"Namespace [{namespace_id}] created successfully")
 
         return self
 
@@ -152,7 +146,7 @@ class DataStore(object):
         self._namespace_node = Node("cohort", namespace_id)
         self._bucket_id      = namespace_id.lower().replace('_','-')
         
-        self.logger.debug(f"Checking if [{namespace_id}] exists...")
+        logger.debug(f"Checking if [{namespace_id}] exists...")
         
         match_res = self._conn.query(f""" MATCH (co:{self._namespace_node.get_match_str()}) RETURN co""")
 
@@ -174,10 +168,10 @@ class DataStore(object):
         """
 
         if not container_type in ['generic', 'patient', 'accession', 'scan', 'slide', 'parquet']: 
-            self.logger.warning (f"DataStore type [{container_type}] invalid, please choose from ['generic', 'patient', 'accession', 'scan', 'slide', 'parquet']" )
+            logger.warning (f"DataStore type [{container_type}] invalid, please choose from ['generic', 'patient', 'accession', 'scan', 'slide', 'parquet']" )
 
         if ":" in container_id: 
-            self.logger.warning (f"Invalid container_id [{container_id}], only use alphanumeric characters")
+            logger.warning (f"Invalid container_id [{container_id}], only use alphanumeric characters")
         
         node = Node(container_type, container_id)
         node.set_namespace( self._namespace_id )
@@ -185,9 +179,9 @@ class DataStore(object):
         create_res = self._conn.query(f""" MERGE (container:{node.get_create_str()}) RETURN container""")
 
         if len(create_res)==1: 
-            self.logger.info(f"DataStore [{container_id}] of type [{container_type}] created or matched successfully!")
+            logger.info(f"DataStore [{container_id}] of type [{container_type}] created or matched successfully!")
         else:
-            self.logger.error("The container does not exists")
+            logger.error("The container does not exists")
         
         return self
     
@@ -198,7 +192,7 @@ class DataStore(object):
         :params: container_id - the unique container ID, either as an integer (neo4j autopopulated ID) or as a string (the Qualified Path)
         """
         self._attached = False
-        self.logger.info ("Lookup ID: %s", container_id)
+        logger.info ("Lookup ID: %s", container_id)
 
         # Figure out how to match the node
         if isinstance(container_id, str) and not "uid://" in container_id: 
@@ -221,7 +215,7 @@ class DataStore(object):
         
         # Check if the results are singleton (they should be... since we only query unique IDs!!!) 
         if res is None or len(res) == 0: 
-            self.logger.warning (f"DataStore [{container_id}] does not exist, you can try creating it first with createContainer()")
+            logger.warning (f"DataStore [{container_id}] does not exist, you can try creating it first with createContainer()")
             return self
 
         # Set some potentially import parameters
@@ -234,21 +228,20 @@ class DataStore(object):
 
         # Containers need to have a qualified path
         if self._qualifiedpath is None: 
-            self.logger.warning ("Found, however not valid container object, containers must have a name, namespace, and qualified path")
+            logger.warning ("Found, however not valid container object, containers must have a name, namespace, and qualified path")
             return self
         
         # Set match clause to id
-        self.logger.debug ("Match on: %s", self._datastore_id)
+        logger.debug ("Match on: %s", self._datastore_id)
 
         # Attach
         cohort = Node("cohort", self._namespace_id)
         if not len(self._conn.query(f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._datastore_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)) == 1:
-            self.logger.warning ( "Cannot attach, tried [%s]", f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._datastore_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)
+            logger.warning ( "Cannot attach, tried [%s]", f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._datastore_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)
             return self
 
         # Let us know attaching was a success! :)
-        self.logger = init_logger(f'container-{self.address}.log')
-        self.logger.info ("Successfully attached to %s container id=%s @ %s", self._type, self._datastore_id, self.address)
+        logger.info ("Successfully attached to %s container id=%s @ %s", self._type, self._datastore_id, self.address)
         self._attached = True
 
         return self
@@ -257,7 +250,7 @@ class DataStore(object):
         """
         Returns true if container was properly attached (i.e. checks in setDatastore succeeded), else False
         """
-        self.logger.debug ("Attached: %s", self._attached)
+        logger.debug ("Attached: %s", self._attached)
         return self._attached
 
 
@@ -277,24 +270,24 @@ class DataStore(object):
 
         query = f"""MATCH (container)-[:HAS_DATA]-(data:{type}) WHERE id(container) = {self._datastore_id} AND data.name='{type}-{name}' AND data.namespace='{self._namespace_id}' RETURN data"""
 
-        self.logger.debug(query)
+        logger.debug(query)
         res = self._conn.query(query)
 
         # Catches bad queries
         # If successfull query, reconstruct a Node object
         if res is None:
-            self.logger.warning(f"get() query failed, data.name='{type}-{name}' returning None")
+            logger.warning(f"get() query failed, data.name='{type}-{name}' returning None")
             return None
         elif len(res) == 0: 
-            self.logger.warning(f"get() found no nodes, data.name='{type}-{name}' returning None")
+            logger.warning(f"get() found no nodes, data.name='{type}-{name}' returning None")
             return None
         elif len(res) > 1: 
-            self.logger.warning(f"get() found many nodes (?), data.name='{type}-{name}' returning None")
+            logger.warning(f"get() found many nodes (?), data.name='{type}-{name}' returning None")
             return None
         else:
             node = Node(res[0]['data']['type'], res[0]['data']['name'], dict(res[0]['data'].items()))
-            self.logger.debug ("Query Successful:")
-            self.logger.debug (node)
+            logger.debug ("Query Successful:")
+            logger.debug (node)
 
         node.set_data(node.properties.get('data', None))
         node.set_aux (node.properties.get('aux', None))
@@ -360,7 +353,7 @@ class DataStore(object):
         assert isinstance(node, Node)
         assert self.isAttached()
 
-        self.logger.info(f"Adding node: {node}")
+        logger.info(f"Adding node: {node}")
 
         # Decorate with the container namespace 
         node.set_namespace( self._namespace_id, self._name )
@@ -382,17 +375,17 @@ class DataStore(object):
                 for path in data_path.glob("*.*"): 
                     node.objects.append(path)        
 
-            self.logger.info ("Node has %s pending object commits",  len(node.objects))
+            logger.info ("Node has %s pending object commits",  len(node.objects))
 
         # Set node aux object only if a path and the object store is enabled
         if node.aux is not None and self.params.get("OBJECT_STORE_ENABLED", False):
             node.properties['object_bucket'] = f"{self._bucket_id}"
             node.properties['object_folder'] = f"{self._name}/{node.name}"
             node.objects.append( pathlib.Path( node.aux ))
-            self.logger.info ("Node has %s pending object commits",  len(node.objects))
+            logger.info ("Node has %s pending object commits",  len(node.objects))
 
         # Add to node commit dictonary
-        self.logger.info ("Adding: %s", node.get_address())
+        logger.info ("Adding: %s", node.get_address())
                 
         self._conn.query( f""" 
             MATCH (container) WHERE id(container) = {node._datastore_id}
@@ -417,20 +410,20 @@ class DataStore(object):
             try:
                 data = future.result()
             except:
-                self.logger.exception('Bad upload: generated an exception:')
+                logger.exception('Bad upload: generated an exception:')
             else:
                 n_count_futures += 1
-                if n_count_futures < 10: self.logger.info("Upload successful with etag: %s", data[0])
-                if n_count_futures < 1000 and n_count_futures % 100 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
-                if n_count_futures % 1000 == 0: self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
+                if n_count_futures < 10: logger.info("Upload successful with etag: %s", data[0])
+                if n_count_futures < 1000 and n_count_futures % 100 == 0: logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
+                if n_count_futures % 1000 == 0: logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
 
-        self.logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
+        logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
         if self.params.get("OBJECT_STORE_ENABLED", False):
-            self.logger.info("Shutdown executor %s", executor)                
+            logger.info("Shutdown executor %s", executor)                
             executor.shutdown()    
-        self.logger.info("Done saving all records!!")
+        logger.info("Done saving all records!!")
 
     def add(self, *args): 
-        self.logger.warning ("Datastore.add() has been depreciated")
+        logger.warning ("Datastore.add() has been depreciated")
     def saveAll(self, *args): 
-        self.logger.warning ("Datastore.saveAll() has been depreciated")
+        logger.warning ("Datastore.saveAll() has been depreciated")

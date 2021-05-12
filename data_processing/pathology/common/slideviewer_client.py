@@ -8,6 +8,9 @@ Functions for downloading annotations from SlideViewer
 import os, shutil
 import zipfile
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_slide_id(full_filename):
     '''
@@ -96,24 +99,17 @@ def download_zip(url, dest_path, chunk_size=128):
                 fd.write(chunk)
         return True
 
-    return False
-
-
 def unzip(zipfile_path):
     '''
 
     :param zipfile_path: path of zipfile to unzip
     :return: readfile pointer to unzippped file if successfully unzippped, else None
     '''
-    print(" +- UNZIP " + zipfile_path)
+    logger.info("Unzipping " + zipfile_path)
     try:
         return zipfile.ZipFile(zipfile_path)  # returns read file pointer
     except zipfile.BadZipFile as err:
-        print(err)
-        print(' +- ERROR Dumping invalid Zipfile ' + zipfile_path + ':')
-        with open(zipfile_path, 'r') as zipf:
-            print(zipf.read())
-
+        logger.exception('Dumping invalid Zipfile ' + zipfile_path + ':')
         return None
 
 
@@ -128,12 +124,12 @@ def download_sv_point_annotation(url):
         response = requests.get(url)
         data = response.json()
     except Exception as err:
-        print(err)
+        logger.exception("General exception raised while trying " + url)
         return None
 
-    print(data)
+    logger.info("Found data = " + str(data))
     if(str(data) != '[]'):
         return data
     else:
-        print(" +- Label annotation file does not exist for slide and user.")
+        logger.warning("Label annotation file does not exist for slide and user.")
         return None

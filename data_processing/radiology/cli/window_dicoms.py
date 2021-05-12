@@ -22,7 +22,6 @@ from data_processing.common.config import ConfigSet
 # From radiology.common
 from data_processing.radiology.common.preprocess import window_dicoms
 
-logger = init_logger("window_dicoms.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
@@ -30,6 +29,8 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
 def cli(cohort_id, datastore_id, method_param_path):
+    init_logger()
+
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
     window_dicom_with_container(cohort_id, datastore_id, method_data)

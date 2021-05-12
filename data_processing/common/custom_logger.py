@@ -22,9 +22,9 @@ def init_logger(filename='data-processing.log', level=logging.INFO):
     logger = logging.getLogger()
     formatter = MultilineFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    fh = logging.FileHandler(log_file)
-    fh.setLevel(level)
-    fh.setFormatter(formatter)
+    # fh = logging.FileHandler(log_file)
+    # fh.setLevel(level)
+    # fh.setFormatter(formatter)
     
     if not logger.handlers:
         logger.setLevel(level)
@@ -34,12 +34,12 @@ def init_logger(filename='data-processing.log', level=logging.INFO):
         ch.setLevel(level)
         # create formatter and add it to the handlers
         ch.setFormatter(formatter)
-        # add the handlers to logger
+    #     # add the handlers to logger
         logger.addHandler(ch)
-        logger.addHandler(fh)
-    if logger.handlers:
-        logger.addHandler(fh)
-    print(">>>>>>>> log file at: " + log_file )
+    #     logger.addHandler(fh)
+    # if logger.handlers:
+    #     logger.addHandler(fh)
+    print(">>>>>>>> Initalized logger, log file at: " + log_file + " with handlers: " + str(logger.handlers))
     return logger
 
 

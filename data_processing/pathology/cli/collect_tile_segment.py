@@ -28,14 +28,13 @@ import pandas as pd
 import pyarrow.parquet as pq
 import pyarrow as pa
 
-logger = init_logger("collect_tiles.log")
-
 @click.command()
 @click.option('-a', '--app_config', required=True)
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
 def cli(app_config, cohort_id, datastore_id, method_param_path):
+    init_logger()
 
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)

@@ -32,6 +32,8 @@ from shapely.geometry import shape, Point, Polygon
 from random import randint
 import torch
 
+logger = logging.getLogger(__name__)
+
 
 palette = sns.color_palette("viridis",as_cmap=True)
 categorial = sns.color_palette("Set1", 8)
@@ -244,8 +246,6 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     The tile size is defined at the requested mag, so it's bigger at full resolution and smaller for the thumbnail
     to_mag_scale_factor and to_thumbnail_scale_factor both need to be event integers, i.e. the scale factors are multiples of the the scanned magnficiation
     """
-    logger = logging.getLogger(__name__)
-
     requested_tile_size       = params.get("tile_size")
     requested_magnification   = params.get("magnification")
 
@@ -372,9 +372,7 @@ def run_model(pil_file_path: str, csv_file_path: str, output_dir: str, params: d
     
     The tile size is defined at the requested mag, so it's bigger at full resolution and smaller for the thumbnail
     to_mag_scale_factor and to_thumbnail_scale_factor both need to be event integers, i.e. the scale factors are multiples of the the scanned magnficiation
-    """
-    logger = logging.getLogger(__name__)
- 
+    """ 
     model_package             = params.get("model_package")
 
     # load csv
@@ -473,7 +471,6 @@ def visualize_tiling_scores(df, thumbnail_img, tile_size, score_type_to_visualiz
 
 # Not used atm
 def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: str, params: dict):
-    logger = logging.getLogger(__name__)
 
     requested_tile_size       = params.get("tile_size")
     requested_magnification   = params.get("magnification")

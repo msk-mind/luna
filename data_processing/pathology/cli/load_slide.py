@@ -20,14 +20,14 @@ from data_processing.common.config          import ConfigSet
 from data_processing.common.sparksession     import SparkConfig
 
 
-logger = init_logger("load_slide.log")
-
 @click.command()
 @click.option('-a', '--app_config', required=True)
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
 def cli(app_config, cohort_id, datastore_id, method_param_path):
+    init_logger()
+
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
     load_slide_with_datastore(app_config, cohort_id, datastore_id, method_data)

@@ -2,10 +2,10 @@ import shutil
 import click
 import yaml, os, json
 from datetime import datetime
+import logging
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
-from data_processing.common.custom_logger import init_logger
 from data_processing.common.DataStore import DataStore_v2
 
 # from data_processing.common.sparksession import SparkConfig
@@ -33,7 +33,6 @@ from datetime import datetime
 
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
-logger = init_logger()
 
 # Base template for geoJSON file
 geojson_base = {
@@ -45,14 +44,17 @@ geojson_base = {
 # too large or they may be annotation artifacts present in the slide. currently set at 30 minute timeout
 TIMEOUT_SECONDS = 1800
 
+logger = logging.getLogger(__name__)
+
 def get_slide_bitmap(full_filename, user, slide_id, SLIDE_BMP_DIR, SLIDEVIEWER_API_URL, TMP_ZIP_DIR, sv_project_id):
+
     full_filename_without_ext = full_filename.replace(".svs", "")
 
     bmp_dirname = os.path.join(SLIDE_BMP_DIR, full_filename_without_ext.replace(";", "_"))
     bmp_dest_path = os.path.join(bmp_dirname, str(slide_id) + '_' + user + '_annot.bmp')
 
     if os.path.exists(bmp_dest_path):
-        print("Removing temporary file "+bmp_dest_path)
+        logger.debug("Removing temporary file " + bmp_dest_path)
         os.remove(bmp_dest_path)
 
     # download bitmap file using api (from brush and fill tool), download zips into TMP_ZIP_DIR
@@ -61,8 +63,7 @@ def get_slide_bitmap(full_filename, user, slide_id, SLIDE_BMP_DIR, SLIDEVIEWER_A
 
     url = SLIDEVIEWER_API_URL +'slides/'+ str(user) + '@mskcc.org/projects;' + str(sv_project_id) + ';' + full_filename + '/getLabelFileBMP'
 
-    # print("Pulling   ", url)
-    # print(" +- TO    ", bmp_dest_path)
+    logger.debug(f"Pulling from Slideviewer URL={url}")
 
     success = download_zip(url, zipfile_path)
 
@@ -71,7 +72,6 @@ def get_slide_bitmap(full_filename, user, slide_id, SLIDE_BMP_DIR, SLIDEVIEWER_A
 
     if not success:
         os.remove(zipfile_path)
-        # print(" +- Label annotation file does not exist for slide and user.")
         return (bmp_record_uuid, bmp_filepath)
 
     unzipped_file_descriptor = unzip(zipfile_path)
@@ -79,19 +79,17 @@ def get_slide_bitmap(full_filename, user, slide_id, SLIDE_BMP_DIR, SLIDEVIEWER_A
     if unzipped_file_descriptor is None:
         return (bmp_record_uuid, bmp_filepath)
 
-
     # create bmp file from unzipped file
     os.makedirs(os.path.dirname(bmp_dest_path), exist_ok=True)
     with open(bmp_dest_path, "wb") as ff:
         ff.write(unzipped_file_descriptor.read("labels.bmp"))  # all bmps from slideviewer are called labels.bmp
 
-    print(" +- Added slide " + str(slide_id) + " to " + str(bmp_dest_path) + "  * * * * ")
+    logger.info("Added slide " + str(slide_id) + " to " + str(bmp_dest_path) + "  * * * * ")
 
     bmp_hash = FileHash('sha256').hash_file(bmp_dest_path)
     bmp_record_uuid = f'SVBMP-{bmp_hash}'
     bmp_filepath = bmp_dirname + '/' + slide_id + '_' + user + '_' + bmp_record_uuid + '_annot.bmp'
     os.rename(bmp_dest_path, bmp_filepath)
-    # print(" +- Generated record " + bmp_filepath)
 
     # cleanup
     if os.path.exists(zipfile_path):
@@ -111,7 +109,6 @@ def convert_bmp_to_npy(bmp_file, output_folder):
     :param output_folder - /path/to/output/folder
     :return filepath to file containing numpy array
     """
-
     Image.MAX_IMAGE_PIXELS = 5000000000
 
     if not '.bmp' in bmp_file:

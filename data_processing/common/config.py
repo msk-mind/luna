@@ -6,11 +6,11 @@ Created on October 17, 2019
 
 import yaml
 import yamale
+import logging
 from jsonpath_ng import parse
-from data_processing.common.custom_logger import init_logger
 from data_processing.common.utils import get_absolute_path
 
-logger = init_logger()
+logger = logging.getLogger(__name__)
 
 class ConfigSet():
     '''

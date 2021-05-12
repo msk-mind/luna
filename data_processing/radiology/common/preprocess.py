@@ -13,6 +13,7 @@ from skimage.transform import resize
 import itk
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
 
 def find_centroid(binary, width, height):
     """
@@ -281,8 +282,6 @@ def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
 
     :return: property dict, None if function fails
     """
-    logger = logging.getLogger(__name__)
-
     PixelType = itk.ctype('signed short')
     ImageType = itk.Image[PixelType, 3]
 
@@ -352,8 +351,6 @@ def extract_voxels(image_path: str, label_path: str, output_dir: str, params: di
 
     :return: property dict, None if function fails
     """
-    logger = logging.getLogger(__name__)
-
     img, img_header = load(image_path)
     seg, seg_header = load(label_path)
 
@@ -399,8 +396,6 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
 
     :return: property dict, None if function fails
     """
-    logger = logging.getLogger(__name__)
-
     logger.info("Image data: %s", image_path)
     logger.info("Label data: %s", label_path)
 
@@ -460,8 +455,6 @@ def window_dicoms(dicom_path: str, output_dir: str, params: dict) -> dict:
 
     :return: property dict, None if function fails
     """ 
- 
-    logger = logging.getLogger(__name__)
 
     if params.get('window', False):
         logger.info ("Applying window [%s,%s]", params['window_low_level'], params['window_high_level'])
@@ -505,7 +498,6 @@ def randomize_contours(image_path: str, label_path: str, output_dir: str, params
 
     :return: property dict, None if function fails
     """
-    logger = logging.getLogger(__name__)
     logger.info("Hello, processing %s, %s", image_path, label_path)
     settings = Settings()
 

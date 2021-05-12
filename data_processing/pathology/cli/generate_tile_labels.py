@@ -33,14 +33,14 @@ from data_processing.common.config          import ConfigSet
 # From radiology.common
 from data_processing.pathology.common.preprocess   import pretile_scoring
 
-logger = init_logger("generate_tile_labels.log")
-
 @click.command()
 @click.option('-a', '--app_config', required=True)
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
 def cli(app_config, cohort_id, datastore_id, method_param_path):
+    init_logger()
+
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
     generate_tile_labels_with_datastore(app_config, cohort_id, datastore_id, method_data)
