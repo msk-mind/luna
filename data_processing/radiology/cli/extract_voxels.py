@@ -10,7 +10,7 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 
 # From common
@@ -39,6 +39,7 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
     """
     Using the container API interface, extract voxels for a given scan container
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
 
     # Do some setup
     datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
@@ -65,7 +66,8 @@ def extract_voxels_with_container(cohort_id: str, container_id: str, method_data
         )
 
     except Exception as e:
-        datastore.logger.exception (f"{e}, stopping job execution...")
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
     else:
         output_node = Node("Voxels", method_id, properties)
         datastore.put(output_node)

@@ -10,7 +10,7 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 
 # From common
@@ -39,6 +39,8 @@ def generate_scan_with_container(cohort_id, container_id, method_data, semaphore
     """
     Using the container API interface, generate a volumetric image for a given scan container
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
+
     try:
          # Do some setup
         datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
@@ -61,7 +63,8 @@ def generate_scan_with_container(cohort_id, container_id, method_data, semaphore
         )
         
     except Exception as e:
-        datastore.logger.exception (f"{e}, stopping job execution...")
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
     else:
         output_node = Node("VolumetricImage", method_id, properties)
         datastore.put(output_node)

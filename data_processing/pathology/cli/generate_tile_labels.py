@@ -21,7 +21,7 @@ python3 -m data_processing.pathology.cli.generate_tile_labels \
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 
 # From common
@@ -49,6 +49,7 @@ def generate_tile_labels_with_datastore(app_config: str, cohort_id: str, contain
     """
     Using the container API interface, score and generate tile addresses
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
 
     # Do some setup
     cfg = ConfigSet("APP_CFG", config_file=app_config)
@@ -73,9 +74,9 @@ def generate_tile_labels_with_datastore(app_config: str, cohort_id: str, contain
 
         properties = pretile_scoring(image_node.data, output_dir, method_data, image_id)
 
-    except Exception:
-        datastore.logger.exception ("Exception raised, stopping job execution.")
-        return
+    except Exception as e:
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
 
     # Put results in the data store
     output_node = Node("TileImages", method_id, properties)

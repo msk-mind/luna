@@ -10,7 +10,7 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 
 # From common
@@ -39,6 +39,7 @@ def window_dicom_with_container(cohort_id, container_id, method_data, semaphore=
     """
     Using the container API interface, perform dicom CT preprocessing (windowing)
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
 
     # Do some setup
     datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
@@ -62,10 +63,11 @@ def window_dicom_with_container(cohort_id, container_id, method_data, semaphore=
             params = method_data
         )
     
-    except Exception:
-        datastore.logger.exception ("Exception raised, stopping job execution.")
-    else:
+    except Exception as e:
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
 
+    else:
         output_node = Node("DicomSeries", method_id, properties)
         datastore.put(output_node)
         

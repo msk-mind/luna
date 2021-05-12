@@ -15,7 +15,7 @@ python3 -m data_processing.pathology.cli.collect_tiles \
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 
 # From common
@@ -44,6 +44,8 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
     """
     Using the container API interface, visualize tile-wise scores
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
+
     cfg = ConfigSet("APP_CFG", config_file=app_config)
 
     input_tile_data_id   = method_data.get("input_label_tag")
@@ -90,7 +92,7 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
         print(properties)
 
     except Exception:
-        input_datastore.logger.exception ("Exception raised, stopping job execution.")
+        logger.exception ("Exception raised, stopping job execution.")
         return
 
     # Put results in the data store

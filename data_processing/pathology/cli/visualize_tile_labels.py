@@ -21,7 +21,7 @@ python3 -m data_processing.pathology.cli.visualize_tile_labels \
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 import tempfile
 import subprocess
@@ -49,6 +49,7 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
     """
     Using the container API interface, visualize tile-wise scores
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
 
     # Do some setup
     cfg = ConfigSet("APP_CFG",  config_file=app_config)
@@ -98,9 +99,9 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
                 subprocess.run(["python3","-m","data_processing.pathology.cli.dsa.dsa_upload",
                                  "-c", f"{tmpdir}/dsa_config.json", "-d", result.stdout])
 
-    except Exception:
-        datastore.logger.exception ("Exception raised, stopping job execution.")
-        return
+    except Exception as e:
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
 
     # Put results in the data store
     output_node = Node("TileScores", method_id, properties)

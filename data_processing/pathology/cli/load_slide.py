@@ -8,7 +8,7 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 from pathlib import Path
 
@@ -36,6 +36,8 @@ def load_slide_with_datastore(app_config, cohort_id, container_id, method_data):
     """
     Using the container API interface, fill scan with original slide from table
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
+
     # Do some setup
     cfg = ConfigSet("APP_CFG",  config_file=app_config)
     datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
@@ -53,9 +55,10 @@ def load_slide_with_datastore(app_config, cohort_id, container_id, method_data):
         if not len(df) == 1: raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {datastore.address}")
             
         record = df.loc[0]
+
     except Exception as e:
-        datastore.logger.exception (f"{e}, stopping job execution...")
-        return
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
 
     # Put results in the data store
     slide = Node("WholeSlideImage", method_id, record['metadata'])
