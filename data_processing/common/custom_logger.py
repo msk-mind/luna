@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler
 
 class MultilineFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord):
@@ -29,7 +30,7 @@ def init_logger(filename='data-processing.log', level=logging.WARNING):
         logger.addHandler(ch)
         
         # create file handler which logs even debug messages
-        fh = logging.handlers.RotatingFileHandler(log_file, maxBytes=1e7, backupCount=10)
+        fh = RotatingFileHandler(log_file, maxBytes=1e7, backupCount=10)
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
         logger.addHandler(fh)

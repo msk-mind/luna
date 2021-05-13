@@ -7,7 +7,7 @@ from data_processing.pathology.cli.collect_tile_segment import cli
 def test_cli(mocker):
 
     mocker.patch.object(Neo4jConnection, 'query')
-    prop_null = [{'mock':'response'}]
+    prop_null = [{'mock':'response'}] # Used when only a response is needed, but data doesn't matter
     props1 = [{"id(container)":"id",
                 "container.name":"store_123",
                 "container.qualified_address":"test::store_123",
@@ -32,10 +32,9 @@ def test_cli(mocker):
                 "data": "tests/data_processing/pathology/cli/testdata/data/test/store_123/test_generate_tile_ov_labels/tiles.slice.pil",
                 "aux":  "tests/data_processing/pathology/cli/testdata/data/test/store_123/test_generate_tile_ov_labels/address.slice.csv"
             }}]
-    # Call order goes [ namespace check, data_store create, data_store set,  namespace check, data_store set,  get TileScores, put ]
+    # Call order goes [ namespace check, data_store set,  namespace check, data_store create,  data_store set,  get TileScores, put ]
     Neo4jConnection.query.side_effect  = [prop_null, props1, prop_null, prop_null, props2, props3, prop_null]
     Neo4jConnection.query.return_value = Neo4jConnection.query.side_effect
-
 
     mocker.patch.object(Neo4jConnection, 'test_connection')
 
