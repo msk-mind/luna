@@ -102,7 +102,10 @@ def generate_image_table():
         n_slices = validate_integer_param(cfg.get_value(path=const.DATA_CFG+'::N_SLICES'))
         crop_width = validate_integer_param(cfg.get_value(path=const.DATA_CFG+'::CROP_WIDTH'))
         crop_height = validate_integer_param(cfg.get_value(path=const.DATA_CFG+'::CROP_HEIGHT'))
-
+        # optional columns from radiology annotation table to include.
+        metadata_columns = []
+        if cfg.has_value(path=const.DATA_CFG+'::METADATA_COLUMNS'):
+            metadata_columns = cfg.get_value(path=const.DATA_CFG+'::METADATA_COLUMNS')
         seg_png_table_path = const.TABLE_LOCATION(cfg)
         
         # find images with tumor
@@ -121,21 +124,27 @@ def generate_image_table():
 
         logger.info("Created segmentation pngs")
 
+        # add metadata_columns
+        columns_to_select = [F.col("slices_uuid_pngs_xy.instance_number").alias("instance_number"),
+                        F.col("slices_uuid_pngs_xy.seg_png").alias("seg_png"),
+                        F.col("slices_uuid_pngs_xy.scan_annotation_record_uuid").alias("scan_annotation_record_uuid"),
+                        F.col("slices_uuid_pngs_xy.n_tumor_slices").alias("n_tumor_slices"),
+                        F.col("slices_uuid_pngs_xy.x").alias("x_center"),
+                        F.col("slices_uuid_pngs_xy.y").alias("y_center"),
+                        "accession_number", "series_number", "path", "series_instance_uid"]
+        columns_to_select.extend(metadata_columns)
         seg_df = seg_df.withColumn("slices_uuid_pngs_xy", F.explode("slices_uuid_pngs_xy")) \
-                       .select(F.col("slices_uuid_pngs_xy.instance_number").alias("instance_number"),
-                               F.col("slices_uuid_pngs_xy.seg_png").alias("seg_png"),
-                               F.col("slices_uuid_pngs_xy.scan_annotation_record_uuid").alias("scan_annotation_record_uuid"),
-                               F.col("slices_uuid_pngs_xy.n_tumor_slices").alias("n_tumor_slices"),
-                               F.col("slices_uuid_pngs_xy.x").alias("x_center"),
-                               F.col("slices_uuid_pngs_xy.y").alias("y_center"),
-                               "accession_number", "series_number", "path", "label", "series_instance_uid")
+                       .select(columns_to_select)
 
         logger.info("Exploded rows")
 
         # create overlay images: blend seg and the dicom images
-        seg_df = seg_df.select("accession_number", seg_df.path.alias("seg_path"), "label",
-                               "instance_number", "seg_png", "scan_annotation_record_uuid", "series_number",
-                               "x_center", "y_center", "n_tumor_slices", "series_instance_uid")
+        columns_to_select = ["accession_number", seg_df.path.alias("seg_path"),
+                            "instance_number", "seg_png", "scan_annotation_record_uuid", "series_number",
+                            "x_center", "y_center", "n_tumor_slices", "series_instance_uid"]
+        columns_to_select.extend(metadata_columns)
+
+        seg_df = seg_df.select(columns_to_select)
         
         cond = [dicom_df.metadata.SeriesInstanceUID == seg_df.series_instance_uid,
                 dicom_df.metadata.InstanceNumber == seg_df.instance_number]
@@ -148,10 +157,14 @@ def generate_image_table():
         seg_df = seg_df.withColumn("dicom_overlay",
             F.lit(overlay_image_udf("path", "seg_png", F.lit(width), F.lit(height), "x_center", "y_center",
                                     F.lit(crop_width), F.lit(crop_height))))
- 
+
+        # add metadata_columns
+        columns_to_select = [F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"),
+                             "metadata", "scan_annotation_record_uuid", "n_tumor_slices"]
+        columns_to_select.extend(metadata_columns)
+
         # unpack dicom_overlay struct into 2 columns
-        seg_df = seg_df.select(F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"),
-                                "metadata", "scan_annotation_record_uuid", "label", "n_tumor_slices")
+        seg_df = seg_df.select(columns_to_select)
 
         # generate uuid
         spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))

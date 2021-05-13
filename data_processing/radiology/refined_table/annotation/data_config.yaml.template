@@ -23,11 +23,16 @@ IMAGE_WIDTH: 512
 # png result height
 IMAGE_HEIGHT: 512
 
-# optional. number of slices to subset
+# (Optional) number of slices to subset
 N_SLICES:
 
-# optional. if you want to crop around the tumor area, specify crop image width, height
+# (Optional) if you want to crop around the tumor area, specify crop image width, height
 # otherwise leave empty
 CROP_WIDTH:
 
 CROP_HEIGHT:
+
+# (Optional) columns to include in the refined table
+METADATA_COLUMNS:
+  - cohort
+  - label
