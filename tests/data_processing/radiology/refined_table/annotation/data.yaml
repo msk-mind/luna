@@ -24,3 +24,7 @@ N_SLICES:
 CROP_WIDTH:
 
 CROP_HEIGHT:
+
+METADATA_COLUMNS:
+  - cohort
+  - label

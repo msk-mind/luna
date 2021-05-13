@@ -45,6 +45,8 @@ def test_cli(spark):
 
     df = spark.read.format("delta").load(png_table_path)
     assert df.count() == 1
+    assert set(['dicom', 'overlay', 'metadata', 'scan_annotation_record_uuid', 'n_tumor_slices', 'cohort', 'label', 'png_record_uuid']) \
+            == set(df.columns)
     dicom_binary = df.select("dicom").head()["dicom"]
 
     # check that image binary can be loaded with expected width/height

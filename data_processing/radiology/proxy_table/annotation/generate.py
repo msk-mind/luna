@@ -116,11 +116,29 @@ def create_proxy_table(data_config):
         parse_accession_number_udf = udf(parse_accession_number, StringType())
         parse_metadata_udf = udf(parse_metadata, MapType(StringType(), StringType()))
 
-        df = spark.read.format("binaryFile") \
-            .option("pathGlobFilter", "*." + cfg.get_value(path=const.DATA_CFG+'::FILE_TYPE')) \
-            .option("recursiveFileLookup", "true") \
-            .load(cfg.get_value(path=const.DATA_CFG+'::RAW_DATA_PATH')) \
-            .drop("content")
+        file_types = cfg.get_value(path=const.DATA_CFG+'::FILE_TYPE')
+        # if multiple file types are provided, union all DFs
+        if isinstance(file_types, list) and len(file_types) > 1:
+            df = spark.read.format("binaryFile") \
+                .option("pathGlobFilter", "*." + file_types[0]) \
+                .option("recursiveFileLookup", "true") \
+                .load(cfg.get_value(path=const.DATA_CFG+'::RAW_DATA_PATH')) \
+                .drop("content")
+
+            for file_type in file_types[1:]:
+                df_add = spark.read.format("binaryFile") \
+                    .option("pathGlobFilter", "*." + file_type) \
+                    .option("recursiveFileLookup", "true") \
+                    .load(cfg.get_value(path=const.DATA_CFG+'::RAW_DATA_PATH')) \
+                    .drop("content")
+
+                df = df.union(df_add)
+        else:
+            df = spark.read.format("binaryFile") \
+                .option("pathGlobFilter", "*." + file_types) \
+                .option("recursiveFileLookup", "true") \
+                .load(cfg.get_value(path=const.DATA_CFG+'::RAW_DATA_PATH')) \
+                .drop("content")
 
         df = df.withColumn("accession_number", parse_accession_number_udf(df.path))
 
@@ -143,7 +161,8 @@ def create_proxy_table(data_config):
                          on=cfg.get_value(path=const.DATA_CFG+'::METADATA_JOIN_ON'),
                          how="left")
 
-        df = df.withColumn("scan_annotation_record_uuid", generate_uuid_udf(df.path, array([lit("SCAN_ANNOTATION")]))) \
+        df = df.dropDuplicates(["path"]) \
+            .withColumn("scan_annotation_record_uuid", generate_uuid_udf(df.path, array([lit("SCAN_ANNOTATION")]))) \
             .withColumn("metadata", parse_metadata_udf(df.path))
 
     # parse all dicoms and save

@@ -1,8 +1,9 @@
 # annotation file type extension like mha, mhd (case sensitive) ..
+# if multiple file types are desired, provide them in a list.
 FILE_TYPE: mha
 
 # annotation data type - used to create table names
-DATA_TYPE: MHA
+DATA_TYPE: RADIOLOGY_ANNOTATION
 
 # path to data directory
 ROOT_PATH: /path/to/data
