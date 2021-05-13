@@ -10,7 +10,7 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 
 # From common
@@ -22,7 +22,6 @@ from data_processing.common.config          import ConfigSet
 # From radiology.common
 from data_processing.radiology.common.preprocess   import randomize_contours
 
-logger = init_logger("randomize_contours.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
@@ -30,6 +29,8 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
 def cli(cohort_id, datastore_id, method_param_path):
+    init_logger()
+
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
     randomize_contours_with_container(cohort_id, datastore_id, method_data)
@@ -38,6 +39,7 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
     """
     Using the container API interface, perform MIRP contour randomization
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
 
     # Do some setup
     datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
@@ -64,7 +66,8 @@ def randomize_contours_with_container(cohort_id: str, container_id: str, method_
         )
 
     except Exception as e:
-        datastore.logger.exception (f"{e}, stopping job execution...")
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
     else:
         new_image_node          = Node("VolumetricImage",    method_id, image_properties)
         new_label_node          = Node("VolumetricLabel",    method_id, label_properties)

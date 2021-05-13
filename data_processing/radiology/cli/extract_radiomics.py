@@ -10,7 +10,7 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 
 # From common
@@ -22,7 +22,6 @@ from data_processing.common.config          import ConfigSet
 # From radiology.common
 from data_processing.radiology.common.preprocess   import extract_radiomics
 
-logger = init_logger("extract_radiomics.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
@@ -30,6 +29,8 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
 def cli(cohort_id, datastore_id, method_param_path):
+    init_logger()
+
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
     extract_radiomics_with_container(cohort_id, datastore_id, method_data)
@@ -38,6 +39,7 @@ def extract_radiomics_with_container(cohort_id, container_id, method_data, semap
     """
     Using the container API interface, extract radiomics for a given scan container
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
 
     # Do some setup
     datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
@@ -67,7 +69,8 @@ def extract_radiomics_with_container(cohort_id, container_id, method_data, semap
             params     = method_data
         )
     except Exception as e:
-        datastore.logger.exception (f"{e}, stopping job execution...")
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
     else:
         if properties:
             output_node = Node("Radiomics", method_id, properties)

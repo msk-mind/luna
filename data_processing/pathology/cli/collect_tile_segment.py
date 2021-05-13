@@ -15,7 +15,7 @@ python3 -m data_processing.pathology.cli.collect_tiles \
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 
 # From common
@@ -28,14 +28,13 @@ import pandas as pd
 import pyarrow.parquet as pq
 import pyarrow as pa
 
-logger = init_logger("collect_tiles.log")
-
 @click.command()
 @click.option('-a', '--app_config', required=True)
 @click.option('-c', '--cohort_id',    required=True)
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
 def cli(app_config, cohort_id, datastore_id, method_param_path):
+    init_logger()
 
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
@@ -45,17 +44,19 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
     """
     Using the container API interface, visualize tile-wise scores
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
+
     cfg = ConfigSet("APP_CFG", config_file=app_config)
 
     input_tile_data_id   = method_data.get("input_label_tag")
     output_datastore_id  = method_data.get("output_datastore")
 
+    input_datastore  = DataStore( cfg ).setNamespace(cohort_id)\
+        .setDatastore(container_id)
+
     output_datastore = DataStore(cfg).setNamespace(cohort_id)\
         .createDatastore(output_datastore_id, "parquet")\
         .setDatastore(output_datastore_id)
-
-    input_datastore  = DataStore( cfg ).setNamespace(cohort_id)\
-        .setDatastore(container_id)
 
     image_node  = input_datastore.get("TileImages", input_tile_data_id)
 
@@ -90,9 +91,9 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
         }
         print(properties)
 
-    except Exception:
-        input_datastore.logger.exception ("Exception raised, stopping job execution.")
-        return
+    except Exception as e:
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
 
     # Put results in the data store
     output_node = Node("ResultSegment", f"slide-{input_datastore._datastore_id}", properties)

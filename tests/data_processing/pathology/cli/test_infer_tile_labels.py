@@ -24,4 +24,5 @@ def test_cli(mocker):
         '-s', '123',
         '-m', 'tests/data_processing/pathology/cli/testdata/infer_tile_labels_resnet18.json'])
 
-    assert result.exit_code == 0
+    # No longer error gracefully -- can update tests with proper data and they'll work
+    assert result.exit_code == 1

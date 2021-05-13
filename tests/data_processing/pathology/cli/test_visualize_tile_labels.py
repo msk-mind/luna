@@ -1,4 +1,5 @@
 import subprocess
+import shutil
 from click.testing import CliRunner
 
 from data_processing.common.Neo4jConnection import Neo4jConnection
@@ -8,13 +9,36 @@ from data_processing.pathology.cli.visualize_tile_labels import cli
 def test_cli(mocker):
 
     mocker.patch.object(Neo4jConnection, 'query')
-    props = {"id(container)":"id",
-             "container.name":"name",
-             "container.qualified_address":"address",
+    prop_null = [{'mock':'response'}]
+    props1 = [{"id(container)":"id",
+             "container.name":"store_123",
+             "container.qualified_address":"test::store_123",
              "container.type":"slide",
-             "labels(container)":"tag",
-             "data":{"type":"TileScores", "name":"123", "properties":{"data":"some.json"}}}
-    Neo4jConnection.query.return_value = [props]
+             "labels(container)":"slide"}]
+    props2 = [{"id(container)":"id",
+             "container.name":"store_123",
+             "container.qualified_address":"test::store_123",
+             "container.type":"slide",
+             "dzlabels(container)":"slide",
+             "data":{
+                 "type":"WholeSlideImage", "name":"123", 
+                 "data":"tests/data_processing//testdata/data/test-project/wsi/123.svs"
+            }}]
+    props3 = [{"id(container)":"id",
+            "container.name":"store_123",
+            "container.qualified_address":"test::store_123",
+            "container.type":"slide",
+            "labels(container)":"slide",
+            "data":{
+                "type": "TileScores", "name":"123", 
+                "tile_size": 128,
+                "magnification": 20,
+                "data": "tests/data_processing/pathology/cli/testdata/data/test/store_123/test_generate_tile_ov_labels/tiles.slice.pil",
+                "aux":  "tests/data_processing/pathology/cli/testdata/data/test/store_123/test_generate_tile_ov_labels/address.slice.csv"
+            }}]
+    # Call order goes [ namespace check, data_store check, get WholeSlideImage, get TileScores, put ]
+    Neo4jConnection.query.side_effect  = [[prop_null], props1, props2, props3, [prop_null]]
+    Neo4jConnection.query.return_value = Neo4jConnection.query.side_effect
 
     mocker.patch.object(Neo4jConnection, 'test_connection')
     mocker.patch.object(subprocess, "run", return_value='tests/data_processing/pathology/cli/testdata/dsa_upload.json')
@@ -27,3 +51,4 @@ def test_cli(mocker):
         '-m', 'tests/data_processing/pathology/cli/testdata/visualize_tile_labels.json'])
 
     assert result.exit_code == 0
+    shutil.rmtree('tests/data_processing/pathology/cli/testdata/data_staging')

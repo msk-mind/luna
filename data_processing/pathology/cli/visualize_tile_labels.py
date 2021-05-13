@@ -21,7 +21,7 @@ python3 -m data_processing.pathology.cli.visualize_tile_labels \
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 import tempfile
 import subprocess
@@ -32,8 +32,8 @@ from data_processing.common.DataStore       import DataStore
 from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
 
+from data_processing.pathology.common.preprocess   import create_tile_thumbnail_image
 
-logger = init_logger("visualize_tile_labels.log")
 
 @click.command()
 @click.option('-a', '--app_config', required=True)
@@ -41,6 +41,8 @@ logger = init_logger("visualize_tile_labels.log")
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
 def cli(app_config, cohort_id, datastore_id, method_param_path):
+    init_logger()
+
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
     visualize_tile_labels_with_datastore(app_config, cohort_id, datastore_id, method_data)
@@ -49,6 +51,7 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
     """
     Using the container API interface, visualize tile-wise scores
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
 
     # Do some setup
     cfg = ConfigSet("APP_CFG",  config_file=app_config)
@@ -70,7 +73,7 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
                                   datastore._namespace_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        # properties = visualize_scoring(image_node.data, label_node.data, output_dir, method_data)
+        properties = create_tile_thumbnail_image(image_node.data, label_node.aux, output_dir, method_data)
 
         # push results to DSA
         if method_data.get("dsa_config", None):
@@ -98,9 +101,9 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
                 subprocess.run(["python3","-m","data_processing.pathology.cli.dsa.dsa_upload",
                                  "-c", f"{tmpdir}/dsa_config.json", "-d", result.stdout])
 
-    except Exception:
-        datastore.logger.exception ("Exception raised, stopping job execution.")
-        return
+    except Exception as e:
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
 
     # Put results in the data store
     output_node = Node("TileScores", method_id, properties)

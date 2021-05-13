@@ -4,7 +4,7 @@
   "tile_size": 128,
   "scale_factor": 16,
   "magnification": 20,
-  "slideviewer_dmt": "msk_mind_ov",
-  "labelset": "PIXEL_CLASSIFIER_LABELS",
+  "NOT_slideviewer_dmt": "no API",
+  "NOT_labelset": "no API",
   "env": "data_staging"
 }

@@ -10,7 +10,7 @@ Given a scan (container) ID
 '''
 
 # General imports
-import os, json, sys
+import os, json, logging
 import click
 
 # From common
@@ -19,12 +19,10 @@ from data_processing.common.DataStore       import DataStore
 from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
 
-import requests 
 import pandas as pd
 import pyarrow.parquet as pq
 import pyarrow as pa
 
-logger = init_logger("collect_result_segment.log")
 cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 
 @click.command()
@@ -32,6 +30,8 @@ cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
 @click.option('-s', '--datastore_id', required=True)
 @click.option('-m', '--method_param_path',    required=True)
 def cli(cohort_id, datastore_id, method_param_path):
+    init_logger()
+
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
     collect_result_segment_with_container(cohort_id, datastore_id, method_data)
@@ -40,6 +40,8 @@ def collect_result_segment_with_container(cohort_id, container_id, method_data, 
     """
     Using the container API interface, collect csv type output into a single container
     """
+    logger = logging.getLogger(f"[datastore={container_id}]")
+
     output_datastore_id  = method_data.get("output_container")
 
     output_datastore = DataStore( cfg ).setNamespace(cohort_id)\
@@ -83,7 +85,8 @@ def collect_result_segment_with_container(cohort_id, container_id, method_data, 
         }
 
     except Exception as e:
-        input_container.logger.exception (f"{e}, stopping job execution...")
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
     else:
         output_node = Node("ResultSegment", f"slice-{input_container._container_id}", properties)
         output_datastore.put(output_node)
