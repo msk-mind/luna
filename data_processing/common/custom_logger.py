@@ -47,7 +47,7 @@ def init_logger(filename='data-processing.log', level=logging.WARNING):
                 host=cfg.get_value('LOG_CFG::MONGO_HOST'), 
                 port=cfg.get_value('LOG_CFG::MONGO_PORT'), 
                 capped=True )
-            mh.setLevel(logging.INFO)
+            mh.setLevel(logging.WARNING)
             logger.addHandler(mh)
     
     logger.info("FYI: Initalized logger, log file at: " + log_file + " with handlers: " + str(logger.handlers))
