@@ -106,8 +106,7 @@ def generate_image_table():
         seg_png_table_path = const.TABLE_LOCATION(cfg)
         
         # find images with tumor
-        #spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/preprocess.py"))
-        spark.sparkContext.addPyFile("data_processing/radiology/refined_table/annotaiton/preprocess.py")
+        spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/preprocess.py"))
         from preprocess import create_seg_images, overlay_images
         create_seg_png_udf = F.udf(create_seg_images, ArrayType(StructType(
                                     [StructField("instance_number", IntegerType()),
@@ -134,14 +133,15 @@ def generate_image_table():
         logger.info("Exploded rows")
 
         # create overlay images: blend seg and the dicom images
+        seg_df = seg_df.select("accession_number", seg_df.path.alias("seg_path"), "label",
+                               "instance_number", "seg_png", "scan_annotation_record_uuid", "series_number",
+                               "x_center", "y_center", "n_tumor_slices", "series_instance_uid")
+        
+        cond = [dicom_df.metadata.SeriesInstanceUID == seg_df.series_instance_uid,
+                dicom_df.metadata.InstanceNumber == seg_df.instance_number]
 
-        #cond = [dicom_df.metadata.AccessionNumber == seg_df.accession_number,
-        #        dicom_df.metadata.SeriesNumber == seg_df.series_number,
-        #        dicom_df.metadata.InstanceNumber == seg_df.instance_number]
-        cond = [dicom_df.metadata.SeriesInstanceUID == seg_df.series_instance_uid]
-
-        seg_df = seg_df.join(dicom_df, cond)
-
+        seg_df = seg_df.join(dicom_df, cond).dropDuplicates(["scan_annotation_record_uuid","series_instance_uid", "instance_number"])
+        
         overlay_image_udf = F.udf(overlay_images, StructType([StructField("dicom", BinaryType()),
                                                               StructField("overlay", BinaryType())]))
 

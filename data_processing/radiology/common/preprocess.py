@@ -177,7 +177,7 @@ def create_seg_images(src_path, uuid, width, height, n_slices=None):
     # find centroid using the mid segmentation and return x,y
     centroid = find_centroid(slices[mid_idx][2], width, height)
 
-    res = [slice + (slices_len, centroid) for slice in slices]
+    res = [slice + (slices_len, centroid[0], centroid[1]) for slice in slices]
 
     # if the user specified n_slices to select, then select the n_slices from the middle.
     if n_slices and n_slices < slices_len:
