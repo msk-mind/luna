@@ -51,12 +51,12 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
     input_tile_data_id   = method_data.get("input_label_tag")
     output_datastore_id  = method_data.get("output_datastore")
 
+    input_datastore  = DataStore( cfg ).setNamespace(cohort_id)\
+        .setDatastore(container_id)
+
     output_datastore = DataStore(cfg).setNamespace(cohort_id)\
         .createDatastore(output_datastore_id, "parquet")\
         .setDatastore(output_datastore_id)
-
-    input_datastore  = DataStore( cfg ).setNamespace(cohort_id)\
-        .setDatastore(container_id)
 
     image_node  = input_datastore.get("TileImages", input_tile_data_id)
 
