@@ -1,4 +1,5 @@
 import subprocess
+import shutil
 from click.testing import CliRunner
 
 from data_processing.common.Neo4jConnection import Neo4jConnection
@@ -18,7 +19,7 @@ def test_cli(mocker):
              "container.name":"store_123",
              "container.qualified_address":"test::store_123",
              "container.type":"slide",
-             "labels(container)":"slide",
+             "dzlabels(container)":"slide",
              "data":{
                  "type":"WholeSlideImage", "name":"123", 
                  "data":"tests/data_processing//testdata/data/test-project/wsi/123.svs"
