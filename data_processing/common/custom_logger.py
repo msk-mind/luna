@@ -1,6 +1,4 @@
 import logging
-import tempfile
-import os
 
 class MultilineFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord):
@@ -15,30 +13,27 @@ class MultilineFormatter(logging.Formatter):
         return output
 
 
-def init_logger(filename='data-processing.log', level=logging.INFO):
+def init_logger(filename='data-processing.log', level=logging.WARNING):
     # Logging configuration
     log_file = filename
 
     logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
     formatter = MultilineFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    # fh = logging.FileHandler(log_file)
-    # fh.setLevel(level)
-    # fh.setFormatter(formatter)
     
     if not logger.handlers:
-        logger.setLevel(level)
-        # create file handler which logs even debug messages
-        # create console handler with a higher log level
+        # create console handler with a customizable, higher log level
         ch = logging.StreamHandler()
         ch.setLevel(level)
-        # create formatter and add it to the handlers
         ch.setFormatter(formatter)
-    #     # add the handlers to logger
         logger.addHandler(ch)
-    #     logger.addHandler(fh)
-    # if logger.handlers:
-    #     logger.addHandler(fh)
+        
+        # create file handler which logs even debug messages
+        fh = logging.handlers.RotatingFileHandler(log_file, maxBytes=1e7, backupCount=10)
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+
     print(">>>>>>>> Initalized logger, log file at: " + log_file + " with handlers: " + str(logger.handlers))
     return logger
 
