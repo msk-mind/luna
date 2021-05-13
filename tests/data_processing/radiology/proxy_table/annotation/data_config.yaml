@@ -7,7 +7,7 @@ FILE_TYPE:
 ROOT_PATH: tests/data_processing/radiology/testdata
 
 # annotation data type - used to create table names
-DATA_TYPE: RadiologyAnnotation
+DATA_TYPE: RADIOLOGY_ANNOTATION
 
 # project name
 PROJECT: test-project

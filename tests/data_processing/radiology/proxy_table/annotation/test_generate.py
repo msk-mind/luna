@@ -1,6 +1,5 @@
 import os
 import shutil
-import subprocess
 
 import pytest
 from click.testing import CliRunner
@@ -14,10 +13,10 @@ mha_app_config_path = project_path + "/configs/MHA_datasetname/app_config.yaml"
 mha_data_config_path = project_path + "/configs/MHA_datasetname/data_config.yaml"
 mha_data_csv_path = project_path + "/configs/MHA_datasetname/metadata.csv"
 
-mhd_table_path = project_path + "/tables/RadiologyAnnotation_datasetname"
-mhd_app_config_path = project_path + "/configs/RadiologyAnnotation_datasetname/app_config.yaml"
-mhd_data_config_path = project_path + "/configs/RadiologyAnnotation_datasetname/data_config.yaml"
-mhd_data_csv_path = project_path + "/configs/RadiologyAnnotation_datasetname/metadata.csv"
+mhd_table_path = project_path + "/tables/RADIOLOGY_ANNOTATION_datasetname"
+mhd_app_config_path = project_path + "/configs/RADIOLOGY_ANNOTATION_datasetname/app_config.yaml"
+mhd_data_config_path = project_path + "/configs/RADIOLOGY_ANNOTATION_datasetname/data_config.yaml"
+mhd_data_csv_path = project_path + "/configs/RADIOLOGY_ANNOTATION_datasetname/metadata.csv"
 
 @pytest.fixture(autouse=True)
 def spark():
