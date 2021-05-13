@@ -91,9 +91,9 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
         }
         print(properties)
 
-    except Exception:
-        logger.exception ("Exception raised, stopping job execution.")
-        return
+    except Exception as e:
+        logger.exception (f"{e}, stopping job execution...")
+        raise e
 
     # Put results in the data store
     output_node = Node("ResultSegment", f"slide-{input_datastore._datastore_id}", properties)
