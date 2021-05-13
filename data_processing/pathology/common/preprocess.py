@@ -316,9 +316,12 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     counter = 0
 
     # filter tiles based on user provided criteria
+    # This line isn't neccessary if we don't do inplace operations on df_tiles_to_process
     df_tiles_to_process = df
-    for column, threshold in filter.items():
-        df_tiles_to_process = df_tiles_to_process[df_tiles_to_process[column] >= threshold]
+   
+    if filter is not None:
+        for column, threshold in filter.items():
+            df_tiles_to_process = df_tiles_to_process[df_tiles_to_process[column] >= threshold]
 
     for index, row in df_tiles_to_process.iterrows():
         counter += 1
