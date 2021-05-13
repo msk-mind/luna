@@ -404,21 +404,20 @@ class DataStore(object):
                 future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
                 future_uploads.append(future)
            
-        n_count_futures = 0
-        n_total_futures = len (future_uploads)
-        for future in as_completed(future_uploads):
-            try:
-                data = future.result()
-            except:
-                logger.exception('Bad upload: generated an exception:')
-            else:
-                n_count_futures += 1
-                if n_count_futures < 10: logger.info("Upload successful with etag: %s", data[0])
-                if n_count_futures < 1000 and n_count_futures % 100 == 0: logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
-                if n_count_futures % 1000 == 0: logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
+            n_count_futures = 0
+            n_total_futures = len (future_uploads)
+            for future in as_completed(future_uploads):
+                try:
+                    data = future.result()
+                except:
+                    logger.exception('Bad upload: generated an exception:')
+                else:
+                    n_count_futures += 1
+                    if n_count_futures < 10: logger.info("Upload successful with etag: %s", data[0])
+                    if n_count_futures < 1000 and n_count_futures % 100 == 0: logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
+                    if n_count_futures % 1000 == 0: logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
 
-        logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
-        if self.params.get("OBJECT_STORE_ENABLED", False):
+            logger.info("Uploaded [%s/%s]", n_count_futures, n_total_futures)
             logger.info("Shutdown executor %s", executor)                
             executor.shutdown()    
         logger.info("Done saving all records!!")
