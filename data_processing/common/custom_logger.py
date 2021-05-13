@@ -1,5 +1,8 @@
-import logging
+import os, logging
 from logging.handlers import RotatingFileHandler
+from log4mongo.handlers import MongoHandler
+
+from data_processing.common.config import ConfigSet
 
 class MultilineFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord):
@@ -21,6 +24,9 @@ def init_logger(filename='data-processing.log', level=logging.WARNING):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     formatter = MultilineFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    if os.path.exists('.logging.yaml'):
+        cfg = ConfigSet(name='LOG_CFG',  config_file='.logging.yaml')
     
     if not logger.handlers:
         # create console handler with a customizable, higher log level
@@ -35,7 +41,16 @@ def init_logger(filename='data-processing.log', level=logging.WARNING):
         fh.setFormatter(formatter)
         logger.addHandler(fh)
 
-    print(">>>>>>>> Initalized logger, log file at: " + log_file + " with handlers: " + str(logger.handlers))
+        # create mongo log handler if we configured it
+        if cfg and cfg.get_value('LOG_CFG::CENTRAL_LOGGING'):
+            mh = MongoHandler (
+                host=cfg.get_value('LOG_CFG::MONGO_HOST'), 
+                port=cfg.get_value('LOG_CFG::MONGO_PORT'), 
+                capped=True )
+            mh.setLevel(logging.INFO)
+            logger.addHandler(mh)
+    
+    logger.info("FYI: Initalized logger, log file at: " + log_file + " with handlers: " + str(logger.handlers))
     return logger
 
 
