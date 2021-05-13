@@ -438,42 +438,7 @@ def run_model(pil_file_path: str, csv_file_path: str, output_dir: str, params: d
 
     return properties 
 
-
-'''
-def visualize_tiling_scores(df, thumbnail_img, tile_size, score_type_to_visualize):
-    """
-    Draw colored boxes around tiles 
-    :param thumbnail_img: np.ndarray
-    :param tile_size: int
-    :param score_type_to_visualize: column name
-    :return: new thumbnail image with black boxes around tiles passing threshold
-    """
-
-    assert isinstance(thumbnail_img, np.ndarray) and isinstance(tile_size, int)
-    thumbnail = array_to_slide(thumbnail_img)
-    generator, generator_level = get_full_resolution_generator(thumbnail, tile_size=tile_size)
-
-    df_tiles_to_process = df[ (df["otsu_score"] > 0.5) &  (df["otsu_score"] > 0.1) ]
-
-    for index, row in df_tiles_to_process.iterrows():
-        address = address_to_coord(index)
-
-        if 'regional_label' in row and pd.isna(row.regional_label): continue
-
-        extent = generator.get_tile_dimensions(generator_level, address)
-        start = (address[1] * tile_size, address[0] * tile_size)  # flip because OpenSlide uses
-                                                                    # (column, row), but skimage
-                                                                    # uses (row, column)
-        rr, cc = rectangle_perimeter(start=start, extent=extent, shape=thumbnail_img.shape)
-        
-        # set color based on intensity of value instead of black border (1)
-        score = row[score_type_to_visualize]
-        thumbnail_img[rr, cc] = get_tile_color(score)
-    
-    return thumbnail_img
-
-# Not used atm
-def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: str, params: dict):
+def create_tile_thumbnail_image(slide_file_path: str, scores_file_path: str, output_dir: str, params: dict):
 
     requested_tile_size       = params.get("tile_size")
     requested_magnification   = params.get("magnification")
@@ -518,4 +483,37 @@ def visualize_scoring(slide_file_path: str, scores_file_path: str, output_dir: s
     properties = {'data': output_dir}
 
     return properties
-'''
+
+
+def visualize_tiling_scores(df, thumbnail_img, tile_size, score_type_to_visualize):
+    """
+    Draw colored boxes around tiles 
+    :param thumbnail_img: np.ndarray
+    :param tile_size: int
+    :param score_type_to_visualize: column name
+    :return: new thumbnail image with black boxes around tiles passing threshold
+    """
+
+    assert isinstance(thumbnail_img, np.ndarray) and isinstance(tile_size, int)
+    thumbnail = array_to_slide(thumbnail_img)
+    generator, generator_level = get_full_resolution_generator(thumbnail, tile_size=tile_size)
+
+    df_tiles_to_process = df[ (df["otsu_score"] > 0.5) &  (df["otsu_score"] > 0.1) ]
+
+    for index, row in df_tiles_to_process.iterrows():
+        address = address_to_coord(index)
+
+        if 'regional_label' in row and pd.isna(row.regional_label): continue
+
+        extent = generator.get_tile_dimensions(generator_level, address)
+        start = (address[1] * tile_size, address[0] * tile_size)  # flip because OpenSlide uses
+                                                                    # (column, row), but skimage
+                                                                    # uses (row, column)
+        rr, cc = rectangle_perimeter(start=start, extent=extent, shape=thumbnail_img.shape)
+        
+        # set color based on intensity of value instead of black border (1)
+        score = row[score_type_to_visualize]
+        thumbnail_img[rr, cc] = get_tile_color(score)
+    
+    return thumbnail_img
+

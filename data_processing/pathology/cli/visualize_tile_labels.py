@@ -32,6 +32,8 @@ from data_processing.common.DataStore       import DataStore
 from data_processing.common.Node            import Node
 from data_processing.common.config          import ConfigSet
 
+from data_processing.pathology.common.preprocess   import create_tile_thumbnail_image
+
 
 @click.command()
 @click.option('-a', '--app_config', required=True)
@@ -71,7 +73,7 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
                                   datastore._namespace_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        # properties = visualize_scoring(image_node.data, label_node.data, output_dir, method_data)
+        properties = create_tile_thumbnail_image(image_node.data, label_node.aux, output_dir, method_data)
 
         # push results to DSA
         if method_data.get("dsa_config", None):

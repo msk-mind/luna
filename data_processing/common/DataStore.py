@@ -230,15 +230,6 @@ class DataStore(object):
         if self._qualifiedpath is None: 
             logger.warning ("Found, however not valid container object, containers must have a name, namespace, and qualified path")
             return self
-        
-        # Set match clause to id
-        logger.debug ("Match on: %s", self._datastore_id)
-
-        # Attach
-        cohort = Node("cohort", self._namespace_id)
-        if not len(self._conn.query(f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._datastore_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)) == 1:
-            logger.warning ( "Cannot attach, tried [%s]", f""" MATCH (co:{cohort.get_match_str()}) MATCH (container) WHERE id(container) = {self._datastore_id} MERGE (co)-[:INCLUDE]->(container) RETURN co,container """)
-            return self
 
         # Let us know attaching was a success! :)
         logger.info ("Successfully attached to %s container id=%s @ %s", self._type, self._datastore_id, self.address)
