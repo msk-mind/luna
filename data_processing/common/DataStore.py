@@ -11,9 +11,15 @@ logger = logging.getLogger(__name__)
 
 class DataStore_v2:
     def __init__(self):
-        self.backend = '/gpfs/mskmindhdp_emc/data_dev/'
+        if os.path.exists('.datastore'):
+            self.params = ConfigSet(name='STORE_CFG',  config_file='.datastore').get_config_set("STORE_CFG")
+        else:
+            self.params = ConfigSet(name='STORE_CFG',  config_file='.datastore.default').get_config_set("STORE_CFG")
+        logger.info(f"Configured datastore with {self.params}")
+
+        self.backend = self.params['FILE_BACKEND'] 
         os.makedirs(self.backend, exist_ok=True)
-        print ("File backend=", self.backend)
+        logger.info(f"Datstore file backend= {self.backend}")
 
     def _generate_qualified_path(self, store_id, namespace_id, data_type, data_tag):
         return os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
@@ -21,10 +27,10 @@ class DataStore_v2:
     def put(self, filepath, store_id, namespace_id, data_type, data_tag='data'):
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
         os.makedirs(dest_dir, exist_ok=True)
-        print ("Save", filepath, "->", dest_dir)
+        logger.info(f"Save {filepath} -> {dest_dir}")
         shutil.copy(filepath, dest_dir )
     
-    def write(self, iostream, store_id, namespace_id, data_type, data_tag, dtype='w'):
+    def write(self, iostream, store_id, namespace_id, data_type, data_tag, metadata={}, dtype='w'):
         dest_path_dir  = os.path.join (store_id, namespace_id, data_type)
         dest_path_file = os.path.join (dest_path_dir, data_tag)
 
@@ -32,11 +38,28 @@ class DataStore_v2:
         dest_file = os.path.join (self.backend, dest_path_file)
 
         os.makedirs(dest_dir, exist_ok=True)
-        print ("Save ->", dest_file)
+        logger.info(f"Save -> {dest_file}")
         with open(dest_file, dtype) as fp:
             fp.write(iostream)
 
-        return dest_path_file
+        if self.params['GRAPH_STORE_ENABLED']:
+            try:
+                conn = Neo4jConnection(uri=self.params['GRAPH_URI'], user=self.params['GRAPH_USER'], pwd=self.params['GRAPH_PASSWORD'])
+                logger.debug ("Connection test: %s", conn.test_connection())
+                node = Node(data_type, data_tag, metadata)
+                node.set_namespace('pathology', store_id)
+                logger.info (str(node))
+                res = conn.query( f""" 
+                    MATCH (datastore) WHERE datastore.name = '{store_id}'
+                    MERGE (datastore)-[:HAS_DATA]->(da:{node.get_match_str()})
+                        ON MATCH  SET da = {node.get_map_str()}
+                        ON CREATE SET da = {node.get_map_str()} 
+                    RETURN datastore""" )
+                if not len(res)==1: logger.warning("Tried adding data to {store_id}, however query failed, this data will not be available!", extra={'store_id': store_id})
+            except Exception as exc:
+                logger.exception(f"On write, encountered {exc}, continuing...", extra={'store_id': store_id})
+
+        return dest_file 
 
 
 
