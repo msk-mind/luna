@@ -1,4 +1,4 @@
-FILE_BACKEND: /data/ 
+FILE_BACKEND: ./tmp/ 
 
 GRAPH_STORE_ENABLED: False 
 GRAPH_URI: neo4j://localhost:7687
