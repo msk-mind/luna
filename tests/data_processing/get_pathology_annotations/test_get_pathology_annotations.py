@@ -30,14 +30,6 @@ def client():
         yield client
 
 
-def mock_init(*args, **kwargs):
-    self.backend = ''
-
-def mock_generate_qualified_path(*args, **kwargs):
-    if kwargs['slide_id'] == 123456:
-        return 'tests/data_processing/pathology/common/testdata/regional_annotation.json'
-    else:
-        return 'no_value'
 
 
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
@@ -50,20 +42,33 @@ def test_get_point_annotation(mocker, client, monkeypatch):
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
 def test_get_regional_annotation(mocker, client, monkeypatch):
 
+    def mock_init(*args, **kwargs):
+        self.backend = ''
+
+    def mock_generate_qualified_path(*args, **kwargs):
+        if kwargs['slide_id'] == 123456:
+            return 'tests/data_processing/pathology/common/testdata/regional_annotation.json'
+        else:
+            return 'no_value'
+
     monkeypatch.setattr(DataStore_v2, "__init__", mock_init)
     monkeypatch.setattr(DataStore_v2, "_generate_qualified_path", mock_generate_qualified_path)
-    
+
+
+        
     response = client.get('/mind/api/v1/getPathologyAnnotation/test/123456/regional/DEFAULT_LABELS')
     print(response)
-    print(response.data)
+    print(response.data )
     assert b"{\"type\":\"FeatureCollection\",\"features" in response.data
 
 
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
 def test_get_bad_slide_id(mocker, client, monkeypatch):
 
+    def mock_init(*args, **kwargs):
+        self.backend = ''
+
     monkeypatch.setattr(DataStore_v2, "__init__", mock_init)
-    monkeypatch.setattr(DataStore_v2, "_generate_qualified_path", mock_generate_qualified_path)
 
     response = client.get('/mind/api/v1/getPathologyAnnotation/test/1/regional/DEFAULT_LABELS')
     print(response)
