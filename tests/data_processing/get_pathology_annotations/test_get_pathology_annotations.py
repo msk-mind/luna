@@ -42,7 +42,7 @@ def test_get_point_annotation(mocker, client, monkeypatch):
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
 def test_get_regional_annotation(mocker, client, monkeypatch):
 
-    def mock_init(*args, **kwargs):
+    def mock_init(self, *args, **kwargs):
         self.backend = ''
 
     def mock_generate_qualified_path(*args, **kwargs):
@@ -65,7 +65,7 @@ def test_get_regional_annotation(mocker, client, monkeypatch):
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
 def test_get_bad_slide_id(mocker, client, monkeypatch):
 
-    def mock_init(*args, **kwargs):
+    def mock_init(self, *args, **kwargs):
         self.backend = ''
 
     monkeypatch.setattr(DataStore_v2, "__init__", mock_init)
