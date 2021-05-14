@@ -1,0 +1,71 @@
+# the name of requestor
+REQUESTOR: bob
+
+# the department to which the requestor belongs
+REQUESTOR_DEPARTMENT: msk-mind-TEAM
+
+# email address of requestor
+REQUESTOR_EMAIL: requestor-email-here
+
+# project name decided by data coordination
+PROJECT: IRB_NUMBER
+
+# project ID in SlideViewer
+PROJECT_ID: slideviewer-number
+
+# source name of input data file
+SOURCE: slide_viewer
+
+# data modality
+MODALITY: pathology
+
+# data type within the modality
+DATA_TYPE: REGIONAL_GEOJSON
+
+# the data on which the request was made
+DATE: 2021-05-11
+
+# Type of ETL
+ETL_TYPE: pathology_annotation_etl
+
+# data directory  
+ROOT_PATH: /path/to/mind/data
+
+# dataset name set to empty string
+DATASET_NAME: ""
+
+# root path for tables and file transfer
+LANDING_PATH: /path/to/mind/data/{PROJECT}
+
+# slide viewer api url (must contain trailing slash)
+SLIDEVIEWER_API_URL: SLIDEVIEWER-URL-HERE
+
+# an optional path to a SlideViewer csv file to use that lists the names of the whole slide images
+# and for which the regional annotation proxy table generator should download point annotations.
+# If this field is left blank, then the regional annotation proxy table generator will attempt to
+# download this file from SlideViewer.
+SLIDEVIEWER_CSV_FILE: 
+
+# set CONTOUR_LEVEL=0.5 to vectorize pixels 
+CONTOUR_LEVEL: 0.5
+
+# list of expert annotators
+USERS:
+    - bjoe
+    - bjill
+
+LABEL_SETS:
+    DEFAULT_LABELS:
+        1: lympho_rich_stroma
+        2: lympho_poor_stroma
+        3: lympho_rich_tumor
+        4: lympho_poor_tumor
+        5: adipocytes
+    PIXEL_CLASSIFIER_LABELS:
+        1: Stroma
+        2: Stroma
+        3: Tumor
+        4: Tumor
+        5: Adipocytes
+
+
