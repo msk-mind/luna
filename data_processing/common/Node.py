@@ -5,7 +5,7 @@ from pathlib import Path
 # TODO: Update types to match docs
 CONTAINER_TYPES = ["cohort", "patient", "scan", "slide", "parquet", "accession", "generic"]
 RADIOLOGY_TYPES = ["DicomSeries", "DicomImageSeries", "DicomImage", "VolumetricImage", "RadiologyScan", "VolumetricLabel", "VolumetricLabelSet", "Voxels", "Radiomics"]
-PATHOLOGY_TYPES = ["WholeSlideImage", "WsiThumbnail", "TileScores", "TileImages", "PointAnnotation", "PointAnnotationJson", "RegionalAnnotationBitmap", "RegionalAnnotationJson", "CellMap"]
+PATHOLOGY_TYPES = ["WholeSlideImage", "WsiThumbnail", "TileScores", "TileImages", "PointAnnotation", "PointAnnotationJson", "RegionalAnnotationBitmap", "RegionalAnnotationJSON", "CellMap"]
 GENERIC_TYPES   = ["ResultSegment"]
 ALL_DATA_TYPES  = RADIOLOGY_TYPES + PATHOLOGY_TYPES + GENERIC_TYPES
 
