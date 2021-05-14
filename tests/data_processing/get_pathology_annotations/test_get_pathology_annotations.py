@@ -8,6 +8,7 @@ import data_processing.common.constants as const
 
 from data_processing.get_pathology_annotations import get_pathology_annotations
 from data_processing.get_pathology_annotations.get_pathology_annotations import PROJECT_MAPPING
+from data_processing.common.DataStore import DataStore_v2
 
 from pytest_mock import mocker
 from mock import patch
@@ -24,6 +25,8 @@ def client():
     get_pathology_annotations.app.config['TESTING'] = True
     get_pathology_annotations.app.config['pathology_root_path'] = cfg.get_value(path=APP_CFG+'::$.pathology[:1]["root_path"]')
     get_pathology_annotations.app.config['spark'] = spark
+
+    DataStore_v2.backend = ''
 
     with get_pathology_annotations.app.test_client() as client:
         yield client
