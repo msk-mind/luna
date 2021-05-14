@@ -36,10 +36,13 @@ PUBLIC_DIR          ='/gpfs/mskmind_ess/mind_public'
 
 # Annotation API Data Mappings
 PROJECT_MAPPING = {'msk_mind_ov': "OV_16-158", "msk_mind_lung": "LUNG_18-193", "msk_mind_crc": "CRC_21-167"}
+
+
 ANNOTATION_TABLE_MAPPINGS = {"regional":\
- {"DATA_TYPE":"REGIONAL_CONCAT_GEOJSON", "GEOJSON_COLUMN_NAME": "concat_geojson"}, \
+ {"DATA_TYPE":"REGIONAL_METADATA_RESULTS", "GEOJSON_COLUMN_NAME": "geojson"}, \
  "point": {"DATA_TYPE": "POINT_GEOJSON", "GEOJSON_COLUMN_NAME": "geojson"} \
     }
+
 
 
 def PROJECT_LOCATION(cfg):

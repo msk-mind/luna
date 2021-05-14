@@ -17,12 +17,16 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.common.config import ConfigSet
 import data_processing.common.constants as const
+from data_processing.common.DataStore import DataStore_v2
 
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType, MapType
 from pyspark.sql.functions import  to_json
+import json
+
 
 import os, shutil, sys, importlib, json, yaml, subprocess, time, click
+import pandas as pd
 from io import BytesIO
 from distutils.util import strtobool
 import re
@@ -84,19 +88,29 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
         else:
                 return "Invalid ID"
 
-        if annotation_type not in ANNOTATION_TABLE_MAPPINGS:
+        # point annots still uses spark-ETL-based organization
+        if annotation_type == "point":
+                DATA_TYPE = ANNOTATION_TABLE_MAPPINGS[annotation_type]["DATA_TYPE"]
+                GEOJSON_COLUMN = ANNOTATION_TABLE_MAPPINGS[annotation_type]["GEOJSON_COLUMN_NAME"]
+                ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, PROJECT_MAPPING[project])
+                GEOJSON_TABLE_PATH = os.path.join(ANNOTATIONS_FOLDER , "tables", DATA_TYPE)
+
+                row = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset.upper()}' and latest=True")
+                if row.count() == 0:
+                        return "No annotations match the provided query."
+                geojson = row.select(to_json(GEOJSON_COLUMN).alias("val")).head()['val']
+                return geojson
+        elif annotation_type == "regional":
+                store = DataStore_v2()
+                geojson_path = store._generate_qualified_path (store_id=slide_id, namespace_id='CONCAT', data_type='RegionalAnnotationJSON', data_tag=labelset.upper())
+                print(geojson_path)
+                with open(geojson_path) as geojson_file:
+                        return json.load(geojson_file)
+
+        else:
                 return "Illegal Annotation Type. This API supports \"regional\" or \"point\" annotations only"
 
-        DATA_TYPE = ANNOTATION_TABLE_MAPPINGS[annotation_type]["DATA_TYPE"]
-        GEOJSON_COLUMN = ANNOTATION_TABLE_MAPPINGS[annotation_type]["GEOJSON_COLUMN_NAME"]
-        ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, PROJECT_MAPPING[project])
-        GEOJSON_TABLE_PATH = os.path.join(ANNOTATIONS_FOLDER , "tables", DATA_TYPE)
 
-        row = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset.upper()}' and latest=True")
-        if row.count() == 0:
-                return "No annotations match the provided query."
-        geojson = row.select(to_json(GEOJSON_COLUMN).alias("val")).head()['val']
-        return geojson
 
 
 @click.command()
