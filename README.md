@@ -4,6 +4,14 @@
 Scripts for data processing
 
 
+## Global configuraiton for datastore
+The Datastore class interfaces with a variety of backends, currently a NFS/POSIX filesystem, Neo4j and Minio. The class will preferentially pull configuration from '.datastore' first and then fallback to '.datastore.default'.
+Here, you can configure the class to write data/metadata to your common file backend, a neo4j backend, and minio backend, if available or desired. 
+
+## Logging configuration
+.logging.yaml contains configuration for centralized logging to MongoDB.  By default this is turned off.
+
+
 ## Steps to generate radiology proxy table.
 1. Make a copy of data_ingestion_template.yaml.template and fill it out. This template contains operational metadata associated with the data and the data transfer process. 
 
