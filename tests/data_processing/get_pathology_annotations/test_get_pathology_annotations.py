@@ -26,10 +26,11 @@ def client():
     get_pathology_annotations.app.config['pathology_root_path'] = cfg.get_value(path=APP_CFG+'::$.pathology[:1]["root_path"]')
     get_pathology_annotations.app.config['spark'] = spark
 
-    DataStore_v2.backend = ''
-
     with get_pathology_annotations.app.test_client() as client:
         yield client
+
+def mock_datastore_init(mock_method):
+    self.backend = ''
 
 
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
@@ -40,6 +41,7 @@ def test_get_point_annotation(mocker, client):
 
 
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
+@patch.object(DataStore_v2, '__init__', 'mock_datastore_init')
 def test_get_regional_annotation(mocker, client):
 
     response = client.get('/mind/api/v1/getPathologyAnnotation/test/123456/regional/DEFAULT_LABELS')
@@ -47,6 +49,7 @@ def test_get_regional_annotation(mocker, client):
 
 
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
+@patch.object(DataStore_v2, '__init__', 'mock_datastore_init')
 def test_get_bad_slide_id(mocker, client):
 
     response = client.get('/mind/api/v1/getPathologyAnnotation/test/1/regional/DEFAULT_LABELS')
