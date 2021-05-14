@@ -15,8 +15,6 @@ import numpy as np
 
 from dask.distributed import Client, as_completed
 
-logger = init_logger()
-
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
               help="path to yaml file containing data input and output parameters. "
@@ -37,13 +35,15 @@ def cli(data_config_file, app_config_file, process_string):
                      --app_config_file <path to app config file> \
                      --process_string geojson
     """
+    logger = init_logger()
+
+    # load configs
+    cfg = ConfigSet(name='DATA_CFG', config_file=data_config_file)
+    cfg = ConfigSet(name='APP_CFG',  config_file=app_config_file)
+    
     with CodeTimer(logger, f"generate {process_string} table"):
         logger.info('data template: ' + data_config_file)
         logger.info('config_file: ' + app_config_file)
-
-        # load configs
-        cfg = ConfigSet(name='DATA_CFG', config_file=data_config_file)
-        cfg = ConfigSet(name='APP_CFG',  config_file=app_config_file)
 
         # copy app and data configuration to destination config dir
         config_location = const.CONFIG_LOCATION(cfg)
@@ -60,9 +60,6 @@ def cli(data_config_file, app_config_file, process_string):
 
 
 def create_geojson_table():
-    client = Client(n_workers=20, threads_per_worker=1, memory_limit=0.1)
-    print (client)
-
     """
     Vectorizes npy array annotation file into polygons and builds GeoJson with the polygon features.
     Creates a geojson file per labelset.
@@ -70,6 +67,11 @@ def create_geojson_table():
 
     # get application and data config variables
     cfg = ConfigSet()
+
+    client = Client(n_workers=25, threads_per_worker=1, memory_limit=0.1)
+    client.run(init_logger)
+    print (client)
+
     SLIDEVIEWER_API_URL     = cfg.get_value('DATA_CFG::SLIDEVIEWER_API_URL')
     SLIDEVIEWER_CSV_FILE    = cfg.get_value('DATA_CFG::SLIDEVIEWER_CSV_FILE')
     PROJECT_ID              = cfg.get_value('DATA_CFG::PROJECT_ID')
