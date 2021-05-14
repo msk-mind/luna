@@ -55,7 +55,7 @@ class DataStore_v2:
                         ON MATCH  SET da = {node.get_map_str()}
                         ON CREATE SET da = {node.get_map_str()} 
                     RETURN datastore""" )
-                if not len(res)==1: logger.warning("Tried adding data to {store_id}, however query failed, this data will not be available!", extra={'store_id': store_id})
+                if not len(res)==1: logger.warning(f"Tried adding data to {store_id}, however query failed, this data will not be available!", extra={'store_id': store_id})
             except Exception as exc:
                 logger.exception(f"On write, encountered {exc}, continuing...", extra={'store_id': store_id})
 
