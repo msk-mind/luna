@@ -110,9 +110,6 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
         else:
                 return "Illegal Annotation Type. This API supports \"regional\" or \"point\" annotations only"
 
-
-
-
 @click.command()
 @click.option('-c',
               '--config_file',
