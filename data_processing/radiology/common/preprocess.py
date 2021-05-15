@@ -8,7 +8,7 @@ from PIL import Image
 import cv2
 from radiomics import featureextractor  # This module is used for interaction with pyradiomics
 from pydicom import dcmread
-from medpy.io import load
+from medpy.io import load, save
 from skimage.transform import resize
 import itk
 from pathlib import Path
@@ -126,6 +126,32 @@ def dicom_to_bytes(dicom_path, width, height):
     im = im.resize( (width, height) )
 
     return im.tobytes()
+
+def subset_bound_seg(src_path, start_slice, end_slice):
+    """
+    Pull out desired range of slices from segmentations created from
+    a bound scan (where multiple scans are bound in one series)
+
+    :param src_path: path to a segmentation file
+    :param start_slice: starting slice
+    :param end_slice:  ending slice
+    :return: new segmentation file path
+    """
+    try:
+        file_path = src_path.split(':')[-1]
+        data, header = load(file_path)
+
+        subset = data[:,:,start_slice:end_slice]
+
+        path = Path(file_path)
+        new_file_path = str(path.parent) + "/subset_" + str(path.name)
+        save(subset, new_file_path, hdr=header)
+
+    except Exception as err:
+        print(err)
+        return None
+
+    return new_file_path
 
 
 def create_seg_images(src_path, uuid, width, height, n_slices=None):

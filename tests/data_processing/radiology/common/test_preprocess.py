@@ -10,9 +10,9 @@ import data_processing.common.constants as const
 from pathlib import Path
 cwd = os.getcwd()
 
-dicom_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/1-01.dcm'
-image_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd'
-label_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'
+dicom_path = 'tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/1-01.dcm'
+image_path = 'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd'
+label_path = 'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'
 
 
 def test_find_centroid():
@@ -61,6 +61,21 @@ def test_create_seg_images():
     assert "uuid" == arr[0][1]
     # RGB seg image
     assert 512*512*3 == len(arr[0][2])
+
+
+def test_subset_bound_seg():
+
+    modified_file = subset_bound_seg(image_path, 0, 3)
+
+    assert "subset_image.mhd" == Path(modified_file).name
+
+    subset_data, subset_hdr = load(modified_file)
+    assert 3 == subset_data.shape[2]
+    assert 3 == subset_hdr.sitkimage.GetSize()[2]
+    
+    # cleanup
+    os.remove('tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/subset_image.mhd')
+    os.remove('tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/subset_image.raw')
 
 
 def test_create_seg_images_subset():
