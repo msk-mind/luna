@@ -173,6 +173,8 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, SLIDE
         print(f" >>>>>>> Processing [{slide_id}] <<<<<<<<")
 
         store = DataStore_v2()
+        store.ensure_datastore(slide_id, "slide")
+
         for user_annotation in outputs:
             bmp_filepath = user_annotation['bmp_filepath']
             npy_filepath = convert_bmp_to_npy(bmp_filepath, SLIDE_NPY_DIR)

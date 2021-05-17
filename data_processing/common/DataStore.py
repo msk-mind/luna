@@ -1,5 +1,5 @@
 from data_processing.common.Neo4jConnection import Neo4jConnection
-from data_processing.common.Node import Node
+from data_processing.common.Node import Node, CONTAINER_TYPES
 from data_processing.common.config import ConfigSet
 
 import os, socket, pathlib, logging, shutil
@@ -23,6 +23,30 @@ class DataStore_v2:
         if not os.path.exists( self.backend ): 
             logger.warning (f"Invalid backend {self.backend}, path does not exist on this node, writes will raise errors!")
 
+
+    def ensure_datastore(self, datastore_id, datastore_type):
+        """
+        :params: datastore_id - unique container ID
+        "params: datastore_type - the type of the container
+        """
+        datastore_id = str(datastore_id)
+
+        if not datastore_type in CONTAINER_TYPES: 
+            logger.warning (f"DataStore type [{datastore_type}] invalid, please choose from [{CONTAINER_TYPES}]" )
+            return
+
+        if ":" in datastore_id: 
+            logger.warning (f"Invalid datastore_id [{datastore_id}], only use alphanumeric characters")
+            return
+
+        conn = Neo4jConnection(uri=self.params['GRAPH_URI'], user=self.params['GRAPH_USER'], pwd=self.params['GRAPH_PASSWORD'])  
+        res = conn.query(f""" MERGE (datastore:globals:{datastore_type}{{qualified_address:'{datastore_id}'}}) RETURN count(datastore)""")
+
+        if res[0]['count(datastore)']==1: 
+            logger.info(f"DataStore [{datastore_id}] of type [{datastore_type}] created or matched successfully!")
+        else:
+            logger.error("The datastore {node} could not be created or found")
+        
     def write_to_graph_store(self, node, store_id):
         """ Saves the 'node' to a datastore managed in the graph DB """
 
@@ -30,7 +54,7 @@ class DataStore_v2:
             # Configure our connection
             conn = Neo4jConnection(uri=self.params['GRAPH_URI'], user=self.params['GRAPH_USER'], pwd=self.params['GRAPH_PASSWORD'])  
             res = conn.query( f""" 
-                MATCH (datastore) WHERE datastore.name = '{store_id}'
+                MATCH (datastore) WHERE datastore.qualified_address = '{store_id}'
                 MERGE (datastore)-[:HAS_DATA]->(da:{node.get_match_str()})
                     ON MATCH  SET da = {node.get_map_str()}
                     ON CREATE SET da = {node.get_map_str()} 
