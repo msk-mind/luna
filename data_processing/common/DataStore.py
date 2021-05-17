@@ -18,19 +18,24 @@ class DataStore_v2:
         logger.info(f"Configured datastore with {self.params}")
 
         self.backend = self.params['FILE_BACKEND'] 
-        os.makedirs(self.backend, exist_ok=True)
         logger.info(f"Datstore file backend= {self.backend}")
 
-    def _generate_qualified_path(self, store_id, namespace_id, data_type, data_tag):
-        return os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
+    def get(self, store_id, namespace_id, data_type, data_tag):
+        dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
+        if not os.path.exists(dest_dir): raise RuntimeWarning(f"Data not found at {dest_dir}")
+        return dest_dir
 
     def put(self, filepath, store_id, namespace_id, data_type, data_tag='data'):
+        os.makedirs(self.backend, exist_ok=True)
+
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
         os.makedirs(dest_dir, exist_ok=True)
         logger.info(f"Save {filepath} -> {dest_dir}")
         shutil.copy(filepath, dest_dir )
     
     def write(self, iostream, store_id, namespace_id, data_type, data_tag, metadata={}, dtype='w'):
+        os.makedirs(self.backend, exist_ok=True)
+
         dest_path_dir  = os.path.join (store_id, namespace_id, data_type)
         dest_path_file = os.path.join (dest_path_dir, data_tag)
 

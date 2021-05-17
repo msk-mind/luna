@@ -89,12 +89,12 @@ def create_geojson_table():
     slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, const.CONFIG_LOCATION(cfg), SLIDEVIEWER_CSV_FILE)
     df = pd.DataFrame(data=np.array(slides),columns=["slideviewer_path", "slide_id", "sv_project_id"])
 
-    ## TODO: REMOVE , just for testing
-    df = df[df['slide_id'].isin(['620621', '2463268', '620596'])]
-
     # get users and labelsets for df explosion
     all_users_list = cfg.get_value('DATA_CFG::USERS')
     all_labelsets  = cfg.get_value('DATA_CFG::LABEL_SETS')
+
+    global params
+    params = cfg.get_config_set("APP_CFG")
 
     bmp_jobs = []
     for _, row in df.iterrows():

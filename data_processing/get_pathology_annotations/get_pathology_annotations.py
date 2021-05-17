@@ -102,7 +102,7 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
                 return geojson
         elif annotation_type == "regional":
                 store = DataStore_v2()
-                geojson_path = store._generate_qualified_path (store_id=slide_id, namespace_id='CONCAT', data_type='RegionalAnnotationJSON', data_tag=labelset.upper())
+                geojson_path = store.get (store_id=slide_id, namespace_id='CONCAT', data_type='RegionalAnnotationJSON', data_tag=labelset.upper())
                 print(geojson_path)
                 with open(geojson_path) as geojson_file:
                         return json.load(geojson_file)
