@@ -102,8 +102,14 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
                 print(result.returncode, result.stdout, result.stderr)
 
                 # push results to DSA
+                result_path = result.stdout.split(" ")[-1].strip()
+                properties["annotation_filepath"] = result_path
+                properties["collection_name"] = method_data["collection_name"]
+                with open(f"{tmpdir}/model_inference_config.json", "w") as f:
+                    json.dump(properties, f)
+
                 subprocess.run(["python3","-m","data_processing.pathology.cli.dsa.dsa_upload",
-                                 "-c", f"{tmpdir}/dsa_config.json", "-d", result.stdout])
+                                 "-c", f"{tmpdir}/dsa_config.json", "-d", f"{tmpdir}/model_inference_config.json"])
 
     except Exception as e:
         logger.exception (f"{e}, stopping job execution...")
