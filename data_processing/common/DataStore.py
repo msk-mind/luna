@@ -24,6 +24,8 @@ class DataStore_v2:
             logger.warning (f"Invalid backend {self.backend}, path does not exist on this node, writes will raise errors!")
 
     def write_to_graph_store(self, node, store_id):
+        """ Saves the 'node' to a datastore managed in the graph DB """
+
         try:
             # Configure our connection
             conn = Neo4jConnection(uri=self.params['GRAPH_URI'], user=self.params['GRAPH_USER'], pwd=self.params['GRAPH_PASSWORD'])  
@@ -39,11 +41,15 @@ class DataStore_v2:
             logger.exception(f"On write, encountered {exc}, continuing...", extra={'store_id': store_id})
 
     def get(self, store_id, namespace_id, data_type, data_tag):
+        """ Looks up and returns the path of data given the store_id, namespace_id, data_type, and data_tag """
+
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
         if not os.path.exists(dest_dir): raise RuntimeWarning(f"Data not found at {dest_dir}")
         return dest_dir
 
     def put(self, filepath, store_id, namespace_id, data_type, data_tag='data', metadata={} ):
+        """ Puts the file at filepath at the proper location given a store_id, namespace_id, data_type, and data_tag, and save metadata to DB """
+
         if not os.path.exists( self.backend ): 
             raise ValueError (f"Invalid backend {self.backend}, path does not exist on this node.")
 
@@ -61,6 +67,8 @@ class DataStore_v2:
         return dest_dir
     
     def write(self, iostream, store_id, namespace_id, data_type, data_tag, metadata={}, dtype='w'):
+        """ Puts the file at filepath at the proper location given a store_id, namespace_id, data_type, and data_tag, and save metadata to DB """
+
         if not os.path.exists( self.backend ): 
             raise ValueError (f"Invalid backend {self.backend}, path does not exist on this node.")
 

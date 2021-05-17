@@ -6,7 +6,7 @@ import logging
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
-from data_processing.common.DataStore import DataStore_v2
+from data_processing.common.DataStore import DataStore_v2, DataStore
 
 # from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
@@ -178,7 +178,7 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, SLIDE
             npy_filepath = convert_bmp_to_npy(bmp_filepath, SLIDE_NPY_DIR)
             user_annotation['npy_filepath'] = npy_filepath
 
-            store.put (npy_filepath, store_id=user_annotation['slide_id'], namespace_id=user_annotation['user'], data_type='RegionalAnnotationBitmask')
+            store.put (npy_filepath, store_id=user_annotation['slide_id'], namespace_id=user_annotation['user'], data_type='RegionalAnnotationBitmap')
 
         
         # build geojsons
@@ -217,6 +217,7 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, SLIDE
             concat_geojson_table_out_entry['geojson'] = geojson
 
             path = store.write(json.dumps(geojson, indent=4), store_id=concat_geojson_table_out_entry['slide_id'], namespace_id=concat_geojson_table_out_entry['user'], data_type='RegionalAnnotationJSON', data_tag=labelset_name)
+
             concat_geojson_table_out_entry['geojson_path'] = path
 
             concat_geojson_table_outs.append(concat_geojson_table_out_entry)
