@@ -137,6 +137,9 @@ def subset_bound_seg(src_path, start_slice, end_slice):
     :param end_slice:  ending slice
     :return: new segmentation file path
     """
+    start_slice = int(start_slice)
+    end_slice = int(end_slice)
+
     try:
         file_path = src_path.split(':')[-1]
         data, header = load(file_path)
