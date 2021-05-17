@@ -23,7 +23,7 @@ def init_logger(filename='data-processing.log', level=logging.WARNING):
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    formatter = MultilineFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = MultilineFormatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 
     if os.path.exists('conf/logging.cfg'):
         cfg = ConfigSet(name='LOG_CFG',  config_file='conf/logging.cfg')

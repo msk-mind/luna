@@ -59,8 +59,12 @@ class DataStore_v2:
                     ON MATCH  SET da = {node.get_map_str()}
                     ON CREATE SET da = {node.get_map_str()} 
                 RETURN count(datastore)""" )
+            if res is None:
+                logger.error(f"Tried adding data to {store_id}, however query failed, this data will not be available!", extra={'store_id': store_id})
+                return
             if not res[0]['count(datastore)']==1: 
-                logger.warning(f"Tried adding data to {store_id}, however query failed, this data will not be available!", extra={'store_id': store_id})
+                logger.warning(f"Tried adding data to {store_id}, however datastore did not exist, this data will not be available!", extra={'store_id': store_id})
+                return
         except Exception as exc:
             logger.exception(f"On write, encountered {exc}, continuing...", extra={'store_id': store_id})
 
