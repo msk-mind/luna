@@ -23,12 +23,27 @@ class DataStore_v2:
         if not os.path.exists( self.backend ): 
             logger.warning (f"Invalid backend {self.backend}, path does not exist on this node, writes will raise errors!")
 
+    def write_to_graph_store(self, node, store_id):
+        try:
+            # Configure our connection
+            conn = Neo4jConnection(uri=self.params['GRAPH_URI'], user=self.params['GRAPH_USER'], pwd=self.params['GRAPH_PASSWORD'])  
+            res = conn.query( f""" 
+                MATCH (datastore) WHERE datastore.name = '{store_id}'
+                MERGE (datastore)-[:HAS_DATA]->(da:{node.get_match_str()})
+                    ON MATCH  SET da = {node.get_map_str()}
+                    ON CREATE SET da = {node.get_map_str()} 
+                RETURN count(datastore)""" )
+            if not res[0]['count(datastore)']==1: 
+                logger.warning(f"Tried adding data to {store_id}, however query failed, this data will not be available!", extra={'store_id': store_id})
+        except Exception as exc:
+            logger.exception(f"On write, encountered {exc}, continuing...", extra={'store_id': store_id})
+
     def get(self, store_id, namespace_id, data_type, data_tag):
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
         if not os.path.exists(dest_dir): raise RuntimeWarning(f"Data not found at {dest_dir}")
         return dest_dir
 
-    def put(self, filepath, store_id, namespace_id, data_type, data_tag='data'):
+    def put(self, filepath, store_id, namespace_id, data_type, data_tag='data', metadata={} ):
         if not os.path.exists( self.backend ): 
             raise ValueError (f"Invalid backend {self.backend}, path does not exist on this node.")
 
@@ -36,6 +51,14 @@ class DataStore_v2:
         os.makedirs(dest_dir, exist_ok=True)
         logger.info(f"Save {filepath} -> {dest_dir}")
         shutil.copy(filepath, dest_dir )
+
+        if self.params['GRAPH_STORE_ENABLED']:
+            node = Node(data_type, data_tag, metadata)
+            node.set_namespace(namespace_id, store_id)
+            logger.info(f"Adding: {node}")
+            self.write_to_graph_store (node, store_id)
+        
+        return dest_dir
     
     def write(self, iostream, store_id, namespace_id, data_type, data_tag, metadata={}, dtype='w'):
         if not os.path.exists( self.backend ): 
@@ -53,21 +76,10 @@ class DataStore_v2:
             fp.write(iostream)
 
         if self.params['GRAPH_STORE_ENABLED']:
-            try:
-                conn = Neo4jConnection(uri=self.params['GRAPH_URI'], user=self.params['GRAPH_USER'], pwd=self.params['GRAPH_PASSWORD'])
-                logger.debug ("Connection test: %s", conn.test_connection())
-                node = Node(data_type, data_tag, metadata)
-                node.set_namespace('pathology', store_id)
-                logger.info (str(node))
-                res = conn.query( f""" 
-                    MATCH (datastore) WHERE datastore.name = '{store_id}'
-                    MERGE (datastore)-[:HAS_DATA]->(da:{node.get_match_str()})
-                        ON MATCH  SET da = {node.get_map_str()}
-                        ON CREATE SET da = {node.get_map_str()} 
-                    RETURN datastore""" )
-                if not len(res)==1: logger.warning(f"Tried adding data to {store_id}, however query failed, this data will not be available!", extra={'store_id': store_id})
-            except Exception as exc:
-                logger.exception(f"On write, encountered {exc}, continuing...", extra={'store_id': store_id})
+            node = Node(data_type, data_tag, metadata)
+            node.set_namespace(namespace_id, store_id)
+            logger.info(f"Adding: {node}")
+            self.write_to_graph_store (node, store_id)
 
         return dest_file 
 
