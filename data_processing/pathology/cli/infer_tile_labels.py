@@ -34,10 +34,14 @@ from data_processing.common.config          import ConfigSet
 from data_processing.pathology.common.preprocess   import run_model
 
 @click.command()
-@click.option('-a', '--app_config', required=True)
-@click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--datastore_id', required=True)
-@click.option('-m', '--method_param_path',    required=True)
+@click.option('-a', '--app_config', required=True,
+              help="application configuration yaml file. See config.yaml.template for details.")
+@click.option('-c', '--cohort_id',    required=True,
+              help="cohort name")
+@click.option('-s', '--datastore_id', required=True,
+              help='datastore name. usually a slide id.')
+@click.option('-m', '--method_param_path', required=True,
+              help='json file with method parameters for loading a saved model.')
 def cli(app_config, cohort_id, datastore_id, method_param_path):
     init_logger()
 
