@@ -73,7 +73,7 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
                                   datastore._namespace_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        properties = create_tile_thumbnail_image(image_node.data, label_node.aux, output_dir, method_data)
+        properties = create_tile_thumbnail_image(image_node.data, label_node.data, output_dir, method_data)
 
         # push results to DSA
         if method_data.get("dsa_config", None):
@@ -82,7 +82,11 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
             properties["column"]   = "tumor_score"
             properties["input"]    = label_node.properties["data"]
             properties["annotation_name"]   = method_id
-
+            properties["tile_size"]   = method_data["tile_size"]
+            properties["scale_factor"]   = method_data["scale_factor"]
+            properties["magnification"]   = method_data["magnification"]
+            properties["output_folder"]   = method_data["output_folder"]
+            properties["image_filename"] = container_id + ".svs"            
             with tempfile.TemporaryDirectory() as tmpdir:
                 print (tmpdir)
                 with open(f"{tmpdir}/model_inference_config.json", "w") as f:
@@ -92,7 +96,7 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
 
                 # build viz
                 result = subprocess.run(["python3","-m","data_processing.pathology.cli.dsa.dsa_viz",
-                                         "-c", f"{tmpdir}/dsa_config.json", "heatmap",
+                                         "-s", "heatmap",
                                          "-d", f"{tmpdir}/model_inference_config.json"],
                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
                 print(result.returncode, result.stdout, result.stderr)

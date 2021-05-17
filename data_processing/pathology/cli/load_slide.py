@@ -45,14 +45,15 @@ def load_slide_with_datastore(app_config, cohort_id, container_id, method_data):
 
     try:
         spark  = SparkConfig().spark_session("APP_CFG", "query_slide")
+        slide_id = datastore._name.upper()
         df = spark.read.format("delta").load(method_data['table_path'])\
-            .where(f"slide_id='{datastore.address}'")\
+            .where(f"UPPER(slide_id)='{slide_id}'")\
             .select("path", "metadata")\
             .toPandas()
 
         spark.stop()
         
-        if not len(df) == 1: raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {datastore.address}")
+        if not len(df) == 1: raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {slide_id}")
             
         record = df.loc[0]
 

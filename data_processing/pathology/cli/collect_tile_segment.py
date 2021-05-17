@@ -63,11 +63,12 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
     try:
         if image_node is None:
             raise ValueError("Image node not found")
-
+ 
         df = pd.read_csv(image_node.aux)
         df.loc[:,"data_path"]     = image_node.data
-        df.loc[:,"object_bucket"] = image_node.properties['object_bucket']
-        df.loc[:,"object_path"]   = image_node.properties['object_folder'] + "/tiles.slice.pil"
+        if cfg.get_value(path='APP_CFG::OBJECT_STORE_ENABLED'):
+            df.loc[:,"object_bucket"] = image_node.properties['object_bucket']
+            df.loc[:,"object_path"]   = image_node.properties['object_folder'] + "/tiles.slice.pil"
         df.loc[:,"id_slide_container"] = input_datastore._name
 
         df = df.set_index(["id_slide_container", "address"])

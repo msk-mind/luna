@@ -3,6 +3,8 @@
     "input_label_tag": "infer_ov_clf",
     "job_tag": "visualize_infer_ov_clf",
     "scale_factor": 8,
+    "tile_size": 128,
+    "magnification": 20,
     "dsa_config": {
       "host": "localhost",
       "port": "8080",

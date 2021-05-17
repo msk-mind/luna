@@ -338,7 +338,7 @@ def heatmap(data_config):
     start = time.time()
 
     df = pd.read_csv(data["input"])
-    scaled_tile_size = int(data["tile_size"]) * int(data["full_resolution_magnification"])/int(data["tile_magnification"])
+    scaled_tile_size = int(data["tile_size"]) * int(data["scale_factor"])
 
     elements = []
     for _, row in df.iterrows():
