@@ -26,7 +26,6 @@ class DataStore_v2:
         return dest_dir
 
     def put(self, filepath, store_id, namespace_id, data_type, data_tag='data'):
-        os.makedirs(self.backend, exist_ok=True)
 
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
         os.makedirs(dest_dir, exist_ok=True)
@@ -34,7 +33,6 @@ class DataStore_v2:
         shutil.copy(filepath, dest_dir )
     
     def write(self, iostream, store_id, namespace_id, data_type, data_tag, metadata={}, dtype='w'):
-        os.makedirs(self.backend, exist_ok=True)
 
         dest_path_dir  = os.path.join (store_id, namespace_id, data_type)
         dest_path_file = os.path.join (dest_path_dir, data_tag)
