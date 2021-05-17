@@ -11,14 +11,17 @@ logger = logging.getLogger(__name__)
 
 class DataStore_v2:
     def __init__(self):
-        if os.path.exists('.datastore'):
-            self.params = ConfigSet(name='STORE_CFG',  config_file='.datastore').get_config_set("STORE_CFG")
+        if os.path.exists('conf/datastore.cfg'):
+            self.params = ConfigSet(name='STORE_CFG',  config_file='conf/datastore.cfg').get_config_set("STORE_CFG")
         else:
-            self.params = ConfigSet(name='STORE_CFG',  config_file='.datastore.default').get_config_set("STORE_CFG")
+            self.params = ConfigSet(name='STORE_CFG',  config_file='conf/datastore.default.yml').get_config_set("STORE_CFG")
         logger.info(f"Configured datastore with {self.params}")
 
         self.backend = self.params['FILE_BACKEND'] 
         logger.info(f"Datstore file backend= {self.backend}")
+
+        if not os.path.exists( self.backend ): 
+            logger.warning (f"Invalid backend {self.backend}, path does not exist on this node, writes will raise errors!")
 
     def get(self, store_id, namespace_id, data_type, data_tag):
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
@@ -26,6 +29,8 @@ class DataStore_v2:
         return dest_dir
 
     def put(self, filepath, store_id, namespace_id, data_type, data_tag='data'):
+        if not os.path.exists( self.backend ): 
+            raise ValueError (f"Invalid backend {self.backend}, path does not exist on this node.")
 
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
         os.makedirs(dest_dir, exist_ok=True)
@@ -33,6 +38,8 @@ class DataStore_v2:
         shutil.copy(filepath, dest_dir )
     
     def write(self, iostream, store_id, namespace_id, data_type, data_tag, metadata={}, dtype='w'):
+        if not os.path.exists( self.backend ): 
+            raise ValueError (f"Invalid backend {self.backend}, path does not exist on this node.")
 
         dest_path_dir  = os.path.join (store_id, namespace_id, data_type)
         dest_path_file = os.path.join (dest_path_dir, data_tag)

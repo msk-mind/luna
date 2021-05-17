@@ -25,8 +25,10 @@ def init_logger(filename='data-processing.log', level=logging.WARNING):
     logger.setLevel(logging.DEBUG)
     formatter = MultilineFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    if os.path.exists('.logging.yaml'):
-        cfg = ConfigSet(name='LOG_CFG',  config_file='.logging.yaml')
+    if os.path.exists('conf/logging.cfg'):
+        cfg = ConfigSet(name='LOG_CFG',  config_file='conf/logging.cfg')
+    else:
+        cfg = ConfigSet(name='LOG_CFG',  config_file='conf/logging.default.yml')
     
     if not logger.handlers:
         # create console handler with a customizable, higher log level
