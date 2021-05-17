@@ -21,10 +21,15 @@ from data_processing.common.sparksession     import SparkConfig
 
 
 @click.command()
-@click.option('-a', '--app_config', required=True)
-@click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--datastore_id', required=True)
-@click.option('-m', '--method_param_path',    required=True)
+@click.option('-a', '--app_config', required=True,
+              help="application configuration yaml file. See config.yaml.template for details.")
+@click.option('-c', '--cohort_id', required=True,
+              help="cohort name")
+@click.option('-s', '--datastore_id', required=True,
+              help='datastore name. usually a slide id.')
+@click.option('-m', '--method_param_path', required=True,
+              help='json parameter file with path to a WSI delta table.')
+
 def cli(app_config, cohort_id, datastore_id, method_param_path):
     init_logger()
 
@@ -45,14 +50,15 @@ def load_slide_with_datastore(app_config, cohort_id, container_id, method_data):
 
     try:
         spark  = SparkConfig().spark_session("APP_CFG", "query_slide")
+        slide_id = datastore._name.upper()
         df = spark.read.format("delta").load(method_data['table_path'])\
-            .where(f"slide_id='{datastore.address}'")\
+            .where(f"UPPER(slide_id)='{slide_id}'")\
             .select("path", "metadata")\
             .toPandas()
 
         spark.stop()
         
-        if not len(df) == 1: raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {datastore.address}")
+        if not len(df) == 1: raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {slide_id}")
             
         record = df.loc[0]
 

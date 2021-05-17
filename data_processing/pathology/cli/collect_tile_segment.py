@@ -29,10 +29,14 @@ import pyarrow.parquet as pq
 import pyarrow as pa
 
 @click.command()
-@click.option('-a', '--app_config', required=True)
-@click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--datastore_id', required=True)
-@click.option('-m', '--method_param_path',    required=True)
+@click.option('-a', '--app_config', required=True,
+              help="application configuration yaml file. See config.yaml.template for details.")
+@click.option('-c', '--cohort_id',    required=True,
+              help="cohort name")
+@click.option('-s', '--datastore_id', required=True,
+              help='datastore name. usually a slide id.')
+@click.option('-m', '--method_param_path', required=True,
+              help='json file with method parameters including input, output details.')
 def cli(app_config, cohort_id, datastore_id, method_param_path):
     init_logger()
 
@@ -63,11 +67,12 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
     try:
         if image_node is None:
             raise ValueError("Image node not found")
-
+ 
         df = pd.read_csv(image_node.aux)
         df.loc[:,"data_path"]     = image_node.data
-        df.loc[:,"object_bucket"] = image_node.properties['object_bucket']
-        df.loc[:,"object_path"]   = image_node.properties['object_folder'] + "/tiles.slice.pil"
+        if cfg.get_value(path='APP_CFG::OBJECT_STORE_ENABLED'):
+            df.loc[:,"object_bucket"] = image_node.properties['object_bucket']
+            df.loc[:,"object_path"]   = image_node.properties['object_folder'] + "/tiles.slice.pil"
         df.loc[:,"id_slide_container"] = input_datastore._name
 
         df = df.set_index(["id_slide_container", "address"])

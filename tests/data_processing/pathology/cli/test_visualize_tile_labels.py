@@ -33,15 +33,15 @@ def test_cli(mocker):
                 "type": "TileScores", "name":"123", 
                 "tile_size": 128,
                 "magnification": 20,
-                "data": "tests/data_processing/pathology/cli/testdata/data/test/store_123/test_generate_tile_ov_labels/tiles.slice.pil",
-                "aux":  "tests/data_processing/pathology/cli/testdata/data/test/store_123/test_generate_tile_ov_labels/address.slice.csv"
+                "scale_factor": 8,
+                "data": "tests/data_processing/pathology/cli/testdata/data/test/store_123/test_generate_tile_ov_labels/address.slice.csv"
             }}]
     # Call order goes [ namespace check, data_store check, get WholeSlideImage, get TileScores, put ]
     Neo4jConnection.query.side_effect  = [[prop_null], props1, props2, props3, [prop_null]]
     Neo4jConnection.query.return_value = Neo4jConnection.query.side_effect
 
     mocker.patch.object(Neo4jConnection, 'test_connection')
-    mocker.patch.object(subprocess, "run", return_value='tests/data_processing/pathology/cli/testdata/dsa_upload.json')
+    mocker.patch.object(subprocess, "run", return_value='tests/data_processing/pathology/cli/dsa/testouts/Tile-Based_Pixel_Classifier_Inference_123.json')
 
     runner = CliRunner(env={'MIND_GPFS_DIR':'tests/data_processing/pathology/cli/testdata'})
     result = runner.invoke(cli, [

@@ -36,10 +36,14 @@ from data_processing.pathology.common.preprocess   import create_tile_thumbnail_
 
 
 @click.command()
-@click.option('-a', '--app_config', required=True)
-@click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--datastore_id', required=True)
-@click.option('-m', '--method_param_path',    required=True)
+@click.option('-a', '--app_config', required=True,
+              help="application configuration yaml file. See config.yaml.template for details.")
+@click.option('-c', '--cohort_id', required=True,
+              help="cohort name")
+@click.option('-s', '--datastore_id', required=True,
+              help='datastore name. usually a slide id.')
+@click.option('-m', '--method_param_path', required=True,
+              help='json file with parameters for creating a heatmap and optionally pushing the annotation to DSA.')
 def cli(app_config, cohort_id, datastore_id, method_param_path):
     init_logger()
 
@@ -73,7 +77,7 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
                                   datastore._namespace_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        properties = create_tile_thumbnail_image(image_node.data, label_node.aux, output_dir, method_data)
+        properties = create_tile_thumbnail_image(image_node.data, label_node.data, output_dir, method_data)
 
         # push results to DSA
         if method_data.get("dsa_config", None):
@@ -82,7 +86,11 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
             properties["column"]   = "tumor_score"
             properties["input"]    = label_node.properties["data"]
             properties["annotation_name"]   = method_id
-
+            properties["tile_size"]   = method_data["tile_size"]
+            properties["scale_factor"]   = method_data["scale_factor"]
+            properties["magnification"]   = method_data["magnification"]
+            properties["output_folder"]   = method_data["output_folder"]
+            properties["image_filename"] = container_id + ".svs"            
             with tempfile.TemporaryDirectory() as tmpdir:
                 print (tmpdir)
                 with open(f"{tmpdir}/model_inference_config.json", "w") as f:
@@ -92,14 +100,20 @@ def visualize_tile_labels_with_datastore(app_config: str, cohort_id: str, contai
 
                 # build viz
                 result = subprocess.run(["python3","-m","data_processing.pathology.cli.dsa.dsa_viz",
-                                         "-c", f"{tmpdir}/dsa_config.json", "heatmap",
+                                         "-s", "heatmap",
                                          "-d", f"{tmpdir}/model_inference_config.json"],
                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
                 print(result.returncode, result.stdout, result.stderr)
 
                 # push results to DSA
+                result_path = result.stdout.split(" ")[-1].strip()
+                properties["annotation_filepath"] = result_path
+                properties["collection_name"] = method_data["collection_name"]
+                with open(f"{tmpdir}/model_inference_config.json", "w") as f:
+                    json.dump(properties, f)
+
                 subprocess.run(["python3","-m","data_processing.pathology.cli.dsa.dsa_upload",
-                                 "-c", f"{tmpdir}/dsa_config.json", "-d", result.stdout])
+                                 "-c", f"{tmpdir}/dsa_config.json", "-d", f"{tmpdir}/model_inference_config.json"])
 
     except Exception as e:
         logger.exception (f"{e}, stopping job execution...")

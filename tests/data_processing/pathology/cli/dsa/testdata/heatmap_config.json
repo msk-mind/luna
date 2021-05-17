@@ -5,6 +5,6 @@
   "output_folder": "tests/data_processing/pathology/cli/dsa/testouts",
   "annotation_name": "test",
   "tile_size": 128,
-  "full_resolution_magnification": 20,
-  "tile_magnification": 20
+  "scale_factor": 8,
+  "magnification": 20
 }
