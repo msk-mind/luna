@@ -85,7 +85,7 @@ class GraphEnum(Enum):
 	# regional concat geojson table contains regional geojson table + concatenated jsons
 	REGIONAL_CONCAT_GEOJSON = [Graph(slide,
 								 "HAS_DATA",
-								 NodeType("RegionalAnnotationJson", "concat_geojson_record_uuid", ["labelset","date_updated","latest"]))]
+								 NodeType("RegionalAnnotationJSON", "concat_geojson_record_uuid", ["labelset","date_updated","latest"]))]
 
 
 	POINT_RAW_JSON = [Graph(slide,

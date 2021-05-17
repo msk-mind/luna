@@ -8,6 +8,7 @@ import data_processing.common.constants as const
 
 from data_processing.get_pathology_annotations import get_pathology_annotations
 from data_processing.get_pathology_annotations.get_pathology_annotations import PROJECT_MAPPING
+from data_processing.common.DataStore import DataStore_v2
 
 from pytest_mock import mocker
 from mock import patch
@@ -30,28 +31,49 @@ def client():
 
 
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
-def test_get_point_annotation(mocker, client):
+def test_get_point_annotation(mocker, client, monkeypatch):
 
     response = client.get('/mind/api/v1/getPathologyAnnotation/test/123456/point/LYMPHOCYTE_DETECTION_LABELSET')
     assert b"[{\"type\":\"Feature\",\"id\":\"PathAnnotationObject" in response.data
 
 
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
-def test_get_regional_annotation(mocker, client):
+def test_get_regional_annotation(mocker, client, monkeypatch):
 
+    def mock_datastore_get(*args, **kwargs):
+        if kwargs['store_id'] == '123456':
+            return 'tests/data_processing/pathology/common/testdata/regional_annotation.json'
+        else:
+            raise RuntimeWarning(f"Data not found at 123456")
+
+    monkeypatch.setattr(DataStore_v2, "get", mock_datastore_get)
+        
     response = client.get('/mind/api/v1/getPathologyAnnotation/test/123456/regional/DEFAULT_LABELS')
-    assert b"{\"type\":\"FeatureCollection\",\"features" in response.data
+    print(response)
+    print(response.data )
+    assert b'{"features":[{"geometry":{"coordinates":[[1261,2140]' in response.data
 
 
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
-def test_get_bad_slide_id(mocker, client):
+def test_get_bad_slide_id(mocker, client, monkeypatch):
+  
+    def mock_datastore_get(*args, **kwargs):
+        if kwargs['store_id'] == '123456':
+            return 'tests/data_processing/pathology/common/testdata/regional_annotation.json'
+        else:
+            raise RuntimeWarning(f"Data not found at 123456")
+
+    monkeypatch.setattr(DataStore_v2, "get", mock_datastore_get)
 
     response = client.get('/mind/api/v1/getPathologyAnnotation/test/1/regional/DEFAULT_LABELS')
-    assert response.data == b"Invalid ID"
+    print(response)
+    print(response.data)
+
+    assert response.data==b'Invalid ID'
 
 
-@patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
-def test_get_no_match(mocker, client):
+# @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
+# def test_get_no_match(mocker, client):
 
-    response = client.get('/mind/api/v1/getPathologyAnnotation/test/1234562/regional/DEFAULT_LABELS')
-    assert response.data == b"No annotations match the provided query."
+#     response = client.get('/mind/api/v1/getPathologyAnnotation/test/1234562/regional/DEFAULT_LABELS')
+#     assert response.data == b"No annotations match the provided query."

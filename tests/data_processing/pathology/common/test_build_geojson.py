@@ -12,7 +12,7 @@ def test_add_contours_for_label():
         "features": []
     }
     annotation = np.load(os.path.join(npy_data_path, '123_jill_SVBMP-123sdf_annot.npy'))
-    res = add_contours_for_label(base_geojson, annotation, 1, {1:"tissue_1"}, 0.5, 1)
+    res = add_contours_for_label(base_geojson, annotation, 1, {1:"tissue_1"}, 0.5)
 
     assert 1 < len(res['features'][0]['geometry']['coordinates'][0])
 
@@ -22,7 +22,7 @@ def test_add_contours_for_label_non_matching_label():
         "features": []
     }
     annotation = np.load(os.path.join(npy_data_path, '123_jill_SVBMP-123sdf_annot.npy'))
-    res = add_contours_for_label(base_geojson, annotation, 3, {1:"tissue_1"}, 0.5, 1)
+    res = add_contours_for_label(base_geojson, annotation, 3, {1:"tissue_1"}, 0.5)
 
     assert base_geojson == res
 
@@ -36,7 +36,6 @@ def test_build_geojson_from_bitmap():
              "npy_filepath": os.path.join(npy_data_path, '123_joe_SVBMP-123asd_annot.npy'),
              "labelset": "DEFAULT_LABELS",
              "contour_level": 0.5,
-             "polygon_tolerance": 1,
              "geojson": ""}]
 
     df = pd.DataFrame(data)

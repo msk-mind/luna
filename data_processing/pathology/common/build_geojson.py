@@ -80,7 +80,7 @@ def find_parents(polygons):
 
 # TODO test performance with/without polygon-tolerance. approximate_polygons(polygon_tolerance) might just be a slow and unnecessary step. 
 # adapted from: https://github.com/ijmbarr/image-processing-with-numpy/blob/master/image-processing-with-numpy.ipynb
-def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, contour_level, polygon_tolerance):
+def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, contour_level):
     """
     Finds the contours for a label mask, builds a polygon, converts polygon to geoJSON feature dictionary
 
@@ -89,7 +89,6 @@ def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, 
     :param label_num: int value represented in the npy array; corresponding to the annotation label set.
     :param mappings: label map for the specified label set
     :param contour_level: value along which to find contours in the array
-    :param polygon_tolerance: polygon resolution
     :return: geojson result
     """
     
@@ -174,7 +173,7 @@ def build_labelset_specific_geojson(default_annotation_geojson, labelset):
     return annotation_geojson
 
 
-def build_all_geojsons_from_default(default_annotation_geojson, all_labelsets, contour_level, polygon_tolerance):
+def build_all_geojsons_from_default(default_annotation_geojson, all_labelsets, contour_level):
 
     labelset_name_to_labelset_specific_geojson = {}
     
@@ -192,7 +191,7 @@ def build_all_geojsons_from_default(default_annotation_geojson, all_labelsets, c
     return labelset_name_to_labelset_specific_geojson
 
 
-def build_default_geojson_from_annotation(annotation_npy_filepath, all_labelsets, contour_level, polygon_tolerance):
+def build_default_geojson_from_annotation(annotation_npy_filepath, all_labelsets, contour_level):
 
     annotation = np.load(annotation_npy_filepath)
     default_annotation_geojson = copy.deepcopy(geojson_base)
@@ -202,15 +201,17 @@ def build_default_geojson_from_annotation(annotation_npy_filepath, all_labelsets
     default_labelset = all_labelsets[DEFAULT_LABELSET_NAME]
 
     if not (annotation > 0).any():
-        raise ValueError(f"No annotated pixels detected in bitmap loaded from {annotation_npy_filepath}")
+        print(f"No annotated pixels detected in bitmap loaded from {annotation_npy_filepath}")
+        return None
 
     # vectorize all
     for label_num in default_labelset:
-        default_annotation_geojson = add_contours_for_label(default_annotation_geojson, annotation, label_num, default_labelset, float(contour_level), float(polygon_tolerance))
+        default_annotation_geojson = add_contours_for_label(default_annotation_geojson, annotation, label_num, default_labelset, float(contour_level))
 
     # empty geojson created, return nan and delete from geojson table
     if len(default_annotation_geojson['features']) == 0:
-        raise RuntimeError(f"Something went wrong with building default geojson from {annotation_npy_filepath}, quitting")
+        print(f"Something went wrong with building default geojson from {annotation_npy_filepath}, quitting")
+        return None
 
     return default_annotation_geojson
 
@@ -226,7 +227,6 @@ def build_geojson_from_annotation(df):
     annotation_npy_filepath = df.npy_filepath.values[0]
     labelset = df.labelset.values[0]
     contour_level = df.contour_level.values[0]
-    polygon_tolerance = df.polygon_tolerance.values[0]
 
     labelsets = ast.literal_eval(labelsets)
     mappings = labelsets[labelset]
@@ -241,7 +241,7 @@ def build_geojson_from_annotation(df):
 
     try:
         for label_num in mappings:
-            annotation_geojson = add_contours_for_label(annotation_geojson, annotation, label_num, mappings, float(contour_level), float(polygon_tolerance))
+            annotation_geojson = add_contours_for_label(annotation_geojson, annotation, label_num, mappings, float(contour_level))
     except TimeoutError as err:
         print("Timeout Error occured while building geojson from slide", annotation_npy_filepath)
         raise err

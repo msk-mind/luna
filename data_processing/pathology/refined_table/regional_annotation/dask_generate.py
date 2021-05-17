@@ -22,18 +22,15 @@ from dask.distributed import Client, as_completed
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to yaml file containing application runtime parameters. "
                    "See ./app_config.yaml.template")
-@click.option('-p', '--process_string', default='geojson',
-              help='process to run or replay: e.g. geojson OR concat')
-def cli(data_config_file, app_config_file, process_string):
+def cli(data_config_file, app_config_file):
     """
         This module generates a delta table with geojson pathology data based on the input and output parameters
          specified in the data_config_file.
 
         Example:
-            python3 -m data_processing.pathology.refined_table.regional_annotation.generate \
+            python3 -m data_processing.pathology.refined_table.regional_annotation.dask_generate \
                      --data_config_file <path to data config file> \
                      --app_config_file <path to app config file> \
-                     --process_string geojson
     """
     logger = init_logger()
 
@@ -41,7 +38,7 @@ def cli(data_config_file, app_config_file, process_string):
     cfg = ConfigSet(name='DATA_CFG', config_file=data_config_file)
     cfg = ConfigSet(name='APP_CFG',  config_file=app_config_file)
     
-    with CodeTimer(logger, f"generate {process_string} table"):
+    with CodeTimer(logger, f"generate annotation geojson table"):
         logger.info('data template: ' + data_config_file)
         logger.info('config_file: ' + app_config_file)
 
@@ -87,7 +84,6 @@ def create_geojson_table():
 
     # setup variables needed for build geojson UDF
     contour_level       = cfg.get_value('DATA_CFG::CONTOUR_LEVEL')
-    polygon_tolerance   = cfg.get_value('DATA_CFG::POLYGON_TOLERANCE')
     
     # fetch full set of slideviewer slides for project
     slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, const.CONFIG_LOCATION(cfg), SLIDEVIEWER_CSV_FILE)
@@ -97,6 +93,9 @@ def create_geojson_table():
     all_users_list = cfg.get_value('DATA_CFG::USERS')
     all_labelsets  = cfg.get_value('DATA_CFG::LABEL_SETS')
 
+    global params
+    params = cfg.get_config_set("APP_CFG")
+
     bmp_jobs = []
     for _, row in df.iterrows():
         bmp_future = client.submit (check_slideviewer_and_download_bmp, row.sv_project_id, row.slideviewer_path, row.slide_id, all_users_list, SLIDE_BMP_DIR, SLIDEVIEWER_API_URL, TMP_ZIP_DIR)
@@ -105,16 +104,19 @@ def create_geojson_table():
     json_jobs = []
     for bmp_future in as_completed(bmp_jobs):
         if bmp_future.result() is not None:
-            json_future = client.submit (convert_slide_bitmap_to_geojson, bmp_future, all_labelsets, contour_level, polygon_tolerance, SLIDE_NPY_DIR)
+            json_future = client.submit (convert_slide_bitmap_to_geojson, bmp_future, all_labelsets, contour_level, SLIDE_NPY_DIR)
             json_jobs.append ( json_future )
 
     for json_future in as_completed(json_jobs):
         try:
             if json_future.result() is not None:
                 slide_id, data = json_future.result()
-                result_df = pd.DataFrame(data)
-                print (result_df)
-                result_df.drop(columns='geojson').to_parquet(f"{TABLE_OUT_DIR}/regional_annot_slice_slide={slide_id}.parquet")
+                if slide_id and data:
+                    result_df = pd.DataFrame(data)
+                    print (result_df)
+                    result_df.drop(columns='geojson').to_parquet(f"{TABLE_OUT_DIR}/regional_annot_slice_slide={slide_id}.parquet")
+                else:
+                    print("Empty geojson returned. this means either this was an empty slide or an error occured during geojson generate")
         except:
             print (f"Something was wrong with future {json_future}, skipping.")
 

@@ -6,7 +6,7 @@ import logging
 
 from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.config import ConfigSet
-from data_processing.common.DataStore import DataStore_v2
+from data_processing.common.DataStore import DataStore_v2, DataStore
 
 # from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
@@ -162,10 +162,9 @@ def check_slideviewer_and_download_bmp(sv_project_id, slideviewer_path, slide_id
         return outputs
 
 
-def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, polygon_tolerance, SLIDE_NPY_DIR):
+def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, SLIDE_NPY_DIR):
+    outputs = copy.deepcopy(outputs)
     try:
-        outputs = copy.deepcopy(outputs)
-
         slide_id = outputs[0]['slide_id']   
         geojson_table_outs = []
         concat_geojson_table_outs = []
@@ -174,18 +173,20 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, polyg
         print(f" >>>>>>> Processing [{slide_id}] <<<<<<<<")
 
         store = DataStore_v2()
+        store.ensure_datastore(slide_id, "slide")
+
         for user_annotation in outputs:
             bmp_filepath = user_annotation['bmp_filepath']
             npy_filepath = convert_bmp_to_npy(bmp_filepath, SLIDE_NPY_DIR)
             user_annotation['npy_filepath'] = npy_filepath
 
-            store.put (npy_filepath, store_id=user_annotation['slide_id'], namespace_id=user_annotation['user'], data_type='RegionalAnnotationBitmask')
+            store.put (npy_filepath, store_id=user_annotation['slide_id'], namespace_id=user_annotation['user'], data_type='RegionalAnnotationBitmap')
 
         
         # build geojsons
         for user_annotation in outputs:
             npy_filepath = user_annotation['npy_filepath']
-            default_annotation_geojson = build_default_geojson_from_annotation(npy_filepath, all_labelsets, contour_level, polygon_tolerance)
+            default_annotation_geojson = build_default_geojson_from_annotation(npy_filepath, all_labelsets, contour_level)
 
             if not default_annotation_geojson:
                 raise RuntimeError("Error while building default geojson!!!")
@@ -195,7 +196,7 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, polyg
         
         for user_annotation in outputs:
             default_annotation_geojson = user_annotation['geojson']
-            labelset_name_to_labelset_specific_geojson = build_all_geojsons_from_default(default_annotation_geojson, all_labelsets, contour_level, polygon_tolerance)
+            labelset_name_to_labelset_specific_geojson = build_all_geojsons_from_default(default_annotation_geojson, all_labelsets, contour_level)
             for labelset_name, geojson in labelset_name_to_labelset_specific_geojson.items():
                 geojson_table_out_entry = copy.deepcopy(user_annotation)
                 geojson_table_out_entry['labelset'] = labelset_name
@@ -210,7 +211,7 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, polyg
         
         geojsons_to_concat = [json.dumps(user_annotation['geojson']) for user_annotation in outputs]
         concat_default_annotation_geojson = concatenate_regional_geojsons(geojsons_to_concat)
-        labelset_name_to_labelset_specific_geojson = build_all_geojsons_from_default(concat_default_annotation_geojson, all_labelsets, contour_level, polygon_tolerance)
+        labelset_name_to_labelset_specific_geojson = build_all_geojsons_from_default(concat_default_annotation_geojson, all_labelsets, contour_level)
         for labelset_name, geojson in labelset_name_to_labelset_specific_geojson.items():
             concat_geojson_table_out_entry = copy.deepcopy(output_dict_base)
             concat_geojson_table_out_entry['user'] = "CONCAT"
@@ -218,6 +219,7 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, polyg
             concat_geojson_table_out_entry['geojson'] = geojson
 
             path = store.write(json.dumps(geojson, indent=4), store_id=concat_geojson_table_out_entry['slide_id'], namespace_id=concat_geojson_table_out_entry['user'], data_type='RegionalAnnotationJSON', data_tag=labelset_name)
+
             concat_geojson_table_out_entry['geojson_path'] = path
 
             concat_geojson_table_outs.append(concat_geojson_table_out_entry)

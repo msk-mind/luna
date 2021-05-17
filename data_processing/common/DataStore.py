@@ -1,5 +1,5 @@
 from data_processing.common.Neo4jConnection import Neo4jConnection
-from data_processing.common.Node import Node
+from data_processing.common.Node import Node, CONTAINER_TYPES
 from data_processing.common.config import ConfigSet
 
 import os, socket, pathlib, logging, shutil
@@ -11,20 +11,95 @@ logger = logging.getLogger(__name__)
 
 class DataStore_v2:
     def __init__(self):
-        self.backend = '/gpfs/mskmindhdp_emc/data_dev/'
-        os.makedirs(self.backend, exist_ok=True)
-        print ("File backend=", self.backend)
+        if os.path.exists('conf/datastore.cfg'):
+            self.params = ConfigSet(name='STORE_CFG',  config_file='conf/datastore.cfg').get_config_set("STORE_CFG")
+        else:
+            self.params = ConfigSet(name='STORE_CFG',  config_file='conf/datastore.default.yml').get_config_set("STORE_CFG")
+        logger.info(f"Configured datastore with {self.params}")
 
-    def _generate_qualified_path(self, store_id, namespace_id, data_type, data_tag):
-        return os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
+        self.backend = self.params['FILE_BACKEND'] 
+        logger.info(f"Datstore file backend= {self.backend}")
 
-    def put(self, filepath, store_id, namespace_id, data_type, data_tag='data'):
+        if not os.path.exists( self.backend ): 
+            logger.warning (f"Invalid backend {self.backend}, path does not exist on this node, writes will raise errors!")
+
+
+    def ensure_datastore(self, datastore_id, datastore_type):
+        """
+        :params: datastore_id - unique container ID
+        "params: datastore_type - the type of the container
+        """
+        datastore_id = str(datastore_id)
+
+        if not datastore_type in CONTAINER_TYPES: 
+            logger.warning (f"DataStore type [{datastore_type}] invalid, please choose from [{CONTAINER_TYPES}]" )
+            return
+
+        if ":" in datastore_id: 
+            logger.warning (f"Invalid datastore_id [{datastore_id}], only use alphanumeric characters")
+            return
+
+        conn = Neo4jConnection(uri=self.params['GRAPH_URI'], user=self.params['GRAPH_USER'], pwd=self.params['GRAPH_PASSWORD'])  
+        res = conn.query(f""" MERGE (datastore:globals:{datastore_type}{{qualified_address:'{datastore_id}'}}) RETURN count(datastore)""")
+
+        if res[0]['count(datastore)']==1: 
+            logger.info(f"DataStore [{datastore_id}] of type [{datastore_type}] created or matched successfully!")
+        else:
+            logger.error("The datastore {node} could not be created or found")
+        
+    def write_to_graph_store(self, node, store_id):
+        """ Saves the 'node' to a datastore managed in the graph DB """
+
+        try:
+            # Configure our connection
+            conn = Neo4jConnection(uri=self.params['GRAPH_URI'], user=self.params['GRAPH_USER'], pwd=self.params['GRAPH_PASSWORD'])  
+            res = conn.query( f""" 
+                MATCH (datastore) WHERE datastore.qualified_address = '{store_id}'
+                MERGE (datastore)-[:HAS_DATA]->(da:{node.get_match_str()})
+                    ON MATCH  SET da = {node.get_map_str()}
+                    ON CREATE SET da = {node.get_map_str()} 
+                RETURN count(datastore)""" )
+            if res is None:
+                logger.error(f"Tried adding data to {store_id}, however query failed, this data will not be available!", extra={'store_id': store_id})
+                return
+            if not res[0]['count(datastore)']==1: 
+                logger.warning(f"Tried adding data to {store_id}, however datastore did not exist, this data will not be available!", extra={'store_id': store_id})
+                return
+        except Exception as exc:
+            logger.exception(f"On write, encountered {exc}, continuing...", extra={'store_id': store_id})
+
+    def get(self, store_id, namespace_id, data_type, data_tag):
+        """ Looks up and returns the path of data given the store_id, namespace_id, data_type, and data_tag """
+
+        dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
+        if not os.path.exists(dest_dir): raise RuntimeWarning(f"Data not found at {dest_dir}")
+        return dest_dir
+
+    def put(self, filepath, store_id, namespace_id, data_type, data_tag='data', metadata={} ):
+        """ Puts the file at filepath at the proper location given a store_id, namespace_id, data_type, and data_tag, and save metadata to DB """
+
+        if not os.path.exists( self.backend ): 
+            raise ValueError (f"Invalid backend {self.backend}, path does not exist on this node.")
+
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
         os.makedirs(dest_dir, exist_ok=True)
-        print ("Save", filepath, "->", dest_dir)
+        logger.info(f"Save {filepath} -> {dest_dir}")
         shutil.copy(filepath, dest_dir )
+
+        if self.params['GRAPH_STORE_ENABLED']:
+            node = Node(data_type, data_tag, metadata)
+            node.set_namespace(namespace_id, store_id)
+            logger.info(f"Adding: {node}")
+            self.write_to_graph_store (node, store_id)
+        
+        return dest_dir
     
-    def write(self, iostream, store_id, namespace_id, data_type, data_tag, dtype='w'):
+    def write(self, iostream, store_id, namespace_id, data_type, data_tag, metadata={}, dtype='w'):
+        """ Puts the file at filepath at the proper location given a store_id, namespace_id, data_type, and data_tag, and save metadata to DB """
+
+        if not os.path.exists( self.backend ): 
+            raise ValueError (f"Invalid backend {self.backend}, path does not exist on this node.")
+
         dest_path_dir  = os.path.join (store_id, namespace_id, data_type)
         dest_path_file = os.path.join (dest_path_dir, data_tag)
 
@@ -32,11 +107,17 @@ class DataStore_v2:
         dest_file = os.path.join (self.backend, dest_path_file)
 
         os.makedirs(dest_dir, exist_ok=True)
-        print ("Save ->", dest_file)
+        logger.info(f"Save -> {dest_file}")
         with open(dest_file, dtype) as fp:
             fp.write(iostream)
 
-        return dest_path_file
+        if self.params['GRAPH_STORE_ENABLED']:
+            node = Node(data_type, data_tag, metadata)
+            node.set_namespace(namespace_id, store_id)
+            logger.info(f"Adding: {node}")
+            self.write_to_graph_store (node, store_id)
+
+        return dest_file 
 
 
 
