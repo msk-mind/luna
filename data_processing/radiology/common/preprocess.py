@@ -127,12 +127,13 @@ def dicom_to_bytes(dicom_path, width, height):
 
     return im.tobytes()
 
-def subset_bound_seg(src_path, start_slice, end_slice):
+def subset_bound_seg(src_path, output_path, start_slice, end_slice):
     """
     Pull out desired range of slices from segmentations created from
     a bound scan (where multiple scans are bound in one series)
 
     :param src_path: path to a segmentation file
+    :param output_path: path to new segmentation file
     :param start_slice: starting slice
     :param end_slice:  ending slice
     :return: new segmentation file path
@@ -143,18 +144,15 @@ def subset_bound_seg(src_path, start_slice, end_slice):
     try:
         file_path = src_path.split(':')[-1]
         data, header = load(file_path)
-
         subset = data[:,:,start_slice:end_slice]
 
-        path = Path(file_path)
-        new_file_path = str(path.parent) + "/subset_" + str(path.name)
-        save(subset, new_file_path, hdr=header)
+        save(subset, output_path, hdr=header)
 
     except Exception as err:
         print(err)
         return None
 
-    return new_file_path
+    return output_path
 
 
 def create_seg_images(src_path, uuid, width, height, n_slices=None):
