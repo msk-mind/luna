@@ -50,3 +50,6 @@ OBJECT_STORE_ENABLED: True
 MINIO_URI: localhost:8000
 MINIO_USER: user
 MINIO_PASSWORD: password
+
+# data, data_staging
+ENV: data_staging

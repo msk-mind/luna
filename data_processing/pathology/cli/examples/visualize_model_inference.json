@@ -9,7 +9,6 @@
       "host": "localhost",
       "port": "8080",
       "token": "abc123"
-    },
-    "env": "data_staging"
+    }
 }
   

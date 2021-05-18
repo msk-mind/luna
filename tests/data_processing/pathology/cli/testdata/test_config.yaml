@@ -40,6 +40,7 @@ GRAPH_PASSWORD: password
 OBJECT_STORE_ENABLED: False
 MINIO_URI: localhost:8002
 MINIO_USER: minio 
-MINIO_PASSWORD: password 
+MINIO_PASSWORD: password
 
+ENV: data_staging
 
