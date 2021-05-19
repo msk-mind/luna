@@ -140,18 +140,39 @@ def subset_bound_seg(src_path, output_path, start_slice, end_slice):
     """
     start_slice = int(start_slice)
     end_slice = int(end_slice)
-
     try:
         file_path = src_path.split(':')[-1]
         data, header = load(file_path)
         subset = data[:,:,start_slice:end_slice]
-
         save(subset, output_path, hdr=header)
-
     except Exception as err:
         print(err)
         return None
+    return output_path
 
+
+def subset_bound_dicom(src_path, output_path, index):
+    """
+    Pull out a from bound series, where the image array has dimensions like
+    (x, y, n_bound_series, z)
+
+    :param src_path: path to nifti file
+    :param output_path: path to new dicom series file
+    :param index: index to subset. should be less than n_bound_series
+    :return: path to new dicom series file
+    """
+    index = int(index)
+    try:
+        file_path = src_path.split(':')[-1]
+        data, header = load(file_path)
+        subset = data[:,:,index,:]
+        # re-arrange the array
+        subset = np.swapaxes(np.swapaxes(subset, 1,2), 0,1)
+        # sometimes fliplr is required.
+        save(subset, output_path)
+    except Exception as err:
+        print(err)
+        return None
     return output_path
 
 
@@ -183,6 +204,7 @@ def create_seg_images(src_path, uuid, width, height, n_slices=None):
         if np.any(image_slice):
             image_2d = image_slice.astype(float).T
             # double check that subtracting is needed for all.
+            # TODO for bound cases slice_num should be i
             slice_num = num_images - (i+1)
 
             image_2d_scaled = normalize(image_2d)
