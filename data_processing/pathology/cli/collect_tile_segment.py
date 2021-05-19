@@ -78,7 +78,7 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
         df = df.set_index(["id_slide_container", "address"])
         logger.info(df)
 
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], method_data.get("env", "data"),
+        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], cfg.get_value(path="APP_CFG::ENV"),
                                   output_datastore._namespace_id, output_datastore._name)
 
         if not os.path.exists(output_dir): os.makedirs(output_dir)

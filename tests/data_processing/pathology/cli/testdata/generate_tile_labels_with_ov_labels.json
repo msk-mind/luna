@@ -5,6 +5,5 @@
   "scale_factor": 16,
   "magnification": 20,
   "NOT_slideviewer_dmt": "no API",
-  "NOT_labelset": "no API",
-  "env": "data_staging"
+  "NOT_labelset": "no API"
 }
