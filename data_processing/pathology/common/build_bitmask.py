@@ -68,7 +68,6 @@ def xml2roi(xml_fn):
         for i, r in enumerate(regions):
             vs = r.findall('Vertices')[0]
             vs = vs.findall('V')
-            vs.append(vs[0]) # last dot should be linked to the first dot
             for v in vs:
                 y, x = int(v.get('Y').split('.')[0]), int(v.get('X').split('.')[0])
                 ylist.append(y)
