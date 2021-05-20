@@ -1,3 +1,5 @@
+### This is just data_processing/pathology/common/utils.py
+
 from   data_processing.common.config import ConfigSet
 import data_processing.common.constants as const
 
@@ -119,7 +121,7 @@ def get_slide_roi_masks(slide_path, halo_roi_path, annotation_name, slide_id=Non
     slide_image_cropped  = slide.read_region((x_roi[0], y_roi[1]), 0, (x_roi[1] - x_roi[0], y_roi[0] - y_roi[1])).convert('RGB')
 
     slide_array  = np.array(slide_image_cropped, dtype=np.uint8)
-    sample_array = np.array(slide_image_cropped.resize( slide_image_cropped.size() // 8 ),  dtype=np.uint8)
+    sample_array = np.array(slide_image_cropped.resize( (slide_image_cropped.size[0] // 80, slide_image_cropped.size[1] // 80)  ),  dtype=np.uint8)
     mask_array   = annotation_mask[ y_roi[1]:y_roi[0], x_roi[0]:x_roi[1]].astype(np.uint8)
 
     if slide_id is not None and output_dir is not None:
@@ -145,23 +147,11 @@ def get_stain_vectors_macenko(sample):
     return vectors
 
 
-def pull_stain_channel(patch, vectors, channel=0, precision=np.uint8):
-    """ Extracts specific stain channel given a stain vector, and returns in absorption space/units """
-    
-    # Concentrations are in opical density units
+def pull_stain_channel(patch, vectors, channel=0):
     tile_concentrations = get_concentrations(patch, vectors)
     identity = np.array([[1,0,0],[0,1,0]])
-
-    # Create 2 channel image 
-    tmp = 1 - np.exp(-1 * np.dot(tile_concentrations, identity))
-
-    if precision==np.uint8:
-        tmp = 255 * tmp.reshape(patch.shape).astype(precision)   
-    elif precision==np.float:
-        tmp = tmp.reshape(patch.shape).astype(precision)   
-    else:
-        tmp = tmp.reshape(patch.shape)
-
+    tmp = 255 * (1 - np.exp(-1 * np.dot(tile_concentrations, identity)))
+    tmp = tmp.reshape(patch.shape).astype(np.uint8)   
     return tmp[:,:,channel]
 
 
@@ -175,15 +165,16 @@ def extract_patch_texture_features(image_patch, mask_patch, stain_vectors, stain
     extractor.disableAllFeatures()
     extractor.enableFeaturesByName(glcm=['ClusterTendency'])
     extractor.enableImageTypeByName('Original')
+    
+    print ("Label sum=", mask_patch.sum())
    
     #mask_patch = np.array( Image.fromarray(mask_patch).resize((250,250))).astype(np.uint8)
     if not (len(np.unique(mask_patch)) > 1 and np.count_nonzero(mask_patch) > 1): return None
-
+    
     stain_patch = pull_stain_channel(image_patch, stain_vectors, channel=stain_channel)
+    
     #pdl1_patch = np.array( Image.fromarray(pdl1_patch).resize((250,250)))
     
-    print (stain_patch.shape, mask_patch.shape)
-
     sitk_image  = sitk.GetImageFromArray(stain_patch.astype(np.uint8))
     sitk_mask   = sitk.GetImageFromArray(mask_patch.astype(np.uint8))
 
