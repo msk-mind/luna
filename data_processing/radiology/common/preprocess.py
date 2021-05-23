@@ -38,8 +38,8 @@ def crop_images(xcenter, ycenter, dicom, overlay, crop_w, crop_h, image_w, image
 
     :param xcenter: x center point to crop around. result of find_centroid()
     :param ycenter: y center point to crop around. result of find_centroid()
-    :param dicom: dicom binary data
-    :param overlay: overlay binary data
+    :param dicom: dicom PIL image
+    :param overlay: overlay PIL image
     :param crop_w: desired width of cropped image
     :param crop_h: desired height of the cropped image
     :param image_w: width of the original image
@@ -71,11 +71,9 @@ def crop_images(xcenter, ycenter, dicom, overlay, crop_w, crop_h, image_w, image
         ymax = image_h
 
     # Crop overlay, dicom pngs.
-    dicom_img = Image.frombytes("L", (image_w, image_h), bytes(dicom))
-    dicom_feature = dicom_img.crop((xmin, ymin, xmax, ymax)).tobytes()
+    dicom_feature = dicom.crop((xmin, ymin, xmax, ymax)).tobytes()
 
-    overlay_img = Image.frombytes("RGB", (image_w, image_h), bytes(overlay))
-    overlay_feature = overlay_img.crop((xmin, ymin, xmax, ymax)).tobytes()
+    overlay_feature = overlay.crop((xmin, ymin, xmax, ymax)).tobytes()
 
     return (dicom_feature, overlay_feature)
 
@@ -96,24 +94,20 @@ def normalize(image: np.ndarray) -> np.ndarray:
 
     return normalized_image
 
-def dicom_to_bytes(dicom_path, width, height):
+def slice_to_image(image_slice, width, height):
     """
-    Create an image binary from dicom image.
+    Normalize and create an image binary from the given 2D array.
 
-    :param dicom_path: filepath to dicom
+    :param image_slice: image slice
     :param width: width of the image
     :param height: height of the image
-    :return: image in bytes
+    :return: PIL image
     """
     from preprocess import normalize
 
-    file_path = dicom_path.split(':')[-1]
-
-    data, header = load(file_path)
-
     # Convert 2d image to float to avoid overflow or underflow losses.
     # Transpose to get the preserve x, y coordinates.
-    image_2d = data[:,:,0].astype(float).T
+    image_2d = image_slice.astype(float).T
 
     # Rescaling grey scale between 0-255
     image_2d_scaled = normalize(image_2d)
@@ -125,7 +119,8 @@ def dicom_to_bytes(dicom_path, width, height):
     # resize pngs to user provided width/height
     im = im.resize( (width, height) )
 
-    return im.tobytes()
+    return im
+
 
 def subset_bound_seg(src_path, output_path, start_slice, end_slice):
     """
@@ -175,21 +170,29 @@ def subset_bound_dicom(src_path, output_path, index):
     return output_path
 
 
-def create_seg_images(src_path, uuid, width, height, n_slices=None):
+def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
+                      width, height, crop_width, crop_height, n_slices=None):
     """
     Create images from 3d segmentations.
 
-    :param src_path: filepath to 3d segmentation
-    :param uuid: scan uuid
+    :param scan_path: filepath to 3d series
+    :param seg_path: filepath to 3d segmentation
+    :param subset_scan_path: filepath to 3d segmentation
+    :param subset_seg_path: filepath to 3d series
     :param width: width of the image
     :param height: height of the image
+    :param crop_width: optional width of the image
+    :param crop_height: optional height of the image
     :param n_slices: optionally provide n_slices to return.
     The subset will be taken from the middle
-    :return: an array of (instance_number, uuid, png binary, n_tumor_slices, x_centroid, y_centroid) tuples
+    :return: an array of (n_tumor_slices, dicom_binary, overlay_binary) tuples
     """
     from preprocess import normalize
 
-    file_path = src_path.split(':')[-1]
+    if subset_seg_path:
+        file_path = subset_seg_path.split(':')[-1]
+    else:
+        file_path = seg_path.split(':')[-1]
     data, header = load(file_path)
 
     num_images = data.shape[2]
@@ -200,26 +203,16 @@ def create_seg_images(src_path, uuid, width, height, n_slices=None):
     slices = []
     for i in range(num_images):
         image_slice = data[:,:,i]
+
         if np.any(image_slice):
-            image_2d = image_slice.astype(float).T
-            # double check that subtracting is needed for all.
-            # TODO for bound cases slice_num should be i
-            slice_num = num_images - (i+1)
-
-            image_2d_scaled = normalize(image_2d)
-            image_2d_scaled = np.uint8(image_2d_scaled)
-
-            im = Image.fromarray(image_2d_scaled)
-            # resize pngs to user provided width/height
-            im = im.resize( (int(width), int(height)) )
+            im = slice_to_image(image_slice, width, height)
 
             # save segmentation in red color.
             rgb = im.convert('RGB')
             red_channel = rgb.getdata(0)
             rgb.putdata(red_channel)
-            png_binary = rgb.tobytes()
 
-            slices.append( (slice_num, uuid, png_binary) )
+            slices.append( (i, rgb) )
 
     slices_len = len(slices)
     mid_idx = slices_len//2
@@ -232,41 +225,36 @@ def create_seg_images(src_path, uuid, width, height, n_slices=None):
     if n_slices and n_slices < slices_len:
         before = n_slices//2
         after = n_slices - before
-        return res[mid_idx - before: mid_idx + after]
+        res = res[mid_idx - before: mid_idx + after]
 
-    return res
+    ## populate SCAN images for indices identified from SEG processing.
+    if subset_scan_path:
+        file_path = subset_scan_path.split(':')[-1]
+    else:
+        file_path = scan_path.split(':')[-1]
+    data, header = load(file_path)
 
+    scans = []
+    for slice in res:
+        image_slice = data[:,:,slice[0]]
+        im = slice_to_image(image_slice, width, height)
+        scans.append(im)
 
-def overlay_images(dicom_path, seg, width, height, x_center, y_center, crop_width=None, crop_height=None):
-    """
-    Create dicom images.
-    Create overlay images by blending dicom and segmentation images with 7:3 ratio.
+    images = []
+    for idx in range(len(res)):
+        # load dicom and seg images from bytes
+        dcm_img = scans[idx].convert("RGB")
+        seg_img = res[idx][1]
 
-    :param dicom_path: filepath to the dicom file
-    :param seg: segmentation image in bytes
-    :param width: width of the image
-    :param height: height of the image
-    :param x_center: x center of segmentation
-    :param y_center: y center of segmentation
-    :param crop_width: optional crop width
-    :param crop_height: optional crop height
-    :return: (dicom, overlay) tuple of binaries
-    """
-    width, height = int(width), int(height)
-    dicom_binary = dicom_to_bytes(dicom_path, width, height)
+        overlay = Image.blend(dcm_img, seg_img, 0.3)
 
-    # load dicom and seg images from bytes
-    dcm_img = Image.frombytes("L", (width, height), bytes(dicom_binary))
-    dcm_img = dcm_img.convert("RGB")
-    seg_img = Image.frombytes("RGB", (width, height), bytes(seg))
+        if crop_width and crop_height:
+            dicom_binary, overlay = crop_images(res[idx][3], res[idx][4], dcm_img, overlay, crop_width, crop_height, width, height)
 
-    res = Image.blend(dcm_img, seg_img, 0.3)
-    overlay = res.tobytes()
+        images.append((res[idx][2], dicom_binary, overlay))
 
-    if crop_width and crop_height:
-        return crop_images(x_center, y_center, dicom_binary, overlay, crop_width, crop_height, width, height)
+    return images
 
-    return (dicom_binary, overlay)
 
 def calculate_target_shape(volume, header, target_spacing):
     """
