@@ -168,8 +168,7 @@ def subset_bound_dicom(src_path, output_path, index):
         subset = data[:,:,index,:]
         # re-arrange the array
         subset = np.swapaxes(np.swapaxes(subset, 1,2), 0,1)
-        # sometimes fliplr is required.
-        save(subset, output_path)
+        save(np.fliplr(subset), output_path)
     except Exception as err:
         print(err)
         return None

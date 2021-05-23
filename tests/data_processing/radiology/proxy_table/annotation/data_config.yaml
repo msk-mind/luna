@@ -1,7 +1,7 @@
 # annotation file type extension like MHA, MHD..
 FILE_TYPE:
-  - mhd
-  - mha
+  - "*.mhd"
+  - "*.mha"
 
 # path to data directory
 ROOT_PATH: tests/data_processing/radiology/testdata
