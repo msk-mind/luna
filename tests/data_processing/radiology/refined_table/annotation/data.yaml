@@ -6,9 +6,9 @@ PROJECT: test-project
 DATASET_NAME: dsn
 
 # to be updated with data type standardization
-SCAN_DATA_TYPE: DICOM
+SCAN_DATA_TYPE: SCAN
 
-SOURCE_DATA_TYPE: MHD
+SOURCE_DATA_TYPE: MHA
 
 DATA_TYPE: PNG
 
@@ -26,5 +26,4 @@ CROP_WIDTH:
 CROP_HEIGHT:
 
 METADATA_COLUMNS:
-  - cohort
   - label
