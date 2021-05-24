@@ -31,30 +31,6 @@ def spark():
         shutil.rmtree(project_path+"/configs")
 
 
-def test_cli(spark):
-
-    runner = CliRunner()
-    result = runner.invoke(cli, 
-        ['-d', 'tests/data_processing/radiology/refined_table/annotation/data.yaml',
-        '-a', 'tests/test_config.yaml'])
-
-    assert result.exit_code == 0
-
-    assert os.path.exists(app_config_path)
-    assert os.path.exists(data_config_path)
-
-    df = spark.read.format("delta").load(png_table_path)
-    assert df.count() == 1
-    assert set(['dicom', 'overlay', 'metadata', 'scan_annotation_record_uuid', 'n_tumor_slices', 'cohort', 'label', 'png_record_uuid']) \
-            == set(df.columns)
-    dicom_binary = df.select("dicom").head()["dicom"]
-
-    # check that image binary can be loaded with expected width/height
-    Image.frombytes("L", (512, 512), bytes(dicom_binary))
-
-    df.unpersist()
-
-
 def test_cli_crop(spark):
 
     runner = CliRunner()
