@@ -15,16 +15,16 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-def find_centroid(binary, width, height):
+def find_centroid(image, width, height):
     """
     Find the centroid of the 2d segmentation.
 
-    :param binary: segmentation slice as an RGB bytearray
+    :param image: segmentation slice as PIL image
     :param width: width of the image
     :param height: height of the image
     :return: (x, y) center point
     """
-    seg = np.array(Image.frombytes("RGB", (width, height), bytes(binary)))
+    seg = np.array(image)
 
     xcenter = np.argmax(np.mean(seg[:,:,0], axis=0))
     ycenter = np.argmax(np.mean(seg[:,:,0], axis=1))
@@ -193,8 +193,8 @@ def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
         file_path = subset_seg_path.split(':')[-1]
     else:
         file_path = seg_path.split(':')[-1]
+    print("Processing ", file_path)
     data, header = load(file_path)
-
     num_images = data.shape[2]
 
     # Find the annotated slices with 3d segmentation.
@@ -214,11 +214,15 @@ def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
 
             slices.append( (i, rgb) )
 
+    if len(slices) == 0:
+        print("No annotation found ", file_path)
+        return None
+
     slices_len = len(slices)
     mid_idx = slices_len//2
     # find centroid using the mid segmentation and return x,y
-    centroid = find_centroid(slices[mid_idx][2], width, height)
-
+    centroid = find_centroid(slices[mid_idx][1], width, height)
+    
     res = [slice + (slices_len, centroid[0], centroid[1]) for slice in slices]
 
     # if the user specified n_slices to select, then select the n_slices from the middle.
@@ -229,27 +233,29 @@ def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
 
     ## populate SCAN images for indices identified from SEG processing.
     if subset_scan_path:
-        file_path = subset_scan_path.split(':')[-1]
+        file_scan_path = subset_scan_path.split(':')[-1]
     else:
-        file_path = scan_path.split(':')[-1]
-    data, header = load(file_path)
+        file_scan_path = scan_path.split(':')[-1]
+    print("Processing ", file_scan_path)
+    data, header = load(file_scan_path)
 
     scans = []
-    for slice in res:
-        image_slice = data[:,:,slice[0]]
+    for res_slice in res:
+        image_slice = np.flipud(data[:,:,res_slice[0]])
         im = slice_to_image(image_slice, width, height)
         scans.append(im)
 
     images = []
     for idx in range(len(res)):
         # load dicom and seg images from bytes
-        dcm_img = scans[idx].convert("RGB")
+        dicom_img = scans[idx]
+        dicom_binary = dicom_img.tobytes()
         seg_img = res[idx][1]
 
-        overlay = Image.blend(dcm_img, seg_img, 0.3)
+        overlay = Image.blend(dicom_img.convert("RGB"), seg_img, 0.3)
 
         if crop_width and crop_height:
-            dicom_binary, overlay = crop_images(res[idx][3], res[idx][4], dcm_img, overlay, crop_width, crop_height, width, height)
+            dicom_binary, overlay = crop_images(res[idx][3], res[idx][4], dicom_img, overlay, crop_width, crop_height, width, height)
 
         images.append((res[idx][2], dicom_binary, overlay))
 

@@ -90,7 +90,9 @@ def generate_image_table():
 
     seg_table_path = const.TABLE_LOCATION(cfg, is_source=True)
 
-    scan_df = spark.read.format("delta").load(scan_table_path)
+    scan_df = spark.read.format("delta").load(scan_table_path) \
+                   .select(F.col("metadata").alias("scan_metadata"), F.col("path").alias("scan_path"),
+                                            F.col("subset_path").alias("subset_scan_path"))
 
     seg_df = spark.read.format("delta").load(seg_table_path)
     logger.info("Loaded dicom and seg tables")
@@ -110,9 +112,8 @@ def generate_image_table():
         seg_png_table_path = const.TABLE_LOCATION(cfg)
 
         # join scan and seg tables
-        seg_df = seg_df.join(scan_df.select("metadata", F.col("path").alias("scan_path"),
-                                            F.col("subset_path").alias("subset_scan_path")),
-                             scan_df.SeriesInstanceUID == seg_df.series_instance_uid)
+        seg_df = seg_df.join(scan_df,
+                             scan_df.scan_metadata.SeriesInstanceUID == seg_df.series_instance_uid)
 
         # find images with tumor
         spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/preprocess.py"))
@@ -132,7 +133,8 @@ def generate_image_table():
         columns_to_select = [F.col("slices_images.n_tumor_slices").alias("n_tumor_slices"),
                              F.col("slices_images.dicom").alias("dicom"),
                              F.col("slices_images.overlay").alias("overlay"),
-                            "metadata", "accession_number", "series_number", "path", "subset_path", "scan_annotation_record_uuid"]
+                             F.col("scan_metadata").alias("metadata"), 
+                             "accession_number", "series_number", "path", "subset_path", "scan_annotation_record_uuid"]
         columns_to_select.extend(metadata_columns)
         seg_df = seg_df.withColumn("slices_images", F.explode("slices_images")) \
                        .select(columns_to_select)
