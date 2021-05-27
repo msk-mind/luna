@@ -120,14 +120,14 @@ def create_proxy_table(data_config):
         # if multiple file types are provided, union all DFs
         if isinstance(file_types, list) and len(file_types) > 1:
             df = spark.read.format("binaryFile") \
-                .option("pathGlobFilter", "*." + file_types[0]) \
+                .option("pathGlobFilter", file_types[0]) \
                 .option("recursiveFileLookup", "true") \
                 .load(cfg.get_value(path=const.DATA_CFG+'::RAW_DATA_PATH')) \
                 .drop("content")
 
             for file_type in file_types[1:]:
                 df_add = spark.read.format("binaryFile") \
-                    .option("pathGlobFilter", "*." + file_type) \
+                    .option("pathGlobFilter", file_type) \
                     .option("recursiveFileLookup", "true") \
                     .load(cfg.get_value(path=const.DATA_CFG+'::RAW_DATA_PATH')) \
                     .drop("content")
@@ -135,7 +135,7 @@ def create_proxy_table(data_config):
                 df = df.union(df_add)
         else:
             df = spark.read.format("binaryFile") \
-                .option("pathGlobFilter", "*." + file_types) \
+                .option("pathGlobFilter", file_types) \
                 .option("recursiveFileLookup", "true") \
                 .load(cfg.get_value(path=const.DATA_CFG+'::RAW_DATA_PATH')) \
                 .drop("content")

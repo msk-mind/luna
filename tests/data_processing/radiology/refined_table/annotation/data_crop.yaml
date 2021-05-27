@@ -5,10 +5,10 @@ PROJECT: test-project
 
 DATASET_NAME: dsn
 
-SOURCE_DATA_TYPE: MHD
+SOURCE_DATA_TYPE: MHA
 
 # to be updated with data type standardization
-SCAN_DATA_TYPE: DICOM
+SCAN_DATA_TYPE: SCAN
 
 DATA_TYPE: PNG
 
@@ -24,3 +24,6 @@ N_SLICES:
 CROP_WIDTH: 256
 
 CROP_HEIGHT: 256
+
+METADATA_COLUMNS:
+  - label

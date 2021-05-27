@@ -1,6 +1,7 @@
-# annotation file type extension like mha, mhd (case sensitive) ..
+# annotation file type extension that can be passed to glob like
+# "*.mhd", "*.hdr.gz" (case sensitive) ..
 # if multiple file types are desired, provide them in a list.
-FILE_TYPE: mha
+FILE_TYPE: "*.mha"
 
 # annotation data type - used to create table names
 DATA_TYPE: RADIOLOGY_ANNOTATION

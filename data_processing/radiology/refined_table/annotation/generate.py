@@ -84,13 +84,15 @@ def generate_image_table():
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='dicom-to-png')
     spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")
 
-    dicom_table_path = os.path.join(project_path, const.TABLE_DIR,
+    scan_table_path = os.path.join(project_path, const.TABLE_DIR,
                                     "{0}_{1}".format(cfg.get_value(path=const.DATA_CFG+'::SCAN_DATA_TYPE'),
 						cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')))
 
     seg_table_path = const.TABLE_LOCATION(cfg, is_source=True)
 
-    dicom_df = spark.read.format("delta").load(dicom_table_path)
+    scan_df = spark.read.format("delta").load(scan_table_path) \
+                   .select(F.col("metadata").alias("scan_metadata"), F.col("path").alias("scan_path"),
+                                            F.col("subset_path").alias("subset_scan_path"))
 
     seg_df = spark.read.format("delta").load(seg_table_path)
     logger.info("Loaded dicom and seg tables")
@@ -102,69 +104,44 @@ def generate_image_table():
         n_slices = validate_integer_param(cfg.get_value(path=const.DATA_CFG+'::N_SLICES'))
         crop_width = validate_integer_param(cfg.get_value(path=const.DATA_CFG+'::CROP_WIDTH'))
         crop_height = validate_integer_param(cfg.get_value(path=const.DATA_CFG+'::CROP_HEIGHT'))
+
         # optional columns from radiology annotation table to include.
         metadata_columns = []
         if cfg.has_value(path=const.DATA_CFG+'::METADATA_COLUMNS'):
             metadata_columns = cfg.get_value(path=const.DATA_CFG+'::METADATA_COLUMNS')
         seg_png_table_path = const.TABLE_LOCATION(cfg)
-        
+
+        # join scan and seg tables
+        seg_df = seg_df.join(scan_df,
+                             scan_df.scan_metadata.SeriesInstanceUID == seg_df.series_instance_uid)
+        logger.info(seg_df.count())
+
         # find images with tumor
         spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/preprocess.py"))
-        from preprocess import create_seg_images, overlay_images
-        create_seg_png_udf = F.udf(create_seg_images, ArrayType(StructType(
-                                    [StructField("instance_number", IntegerType()),
-                                     StructField("scan_annotation_record_uuid", StringType()),
-                                     StructField("seg_png", BinaryType()),
-                                     StructField("n_tumor_slices", IntegerType()),
-                                     StructField("x", IntegerType()),
-                                     StructField("y", IntegerType())])))
+        from preprocess import create_images
+        create_images_udf = F.udf(create_images, ArrayType(StructType(
+                                    [StructField("n_tumor_slices", IntegerType()),
+                                     StructField("dicom", BinaryType()),
+                                     StructField("overlay", BinaryType())])))
 
-        seg_df = seg_df.withColumn("slices_uuid_pngs_xy",
-            F.lit(create_seg_png_udf("path", "scan_annotation_record_uuid", F.lit(width), F.lit(height), F.lit(n_slices))))
+        seg_df = seg_df.withColumn("slices_images",
+            F.lit(create_images_udf("scan_path", "path", "subset_scan_path", "subset_path",
+                                     F.lit(width), F.lit(height), F.lit(crop_width), F.lit(crop_height), F.lit(n_slices))))
 
-        logger.info("Created segmentation pngs")
+        logger.info("Created pngs")
 
         # add metadata_columns
-        columns_to_select = [F.col("slices_uuid_pngs_xy.instance_number").alias("instance_number"),
-                        F.col("slices_uuid_pngs_xy.seg_png").alias("seg_png"),
-                        F.col("slices_uuid_pngs_xy.scan_annotation_record_uuid").alias("scan_annotation_record_uuid"),
-                        F.col("slices_uuid_pngs_xy.n_tumor_slices").alias("n_tumor_slices"),
-                        F.col("slices_uuid_pngs_xy.x").alias("x_center"),
-                        F.col("slices_uuid_pngs_xy.y").alias("y_center"),
-                        "accession_number", "series_number", "path", "series_instance_uid"]
+        columns_to_select = [F.col("slices_images.n_tumor_slices").alias("n_tumor_slices"),
+                             F.col("slices_images.dicom").alias("dicom"),
+                             F.col("slices_images.overlay").alias("overlay"),
+                             F.col("scan_metadata").alias("metadata"), 
+                             "accession_number", "series_number", "path", "subset_path", "scan_annotation_record_uuid"]
         columns_to_select.extend(metadata_columns)
-        seg_df = seg_df.withColumn("slices_uuid_pngs_xy", F.explode("slices_uuid_pngs_xy")) \
+
+        seg_df = seg_df.withColumn("slices_images", F.explode("slices_images")) \
                        .select(columns_to_select)
 
         logger.info("Exploded rows")
-
-        # create overlay images: blend seg and the dicom images
-        columns_to_select = ["accession_number", seg_df.path.alias("seg_path"),
-                            "instance_number", "seg_png", "scan_annotation_record_uuid", "series_number",
-                            "x_center", "y_center", "n_tumor_slices", "series_instance_uid"]
-        columns_to_select.extend(metadata_columns)
-
-        seg_df = seg_df.select(columns_to_select)
-        
-        cond = [dicom_df.metadata.SeriesInstanceUID == seg_df.series_instance_uid,
-                dicom_df.metadata.InstanceNumber == seg_df.instance_number]
-
-        seg_df = seg_df.join(dicom_df, cond).dropDuplicates(["scan_annotation_record_uuid","series_instance_uid", "instance_number"])
-        
-        overlay_image_udf = F.udf(overlay_images, StructType([StructField("dicom", BinaryType()),
-                                                              StructField("overlay", BinaryType())]))
-
-        seg_df = seg_df.withColumn("dicom_overlay",
-            F.lit(overlay_image_udf("path", "seg_png", F.lit(width), F.lit(height), "x_center", "y_center",
-                                    F.lit(crop_width), F.lit(crop_height))))
-
-        # add metadata_columns
-        columns_to_select = [F.col("dicom_overlay.dicom").alias("dicom"), F.col("dicom_overlay.overlay").alias("overlay"),
-                             "metadata", "scan_annotation_record_uuid", "n_tumor_slices"]
-        columns_to_select.extend(metadata_columns)
-
-        # unpack dicom_overlay struct into 2 columns
-        seg_df = seg_df.select(columns_to_select)
 
         # generate uuid
         spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
@@ -172,9 +149,7 @@ def generate_image_table():
         from utils import generate_uuid_binary
         generate_uuid_udf = F.udf(generate_uuid_binary, StringType())
         seg_df = seg_df.withColumn("png_record_uuid", F.lit(generate_uuid_udf(seg_df.overlay, F.array([F.lit("PNG")]))))
-       
-        logger.info("Created overlay images")
-        
+
         seg_df.coalesce(cfg.get_value(path=const.DATA_CFG+'::NUM_PARTITION')).write.format("delta") \
             .mode("overwrite") \
             .save(seg_png_table_path)

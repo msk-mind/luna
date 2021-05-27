@@ -10,9 +10,9 @@ import data_processing.common.constants as const
 from pathlib import Path
 cwd = os.getcwd()
 
-dicom_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/1-01.dcm'
-image_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd'
-label_path = f'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'
+dicom_path = 'tests/data_processing/testdata/data/2.000000-CTAC-24716/dicoms/1-01.dcm'
+image_path = 'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/image.mhd'
+label_path = 'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/label.mha'
 
 
 def test_find_centroid():
@@ -32,51 +32,36 @@ def test_find_centroid():
             rgb = im.convert('RGB')
             red_channel = rgb.getdata(0)
             rgb.putdata(red_channel)
-            png_binary = rgb.tobytes()
             break
 
-    xy = find_centroid(png_binary, 512, 512)
+    xy = find_centroid(rgb, 512, 512)
 
     assert 271 == xy[0]
     assert 128 == xy[1]
 
-def test_dicom_to_bytes():
+def test_slice_to_image():
 
     import data_processing
     sys.modules['preprocess'] = data_processing.radiology.common.preprocess
 
-    image = dicom_to_bytes(dicom_path, 512, 512)
+    data, header = load(dicom_path)
 
-    assert bytes == type(image)
-    assert 512*512 == len(image)
+    image = slice_to_image(data[:,:,0], 512, 512)
 
-def test_create_seg_images():
+    assert (512, 512) == image.size
 
-    import data_processing
-    sys.modules['preprocess'] = data_processing.radiology.common.preprocess
+def test_subset_bound_seg():
 
-    arr = create_seg_images(image_path, "uuid", 512, 512)
+    new_filepath = 'tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/subset_image.mhd'
+    modified_file = subset_bound_seg(image_path, new_filepath, 0, 3)
 
-    assert 9 == len(arr)
-    assert "uuid" == arr[0][1]
-    # RGB seg image
-    assert 512*512*3 == len(arr[0][2])
-
-
-def test_create_seg_images_subset():
-
-    import data_processing
-    sys.modules['preprocess'] = data_processing.radiology.common.preprocess
-
-    n_slices = 5
-    arr = create_seg_images(image_path, "uuid", 512, 512, n_slices)
-
-    assert n_slices == len(arr)
-    # check indices
-    assert [6, 5, 4, 3, 2] == [a[0] for a in arr]
-    assert "uuid" == arr[0][1]
-    # RGB seg image
-    assert 512*512*3 == len(arr[0][2])
+    subset_data, subset_hdr = load(modified_file)
+    assert 3 == subset_data.shape[2]
+    assert 3 == subset_hdr.sitkimage.GetSize()[2]
+    
+    # cleanup
+    os.remove(new_filepath)
+    os.remove('tests/data_processing/testdata/data/2.000000-CTAC-24716/volumes/subset_image.raw')
 
 
 def test_crop_images():
@@ -87,7 +72,7 @@ def test_crop_images():
     png = spark.read.format("delta").load("tests/data_processing/testdata/data/test-project/tables/PNG_dsn").toPandas()
     dicom = png['dicom'][0]
     overlay = png['overlay'][0]
-    dicom_overlay = crop_images(360, 198, dicom, overlay, 256, 256, 512, 512)
+    dicom_overlay = crop_images(360, 198, Image.frombytes("L", (512,512), bytes(dicom)), Image.frombytes("RGB", (512,512), bytes(overlay)), 256, 256, 512, 512)
 
     assert 256*256 == len(dicom_overlay[0])
     # RGB overlay image
