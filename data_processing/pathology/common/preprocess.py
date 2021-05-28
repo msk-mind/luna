@@ -183,16 +183,28 @@ def build_shapely_polygons_from_geojson(annotation_geojson):
     """
     annotation_polygons = []
     annotation_labels = []
+    # print(len(annotation_geojson['features']))
+
     for feature in annotation_geojson['features']:
 
-        coords = feature['geometry']['coordinates']
         class_name = feature['properties']['label_name']
 
-        # filter out lines that may be present (polygons containing 2 coordinates)
-        if len(coords) >= 3:
-            annotation_polygon = Polygon(coords)
+        ring_list = feature['geometry']['coordinates']
+
+        # polygon with no holes
+        if len(ring_list) == 1:
+            annotation_polygon = Polygon(ring_list[0])
+        else:
+            # this is a ring with interior holes
+            annotation_polygon = Polygon(ring_list[0], holes=ring_list[1:])
+        
+        # check all coord lists are valid
+
+        if annotation_polygon.is_valid:
             annotation_polygons.append(annotation_polygon)
             annotation_labels.append(class_name)
+
+
     return annotation_polygons,annotation_labels
 
 

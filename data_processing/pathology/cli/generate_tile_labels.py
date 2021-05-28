@@ -76,6 +76,7 @@ def generate_tile_labels_with_datastore(app_config: str, cohort_id: str, contain
                                   datastore._namespace_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
+        print("Writing to output dir:", output_dir)
         properties = pretile_scoring(image_node.data, output_dir, method_data, image_id)
 
     except Exception as e:
