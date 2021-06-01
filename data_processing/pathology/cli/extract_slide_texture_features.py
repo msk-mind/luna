@@ -24,6 +24,8 @@ def extract_slide_texture_features(slide_path, halo_roi_path, annotation_name, s
             
             img_patch  = img_arr [x:x+TILE_SIZE, y:y+TILE_SIZE, :]  
             mask_patch = mask_arr[x:x+TILE_SIZE, y:y+TILE_SIZE]
+
+            if mask_patch.sum() == 0: continue
             
             # Can't use hash because some masks are identical (empty), and dask tries to delete them
             img_patch_future  = runner.scatter(img_patch,  hash=False)
