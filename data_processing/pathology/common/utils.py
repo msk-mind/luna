@@ -174,7 +174,7 @@ def extract_patch_texture_features(image_patch, mask_patch, stain_vectors, stain
     
     stain_patch = pull_stain_channel(image_patch, stain_vectors, channel=stain_channel)
     
-    #pdl1_patch = np.array( Image.fromarray(pdl1_patch).resize((250,250)))
+    #stain_patch = np.array( Image.fromarray(stain_patch).resize((250,250)))
     
     sitk_image  = sitk.GetImageFromArray(stain_patch.astype(np.uint8))
     sitk_mask   = sitk.GetImageFromArray(mask_patch.astype(np.uint8))

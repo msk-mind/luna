@@ -25,8 +25,9 @@ def extract_slide_texture_features(slide_path, halo_roi_path, annotation_name, s
             img_patch  = img_arr [x:x+TILE_SIZE, y:y+TILE_SIZE, :]  
             mask_patch = mask_arr[x:x+TILE_SIZE, y:y+TILE_SIZE]
             
-            img_patch_future  = runner.scatter(img_patch)
-            mask_patch_future = runner.scatter(mask_patch)
+            # Can't use hash because some masks are identical (empty), and dask tries to delete them
+            img_patch_future  = runner.scatter(img_patch,  hash=False)
+            mask_patch_future = runner.scatter(mask_patch, hash=False)
             
             futures.append (
                 runner.submit(extract_patch_texture_features, img_patch_future, mask_patch_future, stain_vectors=vectors, stain_channel=stain_channel, glcm_feature='original_glcm_ClusterTendency')
