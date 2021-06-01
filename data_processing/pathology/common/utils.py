@@ -16,6 +16,9 @@ import SimpleITK as sitk
 import openslide
 import tifffile
 
+import logging
+logger = logging.getLogger(__name__)
+
 def get_labelset_keys():
     """
     Given DATA_CFG, return slideviewer labelsets
@@ -138,7 +141,6 @@ def get_slide_roi_masks(slide_path, halo_roi_path, annotation_name, slide_id=Non
     return slide_array, sample_array, mask_array
 
 
-
 def get_stain_vectors_macenko(sample):
     """ Use the staintools MacenkoStainExtractor to extract stain vectors """
 
@@ -155,7 +157,6 @@ def pull_stain_channel(patch, vectors, channel=0):
     return tmp[:,:,channel]
 
 
-
 def extract_patch_texture_features(image_patch, mask_patch, stain_vectors, stain_channel, glcm_feature):
     """
     Runs patch-wise extraction from an image_patch, mask_patch pair given a stain vector and stain channel.
@@ -166,7 +167,7 @@ def extract_patch_texture_features(image_patch, mask_patch, stain_vectors, stain
     extractor.enableFeaturesByName(glcm=['ClusterTendency'])
     extractor.enableImageTypeByName('Original')
     
-    print ("Label sum=", mask_patch.sum())
+    logger.debug (f"Label sum= {mask_patch.sum()}")
    
     #mask_patch = np.array( Image.fromarray(mask_patch).resize((250,250))).astype(np.uint8)
     if not (len(np.unique(mask_patch)) > 1 and np.count_nonzero(mask_patch) > 1): return None
@@ -181,7 +182,7 @@ def extract_patch_texture_features(image_patch, mask_patch, stain_vectors, stain
     try:
         bbox, _ = radiomics.imageoperations.checkMask(sitk_image, sitk_mask)
     except Exception as exc:
-        print (f"Skipping this patch, mask pair due to '{exc}'")
+        logger.warning (f"Skipping this patch, mask pair due to '{exc}'")
     else:
         cimg, _ = radiomics.imageoperations.cropToTumorMask(sitk_image, sitk_mask, bbox)
 
