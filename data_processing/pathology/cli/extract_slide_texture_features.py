@@ -2,10 +2,10 @@ import numpy as np
 import os
 from dask.distributed import as_completed
 
-from data_processing.common.dask import dask_worker_runner, get_local_dask_directory
+from data_processing.common.dask import dask_event_loop
 from data_processing.pathology.common.utils import get_slide_roi_masks, get_stain_vectors_macenko, extract_patch_texture_features
 
-@dask_worker_runner
+@dask_event_loop
 def extract_slide_texture_features(slide_id, slide_path, halo_roi_path, annotation_name, stain_channel, TILE_SIZE=500, runner=None):
     print ("Hello from extract_slide_texture_features()")
 

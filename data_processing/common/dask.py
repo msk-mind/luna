@@ -24,10 +24,10 @@ def get_local_dask_directory():
     return local_directory
 
 
-def dask_worker_runner(func):
+def dask_event_loop(func):
     """
-    This methods decorates functions run on dask workers with an async function call
-    Namely, this allows us to manage the execution of a function a bit better, and especially, to exit job execution if things take to long (1hr)
+    This method decorates functions run on dask workers with an async function call
+    Namely, this allows us to manage the execution of a function a bit better, and especially, to exit job execution if things take too long (1hr)
 
     Here, the function func is run in a background thread, and has access to the dask schedular through the 'runner'.
     Critically, sumbission to this runner/client looks the same regardless of if it occurs in a sub-process/thread
@@ -36,7 +36,7 @@ def dask_worker_runner(func):
     While one cannot (or should not) kill the running thread, Dask will cleanup the child tasks eventually once all jobs finish.
 
     Usage:
-    @dask_worker_runner
+    @dask_event_loop
     my_job(args, kwargs, runner=None):
         runner.submit(sleep, 10)
     """
