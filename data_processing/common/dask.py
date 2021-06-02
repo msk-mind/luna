@@ -25,8 +25,23 @@ def get_local_dask_directory():
 
 
 def dask_worker_runner(func):
+    """
+    This methods decorates functions run on dask workers with an async function call
+    Namely, this allows us to manage the execution of a function a bit better, and especially, to exit job execution if things take to long (1hr)
 
-    async def execute_function_as_job(*args, **kwargs):
+    Here, the function func is run in a background thread, and has access to the dask schedular through the 'runner'.
+    Critically, sumbission to this runner/client looks the same regardless of if it occurs in a sub-process/thread
+
+    Mostly, this is a workaround to impliment some form of timeout when running very long-tasks on dask. 
+    While one cannot (or should not) kill the running thread, Dask will cleanup the child tasks eventually once all jobs finish.
+
+    Usage:
+    @dask_worker_runner
+    my_job(args, kwargs, runner=None):
+        runner.submit(sleep, 10)
+    """
+
+    async def wrapped(*args, **kwargs):
         # We'll run our function in a background thread
         executor = ThreadPoolExecutor(max_workers=1)
 
@@ -71,9 +86,8 @@ def dask_worker_runner(func):
         return return_value
     
     def run(*args, **kwargs):
-        print ("Running!")
         loop = asyncio.new_event_loop()
-        return loop.run_until_complete(execute_function_as_job(*args, **kwargs))
+        return loop.run_until_complete(wrapped(*args, **kwargs))
           
     return run
 
