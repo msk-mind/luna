@@ -87,7 +87,9 @@ def dask_worker_runner(func):
     
     def run(*args, **kwargs):
         loop = asyncio.new_event_loop()
-        return loop.run_until_complete(wrapped(*args, **kwargs))
+        result = loop.run_until_complete(wrapped(*args, **kwargs))
+        loop.close()
+        return result
           
     return run
 
