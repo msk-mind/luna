@@ -65,23 +65,23 @@ def dask_worker_runner(func):
             kwargs['runner'] = runner
             job = loop.run_in_executor(executor, partial(func, *args, **kwargs))
         
-        # Move on from job if things take more than hour
-        done, pending = await asyncio.wait([job], timeout=3600)
+            # Move on from job if things take more than hour
+            done, pending = await asyncio.wait([job], timeout=3600)
 
-        # Do some cleanup
-        if len(pending) != 0:
-            logger.warning ("Killing pending tasks!")
-            for task in pending: task.cancel()
+            # Do some cleanup
+            if len(pending) != 0:
+                logger.warning ("Killing pending tasks!")
+                for task in pending: task.cancel()
 
-        executor.shutdown(wait=False)
+            executor.shutdown(wait=False)
 
-        # Get the return value
-        if len(done) == 1:
-            return_value = done.pop().result()
-        else:
-            return_value = None
+            # Get the return value
+            if len(done) == 1:
+                return_value = done.pop().result()
+            else:
+                return_value = None
 
-        logger.info (f"Done running job, returning {return_value}")
+            logger.info (f"Done running job, returning {return_value}")
 
         return return_value
     
