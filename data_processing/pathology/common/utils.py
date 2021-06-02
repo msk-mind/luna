@@ -7,9 +7,6 @@ import xml.etree.ElementTree as et
 import numpy as np
 import cv2
 
-from staintools.stain_extraction.macenko_stain_extractor import MacenkoStainExtractor
-from staintools.miscellaneous.get_concentrations import get_concentrations
-
 import radiomics
 import SimpleITK as sitk
 
@@ -143,6 +140,7 @@ def get_slide_roi_masks(slide_path, halo_roi_path, annotation_name, slide_id=Non
 
 def get_stain_vectors_macenko(sample):
     """ Use the staintools MacenkoStainExtractor to extract stain vectors """
+    from staintools.stain_extraction.macenko_stain_extractor import MacenkoStainExtractor
 
     extractor = MacenkoStainExtractor()
     vectors = extractor.get_stain_matrix(sample)
@@ -150,6 +148,8 @@ def get_stain_vectors_macenko(sample):
 
 
 def pull_stain_channel(patch, vectors, channel=0):
+    from staintools.miscellaneous.get_concentrations import get_concentrations
+
     tile_concentrations = get_concentrations(patch, vectors)
     identity = np.array([[1,0,0],[0,1,0]])
     tmp = 255 * (1 - np.exp(-1 * np.dot(tile_concentrations, identity)))
