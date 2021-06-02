@@ -36,7 +36,6 @@ def extract_slide_texture_features(slide_id, slide_path, halo_roi_path, annotati
             futures.append (
                 runner.submit(extract_patch_texture_features, img_patch_future, mask_patch_future, stain_vectors=vectors, stain_channel=stain_channel, glcm_feature='original_glcm_ClusterTendency')
             )
-        break
 
     features = np.array([])
 
