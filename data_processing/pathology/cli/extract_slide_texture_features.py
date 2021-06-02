@@ -1,12 +1,14 @@
 import numpy as np
+import os
 from dask.distributed import as_completed
 
-from data_processing.common.dask import job_runner
+from data_processing.common.dask import dask_worker_runner, get_local_dask_directory
 from data_processing.pathology.common.utils import get_slide_roi_masks, get_stain_vectors_macenko, extract_patch_texture_features
 
-@job_runner
-def extract_slide_texture_features(slide_path, halo_roi_path, annotation_name, stain_channel, TILE_SIZE=500, runner=None):
-
+@dask_worker_runner
+def extract_slide_texture_features(slide_id, slide_path, halo_roi_path, annotation_name, stain_channel, TILE_SIZE=500, runner=None):
+    print ("Hello from extract_slide_texture_features()")
+    
     img_arr, sample_arr, mask_arr = get_slide_roi_masks(
         slide_path=slide_path, 
         halo_roi_path=halo_roi_path,
@@ -27,7 +29,7 @@ def extract_slide_texture_features(slide_path, halo_roi_path, annotation_name, s
 
             if mask_patch.sum() == 0: continue
             
-            # Can't use hash because some masks are identical (empty), and dask tries to delete them
+            # Use random (instead of deterministic) hashes for result key (?)
             img_patch_future  = runner.scatter(img_patch,  hash=False)
             mask_patch_future = runner.scatter(mask_patch, hash=False)
             
@@ -48,7 +50,10 @@ def extract_slide_texture_features(slide_path, halo_roi_path, annotation_name, s
         except Exception as exc:
             print (f"Skipped future: {exc}")
 
-    np.save("./example_vector.npy", features)
-    return "./example_vector.npy", features.mean()
+    dest_dir=f"/gpfs/mskmind_ess/aukermaa/data/{slide_id}/original_glcm_ClusterTendency/"
+    os.makedirs(dest_dir, exist_ok=True)
+    np.save(f"{dest_dir}/vector.npy", features)
+
+    return dest_dir, features.mean()
 
             
