@@ -36,6 +36,7 @@ def get_labelset_keys():
 def convert_xml_to_mask(xml_fn, shape, annotation_name):
     """ Convert a sparse XML annotation file (polygons) to a dense bitmask of shape <shape> """
 
+    ret = None
     board_pos = None
     board_neg = None
     # Annotations >> 
