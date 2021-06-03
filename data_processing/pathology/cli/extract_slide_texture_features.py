@@ -48,7 +48,6 @@ def extract_slide_texture_features(slide_id, slide_path, halo_roi_path, annotati
 
             if not texture_values is None:
                 features = np.append(features, texture_values)
-                print (f"Current mean: {features.mean()}")
         except Exception as exc:
             print (f"Skipped future: {exc}")
 

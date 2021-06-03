@@ -166,7 +166,7 @@ def extract_patch_texture_features(address, image_patch, mask_patch, stain_vecto
     Runs patch-wise extraction from an image_patch, mask_patch pair given a stain vector and stain channel.
     """
 
-    extractor = radiomics.featureextractor.RadiomicsFeatureExtractor(binWidth=8)
+    extractor = radiomics.featureextractor.RadiomicsFeatureExtractor(binWidth=16)
     extractor.disableAllFeatures()
     extractor.enableFeaturesByName(glcm=['ClusterTendency'])
     extractor.enableImageTypeByName('Original')
