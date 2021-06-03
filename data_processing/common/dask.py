@@ -7,7 +7,8 @@ from dask.distributed import Client
 from dask.distributed import worker_client, get_client, get_worker
 from functools import partial
 
-from distributed.threadpoolexecutor import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ def dask_event_loop(func):
         with worker_client() as runner:
 
             # We'll run our function in a background thread
-            executor = ThreadPoolExecutor(max_workers=1)
+            executor = ProcessPoolExecutor(max_workers=1)
 
             # Add our runner to kwargs
             kwargs['runner'] = runner
@@ -90,11 +91,46 @@ def dask_event_loop(func):
 
         return return_value
     
-    def run(*args, **kwargs):
+    def run_loop(*args, **kwargs):
+        """
+        Uses async and threading capabilities
+
+        Use of background thread causes this error on shutdown: 
+            ERROR - asyncio - task: <Task pending coro=<HTTP1ServerConnection._server_request_loop() running at /gpfs/mskmindhdp_emc/sw/env/lib64/python3.6/site-packages/tornado/http1connection.py:817> wait_for=<Future pending cb=[<TaskWakeupMethWrapper object at 0x7f52e8259318>()]> cb=[IOLoop.add_future.<locals>.<lambda>() at /gpfs/mskmindhdp_emc/sw/env/lib64/python3.6/site-packages/tornado/ioloop.py:690]>
+            Seems like some async task gets hung up in the child thread...
+        """
+
         loop   = asyncio.new_event_loop()
         result = loop.run_until_complete(wrapped(*args, **kwargs))
         loop.close()
         return result
-          
-    return run
+    
+    def run_simple(*args, **kwargs):
+        """
+        Only provides runner object to method, no threading
+        """
 
+        logger.info ("Initializing job... getting parent worker")
+
+        try:
+            worker = get_worker()
+        except ValueError as exc:
+            logger.error("Could not get dask worker!")
+            raise RuntimeError("Data-processing job called without parent dask worker")
+        except Exception as exc:
+            logger.exception(f"Unknown exception when getting dask worker")
+
+        logger.info (f"Successfully found worker {worker}")
+        logger.info (f"Running job {func} with args: {args}, kwargs: {kwargs}")
+        with worker_client() as runner:
+
+            # Add our runner to kwargs
+            kwargs['runner'] = runner
+
+            # Kick off the job
+            return_value = func( *args, **kwargs )
+
+            # 
+            return return_value
+        
+    return run_simple
