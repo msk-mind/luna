@@ -1,0 +1,30 @@
+<Annotations>
+  <Annotation LineColor="65535" Name="Layer 1" Visible="True">
+    <Regions>
+      <Region Type="Rectangle" HasEndcaps="0" NegativeROA="0">
+        <Vertices>
+          <V X="1" Y="40" />
+          <V X="10" Y="1" />
+        </Vertices>
+        <Comments />
+      </Region>
+    </Regions>
+  </Annotation>
+  <Annotation LineColor="255" Name="Tumor" Visible="True">
+    <Regions>
+      <Region Type="Polygon" HasEndcaps="0" NegativeROA="0">
+        <Vertices>
+          <V X="1" Y="10" />
+          <V X="2" Y="5" />
+          <V X="3" Y="2" />
+          <V X="5" Y="4" />
+          <V X="5" Y="11" />
+          <V X="4" Y="16" />
+          <V X="2" Y="22" />
+          <V X="1" Y="30" />
+        </Vertices>
+        <Comments />
+      </Region>
+    </Regions>
+  </Annotation>
+</Annotations>
