@@ -7,9 +7,6 @@ from dask.distributed import Client
 from dask.distributed import worker_client, get_client, get_worker
 from functools import partial
 
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-import threading
-
 logger = logging.getLogger(__name__)
 
 def get_or_create_dask_client():
@@ -25,7 +22,7 @@ def get_local_dask_directory():
     return local_directory
 
 
-def dask_event_loop(func):
+def with_dask_event_loop(func):
     """
     This method decorates functions run on dask workers with an async function call
     Namely, this allows us to manage the execution of a function a bit better, and especially, to exit job execution if things take too long (1hr)
@@ -62,13 +59,13 @@ def dask_event_loop(func):
         with worker_client() as runner:
 
             # We'll run our function in a background thread
-            executor = ProcessPoolExecutor(max_workers=1)
+            # executor = ProcessPoolExecutor(max_workers=1)
 
             # Add our runner to kwargs
             kwargs['runner'] = runner
 
             # Kick off the job
-            job = loop.run_in_executor(executor, partial(func, *args, **kwargs))
+            job = loop.run_in_executor(worker.executor, partial(func, *args, **kwargs))
         
             # Move on from job if things take more than hour
             done, pending = await asyncio.wait([job], timeout=3600)
@@ -78,7 +75,7 @@ def dask_event_loop(func):
                 logger.warning ("Killing pending tasks!")
                 for task in pending: task.cancel()
 
-            executor.shutdown(wait=False)
+            # executor.shutdown(wait=False)
 
             # Get the return value
             if len(done) == 1:
@@ -105,6 +102,8 @@ def dask_event_loop(func):
         loop.close()
         return result
     
+def with_dask_runner(func):
+
     def run_simple(*args, **kwargs):
         """
         Only provides runner object to method, no threading
@@ -122,15 +121,15 @@ def dask_event_loop(func):
 
         logger.info (f"Successfully found worker {worker}")
         logger.info (f"Running job {func} with args: {args}, kwargs: {kwargs}")
+
         with worker_client() as runner:
 
             # Add our runner to kwargs
             kwargs['runner'] = runner
 
             # Kick off the job
-            return_value = func( *args, **kwargs )
+            return_value = func ( *args, **kwargs )
 
-            # 
-            return return_value
+        return return_value
         
     return run_simple
