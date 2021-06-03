@@ -22,7 +22,7 @@ def get_local_dask_directory():
     return local_directory
 
 
-def with_dask_event_loop(func):
+def with_event_loop(func):
     """
     This method decorates functions run on dask workers with an async function call
     Namely, this allows us to manage the execution of a function a bit better, and especially, to exit job execution if things take too long (1hr)
@@ -105,7 +105,7 @@ def with_dask_event_loop(func):
 def with_dask_runner(func):
     """
     The simplier version of a dask job decorator, which only provides the worker_client as a runner to the calling function
-    
+
     Usage:
     @with_dask_runner
     my_job(args, kwargs, runner=None):
@@ -116,7 +116,6 @@ def with_dask_runner(func):
         """
         Only provides runner object to method, no threading
         """
-
         logger.info ("Initializing job... getting parent worker")
 
         try:

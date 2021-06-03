@@ -14,6 +14,10 @@ import openslide
 import tifffile
 
 import logging
+
+from matplotlib import pyplot as plt
+from PIL import Image
+
 logger = logging.getLogger(__name__)
 
 def get_labelset_keys():
@@ -157,12 +161,12 @@ def pull_stain_channel(patch, vectors, channel=0):
     return tmp[:,:,channel]
 
 
-def extract_patch_texture_features(image_patch, mask_patch, stain_vectors, stain_channel, glcm_feature):
+def extract_patch_texture_features(address, image_patch, mask_patch, stain_vectors, stain_channel, glcm_feature, plot=True):
     """
     Runs patch-wise extraction from an image_patch, mask_patch pair given a stain vector and stain channel.
     """
 
-    extractor = radiomics.featureextractor.RadiomicsFeatureExtractor(binWidth=16)
+    extractor = radiomics.featureextractor.RadiomicsFeatureExtractor(binWidth=8)
     extractor.disableAllFeatures()
     extractor.enableFeaturesByName(glcm=['ClusterTendency'])
     extractor.enableImageTypeByName('Original')
@@ -184,13 +188,21 @@ def extract_patch_texture_features(image_patch, mask_patch, stain_vectors, stain
     except Exception as exc:
         logger.warning (f"Skipping this patch, mask pair due to '{exc}'")
     else:
-        cimg, _ = radiomics.imageoperations.cropToTumorMask(sitk_image, sitk_mask, bbox)
+        cimg, cmas = radiomics.imageoperations.cropToTumorMask(sitk_image, sitk_mask, bbox)
 
         fts = extractor.execute(sitk_image, sitk_mask, voxelBased=True)
 
         cluster_tend_patch   = sitk.GetArrayFromImage(fts['original_glcm_ClusterTendency']).astype(np.float).flatten()
         cluster_tend_nonzero = cluster_tend_patch[cluster_tend_patch != 0]
         cluster_tend_valid   = cluster_tend_nonzero[~np.isnan(cluster_tend_nonzero)]
+
+        if plot:
+            fig, ax = plt.subplots(1,3, figsize=(9,3))
+            ax[0].imshow(Image.fromarray(sitk.GetArrayFromImage(cimg)))
+            ax[1].imshow(Image.fromarray(sitk.GetArrayFromImage(cmas)))
+            ax[2].imshow(sitk.GetArrayFromImage(fts['original_glcm_ClusterTendency']), cmap='jet')
+            plt.savefig(f"./plots/tex_result_{address}.png")
+
 
         return cluster_tend_valid
             

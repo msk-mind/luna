@@ -2,10 +2,10 @@ import numpy as np
 import os
 from dask.distributed import as_completed
 
-from data_processing.common.dask import dask_event_loop
+from data_processing.common.dask import with_dask_runner
 from data_processing.pathology.common.utils import get_slide_roi_masks, get_stain_vectors_macenko, extract_patch_texture_features
 
-@dask_event_loop
+@with_dask_runner
 def extract_slide_texture_features(slide_id, slide_path, halo_roi_path, annotation_name, stain_channel, TILE_SIZE=500, runner=None):
     print ("Hello from extract_slide_texture_features()")
 
@@ -30,12 +30,14 @@ def extract_slide_texture_features(slide_id, slide_path, halo_roi_path, annotati
             if mask_patch.sum() == 0: continue
             
             # Use random (instead of deterministic) hashes for result key (?)
-            img_patch_future  = runner.scatter(img_patch,  hash=False)
-            mask_patch_future = runner.scatter(mask_patch, hash=False)
+            img_patch_future  = runner.scatter(img_patch)
+            mask_patch_future = runner.scatter(mask_patch)
+
+            address = f"{slide_id}_{x}_{y}"
             
             futures.append (
-                runner.submit(extract_patch_texture_features, img_patch_future, mask_patch_future, stain_vectors=vectors, stain_channel=stain_channel, glcm_feature='original_glcm_ClusterTendency')
-            )
+                runner.submit(extract_patch_texture_features, address, img_patch_future, mask_patch_future, stain_vectors=vectors, stain_channel=stain_channel, glcm_feature='original_glcm_ClusterTendency')
+            )        
 
     features = np.array([])
 
