@@ -42,9 +42,6 @@ def dask_event_loop(func):
     """
 
     async def wrapped(*args, **kwargs):
-        # We'll run our function in a background thread
-        executor = ThreadPoolExecutor(max_workers=1)
-
         loop = asyncio.get_event_loop()        
         
         # Get our current dask worker, functions wrapped with this method can only be run on dask workers
@@ -52,7 +49,7 @@ def dask_event_loop(func):
         try:
             worker = get_worker()
         except ValueError as exc:
-            logger.error("Data-processing job called without parent dask worker")
+            logger.error("Could not get dask worker!")
             raise RuntimeError("Data-processing job called without parent dask worker")
         except Exception as exc:
             logger.exception(f"Unknown exception when getting dask worker")
@@ -62,7 +59,14 @@ def dask_event_loop(func):
 
         # Get our worker client, and pass as a dask client exector
         with worker_client() as runner:
+
+            # We'll run our function in a background thread
+            executor = ThreadPoolExecutor(max_workers=1)
+
+            # Add our runner to kwargs
             kwargs['runner'] = runner
+
+            # Kick off the job
             job = loop.run_in_executor(executor, partial(func, *args, **kwargs))
         
             # Move on from job if things take more than hour
@@ -81,12 +85,13 @@ def dask_event_loop(func):
             else:
                 return_value = None
 
+            # Logg that we're done!
             logger.info (f"Done running job, returning {return_value}")
 
         return return_value
     
     def run(*args, **kwargs):
-        loop = asyncio.new_event_loop()
+        loop   = asyncio.new_event_loop()
         result = loop.run_until_complete(wrapped(*args, **kwargs))
         loop.close()
         return result
