@@ -34,7 +34,7 @@ def with_dask_event_loop(func):
     While one cannot (or should not) kill the running thread, Dask will cleanup the child tasks eventually once all jobs finish.
 
     Usage:
-    @dask_event_loop
+    @with_dask_event_loop
     my_job(args, kwargs, runner=None):
         runner.submit(sleep, 10)
     """
@@ -103,6 +103,14 @@ def with_dask_event_loop(func):
         return result
     
 def with_dask_runner(func):
+    """
+    The simplier version of a dask job decorator, which only provides the worker_client as a runner to the calling function
+    
+    Usage:
+    @with_dask_runner
+    my_job(args, kwargs, runner=None):
+        runner.submit(sleep, 10)
+    """
 
     def run_simple(*args, **kwargs):
         """
