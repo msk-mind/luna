@@ -161,7 +161,7 @@ def pull_stain_channel(patch, vectors, channel=0):
     return tmp[:,:,channel]
 
 
-def extract_patch_texture_features(address, image_patch, mask_patch, stain_vectors, stain_channel, glcm_feature, plot=True):
+def extract_patch_texture_features(address, image_patch, mask_patch, stain_vectors, stain_channel, glcm_feature, plot=False):
     """
     Runs patch-wise extraction from an image_patch, mask_patch pair given a stain vector and stain channel.
     """
@@ -195,14 +195,6 @@ def extract_patch_texture_features(address, image_patch, mask_patch, stain_vecto
         cluster_tend_patch   = sitk.GetArrayFromImage(fts['original_glcm_ClusterTendency']).astype(np.float).flatten()
         cluster_tend_nonzero = cluster_tend_patch[cluster_tend_patch != 0]
         cluster_tend_valid   = cluster_tend_nonzero[~np.isnan(cluster_tend_nonzero)]
-
-        if plot:
-            fig, ax = plt.subplots(1,3, figsize=(9,3))
-            ax[0].imshow(Image.fromarray(sitk.GetArrayFromImage(cimg)))
-            ax[1].imshow(Image.fromarray(sitk.GetArrayFromImage(cmas)))
-            ax[2].imshow(sitk.GetArrayFromImage(fts['original_glcm_ClusterTendency']), cmap='jet')
-            plt.savefig(f"./plots/tex_result_{address}.png")
-
 
         return cluster_tend_valid
             
