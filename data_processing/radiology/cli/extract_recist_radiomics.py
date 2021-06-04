@@ -91,7 +91,6 @@ def extract_recist_radiomics(namespace, scan_id, dicom_path, segment_path, runne
     data_table = data_table.astype(float)
 
     print (data_table)
-    print (data_table['original_shape_Maximum2DDiameterColumn'])
 
     output_slice = os.path.join(ouput_ds, f"ResultSegment-{scan_id}.parquet")
 
