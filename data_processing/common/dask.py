@@ -21,6 +21,7 @@ def get_local_dask_directory():
     local_directory = os.path.join(local_directory, "dask-worker-space")
     return local_directory
 
+class JobExecutionError(Exception): pass
 
 def with_event_loop(func):
     """
@@ -125,6 +126,7 @@ def with_dask_runner(func):
             raise RuntimeError("Data-processing job called without parent dask worker")
         except Exception as exc:
             logger.exception(f"Unknown exception when getting dask worker")
+            raise RuntimeError("Could not get worker")
 
         logger.info (f"Successfully found worker {worker}")
         logger.info (f"Running job {func} with args: {args}, kwargs: {kwargs}")
@@ -135,7 +137,11 @@ def with_dask_runner(func):
             kwargs['runner'] = runner
 
             # Kick off the job
-            return_value = func ( *args, **kwargs )
+            try:
+                return_value = func ( *args, **kwargs )
+            except Exception as exc:
+                logger.exception(f"Job execution failed: {exc}")
+                raise JobExecutionError(f"Job {func} did not run successfully, please check input data! {args}, {kwargs}")
 
         return return_value
         

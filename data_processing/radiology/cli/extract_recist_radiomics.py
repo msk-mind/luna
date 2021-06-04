@@ -8,7 +8,7 @@ from data_processing.common.dask import with_dask_runner
 from data_processing.common.custom_logger import init_logger
 from data_processing.radiology.common.preprocess import window_dicoms, generate_scan, randomize_contours, extract_radiomics
 
-init_logger(level=0)
+init_logger()
 
 @with_dask_runner
 def extract_recist_radiomics(namespace, scan_id, dicom_path, segment_path, runner=None):
@@ -109,7 +109,17 @@ if __name__=='__main__':
     futures.append( client.submit (extract_recist_radiomics, "testing", "348021", "/mskmind_lung/348021/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/115159 segments/348021_NH_UPDATED.mha") )
     futures.append( client.submit (extract_recist_radiomics, "testing", "347917", "/mskmind_lung/347917/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/152504 segments/347917_AMP.mha") )
     futures.append( client.submit (extract_recist_radiomics, "testing", "348008", "/mskmind_lung/348008/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/111922 segments/348008_NH.mha") )
+
     futures.append( client.submit (extract_recist_radiomics, "testing", "190323", "/mskmind_lung/190323/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/AMP redo segments/190323_AMP.mha") )
+    futures.append( client.submit (extract_recist_radiomics, "testing", "190400", "/mskmind_lung/190400/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/AMP redo segments/190400_AMP.mha") )
+    futures.append( client.submit (extract_recist_radiomics, "testing", "190960", "/mskmind_lung/190960/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/AMP redo segments/190960_AMP.mha") )
+    futures.append( client.submit (extract_recist_radiomics, "testing", "347883", "/mskmind_lung/347883/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/AMP redo segments/347883_AMP.mha") )
+    futures.append( client.submit (extract_recist_radiomics, "testing", "347897", "/mskmind_lung/347897/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/AMP redo segments/347897_AMP.mha") )
+    futures.append( client.submit (extract_recist_radiomics, "testing", "347916", "/mskmind_lung/347916/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/AMP redo segments/347916_AMP.mha") )
+    futures.append( client.submit (extract_recist_radiomics, "testing", "347953", "/mskmind_lung/347953/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/AMP redo segments/347953_AMP.mha") )
+    futures.append( client.submit (extract_recist_radiomics, "testing", "347960", "/mskmind_lung/347960/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/AMP redo segments/347960_AMP.mha") )
+    futures.append( client.submit (extract_recist_radiomics, "testing", "347981", "/mskmind_lung/347981/SCANS/2/DICOM/", "/gpfs/mskmind_ess/vangurir/AMP redo segments/347981_AMP.mha") )
+
 
     wait (futures)
 
