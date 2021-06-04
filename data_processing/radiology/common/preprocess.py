@@ -312,7 +312,7 @@ def interpolate_segmentation_masks(seg, target_shape):
     return new_seg
 
 
-def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
+def generate_scan(dicom_path: str, output_dir: str, params: dict, tag=None) -> dict:
     """
     Generate an ITK compatible image from a dicom series
 
@@ -324,6 +324,11 @@ def generate_scan(dicom_path: str, output_dir: str, params: dict) -> dict:
 
     :return: property dict, None if function fails
     """
+
+    if tag is not None:
+        output_dir =  os.path.join(output_dir, tag)
+        os.makedirs(output_dir, exist_ok=True)
+
     PixelType = itk.ctype('signed short')
     ImageType = itk.Image[PixelType, 3]
 
@@ -424,7 +429,7 @@ def extract_voxels(image_path: str, label_path: str, output_dir: str, params: di
 
     return properties
 
-def extract_radiomics(image_path: str, label_path: str, output_dir: str, params: dict) -> dict:
+def extract_radiomics(image_path: str, label_path: str, output_dir: str, params: dict, tag=None) -> dict:
     """
     Extract radiomics given and image, label to and output_dir, parameterized by params
 
@@ -432,12 +437,16 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
     :param label_path: filepath to 3d segmentation(s) as single path or list
     :param output_dir: destination directory
       :param params {
-        RadiomicsFeatureExtractor dict: configuration for the RadiomicsFeatureExtractor
+        radiomicsFeatureExtractor dict: configuration for the RadiomicsFeatureExtractor
         enableAllImageTypes bool: flag to enable all image types
     }
 
     :return: property dict, None if function fails
     """
+    if tag is not None:
+        output_dir =  os.path.join(output_dir, tag)
+        os.makedirs(output_dir, exist_ok=True)
+
     logger.info("Image data: %s", image_path)
     logger.info("Label data: %s", label_path)
 
@@ -449,41 +458,38 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
         image, image_header = load(image_path)
         label, label_header = load(label_path)
 
-        if params['RadiomicsFeatureExtractor']['label'] not in label: 
-            logger.warning(f"No mask pixels labeled [{params['RadiomicsFeatureExtractor']['label']}] found, returning None")
+        if params['radiomicsFeatureExtractor']['label'] not in label: 
+            logger.warning(f"No mask pixels labeled [{params['radiomicsFeatureExtractor']['label']}] found, returning None")
             return None 
 
-        extractor = featureextractor.RadiomicsFeatureExtractor(**params.get('RadiomicsFeatureExtractor', {}))
+        extractor = featureextractor.RadiomicsFeatureExtractor(**params.get('radiomicsFeatureExtractor', {}))
 
         if params.get("strictGeometry", False): 
             if not image_header.get_voxel_spacing() == label_header.get_voxel_spacing():
                 raise RuntimeError(f"Voxel spacing mismatch, image.spacing={image_header.get_voxel_spacing()}, label.spacing={label_header.get_voxel_spacing()}" )
-            if not image.shape == label.shape:
-                raise RuntimeError(f"Shape mismatch: image.shape={image.shape}, label.shape={label.shape}")
-
+        
+        if not image.shape == label.shape:
+            raise RuntimeError(f"Shape mismatch: image.shape={image.shape}, label.shape={label.shape}")
 
         if params.get("enableAllImageTypes", False): extractor.enableAllImageTypes()
 
         result = extractor.execute(image_path, label_path)
+        result['lesion_id'] = tag
 
         result_list.append( pd.Series(result).to_frame().transpose() )
 
-    output_filename = os.path.join(output_dir, params["job_tag"] + ".csv")
+    output_filename = os.path.join(output_dir, f"{tag}.csv")
     logger.info("Saving to " + output_filename)
     pd.concat(result_list).to_csv(output_filename)
 
     logger.info(pd.concat(result_list))
 
-    # Prepare metadata and commit
-    properties = {
-        "data": output_filename, 
-        "hash":dirhash(output_dir, "sha256")
-    }
+    return pd.concat(result_list)
 
-    return properties
+    # return properties
 
 
-def window_dicoms(dicom_path: str, output_dir: str, params: dict) -> dict:
+def window_dicoms(dicom_path: str, output_dir: str, params: dict, tag=None) -> dict:
     """
     Extract radiomics given and image, label to and output_dir, parameterized by params
 
@@ -491,21 +497,27 @@ def window_dicoms(dicom_path: str, output_dir: str, params: dict) -> dict:
     :param output_dir: destination directory
     :param params {
         window bool: whether to apply windowing
-        window_low_level  int, float : lower level to clip
-        window_high_level int, float: higher level to clip
+        windowLowLevel int, float : lower level to clip
+        windowHighLevel int, float: higher level to clip
     }
 
     :return: property dict, None if function fails
     """ 
 
-    if params.get('window', False):
-        logger.info ("Applying window [%s,%s]", params['window_low_level'], params['window_high_level'])
+    if tag is not None:
+        output_dir =  os.path.join(output_dir, tag)
+        os.makedirs(output_dir, exist_ok=True)
 
-    for dcm in Path(dicom_path).glob("*"):
+    if params.get('window', False):
+        logger.info ("Applying window [%s,%s]", params['windowLowLevel'], params['windowHighLevel'])
+
+    for dcm in Path(dicom_path).glob("*.dcm"):
         ds = dcmread(dcm)
         hu = ds.RescaleSlope * ds.pixel_array + ds.RescaleIntercept
+        ds.RescaleSlope = 0.0
+        ds.RescaleIntercept = 0.0
         if params['window']:
-            hu = np.clip( hu, params['window_low_level'], params['window_high_level']   )
+            hu = np.clip( hu, params['windowLowLevel'], params['windowHighLevel']   )
         ds.PixelData = hu.astype(ds.pixel_array.dtype).tobytes()
         ds.save_as (os.path.join( output_dir, dcm.stem + ".cthu.dcm"  ))
 
@@ -527,7 +539,7 @@ from data_processing.radiology.mirp.imageProcess          import interpolate_ima
 from data_processing.radiology.mirp.imagePerturbations    import randomise_roi_contours
 from data_processing.radiology.mirp.imageProcess          import combine_all_rois, combine_pertubation_rois
 
-def randomize_contours(image_path: str, label_path: str, output_dir: str, params: dict) -> dict:
+def randomize_contours(image_path: str, label_path: str, output_dir: str, params: dict, tag=None) -> dict:
     """
     Randomize contours given and image, label to and output_dir using MIRP processing library
 
@@ -540,15 +552,23 @@ def randomize_contours(image_path: str, label_path: str, output_dir: str, params
 
     :return: property dict, None if function fails
     """
+    if tag is not None:
+        output_dir =  os.path.join(output_dir, tag)
+        os.makedirs(output_dir, exist_ok=True)
+
     logger.info("Hello, processing %s, %s", image_path, label_path)
     settings = Settings()
+
+    settings.img_interpolate.new_spacing = params['mirpResampleSpacing']
+    settings.roi_interpolate.new_spacing = params['mirpResampleSpacing']
+    settings.img_interpolate.smoothing_beta = params['mirpResampleBeta']
 
     # Read
     image_class_object      = read_itk_image(image_path, "CT")
     roi_class_object_list   = read_itk_segmentation(label_path)
 
     # Crop for faster interpolation
-    image_class_object, roi_class_object_list = crop_image(img_obj=image_class_object, roi_list=roi_class_object_list, boundary=50.0, z_only=True)
+    # image_class_object, roi_class_object_list = crop_image(img_obj=image_class_object, roi_list=roi_class_object_list, boundary=50.0, z_only=True)
 
     # Interpolation
     image_class_object    = interpolate_image (img_obj=image_class_object, settings=settings)
