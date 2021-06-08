@@ -43,7 +43,7 @@ def cli(data_config_file, app_config_file):
         logger.info('config_file: ' + app_config_file)
 
         # copy app and data configuration to destination config dir
-        config_location = const.CONFIG_LOCATION(cfg)
+        config_location = os.path.join(cfg.get_value('DATA_CFG::LANDING_PATH'), "configs", "REGIONAL_METADATA_RESULTS")
         os.makedirs(config_location, exist_ok=True)
 
         shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
@@ -77,6 +77,7 @@ def create_geojson_table():
     TMP_ZIP_DIR             = os.path.join(LANDING_PATH, TMP_ZIP_DIR_NAME)
     SLIDE_BMP_DIR           = os.path.join(LANDING_PATH, 'regional_bmps')
     SLIDE_NPY_DIR           = os.path.join(LANDING_PATH, 'regional_npys')
+    SLIDE_STORE_DIR         = os.path.join(LANDING_PATH, 'slides')
     TABLE_OUT_DIR           = os.path.join(LANDING_PATH, 'tables', 'REGIONAL_METADATA_RESULTS')
 
     os.makedirs(TABLE_OUT_DIR, exist_ok=True)
@@ -104,7 +105,7 @@ def create_geojson_table():
     json_jobs = []
     for bmp_future in as_completed(bmp_jobs):
         if bmp_future.result() is not None:
-            json_future = client.submit (convert_slide_bitmap_to_geojson, bmp_future, all_labelsets, contour_level, SLIDE_NPY_DIR)
+            json_future = client.submit (convert_slide_bitmap_to_geojson, bmp_future, all_labelsets, contour_level, SLIDE_NPY_DIR, SLIDE_STORE_DIR)
             json_jobs.append ( json_future )
 
     for json_future in as_completed(json_jobs):

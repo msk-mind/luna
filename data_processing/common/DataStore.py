@@ -10,14 +10,14 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_compl
 logger = logging.getLogger(__name__)
 
 class DataStore_v2:
-    def __init__(self):
+    def __init__(self, store_location):
         if os.path.exists('conf/datastore.cfg'):
             self.params = ConfigSet(name='STORE_CFG',  config_file='conf/datastore.cfg').get_config_set("STORE_CFG")
         else:
             self.params = ConfigSet(name='STORE_CFG',  config_file='conf/datastore.default.yml').get_config_set("STORE_CFG")
         logger.info(f"Configured datastore with {self.params}")
 
-        self.backend = self.params['FILE_BACKEND'] 
+        self.backend = store_location
         logger.info(f"Datstore file backend= {self.backend}")
 
         if not os.path.exists( self.backend ): 

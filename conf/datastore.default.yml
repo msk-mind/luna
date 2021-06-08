@@ -1,6 +1,4 @@
-FILE_BACKEND: ./data/ 
-
-GRAPH_STORE_ENABLED: False 
+GRAPH_STORE_ENABLED: False
 GRAPH_URI: neo4j://localhost:7687
 GRAPH_USER: neo4j
 GRAPH_PASSWORD: password

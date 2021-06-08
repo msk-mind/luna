@@ -109,7 +109,7 @@ def convert_bmp_to_npy(bmp_file, output_folder):
     :param output_folder - /path/to/output/folder
     :return filepath to file containing numpy array
     """
-    Image.MAX_IMAGE_PIXELS = 5000000000
+    Image.MAX_IMAGE_PIXELS = None
 
     if not '.bmp' in bmp_file:
         return ''
@@ -162,7 +162,7 @@ def check_slideviewer_and_download_bmp(sv_project_id, slideviewer_path, slide_id
         return outputs
 
 
-def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, SLIDE_NPY_DIR):
+def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, SLIDE_NPY_DIR, slide_store_dir):
     outputs = copy.deepcopy(outputs)
     try:
         slide_id = outputs[0]['slide_id']   
@@ -172,7 +172,7 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets, contour_level, SLIDE
 
         print(f" >>>>>>> Processing [{slide_id}] <<<<<<<<")
 
-        store = DataStore_v2()
+        store = DataStore_v2(slide_store_dir)
         store.ensure_datastore(slide_id, "slide")
 
         for user_annotation in outputs:
