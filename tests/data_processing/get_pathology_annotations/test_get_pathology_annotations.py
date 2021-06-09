@@ -12,6 +12,7 @@ from data_processing.common.DataStore import DataStore_v2
 
 from pytest_mock import mocker
 from mock import patch
+import json
 
 
 @pytest.fixture
@@ -49,9 +50,10 @@ def test_get_regional_annotation(mocker, client, monkeypatch):
     monkeypatch.setattr(DataStore_v2, "get", mock_datastore_get)
         
     response = client.get('/mind/api/v1/getPathologyAnnotation/test/123456/regional/DEFAULT_LABELS')
-    print(response)
-    print(response.data )
-    assert b'{"features":[{"geometry":{"coordinates":[[1261,2140]' in response.data
+
+    response_data = json.loads(response.get_data(as_text=True))
+    assert "features" in response_data
+
 
 
 @patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)

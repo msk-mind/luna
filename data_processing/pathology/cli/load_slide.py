@@ -44,21 +44,40 @@ def load_slide_with_datastore(app_config, cohort_id, container_id, method_data):
     logger = logging.getLogger(f"[datastore={container_id}]")
 
     # Do some setup
-    cfg = ConfigSet("APP_CFG",  config_file=app_config)
-    datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
+    cfg = ConfigSet("APP_CFG", config_file=app_config)
+    datastore = DataStore(cfg)
+    datastore.createNamespace(cohort_id)
+    datastore.setNamespace(cohort_id)
+    datastore.createDatastore(container_id, 'slide')
+    datastore.setDatastore  (container_id)
     method_id   = method_data["job_tag"]
+
+    # fetch patient_id column 
+    patient_id_column  = method_data.get("patient_id_column_name", None)
+    if patient_id_column == "": patient_id_column = None
 
     try:
         spark  = SparkConfig().spark_session("APP_CFG", "query_slide")
         slide_id = datastore._name.upper()
-        df = spark.read.format("delta").load(method_data['table_path'])\
-            .where(f"UPPER(slide_id)='{slide_id}'")\
-            .select("path", "metadata")\
-            .toPandas()
+
+        if patient_id_column:
+            # assumes parquet from dremio for now, todo: change
+            df = spark.read.parquet(method_data['table_path'])\
+                .where(f"UPPER(slide_id)='{slide_id}'")\
+                .select("path", "metadata", patient_id_column)\
+                .toPandas()
+
+        else:
+            df = spark.read.format("delta").load(method_data['table_path'])\
+                .where(f"UPPER(slide_id)='{slide_id}'")\
+                .select("path", "metadata")\
+                .toPandas()
 
         spark.stop()
         
-        if not len(df) == 1: raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {slide_id}")
+        if not len(df) == 1: 
+            print(df)
+            raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {slide_id}")
             
         record = df.loc[0]
 
@@ -66,8 +85,16 @@ def load_slide_with_datastore(app_config, cohort_id, container_id, method_data):
         logger.exception (f"{e}, stopping job execution...")
         raise e
 
+    # convert nested row-type into dict
+    metadata = record['metadata'][0]
+    properties = {x.asDict()['key']:x.asDict()['value'] for x in metadata}
+    if patient_id_column:
+        properties['patient_id'] = record[patient_id_column]
+
+
+    print(properties)
     # Put results in the data store
-    slide = Node("WholeSlideImage", method_id, record['metadata'])
+    slide = Node("WholeSlideImage", method_id, properties)
     # Do some path processing...we pulled the first dicom image, but need the parent image folder
     data_path = Path(record['path'].split(':')[-1])
     slide.set_data(data_path)

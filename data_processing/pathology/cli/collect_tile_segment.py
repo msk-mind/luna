@@ -53,6 +53,8 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
     cfg = ConfigSet("APP_CFG", config_file=app_config)
 
     input_tile_data_id   = method_data.get("input_label_tag")
+    input_wsi_tag  = method_data.get("input_wsi_tag")
+
     output_datastore_id  = method_data.get("output_datastore")
 
     input_datastore  = DataStore( cfg ).setNamespace(cohort_id)\
@@ -63,6 +65,7 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
         .setDatastore(output_datastore_id)
 
     image_node  = input_datastore.get("TileImages", input_tile_data_id)
+    slide_node  = input_datastore.get("WholeSlideImage", input_wsi_tag)
 
     try:
         if image_node is None:
@@ -73,9 +76,15 @@ def collect_tile_with_datastore(app_config: str, cohort_id: str, container_id: s
         if cfg.get_value(path='APP_CFG::OBJECT_STORE_ENABLED'):
             df.loc[:,"object_bucket"] = image_node.properties['object_bucket']
             df.loc[:,"object_path"]   = image_node.properties['object_folder'] + "/tiles.slice.pil"
+            if slide_node and 'patient_id' in slide_node.properties:
+                df.loc[:,"patient_id"]   = slide_node.properties['patient_id']
+            
         df.loc[:,"id_slide_container"] = input_datastore._name
 
-        df = df.set_index(["id_slide_container", "address"])
+        if 'patient_id' in df:
+            df = df.set_index(["patient_id", "id_slide_container", "address"])
+        else:
+            df = df.set_index(["id_slide_container", "address"])
         logger.info(df)
 
         output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], cfg.get_value(path="APP_CFG::ENV"),
