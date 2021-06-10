@@ -89,6 +89,8 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
                 return "Invalid ID"
 
         # point annots still uses spark-ETL-based organization
+        ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, PROJECT_MAPPING[project])
+
         if annotation_type == "point":
                 DATA_TYPE = ANNOTATION_TABLE_MAPPINGS[annotation_type]["DATA_TYPE"]
                 GEOJSON_COLUMN = ANNOTATION_TABLE_MAPPINGS[annotation_type]["GEOJSON_COLUMN_NAME"]
@@ -101,7 +103,7 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
                 geojson = row.select(to_json(GEOJSON_COLUMN).alias("val")).head()['val']
                 return geojson
         elif annotation_type == "regional":
-                store = DataStore_v2()
+                store = DataStore_v2(os.path.join(ANNOTATIONS_FOLDER, "slides"))
                 geojson_path = store.get (store_id=slide_id, namespace_id='CONCAT', data_type='RegionalAnnotationJSON', data_tag=labelset.upper())
                 print(geojson_path)
                 with open(geojson_path) as geojson_file:
