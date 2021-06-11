@@ -50,9 +50,11 @@ def randomise_roi_contours(img_obj, roi_list, settings):
     # Iterate over roi objects
     for roi_ind in np.arange(0, len(roi_list)):
         print (f">>> Processing ROI with label [{roi_list[roi_ind].label_value}]")
+        
         # Resect image to speed up segmentation process
         res_img_obj, res_roi_obj = crop_image(img_obj=img_obj, roi_obj=roi_list[roi_ind], boundary=5.0, z_only=False)
 
+        print (f"Res_roi_obj shape = {res_roi_obj.roi.size}")
         # Calculate statistics on post-processed, cropped ROI
         res_roi_obj.calculate_roi_statistics(img_obj=res_img_obj, tag="postprocess")
             
@@ -99,7 +101,7 @@ def randomise_roi_contours(img_obj, roi_list, settings):
         print ("Candidate segments: ", len(candidate_indices))
 
         # Determine grid indices of the resected grid with respect to the original image grid
-        grid_origin = world_to_index(coord=res_img_obj.origin, origin=img_obj.origin, spacing=img_obj.spacing)
+        grid_origin = world_to_index(coord=res_img_obj.origin, origin=img_obj.origin, spacing=img_obj.spacing, affine=img_obj.m_affine)
         grid_origin = grid_origin.astype(np.int)
 
         # Iteratively create randomised regions of interest

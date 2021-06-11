@@ -15,6 +15,12 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+### Fix for annoying glcm message:
+logger = logging.getLogger("radiomics.glcm")
+logger.setLevel(logging.ERROR)
+
+## Fix for ITK snap
+
 def find_centroid(image, width, height):
     """
     Find the centroid of the 2d segmentation.

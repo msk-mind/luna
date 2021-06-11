@@ -113,7 +113,7 @@ def with_dask_runner(func):
         runner.submit(sleep, 10)
     """
 
-    def run_simple(*args, **kwargs):
+    def run_simple(namespace, indicies, *args, **kwargs):
         """
         Only provides runner object to method, no threading
         """
@@ -131,17 +131,13 @@ def with_dask_runner(func):
         logger.info (f"Successfully found worker {worker}")
         logger.info (f"Running job {func} with args: {args}, kwargs: {kwargs}")
 
-        with worker_client() as runner:
 
-            # Add our runner to kwargs
-            kwargs['runner'] = runner
-
-            # Kick off the job
-            try:
-                return_value = func ( *args, **kwargs )
-            except Exception as exc:
-                logger.exception(f"Job execution failed: {exc}")
-                raise JobExecutionError(f"Job {func} did not run successfully, please check input data! {args}, {kwargs}")
+        # Kick off the job
+        try:
+            return_value = func (namespace, indicies, *args, **kwargs )
+        except Exception as exc:
+            logger.exception(f"Job execution failed due to: {exc}", extra={ "namespace":namespace, "key": indicies})
+            raise JobExecutionError(f"Job {func} did not run successfully, please check input data! {args}, {kwargs}")
 
         return return_value
         
