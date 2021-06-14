@@ -7,7 +7,7 @@ from data_processing.pathology.common.utils import get_slide_roi_masks, get_stai
 from distributed import worker_client
 
 @with_dask_runner
-def extract_slide_texture_features(namespace, indicies, slide_path, halo_roi_path, annotation_name, stain_channel, TILE_SIZE=500):
+def extract_slide_texture_features(index, slide_path, halo_roi_path, annotation_name, stain_channel, TILE_SIZE=500):
     print ("Hello from extract_slide_texture_features()")
 
     img_arr, sample_arr, mask_arr = get_slide_roi_masks(
@@ -36,7 +36,7 @@ def extract_slide_texture_features(namespace, indicies, slide_path, halo_roi_pat
                 img_patch_future  = runner.scatter(img_patch)
                 mask_patch_future = runner.scatter(mask_patch)
 
-                address = f"{indicies}_{x}_{y}"
+                address = f"{index}_{x}_{y}"
                 
                 futures.append (
                     runner.submit(extract_patch_texture_features, address, img_patch_future, mask_patch_future, stain_vectors=vectors, stain_channel=stain_channel, glcm_feature='original_glcm_ClusterTendency')
@@ -54,7 +54,7 @@ def extract_slide_texture_features(namespace, indicies, slide_path, halo_roi_pat
             except Exception as exc:
                 print (f"Skipped future: {exc}")
 
-    dest_dir=f"/gpfs/mskmind_ess/aukermaa/data/{indicies}/original_glcm_ClusterTendency/"
+    dest_dir=f"/gpfs/mskmind_ess/aukermaa/data/{index}/original_glcm_ClusterTendency/"
     os.makedirs(dest_dir, exist_ok=True)
     np.save(f"{dest_dir}/vector.npy", features)
 

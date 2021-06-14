@@ -103,42 +103,58 @@ def with_event_loop(func):
         loop.close()
         return result
     
-def with_dask_runner(func):
+def with_dask_runner(job_name):
     """
     The simplier version of a dask job decorator, which only provides the worker_client as a runner to the calling function
 
     Usage:
-    @with_dask_runner
+    @with_dask_runner('my_job')
     my_job(args, kwargs, runner=None):
         runner.submit(sleep, 10)
     """
 
-    def run_simple(namespace, indicies, *args, **kwargs):
-        """
-        Only provides runner object to method, no threading
-        """
-        logger.info ("Initializing job... getting parent worker")
+    def wrapped(func):
 
-        try:
-            worker = get_worker()
-        except ValueError as exc:
-            logger.error("Could not get dask worker!")
-            raise RuntimeError("Data-processing job called without parent dask worker")
-        except Exception as exc:
-            logger.exception(f"Unknown exception when getting dask worker")
-            raise RuntimeError("Could not get worker")
+        def run_simple(namespace, index, *args, **kwargs):
+            """
+            Only provides runner object to method, no threading
+            """
+            # Tell us we are running
+            logger.info (f"Initializing {job_name} @ {namespace}/{index}")
 
-        logger.info (f"Successfully found worker {worker}")
-        logger.info (f"Running job {func} with args: {args}, kwargs: {kwargs}")
+            # See if we are on a dask worker
+            try:
+                worker = get_worker()
+            except ValueError as exc:
+                logger.error("Could not get dask worker!")
+                raise RuntimeError("Data-processing job called without parent dask worker")
+            except Exception as exc:
+                logger.exception(f"Unknown exception when getting dask worker")
+                raise RuntimeError("Could not get worker")
 
+            logger.info (f"Successfully found worker {worker}")
 
-        # Kick off the job
-        try:
-            return_value = func (namespace, indicies, *args, **kwargs )
-        except Exception as exc:
-            logger.exception(f"Job execution failed due to: {exc}", extra={ "namespace":namespace, "key": indicies})
-            raise JobExecutionError(f"Job {func} did not run successfully, please check input data! {args}, {kwargs}")
+            # Jobs get an output directory and an ouput parquet slice
+            output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data_dev", namespace, index)
+            output_ds  = os.path.join(os.environ['MIND_GPFS_DIR'], "data_dev", namespace, job_name.upper() + "_DS")
+            os.makedirs(output_dir, exist_ok=True)
+            os.makedirs(output_ds,  exist_ok=True)
+            output_segment = os.path.join(output_ds, f"ResultSegment-{index}.parquet")
 
-        return return_value
-        
-    return run_simple
+            logger.info(f"Setup ouput dir={output_dir} slice={output_ds}")
+
+            # Kick off the job
+            try:
+                logger.info (f"Running job {func} with args: {args}, kwargs: {kwargs}")
+                return_value = func (index, output_dir, output_segment, *args, **kwargs )
+            except Exception as exc:
+                logger.exception(f"Job execution failed due to: {exc}", extra={ "namespace":namespace, "key": index})
+                raise JobExecutionError(f"Job {func} did not run successfully, please check input data! {args}, {kwargs}")
+
+            return return_value
+
+        run_simple.__name__ = job_name
+
+        return run_simple
+
+    return wrapped
