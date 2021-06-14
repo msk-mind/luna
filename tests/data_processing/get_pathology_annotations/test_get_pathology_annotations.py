@@ -4,10 +4,8 @@ import click
 
 from data_processing.common.config import ConfigSet
 from data_processing.common.sparksession import SparkConfig
-import data_processing.common.constants as const
 
 from data_processing.get_pathology_annotations import get_pathology_annotations
-from data_processing.get_pathology_annotations.get_pathology_annotations import PROJECT_MAPPING
 from data_processing.common.DataStore import DataStore_v2
 
 from pytest_mock import mocker
@@ -31,14 +29,12 @@ def client():
         yield client
 
 
-@patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
 def test_get_point_annotation(mocker, client, monkeypatch):
 
-    response = client.get('/mind/api/v1/getPathologyAnnotation/test/123456/point/LYMPHOCYTE_DETECTION_LABELSET')
+    response = client.get('/mind/api/v1/getPathologyAnnotation/test-project/123456/point/LYMPHOCYTE_DETECTION_LABELSET')
     assert b"[{\"type\":\"Feature\",\"id\":\"PathAnnotationObject" in response.data
 
 
-@patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
 def test_get_regional_annotation(mocker, client, monkeypatch):
 
     def mock_datastore_get(*args, **kwargs):
@@ -49,14 +45,13 @@ def test_get_regional_annotation(mocker, client, monkeypatch):
 
     monkeypatch.setattr(DataStore_v2, "get", mock_datastore_get)
         
-    response = client.get('/mind/api/v1/getPathologyAnnotation/test/123456/regional/DEFAULT_LABELS')
+    response = client.get('/mind/api/v1/getPathologyAnnotation/test-project/123456/regional/DEFAULT_LABELS')
 
     response_data = json.loads(response.get_data(as_text=True))
     assert "features" in response_data
 
 
 
-@patch.dict(PROJECT_MAPPING, {'test': 'test-project'}, clear=True)
 def test_get_bad_slide_id(mocker, client, monkeypatch):
   
     def mock_datastore_get(*args, **kwargs):
@@ -67,7 +62,7 @@ def test_get_bad_slide_id(mocker, client, monkeypatch):
 
     monkeypatch.setattr(DataStore_v2, "get", mock_datastore_get)
 
-    response = client.get('/mind/api/v1/getPathologyAnnotation/test/1/regional/DEFAULT_LABELS')
+    response = client.get('/mind/api/v1/getPathologyAnnotation/test-project/1/regional/DEFAULT_LABELS')
     print(response)
     print(response.data)
 

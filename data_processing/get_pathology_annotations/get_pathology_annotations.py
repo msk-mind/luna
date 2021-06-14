@@ -11,7 +11,6 @@ Example:
 
 from flask import Flask, request, jsonify
 
-from data_processing.common.CodeTimer import CodeTimer
 from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 from data_processing.common.Neo4jConnection import Neo4jConnection
@@ -19,16 +18,9 @@ from data_processing.common.config import ConfigSet
 import data_processing.common.constants as const
 from data_processing.common.DataStore import DataStore_v2
 
-from pyspark.sql.functions import udf, lit
-from pyspark.sql.types import StringType, MapType
 from pyspark.sql.functions import  to_json
-import json
-
 
 import os, shutil, sys, importlib, json, yaml, subprocess, time, click
-import pandas as pd
-from io import BytesIO
-from distutils.util import strtobool
 import re
 
 
@@ -41,7 +33,6 @@ APP_CFG = "getPathologyAnnotations"
 slide_id_regex = re.compile("\d{6,}")
 slide_hid_regex = re.compile("HobI\d{2}-\d{12,}")
 
-PROJECT_MAPPING = const.PROJECT_MAPPING
 ANNOTATION_TABLE_MAPPINGS = const.ANNOTATION_TABLE_MAPPINGS
 
 # ==================================================================================================
@@ -89,12 +80,12 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
                 return "Invalid ID"
 
         # point annots still uses spark-ETL-based organization
-        ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, PROJECT_MAPPING[project])
+        ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, project)
 
         if annotation_type == "point":
                 DATA_TYPE = ANNOTATION_TABLE_MAPPINGS[annotation_type]["DATA_TYPE"]
                 GEOJSON_COLUMN = ANNOTATION_TABLE_MAPPINGS[annotation_type]["GEOJSON_COLUMN_NAME"]
-                ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, PROJECT_MAPPING[project])
+                ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, project)
                 GEOJSON_TABLE_PATH = os.path.join(ANNOTATIONS_FOLDER , "tables", DATA_TYPE)
 
                 row = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset.upper()}' and latest=True")
