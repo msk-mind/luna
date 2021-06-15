@@ -29,10 +29,10 @@ if (!ignoreExisting && !existingPoints.isEmpty()) {
 def imageData = getCurrentImageData()
 def filename = GeneralTools.getNameWithoutExtension(imageData.getServer().getMetadata().getName())
 
-def slide_identifier = filename.replace(".svs", "").toString()    
+def image_id = filename.replace(".svs", "").toString()    
 // make sure to change URL, details can be found on confluence on how to configure the API's url accordingly.
-// API FORMAT  http://{SERVER}:{PORT}/mind/api/v1/getPathologyAnnotation/{DMT_name}/{slide_identifier: either HobI-ID or Slide-ID}/point/{labelset_name}
-def url = "http://SERVER:PORT/mind/api/v1/getPathologyAnnotation/msk_mind_ov/" + slide_identifier + "/point/lymphocyte_detection_labelset"
+// API FORMAT  http://{SERVER}:{PORT}/mind/api/v1/getPathologyAnnotation/{PROJECT}/{image_id}/point/{labelset_name}
+def url = "http://SERVER:PORT/mind/api/v1/getPathologyAnnotation/OV_16-158/" + image_id + "/point/lymphocyte_detection_labelset"
 print(url)
 
 def get = new URL(url).openConnection();
