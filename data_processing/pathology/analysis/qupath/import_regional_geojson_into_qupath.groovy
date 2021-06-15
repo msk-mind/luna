@@ -13,11 +13,11 @@ import qupath.lib.geom.Point2
 
 def imageData = getCurrentImageData()
 def filename = GeneralTools.getNameWithoutExtension(imageData.getServer().getMetadata().getName())
-def slide_identifier = filename.replace(".svs", "").toString()    
+def image_id = filename.replace(".svs", "").toString()    
 
 // make sure to change URL, details can be found on confluence on how to configure the API's url accordingly.
-// API FORMAT  http://{SERVER}:{PORT}/mind/api/v1/getPathologyAnnotation/{DMT_name}/{slide_identifier: either HobI-ID or Slide-ID}/regional/{labelset_name}
-def url = "http://SERVER:PORT/mind/api/v1/getPathologyAnnotation/msk_mind_ov/" + slide_identifier + "/regional" + "/simplified_pixel_classifier_labels"
+// API FORMAT  http://{SERVER}:{PORT}/mind/api/v1/getPathologyAnnotation/{PROJECT}/{image_id}/regional/{labelset_name}
+def url = "http://SERVER:PORT/mind/api/v1/getPathologyAnnotation/OV_16-158/" + image_id + "/regional" + "/simplified_pixel_classifier_labels"
 print(url)
 
 def get = new URL(url).openConnection();
