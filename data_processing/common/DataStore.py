@@ -18,11 +18,8 @@ class DataStore_v2:
         logger.info(f"Configured datastore with {self.params}")
 
         self.backend = store_location
+        os.makedirs(self.backend, exist_ok=True)
         logger.info(f"Datstore file backend= {self.backend}")
-
-        if not os.path.exists( self.backend ): 
-            logger.warning (f"Invalid backend {self.backend}, path does not exist on this node, writes will raise errors!")
-
 
     def ensure_datastore(self, datastore_id, datastore_type):
         """
@@ -47,7 +44,7 @@ class DataStore_v2:
         else:
             logger.error("The datastore {node} could not be created or found")
         
-    def write_to_graph_store(self, node, store_id):
+    def _write_to_graph_store(self, node, store_id):
         """ Saves the 'node' to a datastore managed in the graph DB """
 
         try:
@@ -78,9 +75,6 @@ class DataStore_v2:
     def put(self, filepath, store_id, namespace_id, data_type, data_tag='data', metadata={} ):
         """ Puts the file at filepath at the proper location given a store_id, namespace_id, data_type, and data_tag, and save metadata to DB """
 
-        if not os.path.exists( self.backend ): 
-            raise ValueError (f"Invalid backend {self.backend}, path does not exist on this node.")
-
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
         os.makedirs(dest_dir, exist_ok=True)
         logger.info(f"Save {filepath} -> {dest_dir}")
@@ -90,15 +84,12 @@ class DataStore_v2:
             node = Node(data_type, data_tag, metadata)
             node.set_namespace(namespace_id, store_id)
             logger.info(f"Adding: {node}")
-            self.write_to_graph_store (node, store_id)
+            self._write_to_graph_store (node, store_id)
         
         return dest_dir
     
     def write(self, iostream, store_id, namespace_id, data_type, data_tag, metadata={}, dtype='w'):
-        """ Puts the file at filepath at the proper location given a store_id, namespace_id, data_type, and data_tag, and save metadata to DB """
-
-        if not os.path.exists( self.backend ): 
-            raise ValueError (f"Invalid backend {self.backend}, path does not exist on this node.")
+        """ Writes iostream at the proper location given a store_id, namespace_id, data_type, and data_tag, and save metadata to DB """
 
         dest_path_dir  = os.path.join (store_id, namespace_id, data_type)
         dest_path_file = os.path.join (dest_path_dir, data_tag)
@@ -115,7 +106,7 @@ class DataStore_v2:
             node = Node(data_type, data_tag, metadata)
             node.set_namespace(namespace_id, store_id)
             logger.info(f"Adding: {node}")
-            self.write_to_graph_store (node, store_id)
+            self._write_to_graph_store (node, store_id)
 
         return dest_file 
 
