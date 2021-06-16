@@ -61,36 +61,41 @@ def load_slide_with_datastore(app_config, cohort_id, container_id, method_data):
         slide_id = datastore._name.upper()
 
         if patient_id_column:
-            # assumes parquet from dremio for now, todo: change
+            # assumes if patient_id column, source is parquet from dremio
+            # right now has nested row-type into dict, todo: account for map type representation of dict in dremio
             df = spark.read.parquet(method_data['table_path'])\
                 .where(f"UPPER(slide_id)='{slide_id}'")\
                 .select("path", "metadata", patient_id_column)\
                 .toPandas()
+
+            if not len(df) == 1: 
+                print(df)
+                raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {slide_id}")
+
+            record = df.loc[0]
+            metadata = record['metadata'][0]
+            properties = {x.asDict()['key']:x.asDict()['value'] for x in metadata}
+            properties['patient_id'] = record[patient_id_column]
 
         else:
             df = spark.read.format("delta").load(method_data['table_path'])\
                 .where(f"UPPER(slide_id)='{slide_id}'")\
                 .select("path", "metadata")\
                 .toPandas()
+            
+            if not len(df) == 1: 
+                print(df)
+                raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {slide_id}")
+
+            record = df.loc[0]
+            properties = record['metadata']
 
         spark.stop()
         
-        if not len(df) == 1: 
-            print(df)
-            raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {slide_id}")
-            
-        record = df.loc[0]
 
     except Exception as e:
         logger.exception (f"{e}, stopping job execution...")
         raise e
-
-    # convert nested row-type into dict
-    metadata = record['metadata'][0]
-    properties = {x.asDict()['key']:x.asDict()['value'] for x in metadata}
-    if patient_id_column:
-        properties['patient_id'] = record[patient_id_column]
-
 
     print(properties)
     # Put results in the data store
