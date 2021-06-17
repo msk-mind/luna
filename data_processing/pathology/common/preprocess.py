@@ -409,6 +409,7 @@ def run_model(pil_file_path: str, csv_file_path: str, output_dir: str, params: d
     counter = 0
     model_scores = []
     tumor_score  = []
+    label_score = []
 
     fp = open(pil_file_path, "rb")
 
@@ -429,10 +430,12 @@ def run_model(pil_file_path: str, csv_file_path: str, output_dir: str, params: d
 
             model_scores.append( 'Label-' + str( scores.argmax(1).item()) )
             tumor_score.append( scores.flatten()[0].item() )
-
+            label_score.append( scores.max().item() )
+            
     
     df_tiles_to_process.loc[:, "model_score"] =  model_scores
     df_tiles_to_process.loc[:, "tumor_score"] =  tumor_score
+    df_tiles_to_process.loc[:, "label_score"] =  label_score
 
     logger.info(df_tiles_to_process)
 
@@ -480,7 +483,7 @@ def create_tile_thumbnail_image(slide_file_path: str, scores_file_path: str, out
     df_scores      = pd.read_csv(scores_file_path).set_index("address")
 
     # only visualize tile scores that were able to be computed
-    all_score_types = {"tumor_score", "model_score", "purple_score", "otsu_score", "regional_label"}
+    all_score_types = {"tumor_score", "model_score", "label_score", "purple_score", "otsu_score", "regional_label"}
     score_types_to_visualize = set(list(df_scores.columns)).intersection(all_score_types)
 
     for score_type_to_visualize in score_types_to_visualize:
