@@ -449,6 +449,8 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
 
     :return: property dict, None if function fails
     """
+    lesion_index = params['radiomicsFeatureExtractor']['label']
+
     if tag is not None:
         output_dir =  os.path.join(output_dir, tag)
         os.makedirs(output_dir, exist_ok=True)
@@ -480,17 +482,18 @@ def extract_radiomics(image_path: str, label_path: str, output_dir: str, params:
         if params.get("enableAllImageTypes", False): extractor.enableAllImageTypes()
 
         result = extractor.execute(image_path, label_path)
-        result['lesion_id'] = tag
+        result['lesion_index'] = lesion_index 
+        result['job_tag'] = tag 
 
         result_list.append( pd.Series(result).to_frame().transpose() )
 
-    output_filename = os.path.join(output_dir, f"{tag}.csv")
+    output_filename = os.path.join(output_dir, f"tag{tag}-lesion_index{lesion_index}.csv")
     logger.info("Saving to " + output_filename)
     pd.concat(result_list).to_csv(output_filename)
 
     logger.info(pd.concat(result_list))
 
-    return pd.concat(result_list)
+    return pd.concat(result_list).set_index(['job_tag', 'lesion_index'])
 
     # return properties
 
