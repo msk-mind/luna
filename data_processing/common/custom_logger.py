@@ -28,7 +28,11 @@ def init_logger(filename='data-processing.log', level=logging.WARNING):
     if os.path.exists('conf/logging.cfg'):
         cfg = ConfigSet(name='LOG_CFG',  config_file='conf/logging.cfg')
     else:
-        cfg = ConfigSet(name='LOG_CFG',  config_file='conf/logging.default.yml')
+        import data_processing
+        from pathlib import Path
+        dp_path = data_processing.__path__[0]
+        parent_folder = str(Path(dp_path).parent)
+        cfg = ConfigSet(name='LOG_CFG',  config_file=os.path.join(parent_folder, 'conf/logging.default.yml'))
     
     if not logger.handlers:
         # create console handler with a customizable, higher log level
