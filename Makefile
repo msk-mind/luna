@@ -37,6 +37,13 @@ dist: clean
 	python setup.py bdist_wheel
 	ls -l dist
 
+# https://packaging.python.org/tutorials/packaging-projects/
+test-upload:
+	python3 -m twine upload --verbose --repository testpypi dist/*.whl
+
+upload:
+	python3 -m twine upload dist/*.whl
+
 
 lint:
 	flake8 data-processing test
