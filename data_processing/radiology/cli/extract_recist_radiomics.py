@@ -103,7 +103,7 @@ if __name__=='__main__':
     import pandas as pd
 
 
-    df = pd.read_csv("/gpfs/mskmindhdp_emc/user/shared_data_folder/lung-mind-project/inventory/radiology_inventory_v1.csv").set_index("deid")
+    df = pd.read_csv("/gpfs/mskmindhdp_emc/user/shared_data_folder/lung-mind-project/inventory/radiology_inventory_v2.csv").set_index("output_key")
     futures = []
 
     client = Client(threads_per_worker=1, n_workers=25)
@@ -116,7 +116,7 @@ if __name__=='__main__':
 
         print (index, row.dicom_path, row.radiology_segmentation_path)
 
-        futures.append( client.submit (extract_recist_radiomics, "LUNG_RADIOMICS_spacing1.25_indexing", index, row.dicom_path, row.radiology_segmentation_path) )
+        futures.append( client.submit (extract_recist_radiomics, "LUNG_RADIOMICS_spacing1.25_dmp", index, row.dicom_path, row.radiology_segmentation_path) )
 
     wait (futures)
 
