@@ -32,7 +32,7 @@ def client():
 def test_get_point_annotation(mocker, client, monkeypatch):
 
     response = client.get('/mind/api/v1/getPathologyAnnotation/test-project/123456/point/LYMPHOCYTE_DETECTION_LABELSET')
-    assert b"[{\"type\":\"Feature\",\"id\":\"PathAnnotationObject" in response.data
+    assert b"[{\"type\": \"Feature\", \"id\": \"PathAnnotationObject" in response.data
 
 
 def test_get_regional_annotation(mocker, client, monkeypatch):

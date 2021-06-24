@@ -66,11 +66,11 @@ def test_create_proxy_table(monkeypatch):
 
     create_proxy_table()
 
-    df = spark.read.format("delta").load(point_json_table_path)
+    df = spark.read.format("parquet").load(point_json_table_path)
 
     assert 2 == df.count()
     assert set(["slideviewer_path","slide_id","sv_project_id","user",
-                "sv_json", "sv_json_record_uuid", "latest", "date_added", "date_updated"]) == set(df.columns)
+                "sv_json", "sv_json_record_uuid"]) == set(df.columns)
 
     df.unpersist()
 

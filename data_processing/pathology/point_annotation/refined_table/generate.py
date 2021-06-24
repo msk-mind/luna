@@ -110,32 +110,9 @@ def create_refined_table():
     from utils import generate_uuid_dict
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
 
-    df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVPTGEOJSON"), "labelset"))) \
-        .withColumn("latest", lit(True)) \
-        .withColumn("date_added", current_timestamp()) \
-        .withColumn("date_updated", current_timestamp())
+    df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVPTGEOJSON"), "labelset")))
 
-    # create geojson delta table
-    # update main table if exists, otherwise create main table
-    if not os.path.exists(geojson_table_path):
-        df.write.format("delta").save(geojson_table_path)
-    else:
-        from delta.tables import DeltaTable
-        geojson_table = DeltaTable.forPath(spark, geojson_table_path)
-        geojson_table.alias("main_pt_geojson_table") \
-            .merge(df.alias("pt_geojson_annotation_updates"), "main_pt_geojson_table.geojson_record_uuid = pt_geojson_annotation_updates.geojson_record_uuid") \
-            .whenMatchedUpdate(set = { "main_pt_geojson_table.date_updated" : "pt_geojson_annotation_updates.date_updated" } ) \
-            .whenNotMatchedInsertAll() \
-            .execute()
-
-    # add latest flag
-    windowSpec = Window.partitionBy("user", "slide_id", "labelset").orderBy(desc("date_updated"))
-    # Note that last != opposite of first! Have to use desc ordering with first...
-    spark.read.format("delta").load(geojson_table_path) \
-        .withColumn("date_latest", first("date_updated").over(windowSpec)) \
-        .withColumn("latest", col("date_latest")==col("date_updated")) \
-        .drop("date_latest") \
-        .write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(geojson_table_path)
+    df.write.format("parquet").mode("overwrite").save(geojson_table_path)
 
 if __name__ == "__main__":
     cli()

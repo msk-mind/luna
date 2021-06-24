@@ -40,7 +40,7 @@ def test_cli(spark):
     assert os.path.exists(app_config_path)
     assert os.path.exists(data_config_path)
 
-    df = spark.read.format("delta").load(point_geojson_table_path)
+    df = spark.read.format("parquet").load(point_geojson_table_path)
     df.show(10, False)
     assert df.count() == 1
     df.unpersist()

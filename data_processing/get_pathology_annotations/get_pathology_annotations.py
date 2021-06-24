@@ -18,7 +18,7 @@ from data_processing.common.config import ConfigSet
 import data_processing.common.constants as const
 from data_processing.common.DataStore import DataStore_v2
 
-from pyspark.sql.functions import  to_json
+from pyarrow.parquet import read_table
 
 import os, shutil, sys, importlib, json, yaml, subprocess, time, click
 import re
@@ -70,8 +70,6 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
         
         pathology_root_path = app.config.get('pathology_root_path')
 
-        spark = app.config.get('spark')
-
         if slide_hid_regex.match(id):
                 slide_id = get_slide_id(id, "slide_hid")
         elif slide_id_regex.match(id):
@@ -84,14 +82,14 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
 
         if annotation_type == "point":
                 DATA_TYPE = ANNOTATION_TABLE_MAPPINGS[annotation_type]["DATA_TYPE"]
-                GEOJSON_COLUMN = ANNOTATION_TABLE_MAPPINGS[annotation_type]["GEOJSON_COLUMN_NAME"]
-                ANNOTATIONS_FOLDER = os.path.join(pathology_root_path, project)
                 GEOJSON_TABLE_PATH = os.path.join(ANNOTATIONS_FOLDER , "tables", DATA_TYPE)
 
-                row = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset.upper()}' and latest=True")
-                if row.count() == 0:
+                row = read_table(GEOJSON_TABLE_PATH, columns = ["geojson"],
+                                filters = [('slide_id', '=', f'{slide_id}')])
+
+                if len(row) == 0:
                         return "No annotations match the provided query."
-                geojson = row.select(to_json(GEOJSON_COLUMN).alias("val")).head()['val']
+                geojson = json.dumps(row["geojson"].to_pylist()[0])
                 return geojson
         elif annotation_type == "regional":
                 store = DataStore_v2(os.path.join(ANNOTATIONS_FOLDER, "slides"))
@@ -112,7 +110,6 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
                    "See data_processing/get_pathology_annotations/app_config.yaml.template")
 def cli(config_file):
         cfg = ConfigSet(name=APP_CFG, config_file=config_file)
-        spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="data_processing.mind.api")   
         pathology_root_path = cfg.get_value(path=APP_CFG+'::$.pathology[:1]["root_path"]')
 
         if os.environ.get("PATHOLOGY_ROOT_PATH", False): 
@@ -121,10 +118,7 @@ def cli(config_file):
             logger.info("pathology_root_path=" + pathology_root_path)
 
         app.config['cfg'] = cfg
-        app.config['spark'] = spark
         app.config['pathology_root_path'] = pathology_root_path
-
-
 
 
         app.run(host='0.0.0.0',port=5002, debug=False)
