@@ -130,34 +130,11 @@ def create_proxy_table():
     from utils import generate_uuid_dict
     sv_json_record_uuid_udf = udf(generate_uuid_dict, StringType())
 
-    df = df.withColumn("sv_json_record_uuid", sv_json_record_uuid_udf(to_json("sv_json"), array(lit("SVPTJSON")))) \
-        .withColumn("latest", lit(True)) \
-        .withColumn("date_added", current_timestamp()) \
-        .withColumn("date_updated", current_timestamp())
+    df = df.withColumn("sv_json_record_uuid", sv_json_record_uuid_udf(to_json("sv_json"), array(lit("SVPTJSON"))))
 
     df.show(10, False)
+    df.write.format("parquet").mode("overwrite").save(point_table_path)
 
-    # create proxy sv_point json table
-    # update main table if exists, otherwise create main table
-    if not os.path.exists(point_table_path):
-        df.write.format("delta").save(point_table_path)
-    else:
-        from delta.tables import DeltaTable
-        point_table = DeltaTable.forPath(spark, point_table_path)
-        point_table.alias("main_point_table") \
-            .merge(df.alias("point_annotation_updates"), "main_point_table.sv_json_record_uuid = point_annotation_updates.sv_json_record_uuid") \
-            .whenMatchedUpdate(set = { "date_updated" : "point_annotation_updates.date_updated" } ) \
-            .whenNotMatchedInsertAll() \
-            .execute()
-
-    # add latest flag
-    windowSpec = Window.partitionBy("user", "slide_id").orderBy(desc("date_updated"))
-    # Note that last != opposite of first! Have to use desc ordering with first...
-    spark.read.format("delta").load(point_table_path) \
-        .withColumn("date_latest", first("date_updated").over(windowSpec)) \
-        .withColumn("latest", col("date_latest")==col("date_updated")) \
-        .drop("date_latest") \
-        .write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(point_table_path)
 
 if __name__ == "__main__":
     cli()
