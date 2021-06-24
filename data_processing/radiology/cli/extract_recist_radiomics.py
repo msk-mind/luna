@@ -11,7 +11,7 @@ from distributed import worker_client
 
 init_logger()
 
-@as_dask_job('recist_radiomics')
+@dask_job('recist_radiomics')
 def extract_recist_radiomics(index, output_dir, output_segment, dicom_path, segment_path):
     """ 
     The RECIST-style radiomics job, consisting of multiple task modules 
