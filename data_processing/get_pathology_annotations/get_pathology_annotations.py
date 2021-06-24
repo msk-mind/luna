@@ -18,7 +18,6 @@ from data_processing.common.config import ConfigSet
 import data_processing.common.constants as const
 from data_processing.common.DataStore import DataStore_v2
 
-from pyspark.sql.functions import  to_json
 from pyarrow.parquet import read_table
 
 import os, shutil, sys, importlib, json, yaml, subprocess, time, click
@@ -88,7 +87,6 @@ def getPathologyAnnotation(annotation_type, project,id, labelset):
                 row = read_table(GEOJSON_TABLE_PATH, columns = ["geojson"],
                                 filters = [('slide_id', '=', f'{slide_id}')])
 
-                #row = spark.read.format("delta").load(GEOJSON_TABLE_PATH).where(f"slide_id='{slide_id}' and labelset='{labelset.upper()}'")
                 if len(row) == 0:
                         return "No annotations match the provided query."
                 geojson = json.dumps(row["geojson"].to_pylist()[0])
