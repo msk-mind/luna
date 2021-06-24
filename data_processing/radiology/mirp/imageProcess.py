@@ -306,6 +306,8 @@ def get_supervoxel_overlap(roi_obj, img_segments, mask=None):
     overlap_size           = overlap_size[overlap_segment_labels > 0]
     overlap_segment_labels = overlap_segment_labels[overlap_segment_labels > 0]
 
+    if len(overlap_size)==0: raise RuntimeError("No valid supervoxels found, this can happen if the entire grid recieved label 0 from slic, did you window out your tumor?")
+
     # Check the actual size of the segments overlapping with the current contour
     segment_size = list(map(lambda x: np.sum([img_segments == x]), overlap_segment_labels))
 

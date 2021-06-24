@@ -21,6 +21,7 @@ def get_local_dask_directory():
     local_directory = os.path.join(local_directory, "dask-worker-space")
     return local_directory
 
+class JobExecutionError(Exception): pass
 
 def with_event_loop(func):
     """
@@ -102,41 +103,58 @@ def with_event_loop(func):
         loop.close()
         return result
     
-def with_dask_runner(func):
+def dask_job(job_name):
     """
     The simplier version of a dask job decorator, which only provides the worker_client as a runner to the calling function
 
     Usage:
-    @with_dask_runner
+    @dask_job('my_job')
     my_job(args, kwargs, runner=None):
         runner.submit(sleep, 10)
     """
 
-    def run_simple(*args, **kwargs):
-        """
-        Only provides runner object to method, no threading
-        """
-        logger.info ("Initializing job... getting parent worker")
+    def wrapped(func):
 
-        try:
-            worker = get_worker()
-        except ValueError as exc:
-            logger.error("Could not get dask worker!")
-            raise RuntimeError("Data-processing job called without parent dask worker")
-        except Exception as exc:
-            logger.exception(f"Unknown exception when getting dask worker")
+        def run_simple(namespace, index, *args, **kwargs):
+            """
+            Only provides runner object to method, no threading
+            """
+            # Tell us we are running
+            logger.info (f"Initializing {job_name} @ {namespace}/{index}")
 
-        logger.info (f"Successfully found worker {worker}")
-        logger.info (f"Running job {func} with args: {args}, kwargs: {kwargs}")
+            # See if we are on a dask worker
+            try:
+                worker = get_worker()
+            except ValueError as exc:
+                logger.error("Could not get dask worker!")
+                raise RuntimeError("Data-processing job called without parent dask worker")
+            except Exception as exc:
+                logger.exception(f"Unknown exception when getting dask worker")
+                raise RuntimeError("Could not get worker")
 
-        with worker_client() as runner:
+            logger.info (f"Successfully found worker {worker}")
 
-            # Add our runner to kwargs
-            kwargs['runner'] = runner
+            # Jobs get an output directory and an ouput parquet slice
+            output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data_dev", namespace, index)
+            output_ds  = os.path.join(os.environ['MIND_GPFS_DIR'], "data_dev", namespace, job_name.upper() + "_DS")
+            os.makedirs(output_dir, exist_ok=True)
+            os.makedirs(output_ds,  exist_ok=True)
+            output_segment = os.path.join(output_ds, f"ResultSegment-{index}.parquet")
+
+            logger.info(f"Setup ouput dir={output_dir} slice={output_ds}")
 
             # Kick off the job
-            return_value = func ( *args, **kwargs )
+            try:
+                logger.info (f"Running job {func} with args: {args}, kwargs: {kwargs}")
+                return_value = func (index, output_dir, output_segment, *args, **kwargs )
+            except Exception as exc:
+                logger.exception(f"Job execution failed due to: {exc}", extra={ "namespace":namespace, "key": index})
+                raise JobExecutionError(f"Job {func} did not run successfully, please check input data! {args}, {kwargs}")
 
-        return return_value
-        
-    return run_simple
+            return return_value
+
+        run_simple.__name__ = job_name
+
+        return run_simple
+
+    return wrapped

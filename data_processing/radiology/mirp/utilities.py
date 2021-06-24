@@ -3,16 +3,21 @@ from collections import Counter
 from itertools import product
 
 import pandas as pd
-
+import numpy as np
 
 def index_to_world(index, origin, spacing):
     """"Translates index to world coordinates"""
     return origin + index * spacing
 
 
-def world_to_index(coord, origin, spacing):
+def world_to_index(coord, origin, spacing, affine=None):
+
     """"Translates world coordinates to index"""
-    return (coord - origin) / spacing
+    if not np.array_equal( spacing , np.diag(affine)): print ("Warning, affine does not match spacing!", spacing, affine)
+    if affine is None:
+        return (coord - origin) / spacing
+    else:
+        return (coord - origin) / np.diag(affine) 
 
 
 def extract_roi_names(roi_list):
