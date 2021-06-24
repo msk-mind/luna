@@ -103,12 +103,12 @@ def with_event_loop(func):
         loop.close()
         return result
     
-def with_dask_runner(job_name):
+def dask_job(job_name):
     """
     The simplier version of a dask job decorator, which only provides the worker_client as a runner to the calling function
 
     Usage:
-    @with_dask_runner('my_job')
+    @dask_job('my_job')
     my_job(args, kwargs, runner=None):
         runner.submit(sleep, 10)
     """

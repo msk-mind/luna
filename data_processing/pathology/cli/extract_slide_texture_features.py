@@ -6,8 +6,8 @@ from data_processing.common.dask import with_dask_runner
 from data_processing.pathology.common.utils import get_slide_roi_masks, get_stain_vectors_macenko, extract_patch_texture_features
 from distributed import worker_client
 
-@with_dask_runner
-def extract_slide_texture_features(index, slide_path, halo_roi_path, annotation_name, stain_channel, TILE_SIZE=500):
+@dask_job("stain_glcm")
+def extract_slide_texture_features(index, output_dir, output_segment, slide_path, halo_roi_path, annotation_name, stain_channel, TILE_SIZE=500):
     print ("Hello from extract_slide_texture_features()")
 
     img_arr, sample_arr, mask_arr = get_slide_roi_masks(

@@ -11,8 +11,11 @@ from distributed import worker_client
 
 init_logger()
 
-@with_dask_runner('recist_radiomics')
+@as_dask_job('recist_radiomics')
 def extract_recist_radiomics(index, output_dir, output_segment, dicom_path, segment_path):
+    """ 
+    The RECIST-style radiomics job, consisting of multiple task modules 
+    """
 
     method_data = {
         "window": True,
@@ -20,12 +23,12 @@ def extract_recist_radiomics(index, output_dir, output_segment, dicom_path, segm
         "windowHighLevel": 250,
         "itkImageType": 'nii',
         "strictGeometry": False,
-        "enableAllImageTypes": False,
-        "mirpResampleSpacing": [1.25, 1.25, 1.25],
+        "enableAllImageTypes": True,
+        "mirpResampleSpacing": [1.0, 1.0, 1.0],
         "mirpResampleBeta": 0.95,
         "radiomicsFeatureExtractor": {
-            "binWidth": 10,
-            "resampledPixelSpacing": [1.25, 1.25, 1.25],
+            "binWidth": 25,
+            "resampledPixelSpacing": [1.0, 1.0, 1.0],
             "verbose": "False",
             "geometryTolerance":1e-08
         }
@@ -87,36 +90,11 @@ def extract_recist_radiomics(index, output_dir, output_segment, dicom_path, segm
             tag=f'pertubation-radiomics')
         radiomics_results.append( result )
 
-
     data_table =  pd.concat(radiomics_results)
     data_table = data_table.loc[:, ~data_table.columns.str.contains('diag')]
     data_table = data_table.astype(float)
 
-    data_table['case_accession_number'] = index
+    data_table['main_index'] = index
 
     pq.write_table(pa.Table.from_pandas(data_table), output_segment)
-
-
-if __name__=='__main__':
-    from dask.distributed import Client
-    from dask.distributed import wait
-    import pandas as pd
-
-
-    df = pd.read_csv("/gpfs/mskmindhdp_emc/user/shared_data_folder/lung-mind-project/inventory/radiology_inventory_v2.csv").set_index("output_key")
-    futures = []
-
-    client = Client(threads_per_worker=1, n_workers=25)
-
-    for idx, row in df.iterrows():
-        if row.has_radiology_segmentation==0: continue
-        if row.thoracic_disease==0: continue
-
-        index = str(idx)
-
-        print (index, row.dicom_path, row.radiology_segmentation_path)
-
-        futures.append( client.submit (extract_recist_radiomics, "LUNG_RADIOMICS_spacing1.25_dmp", index, row.dicom_path, row.radiology_segmentation_path) )
-
-    wait (futures)
 
