@@ -9,7 +9,6 @@ from data_processing.pathology.common.preprocess import *
 
 output_dir = "tests/data_processing/pathology/common/testdata/output-123"
 slide_path = "tests/data_processing/pathology/common/testdata/123.svs"
-regional_file_path = "tests/data_processing/pathology/common/testdata/DEFAULT"
 scores_csv_path = "tests/data_processing/pathology/common/testdata/input/tile_scores_and_labels.csv"
 slide = openslide.OpenSlide(slide_path)
 img_arr = get_downscaled_thumbnail(slide, 10)
