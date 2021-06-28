@@ -1,4 +1,5 @@
 {
   "input_label_tag": "test_save_tiles_ov_labels",
-  "output_datastore": "ovarian_clf_v1"
+  "output_datastore": "ovarian_clf_v1",
+  "root_path": "tests/data_processing/pathology/cli/testdata/data/test"
 }

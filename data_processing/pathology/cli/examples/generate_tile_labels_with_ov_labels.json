@@ -4,9 +4,10 @@
   "tile_size": 128,
   "scale_factor": 16,
   "magnification": 20,
-  "slideviewer_dmt": "msk_mind_ov",
+  "project_id": "OV_16-158",
   "labelset": "PIXEL_CLASSIFIER_LABELS",
   "filter": {
     "otsu_score": 0.5
-  }
+  },
+  "root_path": "/path/to/output/data"
 }

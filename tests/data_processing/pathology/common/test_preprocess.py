@@ -9,7 +9,7 @@ from data_processing.pathology.common.preprocess import *
 
 output_dir = "tests/data_processing/pathology/common/testdata/output-123"
 slide_path = "tests/data_processing/pathology/common/testdata/123.svs"
-regional_file_path = "tests/data_processing/pathology/common/testdata/regional_annotation.json"
+regional_file_path = "tests/data_processing/pathology/common/testdata/DEFAULT"
 scores_csv_path = "tests/data_processing/pathology/common/testdata/input/tile_scores_and_labels.csv"
 slide = openslide.OpenSlide(slide_path)
 img_arr = get_downscaled_thumbnail(slide, 10)
@@ -60,23 +60,17 @@ def test_make_otsu():
 def test_pretile_scoring(requests_mock):
 
     # setup
-    os.environ['MIND_API_URI'] = 'localhost'
     os.makedirs(output_dir, exist_ok=True)
-    # mock api call
-    with open(regional_file_path) as regional_file:
-        regional_annotation = json.load(regional_file)
-    requests_mock.get("http://localhost/mind/api/v1/getPathologyAnnotation/8/123/regional/default",
-                      json=regional_annotation)
 
     params = {"tile_size":128,
               "magnification":20,
-              "slideviewer_dmt": "8",
+              "project_id": "project",
               "labelset": "default",
               "filter": {
                   "otsu_score": 0.5
               }
               }
-    res = pretile_scoring(slide_path, output_dir, params, "123")
+    res = pretile_scoring(slide_path, output_dir, "tests/data_processing/pathology/common/testdata", params, "123")
 
     print(res)
     assert 'tests/data_processing/pathology/common/testdata/output-123/tiles.slice.pil' == res['data']

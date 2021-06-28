@@ -2,7 +2,7 @@ from click.testing import CliRunner
 
 from data_processing.common.Neo4jConnection import Neo4jConnection
 from data_processing.pathology.cli.collect_tile_segment import cli
-
+import shutil
 
 def test_cli(mocker):
 
@@ -49,7 +49,7 @@ def test_cli(mocker):
 
     mocker.patch.object(Neo4jConnection, 'test_connection')
 
-    runner = CliRunner(env={'MIND_GPFS_DIR':'tests/data_processing/pathology/cli/testdata'})
+    runner = CliRunner()
     result = runner.invoke(cli, [
         '-a', 'tests/data_processing/pathology/cli/testdata/test_config.yaml',
         '-c', 'test',
@@ -57,3 +57,6 @@ def test_cli(mocker):
         '-m', 'tests/data_processing/pathology/cli/testdata/collect_tile_results.json'])
 
     assert result.exit_code == 0
+    # cleanup
+    shutil.rmtree('tests/data_processing/pathology/cli/testdata/data/test/test')
+

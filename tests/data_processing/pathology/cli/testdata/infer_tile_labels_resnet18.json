@@ -7,6 +7,7 @@
     "model": {
       "checkpoint_path": "some_epoch018.torch",
       "n_classes": 4
-  }
+  },
+  "root_path": "tests/data_processing/pathology/cli/testdata/data_staging"
 }
   

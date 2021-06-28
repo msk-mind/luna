@@ -29,6 +29,7 @@ import importlib
 
 from shapely.geometry import shape, Point, Polygon
 
+from data_processing.common.DataStore import DataStore_v2
 from random import randint
 import torch
 
@@ -247,7 +248,7 @@ def get_regional_labels(address_raster, annotation_polygons, annotation_labels, 
     return regional_label_results
 
 ### MAIN ENTRY METHOD -> pretile
-def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_id: str):
+def pretile_scoring(slide_file_path: str, output_dir: str, root_path: str, params: dict, image_id: str):
     """
     Generate tiles and scores.
 
@@ -261,8 +262,8 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     requested_tile_size       = params.get("tile_size")
     requested_magnification   = params.get("magnification")
 
-    # non-required arguments related to slideviewer annotations
-    slideviewer_dmt           = params.get("slideviewer_dmt", None)
+    # optional arguments related to slideviewer annotations
+    project_id               = params.get("project_id", None)
     labelset                  = params.get("labelset", None)
     filter                    = params.get("filter")
 
@@ -308,20 +309,18 @@ def pretile_scoring(slide_file_path: str, output_dir: str, params: dict, image_i
     df.loc[:, "purple_score"] = get_purple_scores (df['coordinates'], rbg_thumbnail,  thumbnail_tile_size)
 
     # get pathology annotations for slide only if valid parameters
-    if slideviewer_dmt != None and slideviewer_dmt != "" and labelset != None and labelset != "":
-        annotation_url = os.path.join("http://", os.environ['MIND_API_URI'], "mind/api/v1/getPathologyAnnotation/",
-                                      slideviewer_dmt, image_id, "regional", labelset)
+    if project_id != None and project_id != "" and labelset != None and labelset != "":
+        # from get_pathology_annotations
+        store = DataStore_v2(os.path.join(root_path, project_id, "slides"))
+        geojson_path = store.get(store_id=image_id, namespace_id='CONCAT', data_type='RegionalAnnotationJSON',
+                                 data_tag=labelset.upper())
+        if geojson_path:
 
-        response = requests.get(annotation_url)
-        response_text = response.text
+            with open(geojson_path) as geojson_file:
+                annotation_geojson = json.load(geojson_file)
 
-        if response_text == 'No annotations match the provided query.':
-            logger.info("No annotation found for slide.")
-        else:
-            annotation_geojson = response.json()
             annotation_polygons, annotation_labels = build_shapely_polygons_from_geojson(annotation_geojson)
             df.loc[:, "regional_label"] = get_regional_labels (df['coordinates'], annotation_polygons, annotation_labels, full_generator, full_level)
-
 
     fp = open(f"{output_dir}/tiles.slice.pil",'wb')
     offset = 0

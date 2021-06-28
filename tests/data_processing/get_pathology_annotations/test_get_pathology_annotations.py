@@ -39,7 +39,7 @@ def test_get_regional_annotation(mocker, client, monkeypatch):
 
     def mock_datastore_get(*args, **kwargs):
         if kwargs['store_id'] == '123456':
-            return 'tests/data_processing/pathology/common/testdata/regional_annotation.json'
+            return 'tests/data_processing/pathology/common/testdata/project/slides/123/CONCAT/RegionalAnnotationJSON/DEFAULT'
         else:
             raise RuntimeWarning(f"Data not found at 123456")
 
@@ -56,7 +56,7 @@ def test_get_bad_slide_id(mocker, client, monkeypatch):
   
     def mock_datastore_get(*args, **kwargs):
         if kwargs['store_id'] == '123456':
-            return 'tests/data_processing/pathology/common/testdata/regional_annotation.json'
+            return 'tests/data_processing/pathology/common/testdata/project/slides/123/CONCAT/RegionalAnnotationJSON/DEFAULT'
         else:
             raise RuntimeWarning(f"Data not found at 123456")
 
