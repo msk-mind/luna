@@ -577,7 +577,7 @@ def randomize_contours(image_path: str, label_path: str, output_dir: str, params
     roi_class_object_list   = read_itk_segmentation(label_path)
 
     # Crop for faster interpolation
-    # image_class_object, roi_class_object_list = crop_image(img_obj=image_class_object, roi_list=roi_class_object_list, boundary=50.0, z_only=True)
+    image_class_object, roi_class_object_list = crop_image(img_obj=image_class_object, roi_list=roi_class_object_list, boundary=50.0, z_only=True)
 
     # Interpolation
     image_class_object    = interpolate_image (img_obj=image_class_object, settings=settings)
