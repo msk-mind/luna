@@ -20,7 +20,7 @@ SOURCE: slide_viewer
 MODALITY: pathology
 
 # data type within the modality
-DATA_TYPE: REGIONAL_GEOJSON
+DATA_TYPE: REGIONAL_METADATA_RESULTS
 
 # the data on which the request was made
 DATE: 2021-05-11
