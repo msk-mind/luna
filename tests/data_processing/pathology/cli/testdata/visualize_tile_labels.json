@@ -2,5 +2,6 @@
   "input_wsi_tag": "pathology.etl", 
   "input_label_tag": "test_generate_tile_ov_labels",
   "job_tag": "test_visualize_tiles",
-  "scale_factor": 16
+  "scale_factor": 16,
+  "root_path": "tests/data_processing/pathology/cli/testdata/data_staging"
 }

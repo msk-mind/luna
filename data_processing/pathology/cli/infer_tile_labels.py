@@ -71,7 +71,7 @@ def infer_tile_labels_with_datastore(app_config: str, cohort_id: str, container_
 
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], cfg.get_value(path="APP_CFG::ENV"),
+        output_dir = os.path.join(method_data.get("root_path"),
                                   datastore._namespace_id, datastore._name, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 

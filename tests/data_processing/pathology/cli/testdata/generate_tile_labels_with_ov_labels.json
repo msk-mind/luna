@@ -5,5 +5,6 @@
   "scale_factor": 16,
   "magnification": 20,
   "NOT_slideviewer_dmt": "no API",
-  "NOT_labelset": "no API"
+  "NOT_labelset": "no API",
+  "root_path": "tests/data_processing/pathology/cli/testdata/data_staging"
 }

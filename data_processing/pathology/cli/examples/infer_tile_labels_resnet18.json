@@ -8,6 +8,7 @@
     "model": {
       "checkpoint_path": "/gpfs/mskmind_ess/boehmk/histocox/checkpoints/2021-02-06_14.26.33_fold-2_epoch018.torch",
       "n_classes": 4
-  }
+  },
+  "root_path": "/path/to/output/data"
 }
   

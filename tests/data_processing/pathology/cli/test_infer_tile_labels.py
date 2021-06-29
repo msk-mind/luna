@@ -17,7 +17,7 @@ def test_cli(mocker):
 
     mocker.patch.object(Neo4jConnection, 'test_connection')
 
-    runner = CliRunner(env={'MIND_GPFS_DIR':'tests/data_processing/pathology/cli/testdata'})
+    runner = CliRunner()
     result = runner.invoke(cli, [
         '-a', 'tests/data_processing/pathology/cli/testdata/test_config.yaml',
         '-c', 'test',

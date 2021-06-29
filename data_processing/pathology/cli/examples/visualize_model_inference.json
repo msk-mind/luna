@@ -9,6 +9,7 @@
       "host": "localhost",
       "port": "8080",
       "token": "abc123"
-    }
+    },
+    "root_path": "/path/to/output/data"
 }
   
