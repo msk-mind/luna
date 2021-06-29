@@ -4,7 +4,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 import pyarrow as pa
 
-from data_processing.common.dask import with_dask_runner
+from data_processing.common.dask import dask_job 
 from data_processing.common.custom_logger import init_logger
 from data_processing.radiology.common.preprocess import window_dicoms, generate_scan, randomize_contours, extract_radiomics
 from distributed import worker_client
@@ -12,27 +12,10 @@ from distributed import worker_client
 init_logger()
 
 @dask_job('recist_radiomics')
-def extract_recist_radiomics(index, output_dir, output_segment, dicom_path, segment_path):
+def extract_recist_radiomics(index, output_dir, output_segment, dicom_path, segment_path, method_data):
     """ 
     The RECIST-style radiomics job, consisting of multiple task modules 
     """
-
-    method_data = {
-        "window": True,
-        "windowLowLevel": -1150,
-        "windowHighLevel": 250,
-        "itkImageType": 'nii',
-        "strictGeometry": False,
-        "enableAllImageTypes": True,
-        "mirpResampleSpacing": [1.0, 1.0, 1.0],
-        "mirpResampleBeta": 0.95,
-        "radiomicsFeatureExtractor": {
-            "binWidth": 25,
-            "resampledPixelSpacing": [1.0, 1.0, 1.0],
-            "verbose": "False",
-            "geometryTolerance":1e-08
-        }
-    }
 
     shutil.copy(segment_path, output_dir)
 
@@ -54,12 +37,13 @@ def extract_recist_radiomics(index, output_dir, output_segment, dicom_path, segm
         params = method_data, 
         tag="windowed_CT_nii")
 
-    image_properties, label_properties, pertubation_properties, supervoxel_properties = randomize_contours(
-        image_path = windowed_CT_nii_properties['data'], 
-        label_path = segment_path, 
-        output_dir = output_dir, 
-        params = method_data, 
-        tag='randomized_segments')
+    if method_data.get("enableMirp", False):
+         image_properties, label_properties, pertubation_properties, supervoxel_properties = randomize_contours(
+             image_path = windowed_CT_nii_properties['data'], 
+             label_path = segment_path, 
+             output_dir = output_dir, 
+             params = method_data, 
+             tag='randomized_segments')
 
     radiomics_results = []
 
@@ -74,21 +58,22 @@ def extract_recist_radiomics(index, output_dir, output_segment, dicom_path, segm
             tag=f'unfiltered-radiomics')
         radiomics_results.append( result )
 
-        result = extract_radiomics(
-            image_path = image_properties['data'], 
-            label_path = label_properties['data'], 
-            output_dir = output_dir, 
-            params = method_data, 
-            tag=f'filtered-radiomics')
-        radiomics_results.append( result )
-
-        result = extract_radiomics(
-            image_path = image_properties['data'], 
-            label_path = pertubation_properties['data'], 
-            output_dir = output_dir, 
-            params = method_data, 
-            tag=f'pertubation-radiomics')
-        radiomics_results.append( result )
+        if method_data.get("enableMirp", False):
+            result = extract_radiomics(
+                image_path = image_properties['data'], 
+                label_path = label_properties['data'], 
+                output_dir = output_dir, 
+                params = method_data, 
+                tag=f'filtered-radiomics')
+            radiomics_results.append( result )
+    
+            result = extract_radiomics(
+                image_path = image_properties['data'], 
+                label_path = pertubation_properties['data'], 
+                output_dir = output_dir, 
+                params = method_data, 
+                tag=f'pertubation-radiomics')
+            radiomics_results.append( result )
 
     data_table =  pd.concat(radiomics_results)
     data_table = data_table.loc[:, ~data_table.columns.str.contains('diag')]

@@ -126,11 +126,11 @@ def dask_job(job_name):
             try:
                 worker = get_worker()
             except ValueError as exc:
-                logger.error("Could not get dask worker!")
-                raise RuntimeError("Data-processing job called without parent dask worker")
+                logger.warning("Could not get dask worker!")
+                worker = None
             except Exception as exc:
                 logger.exception(f"Unknown exception when getting dask worker")
-                raise RuntimeError("Could not get worker")
+                worker = None
 
             logger.info (f"Successfully found worker {worker}")
 

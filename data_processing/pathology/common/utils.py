@@ -122,11 +122,15 @@ def get_slide_roi_masks(slide_path, halo_roi_path, annotation_name, slide_id=Non
     annotation_mask = convert_xml_to_mask(halo_roi_path, wsi_shape, annotation_name)
     x_roi, y_roi    = convert_halo_xml_to_roi(halo_roi_path)
 
-    slide_image_cropped  = slide.read_region((x_roi[0], y_roi[1]), 0, (x_roi[1] - x_roi[0], y_roi[0] - y_roi[1])).convert('RGB')
+    print (x_roi, y_roi)
+#    print ((min(x_roi), min(y_roi)), 0, (abs(x_roi[1] - x_roi[0]), abs(y_roi[1] - y_roi[1])))
+    slide_image_cropped  = slide.read_region((min(x_roi), min(y_roi)), 0, (abs(x_roi[1] - x_roi[0]), abs(y_roi[1] - y_roi[0]))).convert('RGB')
+
+    print (slide_image_cropped)
 
     slide_array  = np.array(slide_image_cropped, dtype=np.uint8)
     sample_array = np.array(slide_image_cropped.resize( (slide_image_cropped.size[0] // 80, slide_image_cropped.size[1] // 80)  ),  dtype=np.uint8)
-    mask_array   = annotation_mask[ y_roi[1]:y_roi[0], x_roi[0]:x_roi[1]].astype(np.uint8)
+    mask_array   = annotation_mask[ min(y_roi):max(y_roi), min(x_roi):max(x_roi)].astype(np.uint8)
 
     if slide_id is not None and output_dir is not None:
 
