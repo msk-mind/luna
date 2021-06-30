@@ -50,7 +50,7 @@ geojson_struct = ArrayType(
                    "See ./app_config.yaml.template")
 def cli(data_config_file, app_config_file):
     """
-        This module generates a delta table with geojson pathology data based on the input and output parameters
+        This module generates a table with geojson pathology data based on the input and output parameters
         specified in the data_config_file.
 
         Example:
@@ -86,7 +86,7 @@ def create_refined_table():
     point_table_path = const.TABLE_LOCATION(cfg, is_source=True)
     geojson_table_path = const.TABLE_LOCATION(cfg)
 
-    df = spark.read.format("delta").load(point_table_path)
+    df = spark.read.format("parquet").load(point_table_path)
 
     labelsets = get_labelset_keys()
     labelset_names = array([lit(key) for key in labelsets])
