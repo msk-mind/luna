@@ -43,7 +43,7 @@ def cli(data_config_file, app_config_file):
         logger.info('config_file: ' + app_config_file)
 
         # copy app and data configuration to destination config dir
-        config_location = os.path.join(cfg.get_value('DATA_CFG::LANDING_PATH'), "configs", "REGIONAL_METADATA_RESULTS")
+        config_location = const.CONFIG_LOCATION(cfg)
         os.makedirs(config_location, exist_ok=True)
 
         shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
@@ -78,7 +78,7 @@ def create_geojson_table():
     SLIDE_BMP_DIR           = os.path.join(LANDING_PATH, 'regional_bmps')
     SLIDE_NPY_DIR           = os.path.join(LANDING_PATH, 'regional_npys')
     SLIDE_STORE_DIR         = os.path.join(LANDING_PATH, 'slides')
-    TABLE_OUT_DIR           = os.path.join(LANDING_PATH, 'tables', 'REGIONAL_METADATA_RESULTS')
+    TABLE_OUT_DIR           = const.TABLE_LOCATION(cfg)
 
     os.makedirs(TABLE_OUT_DIR, exist_ok=True)
     print ("Table output directory =", TABLE_OUT_DIR)
