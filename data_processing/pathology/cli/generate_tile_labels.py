@@ -26,8 +26,7 @@ import click
 
 # From common
 from data_processing.common.custom_logger   import init_logger
-from data_processing.common.DataStore       import DataStore
-from data_processing.common.Node            import Node
+from data_processing.common.DataStore       import DataStore_v2
 from data_processing.common.config          import ConfigSet
 
 # From radiology.common
@@ -57,7 +56,7 @@ def generate_tile_labels_with_datastore(app_config: str, cohort_id: str, contain
 
     # Do some setup
     cfg = ConfigSet("APP_CFG", config_file=app_config)
-    datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
+    datastore   = DataStore_v2(method_data.get("root_path"))
     method_id   = method_data.get("job_tag", "none")
 
     image_node  = datastore.get("WholeSlideImage", method_data['input_wsi_tag'])

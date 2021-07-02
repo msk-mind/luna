@@ -76,13 +76,21 @@ class DataStore_v2:
         if not os.path.exists(dest_dir): raise RuntimeWarning(f"Data not found at {dest_dir}")
         return dest_dir
 
-    def put(self, filepath, store_id, namespace_id, data_type, data_tag='data', metadata={} ):
+    def put(self, filepath, store_id, namespace_id, data_type, data_tag='data', metadata={}, symlink=False):
         """ Puts the file at filepath at the proper location given a store_id, namespace_id, data_type, and data_tag, and save metadata to DB """
 
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
         os.makedirs(dest_dir, exist_ok=True)
-        logger.info(f"Save {filepath} -> {dest_dir}")
-        shutil.copy(filepath, dest_dir )
+
+        if symlink:
+            target = os.path.join(dest_dir, pathlib.Path(filepath).name)
+            if os.path.lexists(target):
+                os.remove(target)
+            logger.info(f"Create symlink {dest_dir} -> {filepath}")
+            os.symlink(filepath, target)
+        else:
+            logger.info(f"Save {filepath} -> {dest_dir}")
+            shutil.copy(filepath, dest_dir )
 
         if self.params['GRAPH_STORE_ENABLED']:
             node = Node(data_type, data_tag, metadata)
