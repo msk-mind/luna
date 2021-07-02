@@ -247,7 +247,8 @@ def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
 
     scans = []
     for res_slice in res:
-        image_slice = np.flipud(data[:,:,res_slice[0]])
+        image_slice = data[:,:,res_slice[0]]
+        #image_slice = np.flipud(data[:,:,res_slice[0]])
         im = slice_to_image(image_slice, width, height)
         scans.append(im)
 
@@ -262,7 +263,8 @@ def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
 
         if crop_width and crop_height:
             dicom_binary, overlay = crop_images(res[idx][3], res[idx][4], dicom_img, overlay, crop_width, crop_height, width, height)
-
+        else:
+            overlay = overlay.tobytes()
         images.append((res[idx][2], dicom_binary, overlay))
 
     return images

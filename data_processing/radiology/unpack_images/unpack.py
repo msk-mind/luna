@@ -98,7 +98,7 @@ def binary_to_png(cfg):
         os.makedirs(image_dir, exist_ok=True)
 
         # save image to png
-        image.save(os.path.join(image_dir, str(row["metadata"]["InstanceNumber"])+".png"))
+        image.save(os.path.join(image_dir, str(index)+".png"))
 
 if __name__ == "__main__":
     cli()
