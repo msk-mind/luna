@@ -94,7 +94,7 @@ def load_slide_with_datastore(app_config, datastore_id, method_data):
     # Put results in the data store
     data_path = Path(record['path'].split(':')[-1])
     print(data_path)
-    datastore.put(data_path, datastore_id, method_id, "slide", "", symlink=True)
+    datastore.put(data_path, datastore_id, method_id, "WholeSlideImage", symlink=True)
         
     
 if __name__ == "__main__":

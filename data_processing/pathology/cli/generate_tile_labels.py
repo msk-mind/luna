@@ -35,57 +35,50 @@ from data_processing.pathology.common.preprocess   import pretile_scoring
 @click.command()
 @click.option('-a', '--app_config', required=True,
               help="application configuration yaml file. See config.yaml.template for details.")
-@click.option('-c', '--cohort_id', required=True,
-              help="cohort name")
 @click.option('-s', '--datastore_id', required=True,
               help='datastore name. usually a slide id.')
 @click.option('-m', '--method_param_path', required=True,
               help='json file with method parameters for tile generation and filtering.')
-def cli(app_config, cohort_id, datastore_id, method_param_path):
+def cli(app_config, datastore_id, method_param_path):
     init_logger()
 
     with open(method_param_path) as json_file:
         method_data = json.load(json_file)
-    generate_tile_labels_with_datastore(app_config, cohort_id, datastore_id, method_data)
+    generate_tile_labels_with_datastore(app_config, datastore_id, method_data)
 
-def generate_tile_labels_with_datastore(app_config: str, cohort_id: str, container_id: str, method_data: dict):
+def generate_tile_labels_with_datastore(app_config: str, datastore_id: str, method_data: dict):
     """
     Using the container API interface, score and generate tile addresses
     """
-    logger = logging.getLogger(f"[datastore={container_id}]")
+    logger = logging.getLogger(f"[datastore={datastore_id}]")
 
     # Do some setup
     cfg = ConfigSet("APP_CFG", config_file=app_config)
     datastore   = DataStore_v2(method_data.get("root_path"))
     method_id   = method_data.get("job_tag", "none")
 
-    image_node  = datastore.get("WholeSlideImage", method_data['input_wsi_tag'])
-    
+    image_path  = datastore.get(datastore_id, method_data['input_wsi_tag'], "WholeSlideImage")
+    logger.info(f"Whole slide image path: {image_path}")
+
     # get image_id
-    # TODO - allow -s to take in slide (container) id
-    image_id = datastore._name
+    # TODO - allow -s to take in slide (datastore_id) id
+    image_id = datastore_id
 
     try:
-        if image_node is None:
+        if image_path is None:
             raise ValueError("Image node not found")
 
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(method_data.get("root_path"),
-                                  datastore._namespace_id, datastore._name, method_id)
+        output_dir = os.path.join(method_data.get("root_path"), datastore_id, method_id)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        print("Writing to output dir:", output_dir)
-        properties = pretile_scoring(image_node.data, output_dir, method_data.get("root_path"), method_data, image_id)
+        logger.info(f"Writing to output dir: {output_dir}")
+        pretile_scoring(image_path, output_dir, method_data.get("root_path"), method_data, image_id)
 
     except Exception as e:
         logger.exception (f"{e}, stopping job execution...")
         raise e
-
-    # Put results in the data store
-    output_node = Node("TileImages", method_id, properties)
-    datastore.put(output_node)
-        
 
 
 if __name__ == "__main__":
