@@ -34,7 +34,7 @@ def test_cli(mocker):
                 "tile_size": 128,
                 "magnification": 20,
                 "scale_factor": 8,
-                "data": "tests/data_processing/pathology/cli/testdata/data/test/store_123/test_generate_tile_ov_labels/address.slice.csv"
+                "data": "tests/data_processing/pathology/cli/testdata/data/test/slides/123/test_generate_tile_ov_labels/TileImages/data/address.slice.csv"
             }}]
     # Call order goes [ namespace check, data_store check, get WholeSlideImage, get TileScores, put ]
     Neo4jConnection.query.side_effect  = [[prop_null], props1, props2, props3, [prop_null]]

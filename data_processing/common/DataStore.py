@@ -69,13 +69,15 @@ class DataStore_v2:
         except Exception as exc:
             logger.exception(f"On write, encountered {exc}, continuing...", extra={'store_id': store_id})
 
-    def get(self, store_id, namespace_id, data_type, data_tag='data'):
+    def get(self, store_id, namespace_id, data_type, data_tag='data', realpath=True):
         """ Looks up and returns the path of data given the store_id, namespace_id, data_type, and data_tag """
 
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
         if not os.path.exists(dest_dir):
+            # if realpath is true, return path to data instead of symlink location
             if os.path.lexists(dest_dir):
-                dest_dir = os.readlink(dest_dir)
+                if realpath:
+                    dest_dir = os.readlink(dest_dir)
             else:
                 raise RuntimeWarning(f"Data not found at {dest_dir}")
         return dest_dir

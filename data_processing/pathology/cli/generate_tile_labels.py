@@ -9,13 +9,11 @@ Given a slide (container) ID
 
 Example:
 python3 -m data_processing.pathology.cli.generate_tile_labels \
-    -c TCGA-BRCA \
     -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
     -m data_processing/pathology/cli/examples/generate_tile_labels.json 
 
 Example with annotation:
 python3 -m data_processing.pathology.cli.generate_tile_labels \
-    -c TCGA-BRCA \
     -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
     -m data_processing/pathology/cli/examples/generate_tile_labels_with_ov_labels.json 
 '''
@@ -70,16 +68,18 @@ def generate_tile_labels_with_datastore(app_config: str, datastore_id: str, meth
 
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(method_data.get("root_path"), datastore_id, method_id)
+        output_dir = os.path.join(method_data.get("root_path"), datastore_id, method_id, "TileImages", "data")
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         logger.info(f"Writing to output dir: {output_dir}")
-        pretile_scoring(image_path, output_dir, method_data.get("root_path"), method_data, image_id)
+        properties = pretile_scoring(image_path, output_dir, method_data.get("root_path"), method_data, image_id)
 
     except Exception as e:
         logger.exception (f"{e}, stopping job execution...")
         raise e
 
+    with open(os.path.join(output_dir, "metadata.json"), "w") as fp:
+        json.dump(properties, fp)
 
 if __name__ == "__main__":
     cli()

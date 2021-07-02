@@ -67,9 +67,9 @@ def load_slide_with_datastore(app_config, datastore_id, method_data):
                 raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {slide_id}")
 
             record = df.loc[0]
-            """metadata = record['metadata'][0]
+            metadata = record['metadata'][0]
             properties = {x.asDict()['key']:x.asDict()['value'] for x in metadata}
-            properties['patient_id'] = record[patient_id_column]"""
+            properties['patient_id'] = record[patient_id_column]
 
         else:
             df = spark.read.format("delta").load(method_data['table_path'])\
@@ -82,7 +82,7 @@ def load_slide_with_datastore(app_config, datastore_id, method_data):
                 raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {slide_id}")
 
             record = df.loc[0]
-            # properties = record['metadata']
+            properties = record['metadata']
 
         spark.stop()
         
@@ -95,7 +95,9 @@ def load_slide_with_datastore(app_config, datastore_id, method_data):
     data_path = Path(record['path'].split(':')[-1])
     print(data_path)
     datastore.put(data_path, datastore_id, method_id, "WholeSlideImage", symlink=True)
-        
+
+    with open(os.path.join(method_data["datastore_path"], datastore_id, method_id, "WholeSlideImage", "metadata.json"), "w") as fp:
+        json.dump(properties, fp)
     
 if __name__ == "__main__":
     cli()
