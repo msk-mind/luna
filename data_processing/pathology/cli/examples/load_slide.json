@@ -1,4 +1,5 @@
 {
     "job_tag": "pathology.etl",
-    "table_path": "/gpfs/mskmindhdp_emc/data/OV_16-158/tables/WSI_PATH_Hobbit_WSI_Ovarian_HNE/"
+    "table_path": "/gpfs/mskmindhdp_emc/data/OV_16-158/tables/WSI_PATH_Hobbit_WSI_Ovarian_HNE/",
+    "datastore_path": "/gpfs/mskmindhdp_emc/data/OV_16-158/slides"
 }

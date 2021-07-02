@@ -14,7 +14,11 @@ class DataStore_v2:
         if os.path.exists('conf/datastore.cfg'):
             self.params = ConfigSet(name='STORE_CFG',  config_file='conf/datastore.cfg').get_config_set("STORE_CFG")
         else:
-            self.params = ConfigSet(name='STORE_CFG',  config_file='conf/datastore.default.yml').get_config_set("STORE_CFG")
+            import data_processing
+            dp_path = data_processing.__path__[0]
+            parent_folder = str(pathlib.Path(dp_path).parent)
+            self.params = ConfigSet(name='STORE_CFG',  config_file=os.path.join(parent_folder,'conf/datastore.default.yml')) \
+                .get_config_set("STORE_CFG")
         logger.info(f"Configured datastore with {self.params}")
 
         self.backend = store_location
@@ -65,20 +69,35 @@ class DataStore_v2:
         except Exception as exc:
             logger.exception(f"On write, encountered {exc}, continuing...", extra={'store_id': store_id})
 
-    def get(self, store_id, namespace_id, data_type, data_tag):
+    def get(self, store_id, namespace_id, data_type, data_tag='data', realpath=True):
         """ Looks up and returns the path of data given the store_id, namespace_id, data_type, and data_tag """
 
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
-        if not os.path.exists(dest_dir): raise RuntimeWarning(f"Data not found at {dest_dir}")
+        if not os.path.exists(dest_dir):
+            # if realpath is true, return path to data instead of symlink location
+            if os.path.lexists(dest_dir):
+                if realpath:
+                    dest_dir = os.readlink(dest_dir)
+            else:
+                raise RuntimeWarning(f"Data not found at {dest_dir}")
         return dest_dir
 
-    def put(self, filepath, store_id, namespace_id, data_type, data_tag='data', metadata={} ):
+    def put(self, filepath, store_id, namespace_id, data_type, data_tag='data', metadata={}, symlink=False):
         """ Puts the file at filepath at the proper location given a store_id, namespace_id, data_type, and data_tag, and save metadata to DB """
 
         dest_dir = os.path.join (self.backend, store_id, namespace_id, data_type, data_tag)
-        os.makedirs(dest_dir, exist_ok=True)
-        logger.info(f"Save {filepath} -> {dest_dir}")
-        shutil.copy(filepath, dest_dir )
+
+        if symlink:
+            os.makedirs(pathlib.Path(dest_dir).parent, exist_ok=True)
+
+            if os.path.lexists(dest_dir):
+                os.remove(dest_dir)
+            logger.info(f"Create symlink {dest_dir} -> {filepath}")
+            os.symlink(filepath, dest_dir)
+        else:
+            os.makedirs(dest_dir, exist_ok=True)
+            logger.info(f"Save {filepath} -> {dest_dir}")
+            shutil.copy(filepath, dest_dir )
 
         if self.params['GRAPH_STORE_ENABLED']:
             node = Node(data_type, data_tag, metadata)
