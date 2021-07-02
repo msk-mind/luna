@@ -14,7 +14,11 @@ class DataStore_v2:
         if os.path.exists('conf/datastore.cfg'):
             self.params = ConfigSet(name='STORE_CFG',  config_file='conf/datastore.cfg').get_config_set("STORE_CFG")
         else:
-            self.params = ConfigSet(name='STORE_CFG',  config_file='conf/datastore.default.yml').get_config_set("STORE_CFG")
+            import data_processing
+            dp_path = data_processing.__path__[0]
+            parent_folder = str(pathlib.Path(dp_path).parent)
+            self.params = ConfigSet(name='STORE_CFG',  config_file=os.path.join(parent_folder,'conf/datastore.default.yml')) \
+                .get_config_set("STORE_CFG")
         logger.info(f"Configured datastore with {self.params}")
 
         self.backend = store_location
