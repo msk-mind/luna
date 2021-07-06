@@ -16,6 +16,7 @@ import json
 from pathlib import Path
 
 from PIL import Image
+from pyarrow.parquet import read_table
 
 import openslide
 from openslide.deepzoom import DeepZoomGenerator
@@ -248,7 +249,7 @@ def get_regional_labels(address_raster, annotation_polygons, annotation_labels, 
     return regional_label_results
 
 ### MAIN ENTRY METHOD -> pretile
-def pretile_scoring(slide_file_path: str, output_dir: str, root_path: str, params: dict, image_id: str):
+def pretile_scoring(slide_file_path: str, output_dir: str, annotation_table_path: str, params: dict, image_id: str):
     """
     Generate tiles and scores.
 
@@ -311,9 +312,12 @@ def pretile_scoring(slide_file_path: str, output_dir: str, root_path: str, param
     # get pathology annotations for slide only if valid parameters
     if project_id != None and project_id != "" and labelset != None and labelset != "":
         # from get_pathology_annotations
-        store = DataStore_v2(os.path.join(root_path, project_id, "slides"))
-        geojson_path = store.get(store_id=image_id, namespace_id='CONCAT', data_type='RegionalAnnotationJSON',
-                                 data_tag=labelset.upper())
+        regional_annotation_table = read_table(annotation_table_path, columns=["geojson"],
+                                               filters=[('slide_id','=',f'{image_id}'),
+                                                        ('user', '=', 'CONCAT'),
+                                                        ('labelset', '=', f'{labelset}')]) \
+                                    .to_pandas()
+        geojson_path = regional_annotation_table['geojson_path'][0]
         if geojson_path:
 
             with open(geojson_path) as geojson_file:

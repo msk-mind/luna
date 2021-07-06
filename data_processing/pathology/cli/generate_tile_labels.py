@@ -72,7 +72,7 @@ def generate_tile_labels_with_datastore(app_config: str, datastore_id: str, meth
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         logger.info(f"Writing to output dir: {output_dir}")
-        properties = pretile_scoring(image_path, output_dir, method_data.get("root_path"), method_data, image_id)
+        properties = pretile_scoring(image_path, output_dir, method_data.get("annotation_table_path"), method_data, image_id)
 
     except Exception as e:
         logger.exception (f"{e}, stopping job execution...")
