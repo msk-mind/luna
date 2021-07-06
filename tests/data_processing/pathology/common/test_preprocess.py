@@ -64,12 +64,15 @@ def test_pretile_scoring(requests_mock):
     params = {"tile_size":128,
               "magnification":20,
               "project_id": "project",
-              "labelset": "default",
+              "labelset": "default_labels",
               "filter": {
                   "otsu_score": 0.5
+              },
+              "annotation_table_path": "tests/data_processing/pathology/common/testdata/project/tables/REGIONAL_METADATA_RESULTS"
               }
-              }
-    res = pretile_scoring(slide_path, output_dir, "tests/data_processing/pathology/common/testdata", params, "123")
+    res = pretile_scoring(slide_path, output_dir,
+                          "tests/data_processing/pathology/common/testdata/project/tables/REGIONAL_METADATA_RESULTS",
+                          params, "123")
 
     print(res)
     assert 'tests/data_processing/pathology/common/testdata/output-123/tiles.slice.pil' == res['data']

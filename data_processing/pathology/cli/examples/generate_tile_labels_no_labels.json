@@ -7,5 +7,6 @@
   "filter": {
     "otsu_score": 0.5
   },
-  "root_path": "/path/to/output/data"
+  "root_path": "/path/to/output/data",
+  "annotation_table_path": "/path/to/regional/annotation/table"
 }
