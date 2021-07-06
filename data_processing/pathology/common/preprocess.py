@@ -315,7 +315,7 @@ def pretile_scoring(slide_file_path: str, output_dir: str, annotation_table_path
         regional_annotation_table = read_table(annotation_table_path, columns=["geojson_path"],
                                                filters=[('slide_id','=',f'{image_id}'),
                                                         ('user', '=', 'CONCAT'),
-                                                        ('labelset', '=', f'{labelset}')]) \
+                                                        ('labelset', '=', f'{labelset.upper()}')]) \
                                     .to_pandas()
         geojson_path = regional_annotation_table['geojson_path'][0]
         if geojson_path:
