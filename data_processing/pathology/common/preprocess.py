@@ -312,7 +312,7 @@ def pretile_scoring(slide_file_path: str, output_dir: str, annotation_table_path
     # get pathology annotations for slide only if valid parameters
     if project_id != None and project_id != "" and labelset != None and labelset != "":
         # from get_pathology_annotations
-        regional_annotation_table = read_table(annotation_table_path, columns=["geojson"],
+        regional_annotation_table = read_table(annotation_table_path, columns=["geojson_path"],
                                                filters=[('slide_id','=',f'{image_id}'),
                                                         ('user', '=', 'CONCAT'),
                                                         ('labelset', '=', f'{labelset}')]) \
