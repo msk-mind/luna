@@ -12,7 +12,7 @@ def test_cli():
         '-m', 'tests/data_processing/pathology/cli/testdata/collect_tile_results.json'])
 
     assert result.exit_code == 0
-    assert os.path.exists('tests/data_processing/pathology/cli/testdata/data/test/slides/ovarian_clf_v1/123/123.parquet')
+    assert os.path.exists('tests/data_processing/pathology/cli/testdata/data/test/slides/ovarian_clf_v1/123.parquet')
 
     # cleanup
     shutil.rmtree('tests/data_processing/pathology/cli/testdata/data/test/slides/ovarian_clf_v1/')

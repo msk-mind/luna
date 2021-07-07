@@ -85,7 +85,7 @@ def collect_tile_with_datastore(app_config: str, datastore_id: str, method_data:
             df = df.set_index(["id_slide_container", "address"])
         logger.info(df)
 
-        output_dir = os.path.join(method_data.get("root_path"), output_datastore_id, datastore_id)
+        output_dir = os.path.join(method_data.get("root_path"), output_datastore_id)
 
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
