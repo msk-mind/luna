@@ -319,9 +319,9 @@ def pretile_scoring(slide_file_path: str, output_dir: str, annotation_table_path
                                     .to_pandas()
         geojson_path = regional_annotation_table['geojson_path'][0]
         if geojson_path:
-
+            # geojson is saved as a string
             with open(geojson_path) as geojson_file:
-                annotation_geojson = json.load(geojson_file)
+                annotation_geojson = json.loads(json.load(geojson_file))
 
             annotation_polygons, annotation_labels = build_shapely_polygons_from_geojson(annotation_geojson)
             df.loc[:, "regional_label"] = get_regional_labels (df['coordinates'], annotation_polygons, annotation_labels, full_generator, full_level)
