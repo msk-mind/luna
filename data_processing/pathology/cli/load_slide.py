@@ -67,10 +67,8 @@ def load_slide_with_datastore(app_config, datastore_id, method_data):
                 raise ValueError(f"Resulting query record is not singular, multiple scan's exist given the container address {slide_id}")
 
             record = df.loc[0]
-            metadata = record['metadata'][0]
-            properties = {x.asDict()['key']:x.asDict()['value'] for x in metadata}
-            properties['patient_id'] = record[patient_id_column]
-
+            properties = record['metadata']
+            properties['patient_id'] = str(record[patient_id_column])
         else:
             df = spark.read.format("delta").load(method_data['table_path'])\
                 .where(f"UPPER(slide_id)='{slide_id}'")\
