@@ -74,8 +74,9 @@ def collect_tile_with_datastore(app_config: str, datastore_id: str, method_data:
         if cfg.get_value(path='APP_CFG::OBJECT_STORE_ENABLED'):
             df.loc[:,"object_bucket"] = tile_properties['object_bucket']
             df.loc[:,"object_path"]   = tile_properties['object_folder'] + "/tiles.slice.pil"
-            if slide_path and 'patient_id' in slide_properties:
-                df.loc[:,"patient_id"]   = slide_properties['patient_id']
+
+        if slide_path and 'patient_id' in slide_properties:
+            df.loc[:,"patient_id"]   = slide_properties['patient_id']
             
         df.loc[:,"id_slide_container"] = datastore_id
 
