@@ -44,6 +44,7 @@ def save_dsa_annotation(base_annotation, elements, annotation_name, output_folde
     image_id = re.search(image_id_regex, image_filename).group(1)
     annotation_name_replaced = annotation_name.replace(" ","_")
 
+    os.makedirs(output_folder, exist_ok=True)
     outfile_name = os.path.join(output_folder, f"{annotation_name_replaced}_{image_id}.json")
 
     try:

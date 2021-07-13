@@ -71,11 +71,12 @@ def visualize_tile_labels_with_datastore(app_config: str, datastore_id: str, met
     method_data.update(slide_properties)
 
     label_path  = datastore.get(datastore_id, method_data['input_label_tag'], "TileScores")
-    label_path = os.path.join(label_path, "address.slice.csv")
+    label_metadata_path = os.path.join(label_path, "metadata.json")
+    label_path = os.path.join(label_path, "tile_scores_and_labels_pytorch_inference.csv")
+    with open(label_metadata_path, "r") as fp:
+        label_properties = json.load(fp)
 
     try:
-        if slide_path is None:
-            raise ValueError("Image node not found")
 
         # Data just goes under namespace/name
         # TODO: This path is really not great, but works for now
@@ -86,10 +87,10 @@ def visualize_tile_labels_with_datastore(app_config: str, datastore_id: str, met
 
         # push results to DSA
         if method_data.get("dsa_config", None):
-            properties = label_node.properties
+            properties = label_properties
 
             properties["column"]   = "tumor_score"
-            properties["input"]    = label_node.properties["data"]
+            properties["input"]    = label_properties["data"]
             properties["annotation_name"]   = method_id
             properties["tile_size"]   = method_data["tile_size"]
             properties["scale_factor"]   = method_data["scale_factor"]
