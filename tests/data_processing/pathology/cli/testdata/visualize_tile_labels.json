@@ -3,5 +3,7 @@
   "input_label_tag": "test_generate_tile_ov_labels",
   "job_tag": "test_visualize_tiles",
   "scale_factor": 16,
-  "root_path": "tests/data_processing/pathology/cli/testdata/data_staging"
+  "tile_size": 128,
+  "magnification": 20,
+  "root_path": "tests/data_processing/pathology/cli/testdata/data/test/slides"
 }
