@@ -15,7 +15,3 @@ def test_cli():
 
     # No longer error gracefully -- can update tests with proper data and they'll work
     assert result.exit_code == 1
-    # no model in the testdata
-    assert type(result.exception) == FileNotFoundError
-
-
