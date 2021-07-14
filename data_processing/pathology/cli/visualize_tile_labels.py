@@ -93,7 +93,8 @@ def visualize_tile_labels_with_datastore(app_config: str, datastore_id: str, met
             properties["input"]    = label_properties["data"]
             properties["annotation_name"]   = method_id
             properties["tile_size"]   = method_data["tile_size"]
-            properties["scale_factor"]   = method_data["scale_factor"]
+            # inference result doesn't need to be scaled. set to 1
+            properties["scale_factor"]   = 1
             properties["magnification"]   = method_data["magnification"]
             properties["output_folder"]   = method_data["output_folder"]
             properties["image_filename"] = datastore_id + ".svs"
