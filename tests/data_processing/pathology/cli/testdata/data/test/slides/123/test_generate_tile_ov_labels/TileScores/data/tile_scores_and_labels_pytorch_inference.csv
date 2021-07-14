@@ -1,4 +1,4 @@
-address,coordinates,otsu_score,purple_score,tile_image_offset,tile_image_length,tile_image_size_xy,tile_image_mode
+address,coordinates,otsu_score,tumor_score,tile_image_offset,tile_image_length,tile_image_size_xy,tile_image_mode
 x1_y1_z20,"(1, 1)",0.0,0.109375,0.0,49152.0,128.0,RGB
 x1_y2_z20,"(1, 2)",0.0,0.0625,49152.0,49152.0,128.0,RGB
 x1_y3_z20,"(1, 3)",0.0,0.015625,98304.0,49152.0,128.0,RGB
