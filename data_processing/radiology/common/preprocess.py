@@ -77,9 +77,12 @@ def crop_images(xcenter, ycenter, dicom, overlay, crop_w, crop_h, image_w, image
         ymax = image_h
 
     # Crop overlay, dicom pngs.
-    dicom_feature = dicom.crop((xmin, ymin, xmax, ymax)).tobytes()
+    dicom_feature = dicom.crop((xmin, ymin, xmax, ymax))
+    overlay_feature = overlay.crop((xmin, ymin, xmax, ymax))
 
-    overlay_feature = overlay.crop((xmin, ymin, xmax, ymax)).tobytes()
+    # normalize after crop
+    dicom_feature = normalize(np.array(dicom_feature)).tobytes()
+    overlay_feature = normalize(np.array(overlay_feature)).tobytes()
 
     return (dicom_feature, overlay_feature)
 
@@ -100,13 +103,14 @@ def normalize(image: np.ndarray) -> np.ndarray:
 
     return normalized_image
 
-def slice_to_image(image_slice, width, height):
+def slice_to_image(image_slice, width, height, normalize=False):
     """
     Normalize and create an image binary from the given 2D array.
 
     :param image_slice: image slice
     :param width: width of the image
     :param height: height of the image
+    :param normalize: if True normalize the image.
     :return: PIL image
     """
     from preprocess import normalize
@@ -116,10 +120,11 @@ def slice_to_image(image_slice, width, height):
     image_2d = image_slice.astype(float).T
 
     # Rescaling grey scale between 0-255
-    image_2d_scaled = normalize(image_2d)
+    if normalize:
+        image_2d = normalize(image_2d)
 
     # Convert to uint
-    image_2d_scaled = np.uint8(image_2d_scaled)
+    image_2d_scaled = np.uint8(image_2d)
 
     im = Image.fromarray(image_2d_scaled)
     # resize pngs to user provided width/height

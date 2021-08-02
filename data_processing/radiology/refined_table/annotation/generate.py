@@ -84,11 +84,8 @@ def generate_image_table():
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='dicom-to-png')
     spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")
 
-    scan_table_path = os.path.join(project_path, const.TABLE_DIR,
-                                    "{0}_{1}".format(cfg.get_value(path=const.DATA_CFG+'::SCAN_DATA_TYPE'),
-						cfg.get_value(path=const.DATA_CFG+'::DATASET_NAME')))
-
-    seg_table_path = const.TABLE_LOCATION(cfg, is_source=True)
+    scan_table_path = cfg.get_value(path=const.DATA_CFG + '::SCAN_TABLE_PATH')
+    seg_table_path = cfg.get_value(path=const.DATA_CFG + '::LABEL_TABLE_PATH')
 
     scan_df = spark.read.format("delta").load(scan_table_path) \
                    .select(F.col("metadata").alias("scan_metadata"), F.col("path").alias("scan_path"),
@@ -140,7 +137,6 @@ def generate_image_table():
 
         seg_df = seg_df.withColumn("slices_images", F.explode("slices_images")) \
                        .select(columns_to_select)
-
         logger.info("Exploded rows")
 
         # generate uuid

@@ -5,10 +5,10 @@ PROJECT: test-project
 
 DATASET_NAME: dsn
 
-SOURCE_DATA_TYPE: MHA
+LABEL_TABLE_PATH: tests/data_processing/radiology/testdata/test-project/tables/MHA_dsn
 
 # to be updated with data type standardization
-SCAN_DATA_TYPE: SCAN
+SCAN_TABLE_PATH: tests/data_processing/radiology/testdata/test-project/tables/SCAN_dsn
 
 DATA_TYPE: PNG
 

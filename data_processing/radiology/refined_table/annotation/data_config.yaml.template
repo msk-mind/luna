@@ -5,11 +5,11 @@ PROJECT: DMT_IRB
 
 DATASET_NAME: DMT_IRB_DATE
 
-# to be updated with data type standardization
-SCAN_DATA_TYPE: SCAN
+# path to segmentation table
+LABEL_TABLE_PATH: tests/data_processing/radiology/testdata/test-project/tables/MHA_dsn
 
-# volumetric segmentation data type
-SOURCE_DATA_TYPE: MHD
+# path to scan table
+SCAN_TABLE_PATH: tests/data_processing/radiology/testdata/test-project/tables/SCAN_dsn
 
 # output radiology images type
 DATA_TYPE: PNG
