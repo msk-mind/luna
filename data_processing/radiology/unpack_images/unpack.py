@@ -64,13 +64,14 @@ def binary_to_png(cfg):
     """
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='unpack')
     spark.conf.set('spark.sql.execution.arrow.pyspark.enabled','false')
-    table_path = const.TABLE_LOCATION(cfg)
-    df = spark.read.format("delta").load(table_path)
 
+    TABLE_PATH = cfg.get_value(path=const.DATA_CFG+"::TABLE_PATH")
     DESTINATION_PATH = cfg.get_value(path=const.DATA_CFG+"::DESTINATION_PATH")
     COLUMN_NAME = cfg.get_value(path=const.DATA_CFG+"::COLUMN_NAME")
     IMAGE_WIDTH = int(cfg.get_value(path=const.DATA_CFG+"::IMAGE_WIDTH"))
     IMAGE_HEIGHT = int(cfg.get_value(path=const.DATA_CFG+"::IMAGE_HEIGHT"))
+
+    df = spark.read.format("delta").load(TABLE_PATH)
 
     # find edge cases with more than 1 annotations
     # (sometimes both L/R organs have tumor, and we end up with 2 annotations per accesion.)
