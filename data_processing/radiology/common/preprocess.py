@@ -255,9 +255,9 @@ def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
         image_slice = data[:,:,res_slice[0]]
         #image_slice = np.flipud(data[:,:,res_slice[0]])
         if crop_width and crop_height:
-            im = slice_to_image(image_slice, width, height, n)
+            im = slice_to_image(image_slice, width, height)
         else:
-            im = slice_to_image(image_slice, width, height, n, normalize=True)
+            im = slice_to_image(image_slice, width, height, normalize=True)
         scans.append(im)
 
     images = []
