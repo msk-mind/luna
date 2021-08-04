@@ -13,11 +13,12 @@ from skimage.transform import resize
 import itk
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
-
 ### Fix for annoying glcm message:
 logger = logging.getLogger("radiomics.glcm")
 logger.setLevel(logging.ERROR)
+
+# Re-get correct logger
+logger = logging.getLogger(__name__)
 
 ## Fix for ITK snap
 
@@ -512,6 +513,8 @@ def window_dicoms(dicom_path: str, output_dir: str, params: dict, tag=None) -> d
 
     :return: property dict, None if function fails
     """ 
+    import warnings
+    warnings.warn("window_dicoms is depreciated, please use window_volume after generating", DeprecationWarning)
 
     if tag is not None:
         output_dir =  os.path.join(output_dir, tag)
@@ -539,6 +542,48 @@ def window_dicoms(dicom_path: str, output_dir: str, params: dict, tag=None) -> d
         "hash": dirhash(output_dir, "sha256")
     }
 
+    return properties
+
+
+def window_volume(image_path: str, output_dir: str, params: dict, tag=None) -> dict:
+    """
+    A slightly better way to apply a window function, using the volumentric image (requires no dicom maniuplation)
+
+    :param image_path: path to volumentric image
+    :param output_dir: destination directory
+    :param params {
+        window bool: whether to apply windowing
+        windowLowLevel int, float : lower level to clip
+        windowHighLevel int, float: higher level to clip
+    }
+
+    :return: property dict with ['data']= output image, None if function fails
+    """ 
+
+    if tag is not None:
+        output_dir =  os.path.join(output_dir, tag)
+        os.makedirs(output_dir, exist_ok=True)
+        logger.info (f"Output directory={output_dir}")
+    
+    file_stem = Path(image_path).stem
+    file_ext  = Path(image_path).suffix
+
+    outFileName = os.path.join(output_dir, file_stem + '.windowed' + file_ext)
+
+    if params.get('window', False):
+        logger.info ("Applying window [%s,%s]", params['windowLowLevel'], params['windowHighLevel'])
+
+        image, header = load(image_path)
+        image = np.clip(image, params['windowLowLevel'], params['windowHighLevel']   )
+        save(image, outFileName, header)
+        # Prepare metadata and commit
+        properties = {
+            'data' : outFileName,
+        }
+    else:
+        properties = {
+            'data' : image_path,
+        }
     return properties
 
 
@@ -577,7 +622,7 @@ def randomize_contours(image_path: str, label_path: str, output_dir: str, params
     roi_class_object_list   = read_itk_segmentation(label_path)
 
     # Crop for faster interpolation
-    # image_class_object, roi_class_object_list = crop_image(img_obj=image_class_object, roi_list=roi_class_object_list, boundary=50.0, z_only=True)
+    image_class_object, roi_class_object_list = crop_image(img_obj=image_class_object, roi_list=roi_class_object_list, boundary=50.0, z_only=True)
 
     # Interpolation
     image_class_object    = interpolate_image (img_obj=image_class_object, settings=settings)

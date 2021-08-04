@@ -126,29 +126,31 @@ def dask_job(job_name):
             try:
                 worker = get_worker()
             except ValueError as exc:
-                logger.error("Could not get dask worker!")
-                raise RuntimeError("Data-processing job called without parent dask worker")
+                logger.warning("Could not get dask worker!")
+                worker = None
             except Exception as exc:
                 logger.exception(f"Unknown exception when getting dask worker")
-                raise RuntimeError("Could not get worker")
+                worker = None
 
             logger.info (f"Successfully found worker {worker}")
 
             # Jobs get an output directory and an ouput parquet slice
             output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data_dev", namespace, index)
             output_ds  = os.path.join(os.environ['MIND_GPFS_DIR'], "data_dev", namespace, job_name.upper() + "_DS")
+            output_slice = f"ResultSegment-{index}.parquet"
+
             os.makedirs(output_dir, exist_ok=True)
             os.makedirs(output_ds,  exist_ok=True)
-            output_segment = os.path.join(output_ds, f"ResultSegment-{index}.parquet")
+            output_segment = os.path.join(output_ds, output_slice)
 
-            logger.info(f"Setup ouput dir={output_dir} slice={output_ds}")
+            logger.info(f"Setup ouput dir={output_dir}, ds={output_ds}, slice={output_ds}")
 
             # Kick off the job
             try:
                 logger.info (f"Running job {func} with args: {args}, kwargs: {kwargs}")
                 return_value = func (index, output_dir, output_segment, *args, **kwargs )
             except Exception as exc:
-                logger.exception(f"Job execution failed due to: {exc}", extra={ "namespace":namespace, "key": index})
+                logger.exception(f"Job execution {func} @ {namespace}/{index} with args: {args}, kwargs: {kwargs} failed due to: {exc}", extra={ "namespace":namespace, "key": index})
                 raise JobExecutionError(f"Job {func} did not run successfully, please check input data! {args}, {kwargs}")
 
             return return_value
