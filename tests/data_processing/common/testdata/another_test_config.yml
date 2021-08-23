@@ -1,0 +1,22 @@
+spark_cluster_config:
+
+  - spark.uri: local[2]
+
+  - spark.driver.host: 127.0.0.1
+
+spark_application_config:
+
+  # 5% total number of cores in cluster
+  - spark.executor.cores: 222
+
+  # 50% total number of cores in cluster
+  - spark.cores.max: 240
+
+  # 5% total memory in cluster
+  - spark.executor.memory: 36g
+
+  # 80% executor memory
+  - spark.executor.pyspark.memory: 30g
+
+  - spark.sql.shuffle.partitions: 300
+

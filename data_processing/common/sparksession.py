@@ -47,4 +47,4 @@ class SparkConfig:
 			.config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.getOrCreate()
-							
+

@@ -93,7 +93,7 @@ class ConfigSet():
             logger.error("unable to find a config file with name "+config_file+
                   ". Please use config.yaml.template to make a "+config_file+". "+str(err))
             raise err
-        
+
         config = {}
         for items in yaml.load_all(stream, Loader=yaml.FullLoader):
             config.update(items)
@@ -196,7 +196,7 @@ class ConfigSet():
             raise ValueError('configuration with logical name '+name+' was never loaded')
 
         return list(ConfigSet.__INSTANCE.__config[name].keys())
-    
+
     def get_config_set(self, name):
         '''
 
@@ -208,7 +208,7 @@ class ConfigSet():
         if ConfigSet.__INSTANCE is None or name not in ConfigSet.__INSTANCE.__config.keys():
             raise ValueError('configuration with logical name '+name+' was never loaded')
         return ConfigSet.__INSTANCE.__config[name]
-  
+
 
 
     def clear(self):

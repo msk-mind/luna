@@ -12,6 +12,24 @@ In this file, you can configure the class to write data/metadata to your common 
 ### Logging configuration
 There is also configuration for centralized logging to MongoDB. Similarily, the init_logger function will preferentially pull configuration from `conf/logging.cfg` first and then fallback to `confg/logging.default.yml`, where by default central logging is turned off
 
+### Setup $LUNA_HOME with conf folder
+
+1. Setup $LUNA_HOME environment variable to point to a location where luna configs can be stored.
+
+``export LUNA_HOME=~/.luna_home``
+
+2. Copy `conf/` folder to $LUNA_HOME/conf
+
+``cp -r conf/ $LUNA_HOME/conf``
+
+3. In the `conf/` folder, copy `logging.default.yml` to `logging.cfg` and `datastore.default.yml` to `datastore.cfg` and modify the `.cfg` files.
+
+``cd $LUNA_HOME/conf``
+
+``cp logging.default.yml logging.cfg``
+
+``cp datastore.default.yml datastore.cfg``
+
 
 ## Steps to generate radiology proxy table.
 1. Make a copy of data_ingestion_template.yaml.template and fill it out. This template contains operational metadata associated with the data and the data transfer process. 

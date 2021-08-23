@@ -4,15 +4,15 @@ from neo4j import __version__ as neo4j_version
 from pyspark.sql.types import StringType,StructType,StructField
 import re
 
-def pretty_path(path): 
+def pretty_path(path):
     to_print = ''
-    for i,x in enumerate(path): 
-        if type(x)==dict: 
+    for i,x in enumerate(path):
+        if type(x)==dict:
             node_desc = '(' + ','.join([key+":"+x[key] for key in x.keys()]) + ')'
             if   i==0: 		   to_print += "SOURCE:" + node_desc # First
             elif i==(len(path)-1): to_print += "SINK:" + node_desc # Last
             else:                  to_print += node_desc # Middle
-        if type(x)==str: 
+        if type(x)==str:
             to_print += '-[' + x + ']-'
     return to_print
 
@@ -57,7 +57,7 @@ class Neo4jConnection:
             return False
 
 
-    
+
     # ==========================================================================================================
     # Simple methods
     def test_count(self):
@@ -88,32 +88,32 @@ class Neo4jConnection:
     # Leaving others in for now for backwards compatability
     def create_id_lookup_table_where(self, sqlc, source, sink, r="ID_LINK|HAS_RECORD", WHERE_CLAUSE=""):
         """
-        Main method for creating lookup tables in a general manner.  
+        Main method for creating lookup tables in a general manner.
         Required:
 		source: what ID type you are starting with (e.g. a dmp_patient_id)
 		sink: what ID you wish to map to (e.g. a SeriesInstanceUID)
         Optional:
 		r: Allowed relationship types.  Default is ID_LINK|HAS_RECORD to contain mapping within a patient subgraph
 		WHERE_CLAUSE: source, sink (as nodes) and r (as relationships) become availabe for filtering in a WHERE clause
-        Returns a dataframe with three columns, [ source | sink | pathspec ] where pathspec is a text-based representation of the path between the source and sink IDs 
+        Returns a dataframe with three columns, [ source | sink | pathspec ] where pathspec is a text-based representation of the path between the source and sink IDs
         """
 
         banned_words = ['delete', 'merge', 'create', 'set', 'remove']
         if re.compile('|'.join(banned_words),re.IGNORECASE).search(WHERE_CLAUSE): #re.IGNORECASE is used to ignore case
             raise Exception("You tried to alter the database, goodbye")
-            return 
+            return
 
         print (f""">>> QUERY >>> \n\tMATCH (source:{source})-[r:{r}*]-(sink:{sink}), \n\tpath=shortestPath( (source)-[:{r}*..15]-(sink) ) \n\t{WHERE_CLAUSE} RETURN DISTINCT source,sink,path""")
 
         result = self.query(f"""
             MATCH (source:{source})-[r:{r}*]-(sink:{sink}), path=shortestPath( (source)-[:{r}*..15]-(sink) ) \
             {WHERE_CLAUSE} \
-            RETURN DISTINCT source,sink,path 
+            RETURN DISTINCT source,sink,path
             """
         )
-        if result is None: 
+        if result is None:
             print ("Improper query returning null")
-            return None 
+            return None
         cSchema = StructType([StructField(source, StringType(), True), StructField(sink, StringType(), True), StructField("pathspec", StringType(), True)])
         return sqlc.createDataFrame(([(x.data()['source']['value'],x.data()['sink']['value'], pretty_path(x.data()['path'])) for x in result]),schema=cSchema)
     # ==========================================================================================================

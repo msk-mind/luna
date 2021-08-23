@@ -23,10 +23,10 @@ class Node(object):
 
 		self.type = node_type
 
-		if properties is None: 
+		if properties is None:
 			self.properties = {}
-		else: 
-			self.properties = properties 
+		else:
+			self.properties = properties
 
 		# Special case: a cohort name is it's own namespace
 		if self.type in ["cohort"]:
@@ -57,7 +57,7 @@ class Node(object):
 		"""
 		Sets the namespace for this Node commits
 
-		:params: namespace_id - namespace value 
+		:params: namespace_id - namespace value
 		:params: subspace_id  - subspace value, optional
 		"""
 		self.properties['namespace'] = namespace_id
@@ -74,13 +74,13 @@ class Node(object):
 
 		if data is None: return
 
-		if isinstance(data, str): 
+		if isinstance(data, str):
 			data = Path(data)
 
-		if not isinstance(data, Path): 
+		if not isinstance(data, Path):
 			raise RuntimeError("set_data() only accepts path-like objects")
-						
-		if not data.exists(): 
+
+		if not data.exists():
 			raise RuntimeError("Tried to set data to a non-existent path!")
 
 		self.properties['data'] = str(data)
@@ -91,13 +91,13 @@ class Node(object):
 
 		if aux is None: return
 
-		if isinstance(aux, str): 
+		if isinstance(aux, str):
 			aux = Path(aux)
 
-		if not isinstance(aux, Path): 
+		if not isinstance(aux, Path):
 			raise RuntimeError("set_aux() only accepts path-like objects")
-		
-		if not aux.exists(): 
+
+		if not aux.exists():
 			raise RuntimeError("Tried to set aux to a non-existent path!")
 
 		self.properties['aux'] = str(aux)
@@ -139,7 +139,7 @@ class Node(object):
 
 		prop_string = self.prop_str( ["qualified_address"], kv)
 		return f"""{self.type}:globals{{ {prop_string} }}"""
-	
+
 	def get_map_str(self):
 		"""
 		Returns the properties as a cypher map
@@ -148,11 +148,11 @@ class Node(object):
 
 		prop_string = self.prop_str(kv.keys(), kv)
 		return f"""{{ {prop_string} }}"""
-		
+
 	def get_address(self):
 		"""
 		Returns current node address
-		"""		
+		"""
 		return self.properties.get("qualified_address")
 
 	@staticmethod
@@ -164,7 +164,7 @@ class Node(object):
 
 		kv = [f" {to_sql_field(x)}: {to_sql_value(row[x])}" for x in fields]
 		return ','.join(kv)
-	
+
 	@staticmethod
 	def prop_str_repr(fields, row):
 		"""
@@ -174,9 +174,9 @@ class Node(object):
 
 		kv = [f"   {to_sql_field(x)}: {to_sql_value(row[x])}" for x in fields]
 		return '\n'.join(kv)
-	
+
 	@staticmethod
-	def get_qualified_name(*args): 
+	def get_qualified_name(*args):
 		"""
 		Returns the full name given a namespace and patient ID
 		"""

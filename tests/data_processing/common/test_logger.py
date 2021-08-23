@@ -1,11 +1,22 @@
 from data_processing.common.custom_logger import init_logger
 from testfixtures import LogCapture
 import pytest
+import os, logging
 
 @pytest.fixture()
 def logger():
-    logger = init_logger() 
+    os.environ['LUNA_HOME'] = 'tests/data_processing/common/testdata/'
+    logger = init_logger()
     yield logger
+
+def test_no_luna_home():
+    os.environ['LUNA_HOME'] = ''
+    with pytest.raises(RuntimeError):
+        init_logger()
+
+def test_check_level(logger):
+    # 20 for info. ref: https://docs.python.org/3/library/logging.html#levels
+    assert 20 == logger.getEffectiveLevel()
 
 def test_levels(logger):
     with LogCapture() as l:

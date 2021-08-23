@@ -1,5 +1,5 @@
 import yaml, json
-import data_processing.transforms 
+import data_processing.transforms
 
 def load(stream):
     if isinstance(stream, str):

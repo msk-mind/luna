@@ -9,6 +9,28 @@ from functools import partial
 
 logger = logging.getLogger(__name__)
 
+LENGTH_MANY_TASKS = 50000 # When should we warn the user they are possibly paying a high price?
+
+def prune_empty_delayed(tasks):
+    """
+    A less-than-ideal method to prune empty tasks from dask tasks 
+    Here we're trading CPU and time for memory.
+    
+    Args:
+        tasks (list): list of delayed dask tasks
+    
+    Returns:
+        list[dask.delayed]: a reduced list of delayed dask tasks
+    """
+    @dask.delayed
+    def mock_return(task):
+        return task
+
+    if len(tasks) >= LENGTH_MANY_TASKS:
+        logger.warning(f"Hope you're okay with a length={len(tasks)} for loop!")
+
+    return [mock_return(task) for task in dask.compute(*tasks) if task is not None]
+
 def get_or_create_dask_client():
     try:
         client = get_client()
