@@ -1,8 +1,9 @@
-### This is just data_processing/pathology/common/utils.py
+### This is just data_processing.pathology/common/utils.py
 
 from   data_processing.common.config import ConfigSet
 import data_processing.common.constants as const
 
+from typing import Tuple, List
 import xml.etree.ElementTree as et
 import numpy as np
 import cv2
@@ -21,10 +22,15 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 
 def get_labelset_keys():
-    """
+    """get labelset keys
+    
     Given DATA_CFG, return slideviewer labelsets
-
-    :return: list of labelset names
+    
+    Args:
+        none
+    
+    Returns:
+        list: a list of labelset names 
     """
     cfg = ConfigSet()
     label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
@@ -36,9 +42,19 @@ def get_labelset_keys():
     return labelsets
 
 
-
-def convert_xml_to_mask(xml_fn, shape, annotation_name):
-    """ Convert a sparse XML annotation file (polygons) to a dense bitmask of shape <shape> """
+def convert_xml_to_mask(xml_fn: str, shape:list, annotation_name:str) -> np.ndarray:
+    """convert xml to bitmask
+    
+    converts a sparse halo XML annotation file (polygons) to a dense bitmask 
+    
+    Args:
+        xml_fn (str): file path to input halo XML file
+        shape (list): desired polygon shape
+        annotation_name (str): name of annotation 
+    
+    Returns:
+        np.ndarray: annotation bitmask of specified shape
+    """
 
     ret = None
     board_pos = None
@@ -88,8 +104,18 @@ def convert_xml_to_mask(xml_fn, shape, annotation_name):
     return ret
 
 
-def convert_halo_xml_to_roi(xml_fn):
-    """ Read the rectangle ROI of a halo XML annotation file """
+def convert_halo_xml_to_roi(xml_fn:str) -> Tuple[List, List]:
+    """get roi from halo XML file
+
+    Read the rectangle ROI of a halo XML annotation file 
+    
+    Args:
+        xml_fn: file path to input halo XML file 
+
+    Returns:
+        Tuple[list, list]: returns a tuple of x, y coordinates of the recangular roi
+
+    """
     
     ylist = list()
     xlist = list()
@@ -109,11 +135,24 @@ def convert_halo_xml_to_roi(xml_fn):
                 xlist.append(x)
     return xlist, ylist
 
-def get_slide_roi_masks(slide_path, halo_roi_path, annotation_name, slide_id=None, output_dir=None):
-    """ 
-    Given a slide, halo annotation xml file, generate labels from xml polygons, then, crop both the image and mask to ROI (rectangle) region
+def get_slide_roi_masks(slide_path, halo_roi_path, annotation_name, slide_id:str=None,
+        output_dir:str=None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]: 
+    """get roi masks from slides 
+
+    Given a slide, halo annotation xml file, generate labels from xml polygons, 
+    then crop both the image and mask to ROI (rectangle) region
     Optionally: save the RGB image, downsampled image sample, and interger label mask as a tiff 
-    returns: slide_array, sample_array, mask_array tuple: the cropped image as RGB numpy array, a downsampled array (as sample for stains), and mask array as single channel
+    
+    Args:
+        slide_path (str): path to input slide
+        halo_roi_path (str): path to halo annotation file
+        annotation_name (str): name of annotation 
+        slide_id (Optional, str): slide id
+        output_dir (Optional, str): destination to save RGB image, thumbnail and mask 
+    
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: the cropped image as RGB numpy array, a 
+        downsampled array (as sample for stains), and mask array as single channel
     """
 
     slide = openslide.OpenSlide(slide_path)
@@ -146,8 +185,17 @@ def get_slide_roi_masks(slide_path, halo_roi_path, annotation_name, slide_id=Non
     return slide_array, sample_array, mask_array
 
 
-def get_stain_vectors_macenko(sample):
-    """ Use the staintools MacenkoStainExtractor to extract stain vectors """
+def get_stain_vectors_macenko(sample: np.ndarray):
+    """get_stain_vectors
+    
+    Uses the staintools MacenkoStainExtractor to extract stain vectors 
+    
+    Args:
+        sample (np.ndarray): input patch
+    Returns:
+        np.ndarray: the stain matrix 
+    
+    """
     from staintools.stain_extraction.macenko_stain_extractor import MacenkoStainExtractor
 
     extractor = MacenkoStainExtractor()
@@ -155,7 +203,20 @@ def get_stain_vectors_macenko(sample):
     return vectors
 
 
-def pull_stain_channel(patch, vectors, channel=0):
+def pull_stain_channel(patch:np.ndarray, vectors:np.ndarray, channel:int=0)->np.ndarray:
+    """pull stain channel
+    
+    adds 'stain channel' to the image patch
+
+    Args:
+        patch (np.ndarray): input image patch
+        vectors (np.ndarray): stain vectors
+        channel (int): stain channel
+    
+    Returns:
+        np.ndarray: the input image patch with an added stain channel
+    """
+
     from staintools.miscellaneous.get_concentrations import get_concentrations
 
     tile_concentrations = get_concentrations(patch, vectors)
@@ -165,9 +226,25 @@ def pull_stain_channel(patch, vectors, channel=0):
     return tmp[:,:,channel]
 
 
-def extract_patch_texture_features(address, image_patch, mask_patch, stain_vectors, stain_channel, glcm_feature, plot=False):
-    """
-    Runs patch-wise extraction from an image_patch, mask_patch pair given a stain vector and stain channel.
+def extract_patch_texture_features(address, image_patch, mask_patch, stain_vectors,
+        stain_channel, glcm_feature, plot=False) -> np.ndarray:
+    """extact patch texture features
+
+    Runs patch-wise extraction from an image_patch, mask_patch pair given a stain
+    vector and stain channel.
+
+    Args:
+        address (str): unused? 
+        image_patch (np.ndarray): input image patch
+        mask_patch (np.ndarray): input image mask
+        stain_vectors (np.ndarray): stain vectors extacted from the image patch
+        stain_channels (int): stain channel 
+        glcm_feature (str): unused? 
+        plot (Optional, bool): unused? 
+
+    Returns:
+        np.ndarray: texture features from image patch
+    
     """
 
     extractor = radiomics.featureextractor.RadiomicsFeatureExtractor(binWidth=16)

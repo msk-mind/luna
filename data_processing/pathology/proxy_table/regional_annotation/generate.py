@@ -1,4 +1,4 @@
-'''
+'''TO BE RETIRED
 Created on January 30, 2021
 
 @author: pashaa@mskcc.org
@@ -36,16 +36,17 @@ Image.MAX_IMAGE_PIXELS = 5000000000
 
 
 def convert_bmp_to_npy(bmp_file, output_folder):
-    """
-    Reads a bmp file and creates friendly numpy ndarray file in the uint8 format in the output
-    directory specified, with extention .annot.npy
+    """Reads a bmp file and creates friendly numpy ndarray file in the uint8 format in the output
+    directory specified, with extension .annot.npy
 
-    Troubleshooting:
-        Make sure Pillow is upgraded to version 8.0.0 if getting an Unsupported BMP Size OS Error
+    Note: Make sure Pillow is upgraded to version 8.0.0 if getting an Unsupported BMP Size OS Error
 
-    :param bmp_file - /path/to/image.bmp
-    :param output_folder - /path/to/output/folder
-    :return filepath to file containing numpy array
+    Args:
+        bmp_file (string): path to the image.bmp
+        output_folder (): path to output folder
+
+    Returns:
+        string: path to the converted numpy array file
     """
     if not '.bmp' in bmp_file:
         return ''
@@ -64,11 +65,16 @@ def convert_bmp_to_npy(bmp_file, output_folder):
 
 
 def process_regional_annotation_slide_row_pandas(row: pd.DataFrame) -> pd.DataFrame:
-    '''
-    Downloads regional annotation bmps for each row in dataframe and saves the bmp to disc.
+    """Downloads regional annotation bmps from slideviewer and saves the bmp to disc.
 
-    :return updated dataframe with bmp metadata
-    '''
+    Update the dataframe with bmp metadata - bmp_record_uuid (hash of the file), bmp_filepath
+
+    Args:
+        row (pandas.DataFrame):
+
+    Returns:
+        pandas.DataFrame: updated dataframe with bmp metadata
+    """
     from slideviewer_client import download_zip, unzip
 
     full_filename = row.slideviewer_path.item()
@@ -133,13 +139,11 @@ def process_regional_annotation_slide_row_pandas(row: pd.DataFrame) -> pd.DataFr
     return row
 
 def create_proxy_table():
-    '''
-    Creates the pathology annotations proxy table with information contained in the specified data_config_file
+    """Creates the pathology annotations proxy table with information contained in the specified data_config_file
 
-    :param data_config_file: data configuration
-    :param app_config_file: app configuration
-    :return: exit_code = 0 if successful, > 0 if unsuccessful
-    '''
+    Returns:
+        int: exit code 0 if successful,
+    """
     # pd.set_option("display.max_rows", None, "display.max_columns", None)
     # pd.set_option('display.max_colwidth', -1)
 

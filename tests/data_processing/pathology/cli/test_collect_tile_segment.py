@@ -9,7 +9,7 @@ def test_cli():
     result = runner.invoke(cli, [
         '-a', 'tests/data_processing/pathology/cli/testdata/test_config.yaml',
         '-s', '123',
-        '-m', 'tests/data_processing/pathology/cli/testdata/collect_tile_results.json'])
+        '-m', 'tests/data_processing/pathology/cli/testdata/collect_tile_results.yaml'])
 
     assert result.exit_code == 0
     assert os.path.exists('tests/data_processing/pathology/cli/testdata/data/test/slides/ovarian_clf_v1/123.parquet')

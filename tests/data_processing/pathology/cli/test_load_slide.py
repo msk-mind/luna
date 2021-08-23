@@ -3,13 +3,14 @@ import os, shutil
 
 from data_processing.pathology.cli.load_slide import cli
 
+
 def test_cli():
 
     runner = CliRunner()
     result = runner.invoke(cli, [
         '-a', 'tests/data_processing/pathology/cli/testdata/test_config.yaml',
         '-s', '123',
-        '-m', 'tests/data_processing/pathology/cli/testdata/load_slide.json'])
+        '-m', 'tests/data_processing/pathology/cli/testdata/load_slide.yaml'])
 
     assert result.exit_code == 0
     assert os.path.lexists('tests/data_processing/pathology/cli/testdata/data/test/slides/123/pathology.etl/WholeSlideImage/data')
@@ -18,13 +19,14 @@ def test_cli():
     # clean up
     shutil.rmtree("tests/data_processing/pathology/cli/testdata/data/test/slides/123/pathology.etl/WholeSlideImage")
 
+
 def test_cli_with_patientid():
 
     runner = CliRunner()
     result = runner.invoke(cli, [
         '-a', 'tests/data_processing/pathology/cli/testdata/test_config.yaml',
         '-s', '123',
-        '-m', 'tests/data_processing/pathology/cli/testdata/load_slide_with_patientid.json'])
+        '-m', 'tests/data_processing/pathology/cli/testdata/load_slide_with_patientid.yaml'])
 
     assert result.exit_code == 0
     assert os.path.lexists('tests/data_processing/pathology/cli/testdata/data/test/slides/123/pathology.etl/WholeSlideImage/data')

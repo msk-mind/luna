@@ -140,8 +140,8 @@ def create_geojson_table():
     polygon_tolerance = cfg.get_value(path=const.DATA_CFG+'::POLYGON_TOLERANCE')
 
     # populate geojson and geojson_record_uuid
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/EnsureByteContext.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/utils.py"))
     spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/build_geojson.py"))
     from build_geojson import build_geojson_from_annotation
     label_config = cfg.get_value(path=const.DATA_CFG+'::LABEL_SETS')
@@ -159,9 +159,9 @@ def create_geojson_table():
     df = df.filter("geojson != ''")
 
     # populate uuid
-    from utils import generate_uuid_dict
+    from data_processing.common.utils import generate_uuid_dict
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/EnsureByteContext.py"))
     df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf("geojson", array(lit("SVGEOJSON"), "labelset")))
 
     # build refined table by selecting columns from output table
@@ -202,10 +202,10 @@ def create_concat_geojson_table():
         .agg(collect_list("geojson").alias("geojson_list"))
 
     # set up udfs
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/EnsureByteContext.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/utils.py"))
     spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/build_geojson.py"))
-    from utils import generate_uuid_dict
+    from data_processing.common.utils import generate_uuid_dict
     from build_geojson import concatenate_regional_geojsons
     concatenate_regional_geojsons_udf = udf(concatenate_regional_geojsons, geojson_struct)
     concat_geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())

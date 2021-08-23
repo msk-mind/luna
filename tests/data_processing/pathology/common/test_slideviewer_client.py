@@ -123,7 +123,7 @@ def test_download_sv_point_annotation(requests_mock):
                       text='[{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"Tissue 1"}, '+\
                            '{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1424","y":"774","class":"3","classname":"Tissue 4"}]')
 
-    import data_processing
+    import data_processing.pathology
     sys.modules['slideviewer_client'] = data_processing.pathology.common.slideviewer_client
 
     res = download_sv_point_annotation("http://test/user@8;123.svs/get")

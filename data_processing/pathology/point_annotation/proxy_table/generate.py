@@ -1,15 +1,9 @@
-"""
-The steps for processing pathology nuclei point annotations includes:
-1) (proxy_table) JSON Anotations are first downloaded from slideviewer
-2) (refined_table) JSON annotations are then converted into qupath-compatible geojson files
-"""
 
 import os, json
 import shutil
 
 import click
-from pyspark.sql.window import Window
-from pyspark.sql.functions import first, last, col, lit, desc, udf, explode, array, to_json, current_timestamp
+from pyspark.sql.functions import lit, udf, explode, array, to_json
 from pyspark.sql.types import ArrayType, StringType, IntegerType, MapType, StructType, StructField
 
 from data_processing.common.CodeTimer import CodeTimer
@@ -19,21 +13,22 @@ from data_processing.common.sparksession import SparkConfig
 from data_processing.common.utils import get_absolute_path
 from data_processing.pathology.common.slideviewer_client import fetch_slide_ids
 import data_processing.common.constants as const
-
 logger = init_logger()
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
 
 def download_point_annotation(slideviewer_url, slideviewer_path, project_id, user):
-    """
-    Return json response from slide viewer call
+    """Downloads point-click nuclear annotations using slideviewer API
 
-    :param slideviewer_url: slideviewer base url
-    :param slideviewer_path: slide path in slideviewer
-    :param project_id: slideviewer project id
-    :param user: username
-    :return: json response from slideviewer API
+    Args:
+        slideviewer_url (string): slideviewer base url e.g. https://slideviewer-url.com
+        slideviewer_path (string): slide path in slideviewer
+        project_id (string): slideviewer project id
+        user (string): username used to create the expert annotation
+
+    Returns:
+        json: point-click nuclear annotations
     """
     from slideviewer_client import download_sv_point_annotation
 
@@ -49,19 +44,51 @@ def download_point_annotation(slideviewer_url, slideviewer_path, project_id, use
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
               help="path to yaml file containing data input and output parameters. "
-                   "See ./data_config.yaml.template")
+                   "See data_config.yaml.template")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to yaml file containing application runtime parameters. "
-                   "See ./app_config.yaml.template")
+                   "See config.yaml.template")
 def cli(data_config_file, app_config_file):
-    """
-        This module generates a delta table with point_json_raw pathology data based on the input and output
-        parameters specified in the data_config_file.
+    """This module generates a parquet table of point-click nuclear annotation jsons.
 
-        Example:
-            python3 -m data_processing.pathology.point_annotation.proxy_table.generate \
-                     --data_config_file <path to data config file> \
-                     --app_config_file <path to app config file>
+    The configuration files are copied to your project/configs/table_name folder
+    to persist the metadata used to generate the proxy table.
+
+    INPUT PARAMETERS
+
+    app_config_file - path to yaml file containing application runtime parameters. See config.yaml.template
+
+    data_config_file - path to yaml file containing data input and output parameters. See data_config.yaml.template
+
+    - ROOT_PATH: path to output data
+
+    - DATA_TYPE: data type used in table name e.g. POINT_RAW_JSON
+
+    - PROJECT: your project name. used in table path
+
+    - DATASET_NAME: optional, dataset name to version your table
+
+    - PROJECT_ID: Slideviewer project id
+
+    - USERS: list of users that provide expert annotations for this project
+
+    - SLIDEVIEWER_CSV_FILE: an optional path to a SlideViewer csv file to use that lists the names of the whole slide images
+    and for which the regional annotation proxy table generator should download point annotations.
+    If this field is left blank, then the regional annotation proxy table generator will download this file from SlideViewer.
+
+    TABLE SCHEMA
+
+    - slideviewer_path: path to original slide image in slideviewer platform
+
+    - slide_id: id for the slide. synonymous with image_id
+
+    - sv_project_id: same as the PROJECT_ID from data_config_file, refers to the SlideViewer project number.
+
+    - sv_json: json annotation file downloaded from slideviewer.
+
+    - user: username of the annotator for a given annotation
+
+    - sv_json_record_uuid: hash of raw json annotation file from slideviewer, format: SVPTJSON-{json_hash}
     """
     with CodeTimer(logger, 'generate POINT_RAW_JSON table'):
         logger.info('data config file: ' + data_config_file)
@@ -83,6 +110,13 @@ def cli(data_config_file, app_config_file):
 
 
 def create_proxy_table():
+    """Create a proxy table of point annotation json files downloaded from the SlideViewer API
+
+    Each row of the table is a point annotation json created by a user for a slide.
+
+    Returns:
+        None
+    """
 
     cfg = ConfigSet()
 
@@ -125,9 +159,9 @@ def create_proxy_table():
     df = df.dropna(subset=["sv_json"])
 
     # populate "date_added", "date_updated","latest", "sv_json_record_uuid"
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
-    from utils import generate_uuid_dict
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/EnsureByteContext.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/utils.py"))
+    from data_processing.common.utils import generate_uuid_dict
     sv_json_record_uuid_udf = udf(generate_uuid_dict, StringType())
 
     df = df.withColumn("sv_json_record_uuid", sv_json_record_uuid_udf(to_json("sv_json"), array(lit("SVPTJSON"))))

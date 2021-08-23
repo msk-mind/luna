@@ -1,26 +1,8 @@
-'''
-Created: February 2021
-@author: aukermaa@mskcc.org
-
-Given a slide (container) ID
-1. resolve the path to the WSI image
-2. perform various scoring and labeling to tiles
-3. save tiles as a csv with schema [address, coordinates, *scores, *labels ]
-
-Example:
-python3 -m data_processing.pathology.cli.generate_tile_labels \
-    -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
-    -m data_processing/pathology/cli/examples/generate_tile_labels.json 
-
-Example with annotation:
-python3 -m data_processing.pathology.cli.generate_tile_labels \
-    -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
-    -m data_processing/pathology/cli/examples/generate_tile_labels_with_ov_labels.json 
-'''
 
 # General imports
 import os, json, logging
 import click
+import yaml
 
 # From common
 from data_processing.common.custom_logger   import init_logger
@@ -38,15 +20,52 @@ from data_processing.pathology.common.preprocess   import pretile_scoring
 @click.option('-m', '--method_param_path', required=True,
               help='json file with method parameters for tile generation and filtering.')
 def cli(app_config, datastore_id, method_param_path):
+    """Generate tile addresses, scores and optionally annotation labels.
+
+    app_config - application configuration yaml file. See config.yaml.template for details.
+
+    datastore_id - datastore name. usually a slide id.
+
+    method_param_path - json file with method parameters for tile generation and filtering.
+
+    - input_wsi_tag: job tag used to load slides
+
+    - job_tag: job tag for generating tile labels
+
+    - tile_size: size of patches
+
+    - scale_factor: desired downscale factor
+
+    - requested_magnification: desired magnification
+
+    - root_path: path to output data
+
+    - filter: optional filter map to select subset of the tiles e.g. {
+        "otsu_score": 0.5
+      }
+
+    - project_id: optional project id, if using regional annotations
+
+    - labelset: optional annotation labelset name, if using regional annotations
+
+    - annotation_table_path: optional path to the regional annotation table
+    """
     init_logger()
 
-    with open(method_param_path) as json_file:
-        method_data = json.load(json_file)
+    with open(method_param_path, 'r') as yaml_file:
+        method_data = yaml.safe_load(yaml_file)
     generate_tile_labels_with_datastore(app_config, datastore_id, method_data)
 
 def generate_tile_labels_with_datastore(app_config: str, datastore_id: str, method_data: dict):
-    """
-    Using the container API interface, score and generate tile addresses
+    """Generate tile addresses, scores and optionally annotation labels.
+
+    Args:
+        app_config (string): path to application configuration file.
+        datastore_id (string): datastore name. usually a slide id.
+        method_data (dict): method parameters including input, output details.
+
+    Returns:
+        None
     """
     logger = logging.getLogger(f"[datastore={datastore_id}]")
 

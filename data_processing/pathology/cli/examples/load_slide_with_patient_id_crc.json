@@ -1,5 +1,0 @@
-{
-    "job_tag": "crc.pathology.etl",
-    "table_path": "/gpfs/mskmindhdp_emc/data/CRC_21-167/tables/WSI_PATH_Hobbit_WSI_Colorectal_only_with_60_annotated_patientIDs", 
-    "patient_id_column_name": "patient_id"
-}

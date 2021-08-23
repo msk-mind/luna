@@ -1,0 +1,4 @@
+job_tag: pathology.etl
+table_path: tests/data_processing/pathology/cli/testdata/data/test-project/tables/WSI_patientId
+datastore_path: tests/data_processing/pathology/cli/testdata/data/test/slides
+patient_id_column_name: patient_id

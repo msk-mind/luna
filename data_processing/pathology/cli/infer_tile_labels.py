@@ -1,28 +1,7 @@
-'''
-Created: February 2021
-@author: aukermaa@mskcc.org
-
-Given a slide (container) ID
-1. resolve the path to the WSI image
-2. perform various scoring and labeling to tiles
-3. save tiles as a csv with schema [address, coordinates, *scores, *labels ]
-
-Example:
-python3 -m data_processing.pathology.cli.generate_tile_labels \
-    -c TCGA-BRCA \
-    -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
-    -m data_processing/pathology/cli/examples/generate_tile_labels.json 
-
-Example with annotation:
-python3 -m data_processing.pathology.cli.generate_tile_labels \
-    -c TCGA-BRCA \
-    -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
-    -m data_processing/pathology/cli/examples/generate_tile_labels_with_ov_labels.json 
-'''
-
 # General imports
 import os, json, logging
 import click
+import yaml
 
 # From common
 from data_processing.common.custom_logger   import init_logger
@@ -40,15 +19,43 @@ from data_processing.pathology.common.preprocess   import run_model
 @click.option('-m', '--method_param_path', required=True,
               help='json file with method parameters for loading a saved model.')
 def cli(app_config, datastore_id, method_param_path):
+    """Infer tile labels with a trained model.
+
+    app_config - application configuration yaml file. See config.yaml.template for details.
+
+    datastore_id - datastore name. usually a slide id.
+
+    method_param_path - json file with method parameters for loading a saved model.
+
+    - input_label_tag: job tag used to generate tile labels
+
+    - job_tag: job tag for the inference
+
+    - model_package: package to load your model e.g. data_processing.pathology.models.ov_tissuenet
+
+    - model: model details e.g. {
+          "checkpoint_path": "/path/to/checkpoint",
+          "n_classes": 4
+      }
+
+    - root_path: path to output directory
+    """
     init_logger()
 
-    with open(method_param_path) as json_file:
-        method_data = json.load(json_file)
+    with open(method_param_path, 'r') as yaml_file:
+        method_data = yaml.safe_load(yaml_file)
     infer_tile_labels_with_datastore(app_config, datastore_id, method_data)
 
 def infer_tile_labels_with_datastore(app_config: str, datastore_id: str, method_data: dict):
-    """
-    Using the container API interface, score and generate tile addresses
+    """Infer tile labels with a trained model.
+
+    Args:
+        app_config (string): path to application configuration file.
+        datastore_id (string): datastore name. usually a slide id.
+        method_data (dict): method parameters including input, output details.
+
+    Returns:
+        None
     """
     logger = logging.getLogger(f"[datastore={datastore_id}]")
 

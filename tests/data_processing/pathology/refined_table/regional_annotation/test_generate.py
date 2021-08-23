@@ -11,7 +11,7 @@ import data_processing.common.constants as const
 
 from pyspark.sql.functions import  to_json, lit, collect_list, udf
 
-project_path = "tests/data_processing/testdata/data/test-project"
+project_path = "tests/data_processing/pathology/testdata/data/test-project"
 geojson_table_path = project_path + "/tables/REGIONAL_GEOJSON_dsn"
 geojson_app_config_path = project_path +  "/configs/REGIONAL_GEOJSON_dsn/app_config.yaml"
 geojson_data_config_path = project_path + "/configs/REGIONAL_GEOJSON_dsn/data_config.yaml"

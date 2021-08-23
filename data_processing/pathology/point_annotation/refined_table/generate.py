@@ -1,15 +1,9 @@
-"""
-The steps for processing pathology nuclei point annotations includes:
-1) (proxy_table) JSON Anotations are first downloaded from slideviewer
-2) (refined_table) JSON annotations are then converted into qupath-compatible geojson files
-"""
 
 import os, json
 import shutil
 
 import click
-from pyspark.sql.window import Window
-from pyspark.sql.functions import first, last, col, lit, desc, udf, explode, array, to_json, current_timestamp
+from pyspark.sql.functions import lit, udf, explode, array, to_json
 from pyspark.sql.types import ArrayType, StringType, MapType, IntegerType, StructType, StructField
 
 from data_processing.common.CodeTimer import CodeTimer
@@ -49,14 +43,53 @@ geojson_struct = ArrayType(
               help="path to yaml file containing application runtime parameters. "
                    "See ./app_config.yaml.template")
 def cli(data_config_file, app_config_file):
-    """
-        This module generates a table with geojson pathology data based on the input and output parameters
-        specified in the data_config_file.
+    """This module generates a table of point-click nuclear annotations in geojson format.
 
-        Example:
-            python3 -m data_processing.pathology.point_annotation.refined_table.generate \
-                     --data_config_file <path to data config file> \
-                     --app_config_file <path to app config file>
+    This module converts the point annotation jsons in the proxy table to geojson format.
+    For more details on point annotation json table, please see `point_annotation/proxy_table/generate.py`
+
+    The configuration files are copied to your project/configs/table_name folder
+    to persist the metadata used to generate the proxy table.
+
+    INPUT PARAMETERS
+
+    app_config_file - path to yaml file containing application runtime parameters. See config.yaml.template
+
+    data_config_file - path to yaml file containing data input and output parameters. See data_config.yaml.template
+
+    - ROOT_PATH: path to output data
+
+    - SOURCE_DATA_TYPE: data type specified in proxy table generation e.g. POINT_RAW_JSON
+
+    - DATA_TYPE: data type used in table name e.g. POINT_GEOJSON
+
+    - PROJECT: your project name. used in table path
+
+    - DATASET_NAME: optional, dataset name to version your table
+
+    - LABEL_SETS: annotation label sets defined for this project
+
+    - USE_LABELSET: a labelset name to use within the specified LABEL_SETS. By default uses the 'default_labels' labelset
+
+    - USE_ALL_LABELSETS: True to generate geojsons for all of LABEL_SETS. False to generate geojsons for USE_LABELSET
+
+    TABLE SCHEMA
+
+    - sv_project_id: same as the PROJECT_ID from point annotation proxy data_config_file, refers to the SlideViewer project number.
+
+    - slideviewer_path: path to original slide image in slideviewer platform
+
+    - slide_id: id for the slide. synonymous with image_id
+
+    - sv_json_record_uuid: hash of raw json annotation file from slideviewer, format: SVPTJSON-{json_hash}
+
+    - user: username of the annotator for a given annotation
+
+    - labelset: labelset used to generate geojson
+
+    - geojson: geojson point annotation created
+
+    - geojson_record_uuid: hash of geojson annotation file, format: SVGEOJSON-{labelset}-{geojson_hash}
     """
     with CodeTimer(logger, 'generate GEOJSON table'):
         logger.info('data config file: ' + data_config_file)
@@ -78,6 +111,15 @@ def cli(data_config_file, app_config_file):
 
 
 def create_refined_table():
+    """Convert point annotation jsons into Geojson format, using the provided labelset mapping.
+
+    Note that the Slideviewer JSON includes a 'classname' field, but this is dependent on the REGIONAL annotation labelset
+    that is currently open, which may lead to unexpected behavior.
+    This is why the labelset mapping from integer to label is handled downstream in our pipeline versus just using the label from SlideViewer.
+
+    Returns:
+        None
+    """
 
     cfg = ConfigSet()
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="data_processing.pathology.point_annotation.refined_table.generate")
@@ -105,9 +147,9 @@ def create_refined_table():
     df = df.withColumn("geojson", build_geojson_from_pointclick_json_udf(lit(str(label_config)), "labelset", "sv_json")).cache()
 
     # populate "date_added", "date_updated","latest", "sv_json_record_uuid"
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/EnsureByteContext.py"))
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
-    from utils import generate_uuid_dict
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/EnsureByteContext.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/utils.py"))
+    from data_processing.common.utils import generate_uuid_dict
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
 
     df = df.withColumn("geojson_record_uuid", geojson_record_uuid_udf(to_json("geojson"), array(lit("SVPTGEOJSON"), "labelset")))

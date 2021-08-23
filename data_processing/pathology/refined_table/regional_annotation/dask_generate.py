@@ -15,29 +15,49 @@ import numpy as np
 
 from dask.distributed import Client, as_completed
 
+logger = init_logger()
+
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
               help="path to yaml file containing data input and output parameters. "
-                   "See ./data_config.yaml.template")
+                   "See dask_data_config.yaml.template")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to yaml file containing application runtime parameters. "
-                   "See ./app_config.yaml.template")
+                   "See config.yaml.template")
 def cli(data_config_file, app_config_file):
-    """
-        This module generates a delta table with geojson pathology data based on the input and output parameters
-         specified in the data_config_file.
+    """This module generates parquets with regional annotation pathology data
 
-        Example:
-            python3 -m data_processing.pathology.refined_table.regional_annotation.dask_generate \
-                     --data_config_file <path to data config file> \
-                     --app_config_file <path to app config file> \
-    """
-    logger = init_logger()
+    INPUT PARAMETERS
 
+    app_config_file - path to yaml file containing application runtime parameters. See config.yaml.template
+
+    data_config_file - path to yaml file containing data input and output parameters. See dask_data_config.yaml.template
+
+    TABLE SCHEMA
+
+    - sv_project_id: project number in slide viewer
+
+    - slideviewer_path: slide path based on slideviewer organization
+
+    - slide_id: slide id. synonymous with image_id
+
+    - user: username of the annotator for a given annotation. For all slides, we combine multiple annotations from
+        different users for a slide. In this case, user is set to 'CONCAT' and bmp_filepath, npy_filepath are null.
+
+    - bmp_filepath: file path to downloaded bmp annotation file
+
+    - npy_filepath: file path to npy annotation file converted from bmp
+
+    - geojson_path: file path to  geojson file converted from numpy
+
+    - date: creation date
+
+    - labelset:
+    """
     # load configs
     cfg = ConfigSet(name='DATA_CFG', config_file=data_config_file)
     cfg = ConfigSet(name='APP_CFG',  config_file=app_config_file)
-    
+
     with CodeTimer(logger, f"generate annotation geojson table"):
         logger.info('data template: ' + data_config_file)
         logger.info('config_file: ' + app_config_file)
@@ -50,24 +70,30 @@ def cli(data_config_file, app_config_file):
         shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
         logger.info("config files copied to %s", config_location)
 
-        exit_code = create_geojson_table()
-        if exit_code != 0:
+        failed = create_geojson_table()
+
+        if failed:
             logger.error("GEOJSON table creation had errors. Exiting.")
-            return
+            logger.error(failed)
+            raise RuntimeError("GEOJSON table creation had errors. Exiting.")
+
+        return
 
 
 def create_geojson_table():
-    """
-    Vectorizes npy array annotation file into polygons and builds GeoJson with the polygon features.
+    """Vectorizes npy array annotation file into polygons and builds GeoJson with the polygon features.
     Creates a geojson file per labelset.
-    """
+    Combines multiple annotations from different users for a slide.
 
+    Returns:
+        list: list of slide ids that failed
+    """
+    failed = []
     # get application and data config variables
     cfg = ConfigSet()
-
     client = Client(n_workers=25, threads_per_worker=1, memory_limit=0.1)
     client.run(init_logger)
-    print (client)
+    logger.info(client)
 
     SLIDEVIEWER_API_URL     = cfg.get_value('DATA_CFG::SLIDEVIEWER_API_URL')
     SLIDEVIEWER_CSV_FILE    = cfg.get_value('DATA_CFG::SLIDEVIEWER_CSV_FILE')
@@ -81,11 +107,11 @@ def create_geojson_table():
     TABLE_OUT_DIR           = const.TABLE_LOCATION(cfg)
 
     os.makedirs(TABLE_OUT_DIR, exist_ok=True)
-    print ("Table output directory =", TABLE_OUT_DIR)
+    logger.info("Table output directory =", TABLE_OUT_DIR)
 
     # setup variables needed for build geojson UDF
     contour_level       = cfg.get_value('DATA_CFG::CONTOUR_LEVEL')
-    
+
     # fetch full set of slideviewer slides for project
     slides = fetch_slide_ids(SLIDEVIEWER_API_URL, PROJECT_ID, const.CONFIG_LOCATION(cfg), SLIDEVIEWER_CSV_FILE)
     df = pd.DataFrame(data=np.array(slides),columns=["slideviewer_path", "slide_id", "sv_project_id"])
@@ -114,16 +140,18 @@ def create_geojson_table():
                 slide_id, data = json_future.result()
                 if slide_id and data:
                     result_df = pd.DataFrame(data)
-                    print (result_df)
+                    logger.info(result_df)
                     result_df.drop(columns='geojson').to_parquet(f"{TABLE_OUT_DIR}/regional_annot_slice_slide={slide_id}.parquet")
                 else:
-                    print("Empty geojson returned. this means either this was an empty slide or an error occured during geojson generate")
+                    failed.append(slide_id)
+                    logger.warning("Empty geojson returned. this means either this was an empty slide or an error occured during geojson generate")
         except:
-            print (f"Something was wrong with future {json_future}, skipping.")
+            failed.append(slide_id)
+            logger.warning(f"Something was wrong with future {json_future}, skipping.")
 
     client.shutdown()
 
-    return 0
+    return failed
 
 
 if __name__ == "__main__":

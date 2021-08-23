@@ -1,0 +1,6 @@
+# path to DSA compatible annotation
+annotation_filepath: path/to/built/dsa/annotation.json
+# image file name from DSA
+image_filename: 123.svs
+# collection name from DSA
+collection_name: Collection Name for slide on DSA

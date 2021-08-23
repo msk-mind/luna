@@ -11,7 +11,7 @@ def test_stardist_polygon():
     runner = CliRunner()
     result = runner.invoke(cli,
                            ["-s", "stardist-polygon",
-                            "-d","tests/data_processing/pathology/cli/dsa/testdata/stardist_polygon.json"])
+                            "-d","tests/data_processing/pathology/cli/dsa/testdata/stardist_polygon.yaml"])
 
     assert result.exit_code == 0
     output_file = "tests/data_processing/pathology/cli/dsa/testouts/StarDist_Segmentations_with_Lymphocyte_Classifications_123.json"
@@ -24,7 +24,7 @@ def test_stardist_cell():
     runner = CliRunner()
     result = runner.invoke(cli,
                            ["-s", "stardist-cell",
-                            "-d","tests/data_processing/pathology/cli/dsa/testdata/stardist_cell.json"])
+                            "-d","tests/data_processing/pathology/cli/dsa/testdata/stardist_cell.yaml"])
 
     assert result.exit_code == 0
 
@@ -39,7 +39,7 @@ def test_regional_polygon():
     runner = CliRunner()
     result = runner.invoke(cli,
                            ["-s", "regional-polygon",
-                            "-d","tests/data_processing/pathology/cli/dsa/testdata/regional_polygon.json"])
+                            "-d","tests/data_processing/pathology/cli/dsa/testdata/regional_polygon.yaml"])
 
     assert result.exit_code == 0
 
@@ -54,7 +54,7 @@ def test_heatmap():
     runner = CliRunner()
     result = runner.invoke(cli,
                            ["-s", "heatmap",
-                            "-d","tests/data_processing/pathology/cli/dsa/testdata/heatmap_config.json"])
+                            "-d","tests/data_processing/pathology/cli/dsa/testdata/heatmap_config.yaml"])
 
     assert result.exit_code == 0
     output_file = "tests/data_processing/pathology/cli/dsa/testouts/otsu_score_test_123.json"
@@ -67,7 +67,7 @@ def test_qupath_polygon():
     runner = CliRunner()
     result = runner.invoke(cli,
                            ["-s", "qupath-polygon",
-                            "-d","tests/data_processing/pathology/cli/dsa/testdata/qupath_polygon.json"])
+                            "-d","tests/data_processing/pathology/cli/dsa/testdata/qupath_polygon.yaml"])
 
     print(result.exc_info)
     assert result.exit_code == 0
@@ -85,7 +85,7 @@ def test_upload(requests_mock):
 
     runner = CliRunner()
     result = runner.invoke(upload,
-                           ["-c", "tests/data_processing/pathology/cli/dsa/testdata/dsa_config.json",
-                            "-d","tests/data_processing/pathology/cli/dsa/testdata/bitmask_polygon_upload.json"])
+                           ["-c", "tests/data_processing/pathology/cli/dsa/testdata/dsa_config.yaml",
+                            "-d","tests/data_processing/pathology/cli/dsa/testdata/bitmask_polygon_upload.yaml"])
 
     assert result.exit_code == 0

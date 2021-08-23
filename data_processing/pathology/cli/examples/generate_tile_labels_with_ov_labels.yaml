@@ -1,0 +1,11 @@
+input_wsi_tag: pathology.etl
+job_tag: test_generate_tile_ov_labels
+tile_size: 128
+scale_factor: 16
+requested_magnification: 20
+project_id: OV_16-158
+labelset: PIXEL_CLASSIFIER_LABELS
+filter:
+  otsu_score: 0.5
+root_path: /path/to/output/data
+annotation_table_path: /path/to/regional/annotation/table

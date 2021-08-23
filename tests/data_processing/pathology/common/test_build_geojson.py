@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import json
 
-npy_data_path = 'tests/data_processing/testdata/data/test-project/pathology_annotations/regional_npys/2021_HobS21_8_123'
+npy_data_path = 'tests/data_processing/pathology/testdata/data/test-project/pathology_annotations/regional_npys/2021_HobS21_8_123'
 
 def test_add_contours_for_label():
     base_geojson = {
@@ -29,7 +29,7 @@ def test_add_contours_for_label_non_matching_label():
 
 def test_build_geojson_from_bitmap():
 
-    import data_processing
+    import data_processing.pathology
     sys.modules['build_geojson'] = data_processing.pathology.common.build_geojson
 
     data = [{"label_config": "{'DEFAULT_LABELS': {1: 'tissue_1', 2: 'tissue_2', 3: 'tissue_3', 4: 'tissue_4', 5: 'tissue_5'}}",

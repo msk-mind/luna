@@ -3,7 +3,7 @@ Created on November 30, 2020
 
 @author: aukermaa@mskcc.org
 
-Memorial Sloan Kettering Cancer Center 
+Memorial Sloan Kettering Cancer Center
 '''
 
 import click
@@ -14,8 +14,8 @@ from data_processing.common.custom_logger import init_logger
 from data_processing.common.sparksession import SparkConfig
 import data_processing.common.constants as const
 from data_processing.common.utils import generate_uuid, get_absolute_path
-from data_processing.common.DataStore import DataStore 
-from data_processing.common.DataStore import Node 
+from data_processing.common.DataStore import DataStore
+from data_processing.common.DataStore import Node
 
 from pyspark.sql.functions import udf, lit, col, array
 from pyspark.sql.types import StringType, MapType
@@ -23,61 +23,101 @@ from pyspark.sql.types import StringType, MapType
 import shutil, sys, importlib, glob, yaml, os, subprocess, time
 from pathlib import Path
 
-import openslide 
-import requests 
+import openslide
+import requests
 
 logger = init_logger()
 
 TRY_S3=False
-SCHEMA_FILE=get_absolute_path(__file__, '../../data_ingestion_template_schema.yml')
+SCHEMA_FILE=get_absolute_path(__file__, 'data_ingestion_template_schema.yml')
 DATA_CFG = 'DATA_CFG'
 APP_CFG = 'APP_CFG'
 
 def sql_cleaner(s):
+    """Replace period and space with underscore
+
+    Args:
+        s (string): string to be cleaned
+
+    Returns:
+        string: cleaned sql string
+    """
     return s.replace(".","_").replace(" ","_")
 
 def parse_slide_id(path):
-    """ Slide stem is their slide id """
+    """Parse slide id from path. Slide id is simply the name of the file without file extension
+
+    Args:
+        path (string): path to slide image
+
+    Returns:
+        string: slide id
+    """
     posix_file_path = path.split(':')[-1]
 
     slide_id = Path(posix_file_path).stem
 
-    return slide_id 
+    return slide_id
 
 def parse_openslide(path):
-    """ From https://github.com/msk-mind/sandbox/blob/master/pathology/slide_to_proxy.py """
-    """ Parse openslide header information """
+    """Extract openslide properties
 
+    Args:
+        path (string): path to slide image
+
+    Returns:
+        dict: slide metadata
+    """
     posix_file_path = path.split(':')[-1]
 
     with openslide.OpenSlide(posix_file_path) as slide_os_handle:
-        kv = dict(slide_os_handle.properties) 
-    
+        kv = dict(slide_os_handle.properties)
+
     meta = {}
     for key in kv.keys():
         meta[sql_cleaner(key)] = kv[key]
-    return meta 
+    return meta
 
 
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
               help="path to yaml file containing data input and output parameters. "
-                   "See ./data_config.yaml.template")
+                   "See data_config.yaml.template")
 @click.option('-a', '--app_config_file', default='config.yaml', type=click.Path(exists=True),
               help="path to yaml file containing application runtime parameters. "
-                   "See ./app_config.yaml.template")
+                   "See config.yaml.template")
 @click.option('-p', '--process_string', default='all',
               help='comma separated list of processes to run or replay: e.g. transfer,delta,graph, or all')
 def cli(data_config_file, app_config_file, process_string):
-    """
-        This module generates a delta table with pathology data based on the input and output parameters specified in
-     the data_config_file.
+    """This module generates a delta table with pathology data
 
-        Example:
-            python3 -m data_processing.pathology.proxy_table.generate \
-                     --data_config_file <path to data config file> \
-                     --app_config_file <path to app config file> \
-                     --process_string transfer,delta
+    This module converts the point annotation jsons in the proxy table to geojson format.
+    For more details on point annotation json table, please see `point_annotation/proxy_table/generate.py`
+
+    The configuration files are copied to your project/configs/table_name folder
+    to persist the metadata used to generate the proxy table.
+
+    INPUT PARAMETERS
+
+    app_config_file - path to yaml file containing application runtime parameters. See config.yaml.template
+
+    data_config_file - path to yaml file containing data input and output parameters. See data_config.yaml.template
+
+    process_string - comma separated list of processes to run or replay: e.g. transfer,delta,graph, or all
+
+    TABLE SCHEMA
+
+    - slide_id: slide id extracted from the filename. primary id for the table
+
+    - path: path to WSI file
+
+    - metadata: properties extracted from the slide using OpenSlide
+
+    - wsi_record_uuid: hash of wsi file, format: WSI-{json_hash}
+
+    - modificationTime: modification time of the wsi on disc
+
+    - length: length of the file
     """
     with CodeTimer(logger, 'generate proxy table'):
         processes = process_string.lower().strip().split(",")
@@ -99,7 +139,7 @@ def cli(data_config_file, app_config_file, process_string):
 
         # subprocess - create proxy table
         if 'delta' in processes or 'all' in processes:
-            exit_code = create_proxy_table(app_config_file)
+            exit_code = create_proxy_table()
             if exit_code != 0:
                 logger.error("Delta table creation had errors. Exiting.")
                 return
@@ -110,7 +150,12 @@ def cli(data_config_file, app_config_file, process_string):
                 return
 
 
-def create_proxy_table(config_file):
+def create_proxy_table():
+    """Create a proxy table with WSI metadata
+
+    Returns:
+        int: exit code 0 if successful
+    """
 
     exit_code = 0
     cfg = ConfigSet()
@@ -154,7 +199,7 @@ def update_graph(config_file):
     """
     This function reads a delta table and:
         1. Creates/validates a cohort-namespace exists given the PROJECT name
-        2. Creates slide containers for each slide_id, and 
+        2. Creates slide containers for each slide_id, and
         3. Commits associated metadata/raw data to neo4j/minio
     """
 
@@ -181,7 +226,7 @@ def update_graph(config_file):
             node = Node("WholeSlideImage", "pathology.etl", properties)
             node.set_data( row.path.split(':')[-1] )
             container.put(node)
-        
+
 
     return exit_code
 

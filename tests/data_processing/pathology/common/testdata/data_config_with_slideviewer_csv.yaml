@@ -63,7 +63,7 @@ SOURCE_PATH: /data
 LANDING_PATH: tests/data_processing/pathology/proxy_table/regional_annotation/test_data/output/
 
 # location where the data should be transferred on the destination machine.
-RAW_DATA_PATH: tests/data_processing/radiology/proxy_table/test_data/OV_16-158_CT_20201028/raw_data
+RAW_DATA_PATH: tests/data_processing/pathology/radiology/proxy_table/test_data/OV_16-158_CT_20201028/raw_data
 
 # required: a full include option for rsync. Examples: --include=*.dcm --include=*.mha
 INCLUDE: --include=*.dcm

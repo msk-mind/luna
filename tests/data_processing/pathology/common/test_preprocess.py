@@ -62,7 +62,7 @@ def test_pretile_scoring(requests_mock):
     os.makedirs(output_dir, exist_ok=True)
 
     params = {"tile_size":128,
-              "magnification":20,
+              "requested_magnification":20,
               "project_id": "project",
               "labelset": "default_labels",
               "filter": {

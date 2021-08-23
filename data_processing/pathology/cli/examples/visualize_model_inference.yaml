@@ -1,0 +1,11 @@
+input_wsi_tag: pathology.etl
+input_label_tag: infer_ov_clf
+job_tag: visualize_infer_ov_clf
+scale_factor: 8
+tile_size: 128
+requested_magnification: 20
+dsa_config:
+  host: localhost
+  port: 8080
+  token: abc123
+root_path: /path/to/output/data

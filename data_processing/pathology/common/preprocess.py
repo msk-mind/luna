@@ -1,13 +1,14 @@
-'''
+"""
 @author: aukermaa@mskcc.org
 @author: pateld6@mskcc.org
 @author: rosed2@mskcc.org
 
 Various utility and processing methods for pathology
-'''
+"""
 
 import os, itertools, logging, re
 
+from typing import Union, Tuple, List, Dict
 import numpy  as np
 import pandas as pd
 import seaborn as sns
@@ -41,7 +42,19 @@ palette = sns.color_palette("viridis",as_cmap=True)
 categorial = sns.color_palette("Set1", 8)
 categorical_colors = {}
 
-def get_tile_color(score):
+def get_tile_color(score:Union[str, float]) -> Union[float, None]:
+    """get tile color
+
+    uses deafult color palette to return color of tile based on score
+
+    Args:
+        score (Union[str, float]): a value between [0,1] such as the 
+            Otsu threshold, puple score, a model output, etc. 
+    Returns:
+        Union[float, None]: returns the color is the input is of valid type
+            else None
+
+    """
     # categorical
     if isinstance(score, str):
         if score in categorical_colors:
@@ -62,19 +75,35 @@ def get_tile_color(score):
 
 
 # USED -> utils
-def array_to_slide(arr):
+def array_to_slide(arr: np.ndarray) -> openslide.OpenSlide:
+    """converts a numpy array to a openslide.OpenSlide object
+
+    Args:
+        arr (np.ndarray): input image array
+    
+    Returns:
+        openslide.OpenSlide: a slide object from openslide    
+    """
+
     assert isinstance(arr, np.ndarray)
     slide = openslide.ImageSlide(Image.fromarray(arr))
     return slide
-    
+   
+
 # USED -> utils
-def get_scale_factor_at_magnfication(slide, requested_magnification):
-    """
+def get_scale_factor_at_magnfication(slide: openslide.OpenSlide,
+        requested_magnification: int) -> int:
+    """get scale factor at magnification
+
     Return a scale factor if slide scanned magnification and
     requested magnification are different.
-    :param slide: Openslide slide object
-    :param requested_magnification: int
-    :return: scale factor
+
+    Args:
+        slide (openslide.OpenSlide): slide object
+        requested_magnification (int): requested magnification
+    
+    Returns:
+        int: scale factor required to achieve requested magnification
     """
     
     # First convert to float to handle true integers encoded as string floats (e.g. '20.000')
@@ -97,13 +126,17 @@ def get_scale_factor_at_magnfication(slide, requested_magnification):
             raise ValueError(f'Expected magnification {requested_magnification} to be an divisor multiple of {scanned_magnfication}')
     return scale_factor
 
+
 # USED -> utils
-def get_full_resolution_generator(slide, tile_size):
-    """
-    Return deepzoom generator and generator level
-    :param slide: Openslide object
-    :param tile_size: for the DeepZoomGenerator
-    :return:
+def get_full_resolution_generator(slide: openslide.OpenSlide, tile_size:int) -> Tuple[DeepZoomGenerator, int]:
+    """Return DeepZoomGenerator and generator level
+
+    Args:
+        slide (openslide.OpenSlide): slide object
+        tile_size (int): width and height of a single tile for the DeepZoomGenerator
+    
+    Returns:
+        Tuple[DeepZoomGenerator, int] 
     """
     assert isinstance(slide, openslide.OpenSlide) or isinstance(slide, openslide.ImageSlide)
     generator = DeepZoomGenerator(slide, overlap=0, tile_size=tile_size, limit_bounds=False)
@@ -112,7 +145,20 @@ def get_full_resolution_generator(slide, tile_size):
     return generator, generator_level
 
 # USED -> generate cli
-def get_otsu_scores(address_raster, otsu_img, otsu_tile_size):
+def get_otsu_scores(address_raster:list, otsu_img:np.ndarray, otsu_tile_size:int) -> List[float]:
+    """compute otsu score
+
+    otsu thresholds a single tile and computes the mean value to yield a scalar score
+    between 0 and 1
+
+    Args:
+        addresss_raster (list): the raster address of a tiles to score
+        otsu_img (np.ndarray): input array to threshold
+        otsu_tile_size (int): size of input tiles  
+    
+    Returns:
+        list[float]: a list of otsu scores 
+    """
     otsu_slide = array_to_slide(otsu_img)
     otsu_generator, otsu_generator_level = get_full_resolution_generator(otsu_slide, tile_size=otsu_tile_size)
     otsu_score_results = []
@@ -122,7 +168,20 @@ def get_otsu_scores(address_raster, otsu_img, otsu_tile_size):
     return otsu_score_results
 
 # USED -> generate cli
-def get_purple_scores(address_raster, rgb_img, rgb_tile_size):
+def get_purple_scores(address_raster:list, rgb_img:np.ndarray, rgb_tile_size:int) -> List[float]:
+    """compute purple score 
+
+    computes the purple score for tiles in a slide 
+
+    Args:
+        address_raster (list): the raster address of tiles to score
+        rgb_img (np.ndarray): input array to score
+        rgb_tile_size (int): size of input tiles 
+    
+    Returns:
+        list[float]: a list of purple scores    
+    """
+
     rgb_slide = array_to_slide(rgb_img)
     rgb_generator, rgb_generator_level = get_full_resolution_generator(rgb_slide, tile_size=rgb_tile_size)   
     purple_score_results = []
@@ -133,17 +192,36 @@ def get_purple_scores(address_raster, rgb_img, rgb_tile_size):
         # cond2 = b > 90
         # score = np.sum(cond1 & cond2)
         score = np.mean((r > (g + 10)) & (b > (g + 10)))
-        purple_score_results.append ( score )  
+        purple_score_results.append(score)  
+
     return purple_score_results
 
 # USED -> utils
-def coord_to_address(s, magnification):
+def coord_to_address(s:Tuple[int, int], magnification:int)->str:
+    """converts coordinate to address
+
+    Args:
+        s (tuple[int, int]): coordinate consisting of an (x, y) tuple
+        magnification (int): magnification factor
+
+    Returns:
+        str: a string consisting of an x_y_z address
+    """
+
     x = s[0]
     y = s[1]
     return f"x{x}_y{y}_z{magnification}"
 
 # USED -> utils
-def address_to_coord(s):
+def address_to_coord(s:str) -> Tuple[int, int]:
+    """converts address into coordinates
+    
+    Args:
+        s (str): a string consisting of an x_y_z address 
+
+    Returns:
+        Tuple[int, int]: a tuple consisting of an x, y pair 
+    """
     s = str(s)
     p = re.compile('x(\d+)_y(\d+)_z(\d+)', re.IGNORECASE)
     m = p.match(s)
@@ -152,12 +230,17 @@ def address_to_coord(s):
     return (x,y)
 
 # USED -> utils
-def get_downscaled_thumbnail(slide, scale_factor):
-    """
-    Return downscaled thumbnail
-    :param slide: OpenSlide slide object
-    :param scale_factor: scale factor
-    :return: downscaled np.ndarray
+def get_downscaled_thumbnail(slide:openslide.OpenSlide, scale_factor:int)-> np.ndarray:
+    """get downscaled thumbnail
+
+    yields a thumbnail image of a whole slide rescaled by a specified scale factor
+
+    Args:
+        slide (openslide.OpenSlide): slide object
+        scale_factor (int): integer scaling factor to resize the whole slide by
+    
+    Returns:    
+        np.ndarray: downsized whole slie thumbnail 
     """
     new_width  = slide.dimensions[0] // scale_factor
     new_height = slide.dimensions[1] // scale_factor
@@ -165,23 +248,35 @@ def get_downscaled_thumbnail(slide, scale_factor):
     return np.array(img)
 
 # USED -> generate tiles
-def make_otsu(img, scale=1):
-    """
-    Make image with pixel-wise foreground/background labels.
-    :param img: grayscale np.ndarray
-    :return: np.ndarray where each pixel is 0 if background and 1 if foreground
+def make_otsu(img: np.ndarray, scale:int=1) -> np.ndarray: 
+    """make otsu-thresholded image 
+    
+    Make image with pixel-wise foreground/background labels as determined by the otsu
+    threshold 
+
+    Args:
+        img (np.ndarray):  grayscale input image
+        scale (float): value to scale the threshold by 
+
+    Returns:
+        np.ndarray: array where each pixel is 0 if background and 1 if foreground
     """
     assert isinstance(img, np.ndarray)
     _img = rgb2gray(img)
     threshold = threshold_otsu(_img)
     return (_img < (threshold * scale)).astype(float)
 
-def build_shapely_polygons_from_geojson(annotation_geojson):
-    """
-    Build shapely polygons from geojson
+def build_shapely_polygons_from_geojson(annotation_geojson:Dict[str, any])-> Tuple[list,
+        list]:
+    """Build shapely polygons from geojson
 
-    :param annotation_geojson: geojson
-    :return: polygon and annotation label lists
+    builds a list of shapely polygons and their cooresponding label from a geojson object
+
+    Args:
+        annotation_geojson (dict[str, any]): input annotation geoJSON object
+    
+    Returns:
+        Tuple[list, list]: a tuple consisting of polygon and annotation label lists
     """
     annotation_polygons = []
     annotation_labels = []
@@ -210,17 +305,22 @@ def build_shapely_polygons_from_geojson(annotation_geojson):
     return annotation_polygons,annotation_labels
 
 
-def get_regional_labels(address_raster, annotation_polygons, annotation_labels, full_generator, full_level):
-    """
-    Return annotation labels for tiles that contain annotations
+def get_regional_labels(address_raster:list, annotation_polygons:list,
+        annotation_labels:list, full_generator:DeepZoomGenerator, full_level:int)->list:
+    """get regional labels
+
+    Returns annotation labels for tiles that contain annotations
     If the tile doesn't contain annotation, set label to None.
 
-    :param address_raster: coordinates
-    :param annotation_polygons: shapely Polygon
-    :param annotation_labels: annotation label name
-    :param full_generator: full res generator
-    :param full_level: full res level
-    :return: annotation labels
+    Args:
+        address_raster (list): raster coordinates for tiles 
+        annotation_polygons (list): list of shapely Polygon objects
+        annotation_labels (list): list of annotation label names
+        full_generator (DeepZoomGenerator): whole slide full resolution generator
+        param full_level (int): full res level for full_generator
+    
+    Returns:
+        list: list of annotation labels for each polygon 
     """
     regional_label_results = []
 
@@ -249,19 +349,33 @@ def get_regional_labels(address_raster, annotation_polygons, annotation_labels, 
     return regional_label_results
 
 ### MAIN ENTRY METHOD -> pretile
-def pretile_scoring(slide_file_path: str, output_dir: str, annotation_table_path: str, params: dict, image_id: str):
-    """
-    Generate tiles and scores.
+def pretile_scoring(slide_file_path: str, output_dir: str, annotation_table_path: str,
+        params: dict, image_id: str) -> dict:
+    """preform tiling operations and score tiles 
 
-    Notes: 
-    to_mag_scale_factor tells us how much to scale to get from full resolution to desired magnification
-    to_thumbnail_scale_factor tells us how much to scale to get from desired magnification to the desired thumbnail downscale, relative to requested mag
-    
-    The tile size is defined at the requested mag, so it's bigger at full resolution and smaller for the thumbnail
-    to_mag_scale_factor and to_thumbnail_scale_factor both need to be event integers, i.e. the scale factors are multiples of the the scanned magnficiation
+    Generate tiles and scores. to_mag_scale_factor tells us how much to scale to get from
+    full resolution to desired magnification. to_thumbnail_scale_factor tells us how much to 
+    scale to get from desired magnification to the desired thumbnail downscale, relative
+    to the requested mag. The tile size is defined at the requested mag, so it's bigger at 
+    full resolution and smaller for the thumbnail to_mag_scale_factor and to_thumbnail_scale_factor
+    both need to be event integers, i.e. the scale factors are multiples 
+    of the the scanned magnficiation
+
+    Args:
+        slide_file_path (str): input whole slide file path
+        output_dir (str): directory to save files
+        annotation_table_path (str): path to annotation table
+        params (dict): parameter dict consisting of tile_size, magnification,
+            project_id, label_set, filter and scale factor
+        image_id (str): input image id 
+
+    Returns:
+        dict: a dictionary of properties specifying parameters used to generate tiles
+            and save output files
     """
+
     requested_tile_size       = params.get("tile_size")
-    requested_magnification   = params.get("magnification")
+    requested_magnification   = params.get("requested_magnification")
 
     # optional arguments related to slideviewer annotations
     project_id               = params.get("project_id", None)
@@ -381,15 +495,30 @@ def pretile_scoring(slide_file_path: str, output_dir: str, annotation_table_path
 
 
 ### MAIN ENTRY METHOD -> pretile
-def run_model(pil_file_path: str, csv_file_path: str, output_dir: str, params: dict):
-    """
-
-    Notes: 
-    to_mag_scale_factor tells us how much to scale to get from full resolution to desired magnification
-    to_thumbnail_scale_factor tells us how much to scale to get from desired magnification to the desired thumbnail downscale, relative to requested mag
+def run_model(pil_file_path: str, csv_file_path: str, output_dir: str, params: dict) -> dict:
+    """runs a tile classifier model on a tile data frame/csv
     
-    The tile size is defined at the requested mag, so it's bigger at full resolution and smaller for the thumbnail
-    to_mag_scale_factor and to_thumbnail_scale_factor both need to be event integers, i.e. the scale factors are multiples of the the scanned magnficiation
+    Loads a PyTorch model and runs inference on a set of tiles in an input dataframe. 
+    The results are saved to an output csv. 
+
+    to_mag_scale_factor tells us how much to scale to get from full resolution to
+    desired magnification. to_thumbnail_scale_factor tells us how much to scale to get
+    from desired magnification to the desired thumbnail downscale, relative to requested
+    mag. The tile size is defined at the requested mag, so it's bigger at full resolution
+    and smaller for the thumbnail. to_mag_scale_factor and to_thumbnail_scale_factor both
+    need to be event integers, i.e. the scale factors are multiples of the the scanned
+    magnficiation
+
+    Args:
+        pil_file_path (str): file path to the input whole slide 
+        csv_file_path (str): input tile csv/dataframe 
+        output_dir (str): destination to save inference results to 
+        params (dict): configuration dictionary consisting of model_package, which
+            properties of the tile classifier model 
+
+    Returns:
+        properties (dict): a properties dictionary with return values 
+        
     """ 
     model_package             = params.get("model_package")
 
@@ -456,10 +585,26 @@ def run_model(pil_file_path: str, csv_file_path: str, output_dir: str, params: d
 
     return properties 
 
-def create_tile_thumbnail_image(slide_file_path: str, scores_file_path: str, output_dir: str, params: dict):
+def create_tile_thumbnail_image(slide_file_path: str, scores_file_path: str, output_dir:
+        str, params: dict)-> dict:
+    """creates thumbnail images for score visualizations
+    
+    creates a thumbnail image for score visualizations (otsu, purple, model scores, etc.) and
+    saves the result to an output directory. 
+
+    Args:
+        slide_file_path (str): file path of slide to visualize
+        scores_file_path (str): file path of score .csv file to visualize
+        output_dir (str): destination to save thumbnail image to 
+        params (dict): parmater dictionary consisting of tile_size, magnification,
+            and scale_factor
+
+    Returns:
+        dict: a properties dictionary with return values 
+    """
 
     requested_tile_size       = params.get("tile_size")
-    requested_magnification   = params.get("magnification")
+    requested_magnification   = params.get("requested_magnification")
 
     logger.info("Processing slide %s", slide_file_path)
     logger.info("Params = %s", params)
@@ -503,13 +648,21 @@ def create_tile_thumbnail_image(slide_file_path: str, scores_file_path: str, out
     return properties
 
 
-def visualize_tiling_scores(df, thumbnail_img, tile_size, score_type_to_visualize):
-    """
-    Draw colored boxes around tiles 
-    :param thumbnail_img: np.ndarray
-    :param tile_size: int
-    :param score_type_to_visualize: column name
-    :return: new thumbnail image with black boxes around tiles passing threshold
+def visualize_tiling_scores(df:pd.DataFrame, thumbnail_img:np.ndarray,
+        tile_size:int, score_type_to_visualize:str) -> np.ndarray:
+    """visualize tile scores
+    
+    draws colored boxes around tiles to indicate the value of the score 
+
+    Args:
+        df (pd.DataFrame): input dataframe
+        thumbnail_img (np.ndarray): input tile 
+        tile_size (int): tile width/length
+        score_type_to_visualize (str): column name from data frame
+    
+    Returns:
+        np.ndarray: new thumbnail image with boxes around tiles passing indicating the
+        value of the score
     """
 
     assert isinstance(thumbnail_img, np.ndarray) and isinstance(tile_size, int)

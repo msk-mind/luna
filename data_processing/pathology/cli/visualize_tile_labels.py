@@ -1,30 +1,10 @@
-'''
-Created: February 2021
-@author: aukermaa@mskcc.org
-
-Given a slide (container) ID
-1. resolve the path to the WSI image
-2. perform various scoring and labeling to tiles
-3. save tiles as a csv with schema [address, coordinates, *scores, *labels ]
-
-Example:
-python3 -m data_processing.pathology.cli.visualize_tile_labels \
-    -c TCGA-BRCA \
-    -s tcga-gm-a2db-01z-00-dx1.9ee36aa6-2594-44c7-b05c-91a0aec7e511 \
-    -m data_processing/pathology/cli/example_visualize_tile_labels.json
-
-Example with annotation:
-python3 -m data_processing.pathology.cli.visualize_tile_labels \
-        -c ov-path-druv  \
-        -s 226871 \
-        -m data_processing/pathology/cli/example_visualize_tile_labels.json 
-'''
 
 # General imports
 import os, json, logging, pathlib
 import click
 import tempfile
 import subprocess
+import yaml
 
 # From common
 from data_processing.common.custom_logger   import init_logger
@@ -42,15 +22,50 @@ from data_processing.pathology.common.preprocess   import create_tile_thumbnail_
 @click.option('-m', '--method_param_path', required=True,
               help='json file with parameters for creating a heatmap and optionally pushing the annotation to DSA.')
 def cli(app_config, datastore_id, method_param_path):
+    """Visualize tile scores from inference.
+
+    app_config - application configuration yaml file. See config.yaml.template for details.
+
+    datastore_id - datastore name. usually a slide id.
+
+    method_param_path - json file with parameters for creating a heatmap and optionally pushing the annotation to DSA.
+
+    - input_wsi_tag: job tag used in loading the whole slide image
+
+    - input_label_tag: job tag used in generating tile labels
+
+    - job_tag: job tag for this visualization
+
+    - scale_factor: scale for generation of thumbnails, e.g. 8 will generate a thumbnail scaled at 1/8 of the wsi.
+
+    - tile_size: requested tile size
+
+    - requested_magnification: requested of the slide
+
+    - dsa_config: map of DSA instance details. e.g. {
+          "host": "localhost",
+          "port": "8080",
+          "token": "abc123"
+        }
+
+    - root_path: path to output directory
+    """
     init_logger()
 
-    with open(method_param_path) as json_file:
-        method_data = json.load(json_file)
+    with open(method_param_path, 'r') as yaml_file:
+        method_data = yaml.safe_load(yaml_file)
     visualize_tile_labels_with_datastore(app_config, datastore_id, method_data)
 
 def visualize_tile_labels_with_datastore(app_config: str, datastore_id: str, method_data: dict):
-    """
-    Using the container API interface, visualize tile-wise scores
+    """Visualize tile scores from inference.
+
+    Args:
+        app_config (string): path to application configuration file.
+        datastore_id (string): datastore name. usually a slide id.
+        method_data (dict): method parameters including input, output details.
+
+    Returns:
+        None
     """
     logger = logging.getLogger(f"[datastore={datastore_id}]")
 
@@ -95,7 +110,7 @@ def visualize_tile_labels_with_datastore(app_config: str, datastore_id: str, met
             properties["tile_size"]   = method_data["tile_size"]
             # inference result doesn't need to be scaled. set to 1
             properties["scale_factor"]   = 1
-            properties["magnification"]   = method_data["magnification"]
+            properties["requested_magnification"]   = method_data["requested_magnification"]
             properties["output_folder"]   = method_data["output_folder"]
             properties["image_filename"] = datastore_id + ".svs"
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -129,7 +144,7 @@ def visualize_tile_labels_with_datastore(app_config: str, datastore_id: str, met
     # Save metadata
     with open(os.path.join(output_dir, "metadata.json"), "w") as fp:
         json.dump(properties, fp)
-        
+
 
 
 if __name__ == "__main__":

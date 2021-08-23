@@ -1,8 +1,9 @@
 # Uses numpy array containing annotation and splits into label masks. For each label mask, the annotations
 # are vectorized into a set of polygons. These polygons are then converted into the geoJSON format and written to file.
-
+from typing import List, Dict
 from skimage import measure
 import numpy as np
+import pandas as pd
 import json
 import ast
 import copy
@@ -23,14 +24,21 @@ geojson_base = {
     "features": []
 }
 
-def build_geojson_from_pointclick_json(labelsets, labelset, sv_json):
-    """
-    Build geojson from slideviewer json.
+def build_geojson_from_pointclick_json(labelsets: dict, labelset:str,
+        sv_json:List[dict])-> list:
+    """Build geoJSON m slideviewer JSON
 
-    :param labelsets: dictionary of labelset as string {labelset: {label number: label name}}
-    :param labelset: a labelset e.g. default_labels
-    :param sv_json: list of dictionaries, from slideviewer
-    :return: geojson list
+    This method extracts point annotations from a slideviwer json object and 
+    converts them to a standardized geoJSON format 
+
+    Args:
+        labelsets (dict): dictionary of label set as string (e.g. {labelset:
+            {label_number: label_name}})
+        labelset (str): the name of the labelset e.g. default_labels
+        sv_json (list[dict]): annotatations from slideviwer in the form of a list of dictionaries 
+
+    Returns:
+        list: a list of geoJSON annotation objects
     """
 
     labelsets = ast.literal_eval(labelsets)
@@ -56,11 +64,21 @@ def build_geojson_from_pointclick_json(labelsets, labelset, sv_json):
     return output_geojson
 
 
-# determines parent child relationships of polygons
-# returns a list of size n (where n is the number of input polygons in input list polygons)
-# each index in n corresponds to polygon n's parent. in case of no parent -1 is used.
-# for example, parent_nums[0] == 2 means that polygon 0's parent is polygon 2.
-def find_parents(polygons):
+def find_parents(polygons: list) -> list:
+    """determines of parent child relationships of polygons 
+
+    Returns a list of size n (where n is the number of input polygons in the input list
+    polygons) where the value at index n cooresponds to the nth polygon's parent. In
+    the case of no parent, -1 is used. for example, parent_nums[0] = 2 means that
+    polygon 0's parent is polygon 2
+
+    Args:
+        polygons (list): a list of shapely polygon objects
+    
+    Returns:
+        list: a list of parent-child relationships for the polygon objects    
+
+    """
     parent_nums = []
     for child in polygons:
         found_parent = False
@@ -75,21 +93,30 @@ def find_parents(polygons):
         # finished looping through all potential parents, so child is a parent
         if not found_parent:
             parent_nums.append(-1)
+    
     print(parent_nums)
+
     return parent_nums
 
 # TODO test performance with/without polygon-tolerance. approximate_polygons(polygon_tolerance) might just be a slow and unnecessary step. 
 # adapted from: https://github.com/ijmbarr/image-processing-with-numpy/blob/master/image-processing-with-numpy.ipynb
-def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, contour_level):
-    """
-    Finds the contours for a label mask, builds a polygon, converts polygon to geoJSON feature dictionary
 
-    :param annotation_geojson: geojson result to populate
-    :param annotation: npy array of bitmap
-    :param label_num: int value represented in the npy array; corresponding to the annotation label set.
-    :param mappings: label map for the specified label set
-    :param contour_level: value along which to find contours in the array
-    :return: geojson result
+def add_contours_for_label(annotation_geojson:Dict[str, any], annotation:np.ndarray,
+        label_num:int, mappings:dict, contour_level:float) -> Dict[str, any]:
+    """creates geoJSON feature dictionary for labels 
+
+    Finds the contours for a label mask, builds a polygon and then converts the polygon 
+    to geoJSON feature dictionary
+    
+    Args:
+        annotation_geojson (dict[str, any]): geoJSON result to populate
+        annotation (np.ndarray): npy array of bitmap
+        label_num (int): the integer cooresponding to the annotated label
+        mappings (dict): label map for specified label set
+        contour_level (float): value along which to find contours in the array 
+
+    Returns:
+         dict[str, any]: geoJSON with label countours
     """
     
     if label_num in annotation:
@@ -140,14 +167,38 @@ def add_contours_for_label(annotation_geojson, annotation, label_num, mappings, 
 
     else:
         print("No label " + str(label_num) + " found")
+
     return annotation_geojson
 
 
-def handler(signum, frame):
+def handler(signum:str, frame:str) -> None:
+    """signal handler for geojson
+
+    Args:
+        signum (str): signal number
+        fname (str): filename for which exception occurred
+
+    Returns:
+        None
+    """
+
     raise TimeoutError("Geojson generation timed out.")
 
 
-def build_labelset_specific_geojson(default_annotation_geojson, labelset):
+def build_labelset_specific_geojson(default_annotation_geojson:Dict[str, any],
+        labelset:dict) -> Dict[str, any]:
+    """builds geoJSON for labelset
+
+    Instead of working with a large geJSON object, you can extact polygons
+    that coorspond to specific labels into a smaller object. 
+
+    Args:
+        default_annotation_geojson (dict[str, any]):  geoJSON annotation file
+        labelset (dict): label set dictionary   
+
+    Returns:
+        dict[str, any]: geoJSON with only polygons from provided labelset
+    """
 
     annotation_geojson = copy.deepcopy(geojson_base)
 
@@ -173,7 +224,23 @@ def build_labelset_specific_geojson(default_annotation_geojson, labelset):
     return annotation_geojson
 
 
-def build_all_geojsons_from_default(default_annotation_geojson, all_labelsets, contour_level):
+def build_all_geojsons_from_default(default_annotation_geojson:Dict[str, any],
+        all_labelsets:List[dict], contour_level:float) -> dict:
+    """builds geoJSON objects from a set of labels
+
+    wraps build_labelset_specific_geojson with logic to generate annotations
+    from multiple labelsets 
+
+    Args:
+        default_annotation_geojson (dict[str, any]): input geoJSON
+        all_labelsets (list[dict]): a list of dictionaries containing label sets 
+        contour_level (float):  value along which to find contours
+
+    Returns:
+        dict: a dictionary with labelset name and cooresponding geoJSON as key, value
+        pairs
+        
+    """
 
     labelset_name_to_labelset_specific_geojson = {}
     
@@ -191,7 +258,18 @@ def build_all_geojsons_from_default(default_annotation_geojson, all_labelsets, c
     return labelset_name_to_labelset_specific_geojson
 
 
-def build_default_geojson_from_annotation(annotation_npy_filepath, all_labelsets, contour_level):
+def build_default_geojson_from_annotation(annotation_npy_filepath:str,
+        all_labelsets:dict, contour_level:float):
+    """builds geoJSONS from numpy annotation with default label set
+
+    Args:
+        annotation_npy_filepath (str): string to numpy annotation
+        all_labelsets (dict): a dictionary of label sets
+        contour_level (float):  value along which to find contours
+
+    Returns:
+        dict[str, any]: the default geoJSON annotation 
+    """
 
     annotation = np.load(annotation_npy_filepath)
     default_annotation_geojson = copy.deepcopy(geojson_base)
@@ -215,12 +293,15 @@ def build_default_geojson_from_annotation(annotation_npy_filepath, all_labelsets
 
     return default_annotation_geojson
 
-def build_geojson_from_annotation(df):
-    """
-    Builds geojson for all annotation labels in the specified labelset.
 
-    :param df: Pandas dataframe
-    :return: Pandas dataframe with geojson field populated
+def build_geojson_from_annotation(df: pd.DataFrame) -> pd.DataFrame:
+    """Builds geoJSON for all annotation labels in the specified labelset.
+
+    Args:
+        df (pandas.DataFrame): input regional annotation table 
+    
+    Returns:
+        pandasDataFrame: dataframe with geoJSON field poopulated 
     """
 
     labelsets = df.label_config.values[0]
@@ -257,12 +338,16 @@ def build_geojson_from_annotation(df):
     return df
 
 
-def concatenate_regional_geojsons(geojson_list):
-    """
+def concatenate_regional_geojsons(geojson_list: List[Dict[str, any]]) -> Dict[str, any]:
+    """concatenate regional annotations
+
     Concatenates geojsons if there are more than one annotations for the labelset.
 
-    :param geojson_list: list of geojson strings
-    :return: concatenated geojson dict
+    Args: 
+        geojson_list (list[dict[str, any]]): list of geoJSON strings
+
+    Returns:
+        dict[str, any]: a single concatenated geoJSON 
     """
     # create json from str representations
     geojson_list = [json.loads(geojson) for geojson in geojson_list]
