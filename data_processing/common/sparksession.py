@@ -43,6 +43,7 @@ class SparkConfig:
 			.config("spark.executor.pyspark.memory", spark_executor_pyspark_memory) \
 			.config("spark.sql.shuffle.partitions", spark_sql_shuffle_partitions) \
 			.config("spark.driver.maxResultSize", spark_driver_maxresultsize) \
+			.config("spark.files.overwrite", "true") \
 			.config("fs.defaultFS", "file:///") \
 			.config("spark.driver.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
 			.config("spark.executor.extraJavaOptions", "-Dio.netty.tryReflectionSetAccessible=true") \
