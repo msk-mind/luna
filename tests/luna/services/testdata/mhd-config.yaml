@@ -1,0 +1,14 @@
+ROOT_PATH: tests/luna/services/testdata
+
+PROJECT: test-project
+
+DATASET_NAME: ds
+
+DATA_TYPE: MHD
+
+# mock graph configs
+GRAPH_URI: localhost:7897
+
+GRAPH_USER: graphuser
+
+GRAPH_PW: graphpw

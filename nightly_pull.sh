@@ -37,7 +37,7 @@ echo "Running annotation-point-refined-br-spore ETL"
 # echo "Update Graph"
 # for filename in ../configs/*/graph-config-*; do
 #     echo "Update graph with $filename"
-#     /gpfs/mskmindhdp_emc/sw/env/bin/python3 -m data_processing.services.graph_service -d $filename -a ../configs/config.yaml
+#     /gpfs/mskmindhdp_emc/sw/env/bin/python3 -m luna.services.graph_service -d $filename -a ../configs/config.yaml
 # done
 
 # echo "DONE with nightly annotation pulls and graph updates."
