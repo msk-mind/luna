@@ -1,0 +1,9 @@
+input_wsi_tag: pathology.etl
+job_tag: test_generate_tiles_no_labels
+tile_size: 128
+scale_factor: 8
+requested_magnification: 20
+filter:
+  otsu_score: 0.5
+root_path: /path/to/output/data
+annotation_table_path: /path/to/regional/annotation/table
