@@ -7,4 +7,4 @@
 
 # to override abstract requirements in setup.cfg to specific versions, place specific version entries here
 
--e .
+-e .[dev]
