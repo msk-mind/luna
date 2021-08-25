@@ -1,7 +1,19 @@
-[![MSK-MIND](https://circleci.com/gh/msk-mind/data-processing.svg?style=shield)](https://circleci.com/gh/msk-mind/data-processing) [![codecov](https://codecov.io/gh/msk-mind/data-processing/branch/master/graph/badge.svg)](https://app.codecov.io/gh/msk-mind/data-processing)
+[![MSK-MIND](https://circleci.com/gh/msk-mind/luna.svg?style=shield)](https://circleci.com/gh/msk-mind/luna) [![codecov](https://codecov.io/gh/msk-mind/luna/branch/master/graph/badge.svg)](https://app.codecov.io/gh/msk-mind/luna)
 
-# Data Processing
-Scripts for data processing
+# luna
+Transformation functions and services for multi-modal oncology data
+
+## Installation
+`pip install --upgrade pip`
+
+`pip install numpy`
+
+`pip install pyluna`
+
+Check installation, by importing luna package and printing the version.
+
+`python -c 'import luna; print(luna.__version__)'`
+
 
 ## Config
 

@@ -1,5 +1,5 @@
-'''
-Created on September 14, 2020
+"""Top-level package for luna"""
 
-@author: pashaa@mskcc.org
-'''
+__author__ = """msk-mind"""
+__email__ = 'CompOncBST@mskcc.org'
+__version__ = '0.0.1'
