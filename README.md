@@ -8,7 +8,9 @@ Transformation functions and services for multi-modal oncology data
 
 `pip install numpy`
 
-`pip install pyluna`
+pyluna can be installed with [all], [radiology], [pathology], and [dev] extra requirements.
+
+`pip install .[dev]` # for dev dependencies.
 
 Check installation, by importing luna package and printing the version.
 
