@@ -13,9 +13,9 @@ DSA_HOSTNAME=os.environ['DSA_HOSTNAME']
 DSA_USERNAME=os.environ['DSA_USERNAME'] 
 DSA_PASSWORD=os.environ['DSA_PASSWORD']
 
-def dsa_to_geojson(gc, FOLDER_ID, SLIDE_NAME):
+def dsa_to_geojson(gc, folder_id, slide_name):
     
-    item  = next(gc.listItem(folderId=FOLDER_ID, name=SLIDE_NAME))
+    item  = next(gc.listItem(folderId=folder_id, name=slide_name))
     annots  = gc.get(f"/annotation?itemId={item['_id']}")
     
     geojson = {
