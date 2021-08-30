@@ -19,7 +19,17 @@ Check installation, by importing luna package and printing the version.
 
 ## Development Installation
 
+Install all python dependencies with:
+
 `pip install -r requirements_dev.txt`
+
+For development and testing purposes, add the subpackages to your `PYTHONPATH`:
+
+`export PYTHONPATH=.:src:pyluna-common:pyluna-radiology:pyluna-pathology`
+
+To run tests, specify the subpackage you want to test. For example, this command will run all tests under pyluna-common package.
+
+`pytest pyluna-common`
 
 ## Config
 
