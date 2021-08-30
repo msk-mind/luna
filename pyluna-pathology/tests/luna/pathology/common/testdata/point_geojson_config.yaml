@@ -1,0 +1,26 @@
+# root path to pathology data in the data lake
+ROOT_PATH: pyluna-pathology/tests/luna/pathology/point_annotation/testdata
+
+# source data type
+SOURCE_DATA_TYPE: POINT_RAW_JSON
+
+# data type to create
+DATA_TYPE: POINT_GEOJSON
+
+# MIND project name
+PROJECT: test-project
+
+# dataset name
+DATASET_NAME: dsn
+
+# Annotation label sets defined for this project
+LABEL_SETS:
+    LYMPHOCYTE_DETECTION_LABELSET:
+        0: Lymphocyte
+        1: Other
+
+# specify the name of a single labelset to use within the config. By default uses the 'default_labels' labelset
+USE_LABELSET: LYMPHOCYTE_DETECTION_LABELSET
+
+# if true, generate geojsons for all of the provided dmt's labelsets
+USE_ALL_LABELSETS: False

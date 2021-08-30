@@ -1,0 +1,45 @@
+spark_cluster_config:
+
+  - spark.uri: local[2]
+
+  - spark.driver.host: 127.0.0.1
+
+spark_application_config:
+
+  # 5% total number of cores in cluster
+  - spark.executor.cores: 1
+
+  # 50% total number of cores in cluster
+  - spark.cores.max: 2
+
+  # 5% total memory in cluster
+  - spark.executor.memory: 2g
+  
+  # 80% executor memory
+  - spark.executor.pyspark.memory: 2g
+
+  - spark.sql.shuffle.partitions: 60
+
+  - spark.driver.maxResultSize: 2g
+
+
+api_version: 1.1
+scanManager_port: 5001
+getPathologyAnnotations_port: 5002
+scanManager_port: 5003
+cohortManager_port: 5004
+radiology_library_port: 5005
+radiology_service_port: 5006
+scanManager_processes: 16
+radiology_service_processes: 16
+
+GRAPH_URI: neo4j://localhost:7687
+GRAPH_USER: neo4j
+GRAPH_PASSWORD: password
+
+OBJECT_STORE_ENABLED: True
+MINIO_URI: localhost:8002
+MINIO_USER: minio 
+MINIO_PASSWORD: password 
+
+

@@ -1,0 +1,74 @@
+# copy-paste this template into a data_ingestion_template.yaml before using
+# as a best practice, config.yaml must not be committed to github
+# as it may contain sensitive information about the data.
+
+
+# the name of requestor
+REQUESTOR:
+
+# the department to which the requestor belongs
+REQUESTOR_DEPARTMENT:
+
+# email address of requestor
+REQUESTOR_EMAIL:
+
+# project name decided by data coordination
+PROJECT:
+
+# source name of input data file
+SOURCE:
+
+# data modality
+MODALITY:
+
+# data type within the modality
+DATA_TYPE: CAT
+
+# description of the template defined by the requestor
+COMMENTS:
+
+# the data on which the request was made
+DATE: 555-3 
+
+# name to be given to the dataset
+DATASET_NAME: OV_16-158_CT_20201028
+
+# Type of ETL
+ETL_TYPE: proxy
+
+# input source file. examples "csv", "dcm"
+FILE_TYPE: dcm
+
+# format type of the output proxy table
+FORMAT_TYPE: delta
+
+# num partition for delta table creation
+NUM_PARTITION: 1
+
+# ip or hostname of machine where source data file(s) reside, if applicable
+HOST:
+
+# file path to the source data file(s). if host is specified, the source data location is determined
+# as host:source_path
+SOURCE_PATH: /data
+
+# root path for tables and file transfer
+LANDING_PATH: pyluna-common/tests/luna/radiology/proxy_table/test_data/OV_16-158_CT_20201028
+
+# location where the data should be transferred on the destination machine.
+RAW_DATA_PATH: pyluna-common/tests/luna/radiology/proxy_table/test_data/OV_16-158_CT_20201028/raw_data
+
+# location for where tables are created
+TABLE_PATH: pyluna-common/tests/luna/radiology/proxy_table/test_data/OV_16-158_CT_20201028/table
+
+INCLUDE: --include=*.dcm
+
+# total number of input data files to process. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
+FILE_COUNT: 1000000
+
+# total number of bytes to be transfered. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
+DATA_SIZE: 291337979
+
+BWLIMIT: 5T

@@ -1,0 +1,29 @@
+
+ROOT_PATH: pyluna-radiology/tests/luna/radiology/testdata
+
+PROJECT: test-project
+
+DATASET_NAME: dsn
+
+LABEL_TABLE_PATH: pyluna-radiology/tests/luna/radiology/testdata/test-project/tables/MHA_dsn
+
+# to be updated with data type standardization
+SCAN_TABLE_PATH: pyluna-radiology/tests/luna/radiology/testdata/test-project/tables/SCAN_dsn
+
+DATA_TYPE: PNG
+
+# num partition for delta table
+NUM_PARTITION: 1
+
+IMAGE_WIDTH: 512
+
+IMAGE_HEIGHT: 512
+
+N_SLICES:
+
+CROP_WIDTH: 256
+
+CROP_HEIGHT: 256
+
+METADATA_COLUMNS:
+  - label

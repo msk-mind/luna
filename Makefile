@@ -31,8 +31,8 @@ clean-test:      ## remove test and coverage artifacts
 
 dist: clean
 	pip install --upgrade pip
-	pip install --use-feature=2020-resolver -r requirements.txt
-	pyinstaller -F --clean --hidden-import py4j.java_collections --exclude-module tkinter data_processing/preprocess_feature.py
+	pip install --use-feature=2020-resolver -r requirements_dev.txt
+	pyinstaller -F --clean --hidden-import py4j.java_collections --exclude-module tkinter src/preprocess_feature.py
 	python setup.py sdist
 	python setup.py bdist_wheel
 	ls -l dist
@@ -50,17 +50,17 @@ lint:
 
 test: clean-test clean-pyc    ## run tests quickly with the default Python
 	pip install --upgrade pip
-	pip install --use-feature=2020-resolver -r requirements.txt
+	pip install --use-feature=2020-resolver -r requirements_dev.txt
 	pytest
 
 coverage:
-	pytest -s --cov=data_processing tests
+	pytest -s --cov=src --cov=pyluna-common --cov=pyluna-radiology --cov=pyluna-pathology tests
 	coverage report -m
 	coverage html
 	open htmlcov/index.html
 
 grpt:
-	time python3 -m data_processing.radiology.proxy_table.generate -t $(template-file) -f $(config-file) -p $(process-string)
+	time python3 -m luna.radiology.proxy_table.generate -t $(template-file) -f $(config-file) -p $(process-string)
 gppt:
-	time python3 -m data_processing.pathology.proxy_table.generate -d $(template-file) -a $(config-file) -p $(process-string)
+	time python3 -m luna.pathology.proxy_table.generate -d $(template-file) -a $(config-file) -p $(process-string)
 

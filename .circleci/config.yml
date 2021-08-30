@@ -24,7 +24,8 @@ jobs:
       - run: which java
       - run: echo "export PATH=/home/circleci/.local/bin:$PATH" >> $BASH_ENV  # some python packages get installed  here
       - run: echo "export CODECOV_TOKEN="4d2ae912-4489-4e40-ac13-02add6c0d1a6"" >> $BASH_ENV
-      - run: echo "export LUNA_HOME=tests/luna/common/testdata" >> $BASH_ENV
+      - run: echo "export LUNA_HOME=pyluna-common/tests/luna/common/testdata" >> $BASH_ENV
+      - run: echo "export PYTHONPATH=.:src:pyluna-common:pyluna-radiology:pyluna-pathology" >> $BASH_ENV
       - run: export PYSPARK_PYTHON=`which python`
       - run: echo $PATH
       - run: python --version
@@ -33,7 +34,7 @@ jobs:
       - run: sudo pip install -r requirements_dev.txt
       - run: pip list
       - run: pip check
-      - run: sudo python setup.py install  # needed to run the cli unit tests
+      #- run: sudo python setup.py install  # needed to run the cli unit tests
       - run: pytest -v --capture=tee-sys --show-capture=all --cov=luna tests --cov-report=xml
       - run: coverage report -m
       - store_artifacts:

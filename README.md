@@ -9,13 +9,17 @@ Transformation functions and services for multi-modal oncology data
 `pip install numpy`
 
 pyluna can be installed with [all], [radiology], [pathology], and [dev] extra requirements.
+> **Note**: for pyluna-* packages that are not on pypi, add your local path for installation to work correctly. Refer to the setup.cfg in the pyluna-* packages for more details.
 
-`pip install .[dev]` # for dev dependencies.
+`pip install .[pathology]` # for pathology dependencies.
 
 Check installation, by importing luna package and printing the version.
 
 `python -c 'import luna; print(luna.__version__)'`
 
+## Development Installation
+
+`pip install -r requirements_dev.txt`
 
 ## Config
 

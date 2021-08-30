@@ -1,0 +1,164 @@
+# copy-paste this template into a data_config.yaml before using
+# as a best practice, data_config.yaml must not be committed to github
+# as it may contain sensitive information about the data.
+#
+# See corresponding data_config_schema.yml for valid values
+
+# the name of requestor
+REQUESTOR: jane
+
+# the department to which the requestor belongs
+REQUESTOR_DEPARTMENT: gynocology
+
+# email address of requestor
+REQUESTOR_EMAIL: jane@mskcc.org
+
+# project name decided by data coordination
+PROJECT: OV_16-158
+
+# project ID in SlideViewer
+PROJECT_ID: 155
+
+# source name of input data file
+SOURCE: slide_viewer
+
+# data modality
+MODALITY: pathology
+
+# data type within the modality
+DATA_TYPE: H&E
+
+# description of the template defined by the requestor
+COMMENTS:
+
+# the data on which the request was made
+DATE: 2020-10-29
+
+# name to be given to the dataset
+DATASET_NAME: OV_16-158_CT_20201028
+
+# Type of ETL
+ETL_TYPE: pathology_annotation_proxy
+
+# input source file
+FILE_TYPE: bmp
+
+# format type of the output proxy table
+FORMAT_TYPE: delta
+
+# num partition for delta table creation
+NUM_PARTITION: 10
+
+# ip or hostname of machine where source data file(s) reside, if applicable
+HOST:
+
+# mind root data path.
+ROOT_PATH: pyluna-pathology/tests/luna/pathology/proxy_table/regional_annotation/test_data/output
+
+# file path to the source data file(s). if host is specified, the source data location is determined
+# as host:source_path, else the source data location is determined simply as source_path.
+SOURCE_PATH: /data
+
+# root path for tables and file transfer
+LANDING_PATH: pyluna-pathology/tests/luna/pathology/proxy_table/regional_annotation/test_data/output/
+
+# location where the data should be transferred on the destination machine.
+RAW_DATA_PATH: pyluna-pathology/tests/luna/pathology/radiology/proxy_table/test_data/OV_16-158_CT_20201028/raw_data
+
+# required: a full include option for rsync. Examples: --include=*.dcm --include=*.mha
+INCLUDE: --include=*.dcm
+
+# a file containing names of files and sub-directories that exist under the source_path of the remote system and that
+# need to be transferred. One name should be placed on each line. An easy way to generate such a file is by changing
+# directory to the source_path on the remote file system and executing 'ls -1 . > chunks.txt' and then moving chunks.txt
+# to the destination file system.
+CHUNK_FILE: chunks.txt
+
+# total number of input data files to process. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
+# NOTE: if you get "permission_denied" on some dirs, make sure those dirs have +x permission for "others" as this is required
+# for 'find' and 'ls' operations
+FILE_COUNT: 1000000
+
+# total number of bytes to be transferred. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
+DATA_SIZE: 291337979
+
+
+# limit socket I/O bandwidth. Set this limit based on available bandwidth between the source
+# and destination servers. The bandwidth can be measured as follows:
+# on source machine, start an iperf3 server
+# $ iperf3 -s
+# -----------------------------------------------------------
+# Server listening on 5201
+# -----------------------------------------------------------
+# on the destination machine, start an iperf3 client
+# iperf3 -c <source_machine> -p <listening_port>
+# Connecting to host <source_machine>, port 5201
+# - - - - - - - - - - - - - - - - - - - - - - - - -
+# [ ID] Interval           Transfer     Bandwidth       Retr
+# [  4]   0.00-10.00  sec  10.7 GBytes  9.20 Gbits/sec    0             sender
+# [  4]   0.00-10.00  sec  10.7 GBytes  9.19 Gbits/sec                  receiver
+# iperf Done.
+#
+# be nice and don't use all available bandwidth. Use up to 50% available bandwidth. The amount specified
+# here is the total bandwidth that will be used by all processes that are spawned for the data transfer.
+BWLIMIT: 5G
+
+# slide viewer api url (must contain trailing slash)
+SLIDEVIEWER_API_URL: https://fake-slides-res.mskcc.org/
+
+# list of expert annotators
+USERS:
+    - someuser
+
+# sets of annotation labels mapped to integer ids. Multiple label sets may be specified, but only specify label sets
+# that are used for the proxy table generation.
+LABEL_SETS:
+    DEFAULT_LABELS:
+      1: lympho_rich_stroma
+      2: lympho_poor_stroma
+      3: lympho_rich_tumor
+      4: lympho_poor_tumor
+      5: adipocytes
+      6: arteries
+      7: veins
+      8: psammoma_bodies
+      9: stic_lesions
+      10: necrosis
+      11: glass
+      12: qc_tissue_fold
+      13: qc_air_bubbles
+      14: qc_pen
+      15: qc_other
+    PIXEL_CLASSIFIER_LABELS:
+      1: Stroma
+      2: Stroma
+      3: Tumor
+      4: Tumor
+      5: Adipocytes
+      6: Arteries
+      7: Veins
+      10: Necrosis
+      11: Glass
+    OBJECT_CLASSIFIER_LABELS:
+      1: Lymphocyte
+      2: Other
+      3: Lymphocyte
+      4: Other
+    SIMPLIFIED_PIXEL_CLASSIFIER_LABELS:
+      1: Stroma
+      2: Stroma
+      3: Tumor
+      4: Tumor
+      5: Adipocytes
+      10: Necrosis
+      11: Glass
+
+# an optional SlideViewer csv file to use that lists the names of the whole slide images and for which
+# the regional annotation proxy table generator should download regional annotations. If this field is left blank,
+# then the regional annotation proxy table generator will attempt to download this file from SlideViewer.
+SLIDEVIEWER_CSV_FILE:
+
+#
+GRAPH_URI: bolt://localhost:7687

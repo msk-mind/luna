@@ -1,0 +1,8 @@
+input_wsi_tag: pathology.etl
+job_tag: test_generate_tile_ov_labels
+tile_size: 128
+scale_factor: 16
+requested_magnification: 20
+NOT_slideviewer_dmt: no API
+NOT_labelset: no API
+root_path: pyluna-pathology/tests/luna/pathology/cli/testdata/data/test/slides
