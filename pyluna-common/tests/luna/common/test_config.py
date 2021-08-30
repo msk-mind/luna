@@ -100,7 +100,7 @@ def test_get_keys(cfg):
 
 
 def test_singleton_with_schema(cfg):
-    schema_file = get_absolute_path(__file__, '../../../../src/data_ingestion_template_schema.yml')
+    schema_file = get_absolute_path(__file__, '../../../../src/luna/data_ingestion_template_schema.yml')
 
     c1 = ConfigSet(name='app_config', config_file='pyluna-common/tests/luna/common/test_config.yml')
     c2 = ConfigSet(name='data_config', config_file='pyluna-common/tests/luna/common/test_data_ingestion_template.yml',
@@ -127,7 +127,7 @@ def test_has_value(cfg):
         ConfigSet().has_value('name_does_not_exist::$.spark_application_config[:1]["spark.does.not.exist"]')
 
 def test_clear(cfg):
-    schema_file = get_absolute_path(__file__, '../../../../src/data_ingestion_template_schema.yml')
+    schema_file = get_absolute_path(__file__, '../../../../src/luna/data_ingestion_template_schema.yml')
 
     ConfigSet(name='app_config', config_file='pyluna-common/tests/luna/common/test_config.yml')
     ConfigSet(name='data_config', config_file='pyluna-common/tests/luna/common/test_data_ingestion_template.yml',

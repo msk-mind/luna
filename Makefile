@@ -32,7 +32,7 @@ clean-test:      ## remove test and coverage artifacts
 dist: clean
 	pip install --upgrade pip
 	pip install --use-feature=2020-resolver -r requirements_dev.txt
-	pyinstaller -F --clean --hidden-import py4j.java_collections --exclude-module tkinter src/preprocess_feature.py
+	pyinstaller -F --clean --hidden-import py4j.java_collections --exclude-module tkinter src/luna/preprocess_feature.py
 	python setup.py sdist
 	python setup.py bdist_wheel
 	ls -l dist
