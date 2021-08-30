@@ -36,7 +36,7 @@ if(getRC.equals(200)) {
 
     for (feat in map['features']) {
         def name = feat['properties']['label_name'].toString()
-        def vertices = feat['geometry']['coordinates']
+        def vertices = feat['geometry']['coordinates'][0]
         def points = vertices.collect {new Point2(it[0], it[1])}
         def polygon = new PolygonROI(points)
         def pathAnnotation = new PathAnnotationObject(polygon)
