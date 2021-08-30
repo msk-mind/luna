@@ -9,11 +9,10 @@ import java.nio.file.Paths;
 import java.util.stream.Collectors;
 import qupath.lib.geom.Point2
 
-
-
-def imageData = getCurrentImageData()
-def filename = GeneralTools.getNameWithoutExtension(imageData.getServer().getMetadata().getName())
-def image_id = filename.replace(".svs", "").toString()    
+def imageData = QPEx.getCurrentImageData()
+def server = getCurrentServer()
+def filename = GeneralTools.getNameWithoutExtension(server.getMetadata().getName())
+def image_id = filename.replace(".svs", "").toString()  
 
 // make sure to change URL, details can be found on confluence on how to configure the API's url accordingly.
 // API FORMAT  http://{SERVER}:{PORT}/mind/api/v1/getPathologyAnnotation/{PROJECT}/{image_id}/regional/{labelset_name}
