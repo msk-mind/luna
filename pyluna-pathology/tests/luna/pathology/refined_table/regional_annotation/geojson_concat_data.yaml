@@ -1,0 +1,27 @@
+# root path to pathology data in the data lake
+ROOT_PATH: pyluna-pathology/tests/luna/pathology/testdata/data
+
+PROJECT: test-project
+
+## Expected (SOURCE_DATA_TYPE, DATA_TYPE) pairs:
+## (REGIONAL_BITMASK, REGIONAL_GEOJSON) or (REGIONAL_GEOJSON, REGIONAL_CONCAT_GEOJSON)
+
+# table needed for process. REGIONAL_BITMASK or REGIONAL_GEOJSON
+SOURCE_DATA_TYPE: REGIONAL_GEOJSON
+
+# data type REGIONAL_GEOJSON or REGIONAL_CONCAT_GEOJSON.
+DATA_TYPE: REGIONAL_CONCAT_GEOJSON
+
+# dataset name
+DATASET_NAME: ds
+
+# specify the name of a single labelset to use within the etl config.
+USE_LABELSET: default_labels
+
+# generate geojsons for all of the provided dmt's labelsets
+USE_ALL_LABELSETS: False
+
+CONTOUR_LEVEL: 0.5
+
+# this is scaled up dynamically (lower resolution) if the annotation is very large
+POLYGON_TOLERANCE: 1

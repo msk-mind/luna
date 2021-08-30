@@ -1,7 +1,35 @@
-[![MSK-MIND](https://circleci.com/gh/msk-mind/data-processing.svg?style=shield)](https://circleci.com/gh/msk-mind/data-processing) [![codecov](https://codecov.io/gh/msk-mind/data-processing/branch/master/graph/badge.svg)](https://app.codecov.io/gh/msk-mind/data-processing)
+[![MSK-MIND](https://circleci.com/gh/msk-mind/luna.svg?style=shield)](https://circleci.com/gh/msk-mind/luna) [![codecov](https://codecov.io/gh/msk-mind/luna/branch/master/graph/badge.svg)](https://app.codecov.io/gh/msk-mind/luna)
 
-# Data Processing
-Scripts for data processing
+# Luna
+Transformation functions and services for multi-modal oncology data
+
+## Installation
+`pip install --upgrade pip`
+
+`pip install numpy`
+
+pyluna can be installed with [all], [radiology], [pathology], and [dev] extra requirements.
+> **Note**: for pyluna-* packages that are not on pypi, add your local path for installation to work correctly. Refer to the setup.cfg in the pyluna-* packages for more details.
+
+`pip install .[pathology]` # for pathology dependencies.
+
+Check installation, by importing luna package and printing the version.
+
+`python -c 'import luna; print(luna.__version__)'`
+
+## Development Installation
+
+Install all python dependencies with:
+
+`pip install -r requirements_dev.txt`
+
+For development and testing purposes, add the subpackages to your `PYTHONPATH`:
+
+`export PYTHONPATH=.:src:pyluna-common:pyluna-radiology:pyluna-pathology`
+
+To run tests, specify the subpackage you want to test. For example, this command will run all tests under pyluna-common package.
+
+`pytest pyluna-common`
 
 ## Config
 

@@ -1,0 +1,37 @@
+# annotation file type extension like MHA, MHD..
+FILE_TYPE:
+  - "*.mhd"
+  - "*.mha"
+
+# path to data directory
+ROOT_PATH: pyluna-radiology/tests/luna/radiology/testdata
+
+# annotation data type - used to create table names
+DATA_TYPE: RADIOLOGY_ANNOTATION
+
+# project name
+PROJECT: test-project
+
+# dataset name
+DATASET_NAME: datasetname
+
+# path to annotation metadata csv including AccessionNumber, SeriesNumber
+METADATA_CSV: pyluna-radiology/tests/luna/radiology/testdata/metadata.csv
+
+# columns to include from csv
+METADATA_COLUMNS:
+  - accession_number
+  - series_number
+  - label
+
+# column to join on
+METADATA_JOIN_ON: accession_number
+
+# path for the annotation data on the data lake
+RAW_DATA_PATH: pyluna-radiology/tests/luna/radiology/testdata/test-project/scan_annotations
+
+# number of partitions for delta table
+NUM_PARTITION: 20
+
+# number of annotation files
+FILE_COUNT: 1

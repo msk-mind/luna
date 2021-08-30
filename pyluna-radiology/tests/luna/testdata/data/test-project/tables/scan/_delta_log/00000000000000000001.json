@@ -1,0 +1,2 @@
+{"commitInfo":{"timestamp":1630251412669,"operation":"WRITE","operationParameters":{"mode":"Append","partitionBy":"[]"},"readVersion":0,"isBlindAppend":true,"operationMetrics":{"numFiles":"1","numOutputBytes":"605","numOutputRows":"0"}}}
+{"add":{"path":"part-00000-ffcf0a68-9940-4982-a11d-4af025984f87-c000.parquet","partitionValues":{},"size":605,"modificationTime":1630251412000,"dataChange":true}}

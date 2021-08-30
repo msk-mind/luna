@@ -1,0 +1,12 @@
+# path to table
+TABLE_PATH: pyluna-radiology/tests/luna/radiology/testdata/test-project/tables/FEATURE_unpack
+
+DESTINATION_PATH: pyluna-radiology/tests/luna/radiology/testdata/unpacked_pngs
+
+# field to unpack dicom or overlay
+COLUMN_NAME: dicom
+
+# png image width, height
+IMAGE_WIDTH: 256
+
+IMAGE_HEIGHT: 256

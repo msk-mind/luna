@@ -1,0 +1,12 @@
+HDFS_URI: file:/// or hdfs://hdfs-ip:8020
+
+DATASET_NAME:
+
+DATA_TYPE: dicom
+
+# graph service
+GRAPH_URI: neo4j://graph-host:ip
+
+GRAPH_USER: replace_with_graph_user
+
+GRAPH_PW: replace_with_graph_pw

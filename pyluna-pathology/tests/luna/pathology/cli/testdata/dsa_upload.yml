@@ -1,0 +1,3 @@
+annotation_filepath: pyluna-pathology/tests/luna/pathology/cli/dsa/testouts/Tile-Based_Pixel_Classifier_Inference_123.json
+image_filename: 123.svs
+collection_name: test_collection

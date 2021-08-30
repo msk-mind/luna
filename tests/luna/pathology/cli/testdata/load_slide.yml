@@ -1,3 +1,0 @@
-job_tag: pathology.etl
-table_path: tests/luna/pathology/cli/testdata/data/test-project/tables/WSI_patientId
-datastore_path: tests/luna/pathology/cli/testdata/data/test/slides
