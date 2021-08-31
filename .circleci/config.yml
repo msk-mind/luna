@@ -12,6 +12,7 @@ orbs:
 
 jobs:
   build:
+    parallelism: 2
     docker:
       - image: circleci/python:3.6.8  # primary container for the build job
 
