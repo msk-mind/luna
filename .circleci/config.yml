@@ -12,7 +12,7 @@ orbs:
 
 jobs:
   build:
-    parallelism: 2
+    parallelism: 3
     docker:
       - image: circleci/python:3.6.8  # primary container for the build job
 
@@ -36,9 +36,27 @@ jobs:
       - run: pip list
       - run: pip check
       #- run: sudo python setup.py install  # needed to run the cli unit tests
-      - run: pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-common pyluna-common/tests --cov-report=xml
-      - run: pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-radiology pyluna-radiology/tests --cov-report=xml --cov-append
-      - run: pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-pathology pyluna-pathology/tests --cov-report=xml --cov-append
+      #- run: pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-common pyluna-common/tests --cov-report=xml
+      #- run: pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-radiology pyluna-radiology/tests --cov-report=xml --cov-append
+      #- run: pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-pathology pyluna-pathology/tests --cov-report=xml --cov-append
+      - run:
+          name: Run tests - pyluna-common
+          command: |
+            set -e
+            COMMON_TEST_FILES=$(circleci tests glob "pyluna-common/tests/**/test_*.py" | circleci tests split --split-by=timings)
+            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-common $COMMON_TEST_FILES --cov-report=xml
+      - run:
+          name: Run tests - pyluna-radiology
+          command: |
+            set -e
+            RADIOLOGY_TEST_FILES=$(circleci tests glob "pyluna-radiology/tests/**/test_*.py" | circleci tests split --split-by=timings)
+            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-radiology $RADIOLOGY_TEST_FILES --cov-report=xml --cov-append
+      - run:
+          name: Run tests - pyluna-pathology
+          command: |
+            set -e
+            PATHOLOGY_TEST_FILES=$(circleci tests glob "pyluna-pathology/tests/**/test_*.py" | circleci tests split --split-by=timings)
+            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-pathology $PATHOLOGY_TEST_FILES --cov-report=xml --cov-append
       - run: coverage report -m
       - store_artifacts:
           path: htmlcov
