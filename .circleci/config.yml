@@ -12,15 +12,13 @@ orbs:
 
 jobs:
   build:
-    parallelism: 3
+    parallelism: 4
     docker:
       - image: doori87/luna-dev:latest  # primary container for the build job
 
     steps:
       - checkout
       - run: cat /etc/os-release
-      #- run: sudo apt update
-      #- run: sudo apt install openslide-tools python-openslide default-jre
       - run: java -version
       - run: which java
       - run: echo "export PATH=/home/circleci/.local/bin:$PATH" >> $BASH_ENV  # some python packages get installed  here
@@ -30,16 +28,9 @@ jobs:
       - run: export PYSPARK_PYTHON=`which python`
       - run: echo $PATH
       - run: python --version
-      #- run: sudo pip install --upgrade pip
       - run: pip --version
-      #- run: sudo pip install -r requirements_dev.txt -q
       - run: pip list
       - run: pip check
-      #- run: sudo python setup.py install  # needed to run the cli unit tests
-      #- run: pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-common pyluna-common/tests --cov-report=xml
-      #- run: pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-radiology pyluna-radiology/tests --cov-report=xml --cov-append
-      #- run: pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-pathology pyluna-pathology/tests --cov-report=xml --cov-append
-      #- run: coverage report -m # coverage report becomes meaningless when splitting tests across multiple containers.
       - run:
           name: Run tests - pyluna-common
           command: |
