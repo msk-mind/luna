@@ -66,9 +66,6 @@ jobs:
     machine: true
     steps:
       - checkout
-      - setup_remote_docker:
-          version: 19.03.13
-          # docker_layer_caching: true # not available with the our current plan
       - run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
       - run: docker build -t $DOCKER_USERNAME/luna-dev:latest ./docker/
       - run: docker push $DOCKER_USERNAME/luna-dev:latest
