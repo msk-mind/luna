@@ -78,9 +78,13 @@ workflows:
   test:
     when: << pipeline.parameters.run_workflow_test >>
     jobs:
-      - test
+      - test:
+          context:
+            - MIND-Data-Processing
 
   build:
     when: << pipeline.parameters.run_workflow_docker >>
     jobs:
-      - docker_build
+      - docker_build:
+          context:
+            - MIND-Data-Processing
