@@ -6,15 +6,22 @@ version: 2.1
 # docker-compose integration testing in circleci
 # kubernetes deploy and integration test
 # usecase focussed integration tests if code changes frequently
+parameters:
+  run_workflow_test:
+    type: boolean
+    default: true
+  run_workflow_docker:
+    type: boolean
+    default: false
 
 orbs:
   codecov: codecov/codecov@1.0.2
 
 jobs:
-  build:
+  test:
     parallelism: 3
     docker:
-      - image: doori87/luna-dev:latest  # primary container for the build job
+      - image: $DOCKER_USERNAME/luna-dev:latest  # primary container for the build job
 
     steps:
       - checkout
@@ -53,3 +60,27 @@ jobs:
           path: htmlcov
       - codecov/upload:
           file: coverage.xml
+
+  # https://circleci.com/docs/2.0/building-docker-images/
+  docker_build:
+    machine: true
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 19.03.13
+          docker_layer_caching: true
+      - run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+      - run: docker build -t $DOCKER_USERNAME/luna-dev:latest ./docker/
+      - run: docker push $DOCKER_USERNAME/luna-dev:latest
+
+workflows:
+  version: 2
+  test:
+    when: << pipeline.parameters.run_workflow_test >>
+    jobs:
+      - test
+
+  build:
+    when: << pipeline.parameters.run_workflow_docker >>
+    jobs:
+      - docker_build
