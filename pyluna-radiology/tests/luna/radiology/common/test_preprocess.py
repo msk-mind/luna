@@ -89,7 +89,7 @@ def test_extract_voxels_1(tmp_path):
     print (properties)
 
     assert properties['targetShape'] == [280, 280, 11] # Check target shape
-    assert abs(np.load(str(properties['data']) + '/image_voxels.npy').mean() - -1289.5683001548427) < 1e-8 # Mean within some percision 
+    assert abs(np.load(str(properties['data']) + '/image_voxels.npy').mean() - -1289.3716255245372) < 1e-8 # Mean within some percision 
     assert np.load(str(properties['data']) + '/label_voxels.npy').sum() == 1139 # ~ number of 1 label voxels
 
 
@@ -103,7 +103,7 @@ def test_extract_voxels_2(tmp_path):
 
     print (properties)
     assert properties['targetShape'] == [140, 140, 5] # Check target shape
-    assert abs(np.load(str(properties['data']) + '/image_voxels.npy').mean() - -1289.2570235496087) < 1e-8 # Mean within some percision 
+    assert abs(np.load(str(properties['data']) + '/image_voxels.npy').mean() - -1289.2387456682986) < 1e-8 # Mean within some percision 
     assert np.load(str(properties['data']) + '/label_voxels.npy').sum() == 132 # ~ number of 1 label voxels, less due to different resampling
 
 
