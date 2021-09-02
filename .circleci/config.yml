@@ -6,6 +6,8 @@ version: 2.1
 # docker-compose integration testing in circleci
 # kubernetes deploy and integration test
 # usecase focussed integration tests if code changes frequently
+
+# Note: to edit context and environment variables, see Organization Settings https://app.circleci.com/settings/organization/github/msk-mind/contexts
 parameters:
   run_workflow_test:
     type: boolean
