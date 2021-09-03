@@ -89,13 +89,16 @@ class Neo4jConnection:
     def create_id_lookup_table_where(self, sqlc, source, sink, r="ID_LINK|HAS_RECORD", WHERE_CLAUSE=""):
         """
         Main method for creating lookup tables in a general manner.
-        Required:
-		source: what ID type you are starting with (e.g. a dmp_patient_id)
-		sink: what ID you wish to map to (e.g. a SeriesInstanceUID)
-        Optional:
-		r: Allowed relationship types.  Default is ID_LINK|HAS_RECORD to contain mapping within a patient subgraph
-		WHERE_CLAUSE: source, sink (as nodes) and r (as relationships) become availabe for filtering in a WHERE clause
-        Returns a dataframe with three columns, [ source | sink | pathspec ] where pathspec is a text-based representation of the path between the source and sink IDs
+
+        Args:
+            source: what ID type you are starting with (e.g. a dmp_patient_id)
+		    sink: what ID you wish to map to (e.g. a SeriesInstanceUID)
+            r: optional. Allowed relationship types.  Default is ID_LINK|HAS_RECORD to contain mapping within a patient subgraph
+		    WHERE_CLAUSE: optional. source, sink (as nodes) and r (as relationships) become availabe for filtering in a WHERE clause
+
+        Returns:
+             a dataframe with three columns, [ source | sink | pathspec ] where pathspec is a text-based representation of the path between the source and sink IDs
+
         """
 
         banned_words = ['delete', 'merge', 'create', 'set', 'remove']

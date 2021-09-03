@@ -44,6 +44,7 @@ ijson
 geojson
 orjson
 torch
+torchvision
 staintools
 pytest
 pytest-cov
@@ -59,4 +60,6 @@ python-semantic-release
 m2r2
 twine
 Sphinx
-
+sphinx-click
+nbsphinx
+ipython

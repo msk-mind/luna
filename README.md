@@ -1,6 +1,5 @@
-[![MSK-MIND](https://circleci.com/gh/msk-mind/luna.svg?style=shield)](https://circleci.com/gh/msk-mind/luna) [![codecov](https://codecov.io/gh/msk-mind/luna/branch/master/graph/badge.svg)](https://app.codecov.io/gh/msk-mind/luna)
-
 # Luna
+[![MSK-MIND](https://circleci.com/gh/msk-mind/luna.svg?style=shield)](https://circleci.com/gh/msk-mind/luna) [![codecov](https://codecov.io/gh/msk-mind/luna/branch/master/graph/badge.svg)](https://app.codecov.io/gh/msk-mind/luna)
 Transformation functions and services for multi-modal oncology data
 
 ## Installation
@@ -26,6 +25,8 @@ Install all python dependencies with:
 For development and testing purposes, add the subpackages to your `PYTHONPATH`:
 
 `export PYTHONPATH=.:src:pyluna-common:pyluna-radiology:pyluna-pathology`
+
+OR use `setup_local.sh` to setup your python paths and LUNA_HOME config:
 
 To run tests, specify the subpackage you want to test. For example, this command will run all tests under pyluna-common package.
 
@@ -58,6 +59,18 @@ There is also configuration for centralized logging to MongoDB. Similarily, the 
 
 ``cp datastore.default.yml datastore.cfg``
 
+## Steps to generate Sphinx doc pages
+
+```
+cd docs
+
+# generate module docs
+sphinx-apidoc --implicit-namespaces -o ./common ../pyluna-common ../pyluna-common/tests ../pyluna-common/setup*
+sphinx-apidoc --implicit-namespaces -o ./pathology ../pyluna-pathology ../pyluna-pathology/tests ../pyluna-pathology/setup*
+
+# generate html
+make html
+```
 
 ## Steps to generate radiology proxy table.
 1. Make a copy of data_ingestion_template.yaml.template and fill it out. This template contains operational metadata associated with the data and the data transfer process. 
