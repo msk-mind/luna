@@ -27,7 +27,8 @@ class DataStore_v2:
     def ensure_datastore(self, datastore_id, datastore_type):
         """
         :params: datastore_id - unique container ID
-        "params: datastore_type - the type of the container
+        :params: datastore_type - the type of the container
+
         """
         datastore_id = str(datastore_id)
 
@@ -143,34 +144,34 @@ class DataStore(object):
     Handles the matching and creation of metadata
 
     Example usage:
+
     $ container = luna.common.GraphEnum.DataStore( params ).setNamespace("test").setContainer("1.2.840...")
-        > Connecting to: neo4j://localhost:7687
-        > Connection successfull: True
-        > Running on: localhost
-        > Lookup ID: 1.2.840...
-        > Found: [<Record id(container)=7091 labels(container)=['scan'] container.type='scan' container.name='1.2.840...>]
-        > Match on: WHERE id(container) = 7091
-        > Successfully attached to: scan 1.2.840...
+    > Connecting to: neo4j://localhost:7687
+    > Connection successfull: True
+    > Running on: localhost
+    > Lookup ID: 1.2.840...
+    > Found: [<Record id(container)=7091 labels(container)=['scan'] container.type='scan' container.name='1.2.840...>]
+    > Match on: WHERE id(container) = 7091
+    > Successfully attached to: scan 1.2.840...
 
     $ node = Node("dicom", "DCM-0123", {"Modality":"CT", "path":"file:/some/path/1.dcm"})
 
     $ container.put(node)
-        > Adding: test-0000
-          DataStore has 1 pending commits
+    > Adding: test-0000
+    DataStore has 1 pending commits
 
     $
-        > Committing dicom:globals{ hash: 'abc123' name: 'my-dicom', qualified_address: 'test::1.2.840::my-dicom', namespace: 'test', type: 'dicom' , path: 'file:/some/path/1.dcm'}
+    > Committing dicom:globals{ hash: 'abc123' name: 'my-dicom', qualified_address: 'test::1.2.840::my-dicom', namespace: 'test', type: 'dicom' , path: 'file:/some/path/1.dcm'}
 
     $ container.get("dicom", "my-dicom").path
-        > /some/path/1.dcm
+    > /some/path/1.dcm
 
     $ container.get("dicom", "my-dicom").properties['Modality']
-        > 'CT'
+    > 'CT'
 
     The container includes a logging method:
     $ container.logger.info("I am processing the CT")
-        > 'yyyy-mm-dd h:m:s,ms - DataStore [1] - INFO - I am processing the CT'
-
+    > 'yyyy-mm-dd h:m:s,ms - DataStore [1] - INFO - I am processing the CT'
 
     """
     # TODO: worried about schema issues? like making sure name, namespace, type and qualified path are present, neo4j offers schema enforcment.
@@ -254,7 +255,8 @@ class DataStore(object):
         Checks if the node referenced by container_id is a valid container, queries the metastore for relevant metadata
 
         :params: container_id - unique container ID
-        "params: type - the type of the container
+        :params: type - the type of the container
+
         """
 
         if not container_type in ['generic', 'patient', 'accession', 'scan', 'slide', 'parquet']:

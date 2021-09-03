@@ -56,10 +56,10 @@ def with_event_loop(func):
     Mostly, this is a workaround to impliment some form of timeout when running very long-tasks on dask. 
     While one cannot (or should not) kill the running thread, Dask will cleanup the child tasks eventually once all jobs finish.
 
-    Usage:
-    @with_dask_event_loop
-    my_job(args, kwargs, runner=None):
-        runner.submit(sleep, 10)
+    Examples:
+        >>> @with_dask_event_loop
+        >>> my_job(args, kwargs, runner=None):
+        >>>     runner.submit(sleep, 10)
     """
 
     async def wrapped(*args, **kwargs):
@@ -129,10 +129,10 @@ def dask_job(job_name):
     """
     The simplier version of a dask job decorator, which only provides the worker_client as a runner to the calling function
 
-    Usage:
-    @dask_job('my_job')
-    my_job(args, kwargs, runner=None):
-        runner.submit(sleep, 10)
+    Examples:
+        >>> @dask_job('my_job')
+        >>> my_job(args, kwargs, runner=None):
+        >>>     runner.submit(sleep, 10)
     """
 
     def wrapped(func):

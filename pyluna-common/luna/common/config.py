@@ -121,14 +121,18 @@ class ConfigSet():
 
     def has_value(self, path):
         '''
-        :param path: path to a value in a configuration. The path must be of the form
-                        "name::jsonpath" where name is the logical name of the configuration
-                        and jsonpath is the jsonpath to value.
-                        see config.yaml to generate a jsonpath.
-                        See https://pypi.org/project/jsonpath-ng/
-                         jsonpath expressions may be tested here - https://jsonpath.com/
-        :return: true if value is not an empty string, else false.
-        :raises: ValueError if a configuration with the specified name was never loaded
+        Args:
+            path (str): path to a value in a configuration. The path must be of the form
+            "name::jsonpath" where name is the logical name of the configuration and jsonpath is the jsonpath to value.
+            see config.yaml to generate a jsonpath. See https://pypi.org/project/jsonpath-ng/ jsonpath expressions
+            may be tested here - https://jsonpath.com/
+
+        Returns:
+            boolean: true if value is not an empty string, else false.
+
+        Raises:
+            ValueError: if a configuration with the specified name was never loaded
+
         '''
         parsed = self._parse_path(path)
         name= parsed['name']
@@ -147,15 +151,19 @@ class ConfigSet():
         '''
         Gets the value for the specified jsonpath from the specified configuration.
 
-        :param path: path to a value in a configuration. The path must be of the form
-                        "name::jsonpath" where name is the logical name of the configuration
-                        and jsonpath is the jsonpath to value.
-                        see config.yaml to generate a jsonpath.
-                        See https://pypi.org/project/jsonpath-ng/
-                         jsonpath expressions may be tested here - https://jsonpath.com/
-        :return: string value from config file
-        :raises: ValueError if no match is found for the specified exception or a
-                 configuration with the specified name was never loaded
+        Args:
+            path (str): path to a value in a configuration. The path must be of the form "name::jsonpath"
+            where name is the logical name of the configuration and jsonpath is the jsonpath to value.
+            see config.yaml to generate a jsonpath. See https://pypi.org/project/jsonpath-ng/
+            jsonpath expressions may be tested here - https://jsonpath.com/
+
+        Returns:
+            str: value from config file
+
+        Raises:
+            ValueError: if no match is found for the specified exception or a configuration with
+            the specified name was never loaded
+
         '''
         parsed = self._parse_path(path)
         name = parsed['name']
