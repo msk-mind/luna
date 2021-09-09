@@ -9,4 +9,4 @@ data_ingestion_template.yaml
 preprocess_feature.spec
 tests/data_mock/
 *.idea
-*.cfg
+# *.cfg # ignores setup.cfg

@@ -37,6 +37,7 @@ import luna.pathology
 extensions = ['sphinx.ext.autodoc',
 	'sphinx.ext.viewcode',
 	'sphinx.ext.napoleon',
+    'sphinx.ext.autosectionlabel',
 	'sphinx_click',
 	'm2r2',
 	'nbsphinx']
