@@ -36,7 +36,12 @@ In order to generate the documentation::
     cd docs
     # generate module docs
     sphinx-apidoc --implicit-namespaces -o ./common ../pyluna-common ../pyluna-common/tests ../pyluna-common/setup*
-    sphinx-apidoc --implicit-namespaces -o ./pathology ../pyluna-pathology ../pyluna-pathology  /tests ../pyluna-pathology/setup*
+    sphinx-apidoc --implicit-namespaces -o ./pathology ../pyluna-pathology ../pyluna-pathology/tests ../pyluna-pathology/setup*
+
+    # clean up duplicate modules
+    # custom common/common-modules.rst pathology/pathology-modules.rst are used.
+    rm common/modules.rst pathology/modules.rst
+    rm common/pyluna-common.rst pathology/pyluna-pathology.rst
 
     # generate html
     make html

@@ -23,13 +23,13 @@ To see examples of various CLI calls, take a look at some of the various
 
 API Use
 =======
-In addition to launching jobs from the command lines, Luna can also used
+In addition to launching jobs from the command lines, Luna can also be used
 in Python files or Jupyter Notebooks. After installation, you can simply 
 import it into a Python file and access the built-in functions just as you
 would for any other library ::
 
     import luna
-    from luna.data_processing.pathology.common import preprocess
+    from luna.pathology.common import preprocess
     
 
 .. _Tutorials:
