@@ -2,12 +2,20 @@
 Developer Guide
 ===============
 
+A comprehensive guide for those interested in making contributions or
+supporting the development of Luna. 
+
+.. warning::
+    This documentation is still a work in progress
+
+
 Development Setup Instructions
 ==============================
+Follow the instructions below to install the latest version of Luna and 
+setup a development environment. 
 
-
-Installation
-------------
+Developement Installation
+-------------------------
 
 Developers interested in using the newest features of Luna, or are
 actively contributing to Luna should install the latest version available via::

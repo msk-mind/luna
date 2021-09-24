@@ -4,6 +4,8 @@
 Installation
 ============
 
+See below for installation instructions
+
 1. Pre-requisites
 -----------------
 

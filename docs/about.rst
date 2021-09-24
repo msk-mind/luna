@@ -1,5 +1,5 @@
 ============
-About PyLuna
+About Luna
 ============
 
 Luna serves as the core computational library for multi-modality oncology data analysis.
