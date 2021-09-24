@@ -4,7 +4,7 @@ Created on January 30, 2021
 @author: pashaa@mskcc.org
 '''
 import pathlib
-import shutil
+import shutil, logging
 
 import click
 from filehash import FileHash
@@ -26,7 +26,6 @@ from luna.common.utils import get_absolute_path
 from luna.pathology.common.slideviewer_client import fetch_slide_ids
 from luna.pathology.common.annotation_utils import convert_bmp_to_npy
 
-logger = init_logger()
 
 DATA_SCHEMA_FILE = os.path.join(
                       pathlib.Path(__file__).resolve().parent,
@@ -117,6 +116,7 @@ def create_proxy_table():
     # pd.set_option('display.max_colwidth', -1)
 
     exit_code = 0
+    logger = logging.getLogger(__name__)
     cfg = ConfigSet()
     spark = SparkConfig().spark_session(
                                  config_name=const.APP_CFG,
@@ -245,6 +245,8 @@ def cli(data_config_file, app_config_file):
             -d {data_config_yaml} \
             -a {app_config_yaml}
     """
+    logger = init_logger()
+
     with CodeTimer(logger, 'generate regional annotation proxy table'):
         # read and validate configs
         logger.info('data config: ' + data_config_file)

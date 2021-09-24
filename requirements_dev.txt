@@ -63,3 +63,4 @@ Sphinx
 sphinx-click
 nbsphinx
 ipython
+sphinx-book-theme

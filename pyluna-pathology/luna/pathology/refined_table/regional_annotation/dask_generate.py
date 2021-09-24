@@ -1,5 +1,5 @@
 import click
-import os
+import os, logging
 import shutil
 
 from luna.common.CodeTimer       import CodeTimer
@@ -15,7 +15,6 @@ import numpy as np
 
 from dask.distributed import Client, as_completed
 
-logger = init_logger()
 
 @click.command()
 @click.option('-d', '--data_config_file', default=None, type=click.Path(exists=True),
@@ -54,6 +53,8 @@ def cli(data_config_file, app_config_file):
 
     - labelset:
     """
+    logger = init_logger()
+
     # load configs
     cfg = ConfigSet(name='DATA_CFG', config_file=data_config_file)
     cfg = ConfigSet(name='APP_CFG',  config_file=app_config_file)
@@ -88,6 +89,8 @@ def create_geojson_table():
     Returns:
         list: list of slide ids that failed
     """
+    logger = logging.getLogger(__name__)
+
     failed = []
     # get application and data config variables
     cfg = ConfigSet()

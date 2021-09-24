@@ -1,4 +1,4 @@
-import shutil
+import shutil, logging
 
 import click
 
@@ -16,7 +16,6 @@ from pyspark.sql.types import StringType, IntegerType, ArrayType, MapType, Struc
 import os
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
-logger = init_logger()
 
 # geojson struct - example
 # {"type":"FeatureCollection",
@@ -79,6 +78,7 @@ def cli(data_config_file, app_config_file, process_string):
                      --app_config_file <path to app config file> \
                      --process_string geojson
     """
+    logger = init_logger()
     with CodeTimer(logger, f"generate {process_string} table"):
         logger.info('data template: ' + data_config_file)
         logger.info('config_file: ' + app_config_file)
@@ -113,7 +113,7 @@ def create_geojson_table():
     Creates a geojson file per labelset.
     """
     exit_code = 0
-
+    logger = logging.getLogger(__name__)
     cfg = ConfigSet()
     spark = SparkConfig().spark_session(config_name=const.APP_CFG,
                                         app_name="luna.pathology.refined_table.annotation.generate")
@@ -181,7 +181,7 @@ def create_concat_geojson_table():
     Aggregate geojson features for each labelset, in case there are annotations from multiple users.
     """
     exit_code = 0
-
+    logger = logging.getLogger(__name__)
     cfg = ConfigSet()
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="luna.pathology.refined_table.annotation.generate")
     spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "false")
