@@ -16,8 +16,6 @@ from luna.pathology.common.utils import get_labelset_keys
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
-logger = init_logger()
-
 # geojson struct - example
 # [{"type": "Feature", "id": "PathAnnotationObject", "geometry": {"type": "Point", "coordinates": [13981, 15274]}, "properties": {"classification": {"name": "Other"}}},
 # {"type": "Feature", "id": "PathAnnotationObject", "geometry": {"type": "Point", "coordinates": [14013, 15279]}, "properties": {"classification": {"name": "Other"}}}]
@@ -91,6 +89,8 @@ def cli(data_config_file, app_config_file):
 
     - geojson_record_uuid: hash of geojson annotation file, format: SVGEOJSON-{labelset}-{geojson_hash}
     """
+    logger = init_logger()
+
     with CodeTimer(logger, 'generate GEOJSON table'):
         logger.info('data config file: ' + data_config_file)
         logger.info('app config file: ' + app_config_file)

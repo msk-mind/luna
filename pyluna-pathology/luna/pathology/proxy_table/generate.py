@@ -6,7 +6,7 @@ Created on November 30, 2020
 Memorial Sloan Kettering Cancer Center
 '''
 
-import click
+import click, logging
 
 from luna.common.CodeTimer import CodeTimer
 from luna.common.config import ConfigSet
@@ -26,7 +26,6 @@ from pathlib import Path
 import openslide
 import requests
 
-logger = init_logger()
 
 TRY_S3=False
 SCHEMA_FILE=get_absolute_path(__file__, 'data_ingestion_template_schema.yml')
@@ -119,6 +118,7 @@ def cli(data_config_file, app_config_file, process_string):
 
     - length: length of the file
     """
+    logger = init_logger()
     with CodeTimer(logger, 'generate proxy table'):
         processes = process_string.lower().strip().split(",")
         logger.info('data_ingestions_template: ' + data_config_file)
@@ -158,6 +158,7 @@ def create_proxy_table():
     """
 
     exit_code = 0
+    logger = logging.getLogger(__name__)
     cfg = ConfigSet()
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="luna.pathology.proxy_table.generate")
 
@@ -204,6 +205,7 @@ def update_graph(config_file):
     """
 
     exit_code = 0
+    logger = logging.getLogger(__name__)
     cfg  = ConfigSet()
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="luna.pathology.proxy_table.generate")
 

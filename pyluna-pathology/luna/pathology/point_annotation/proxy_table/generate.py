@@ -1,6 +1,6 @@
 
 import os, json
-import shutil
+import shutil, logging
 
 import click
 from pyspark.sql.functions import lit, udf, explode, array, to_json
@@ -13,7 +13,6 @@ from luna.common.sparksession import SparkConfig
 from luna.common.utils import get_absolute_path
 from luna.pathology.common.slideviewer_client import fetch_slide_ids
 import luna.common.constants as const
-logger = init_logger()
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
@@ -90,6 +89,8 @@ def cli(data_config_file, app_config_file):
 
     - sv_json_record_uuid: hash of raw json annotation file from slideviewer, format: SVPTJSON-{json_hash}
     """
+    logger = init_logger()
+
     with CodeTimer(logger, 'generate POINT_RAW_JSON table'):
         logger.info('data config file: ' + data_config_file)
         logger.info('app config file: ' + app_config_file)
@@ -119,6 +120,7 @@ def create_proxy_table():
     """
 
     cfg = ConfigSet()
+    logger = logging.getLogger(__name__)
 
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name="luna.pathology.point_annotation.proxy_table.generate")
 
