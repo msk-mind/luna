@@ -18,7 +18,7 @@ is often the filename or unique identifier of something like a slide.
 python function call. 
 
 To see examples of various CLI calls, take a look at some of the various
-:ref:`tutorials<Tutorials>` for our pathology workflows. 
+:ref:`Tutorials` for our pathology workflows. 
 
 
 API Use
@@ -32,7 +32,6 @@ would for any other library ::
     from luna.pathology.common import preprocess
     
 
-.. _Tutorials:
 
 Tutorials
 =========
@@ -51,7 +50,7 @@ The following notebook tutorials walk you through analysis workflows.
 
 Pathology Workflow
 ==================
-At a high level, the pathology workflow that PyLuna supports resembles
+At a high level, the pathology workflow that Luna supports resembles
 :numref:`fig-path_workflow`
 
 .. _fig-path_workflow:

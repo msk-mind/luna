@@ -58,7 +58,7 @@ source_suffix = ['.rst', '.md']
 master_doc = 'index'
 
 # General information about the project.
-project = 'luna'
+project = 'Luna'
 copyright = "2021, msk-mind"
 author = "msk-mind"
 
