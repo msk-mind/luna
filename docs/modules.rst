@@ -1,4 +1,4 @@
-Luna Modules
+API Reference
 ============
 
 .. toctree::

@@ -100,7 +100,7 @@ In luna repo, run:
 
 .. code-block:: console
 
-    $ ./setup_local.sh
+    $ . setup_local.sh
 
 Running the setup_local script will:
 
