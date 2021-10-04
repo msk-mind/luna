@@ -24,7 +24,7 @@ def generate_k_function_statistics(cell_paths, method_data, main_index=None):
                         'value' : (str) Phenotype string to match (e.g. panCK)
                 },
                 "count" : (bool) Flag to compute counting stats.
-                "R" : (float) Radius cutoff
+                "radius" : (float) Radius cutoff
                 "intensity" : (str, optional) Column containing intensity information 
                 "distance" : (bool) Flag to compute intensity-distance stats.
     
