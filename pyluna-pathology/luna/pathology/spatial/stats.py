@@ -39,24 +39,24 @@ def Kfunction(p1XY, p2XY, R, ls = False, count=True, intensity=[], distance = Fa
 	''' Computes the Counting, Intensity, and experimental
 		Intensity-Distance K functions
 
-		Parameters:
-	    p1XY: An Nx2 array representing the (X,Y) coordinates of cells with phenotype 1
-	    p2XY: Same as p1XY but for phenotype 2 cells
-	    R: The radius (or list of radii) to consider
-	    ls: If True, returns an |R|x|p1XY| 2D array representing the K function
+    Args:
+	    p1XY (np.ndarray): An Nx2 array representing the (X,Y) coordinates of cells with phenotype 1
+	    p2XY (np.ndarray): Same as p1XY but for phenotype 2 cells
+	    R (float, list[float]): The radius (or list of radii) to consider
+	    ls (bool): If True, returns an |R|x|p1XY| 2D array representing the K function
 	    	for each phenotype 1 cell for each radius. If False, returns the mean
 	    	for each radius
-	    count: By default, this function only computes the Counting K function.
+	    count (bool): By default, this function only computes the Counting K function.
 	           Can be disabled with count=False.
-	    intensity: An array of length |p2XY| representing the intensity of each
+	    intensity (np.ndarray): An array of length |p2XY| representing the intensity of each
 	               phenotype 2 cell. When passed in, this method will also compute
 	               the Intensity K function
-        distance: If an intensity array is passed in, then setting distance=True
+        distance (bool): If an intensity array is passed in, then setting distance=True
                   will compute the experimental Intensity-Distance K function
-		distance_scale: Characteristic distance scale (usually approx. 1 cell length in the given units)
+		distance_scale (float): Characteristic distance scale (usually approx. 1 cell length in the given units)
 
-	   Return value: a dictionary with keys ["count", "intensity", "distance"]
-	   			     and values corresponding to the result of each K function
+	Returns:
+		dict: a dictionary with keys ["count", "intensity", "distance"] and values corresponding to the result of each K function
 	'''
 	# Compute the distance matrix
 	dists = cdist(p1XY,p2XY)
