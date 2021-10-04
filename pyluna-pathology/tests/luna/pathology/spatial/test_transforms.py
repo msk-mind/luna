@@ -16,12 +16,10 @@ method_data = {
         "distance" : True
 }
 
-LUNA_HOME = os.environ['LUNA_HOME']
-
 def test():
 
     output = generate_k_function_statistics(
-        f"{LUNA_HOME}/pyluna-pathology/tests/luna/testdata/data/spatial/example_cell_data.csv", 
+        f"pyluna-pathology/tests/luna/testdata/data/spatial/example_cell_data.csv", 
         method_data, 
         "PX-001")
     assert output.index[0] == "PX-001"
