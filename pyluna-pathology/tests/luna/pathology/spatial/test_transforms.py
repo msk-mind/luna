@@ -11,7 +11,7 @@ method_data = {
                 'value' : 'panCK+'
         },
         "count" : True,
-        "R" : 60,
+        "radius" : 60,
         "intensity" : 'Cell: PDL1 sum',
         "distance" : True
 }

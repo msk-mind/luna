@@ -44,7 +44,7 @@ def generate_k_function_statistics(cell_paths, method_data, main_index=None):
     pheno2_col    = method_data["phenotype2"]["name"]
     pheno2_val    = method_data["phenotype2"]["value"]
     index_col     = method_data.get("index", None)
-    R             = method_data["R"]
+    radius        = method_data["radius"]
     count         = method_data["count"]
     distance      = method_data["distance"]
     intensity_col = method_data.get("intensity", None)
@@ -86,7 +86,7 @@ def generate_k_function_statistics(cell_paths, method_data, main_index=None):
         # Compute the K function
         print (f"Running... {cell_path}")
 
-        fov_k_data = Kfunction(p1XY, p2XY, R, ls=True, count=count, intensity=I, distance=distance)
+        fov_k_data = Kfunction(p1XY, p2XY, radius, ls=True, count=count, intensity=I, distance=distance)
 
         for key in fov_k_data:
             if key in agg_k_data:
@@ -101,10 +101,10 @@ def generate_k_function_statistics(cell_paths, method_data, main_index=None):
         if len(arr)==0: arr=[0]
         data_out.update( 
             {
-                f"For_{pheno1_val}_Find_{pheno2_val}_at{R}_{kfunct}_{intensity_col}_mean": np.mean(arr),
-                f"For_{pheno1_val}_Find_{pheno2_val}_at{R}_{kfunct}_{intensity_col}_variance": np.var(arr),
-                f"For_{pheno1_val}_Find_{pheno2_val}_at{R}_{kfunct}_{intensity_col}_skew": scipy.stats.skew(arr),
-                f"For_{pheno1_val}_Find_{pheno2_val}_at{R}_{kfunct}_{intensity_col}_kurtosis": scipy.stats.kurtosis(arr)
+                f"For_{pheno1_val}_Find_{pheno2_val}_at{radius}_{kfunct}_{intensity_col}_mean": np.mean(arr),
+                f"For_{pheno1_val}_Find_{pheno2_val}_at{radius}_{kfunct}_{intensity_col}_variance": np.var(arr),
+                f"For_{pheno1_val}_Find_{pheno2_val}_at{radius}_{kfunct}_{intensity_col}_skew": scipy.stats.skew(arr),
+                f"For_{pheno1_val}_Find_{pheno2_val}_at{radius}_{kfunct}_{intensity_col}_kurtosis": scipy.stats.kurtosis(arr)
             }
         )
 

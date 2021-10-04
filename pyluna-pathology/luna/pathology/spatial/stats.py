@@ -35,15 +35,15 @@ def _ret(count, ls):
 # 		weights.append(np.max(1/prop))
 # 	return weights
 
-def Kfunction(p1XY, p2XY, R, ls = False, count=True, intensity=[], distance = False, distance_scale=10.0):
+def Kfunction(p1XY, p2XY, radius, ls = False, count=True, intensity=[], distance = False, distance_scale=10.0):
 	''' Computes the Counting, Intensity, and experimental
 		Intensity-Distance K functions
 
     Args:
 	    p1XY (np.ndarray): An Nx2 array representing the (X,Y) coordinates of cells with phenotype 1
 	    p2XY (np.ndarray): Same as p1XY but for phenotype 2 cells
-	    R (float, list[float]): The radius (or list of radii) to consider
-	    ls (bool): If True, returns an |R|x|p1XY| 2D array representing the K function
+	    radius (float, list[float]): The radius (or list of radii) to consider
+	    ls (bool): If True, returns an |radius|x|p1XY| 2D array representing the K function
 	    	for each phenotype 1 cell for each radius. If False, returns the mean
 	    	for each radius
 	    count (bool): By default, this function only computes the Counting K function.
@@ -61,19 +61,19 @@ def Kfunction(p1XY, p2XY, R, ls = False, count=True, intensity=[], distance = Fa
 	# Compute the distance matrix
 	dists = cdist(p1XY,p2XY)
 
-	# Turn R into an array if it isn't one already
+	# Turn radius into an array if it isn't one already
 	try:
-		it = iter(R)
+		it = iter(radius)
 	except TypeError:
-		R = [R]
+		radius = [radius]
 
 	# Define the lambdas for each K function variant
 	CKfunc  = lambda mask: np.sum(mask, axis=1)
 	IKfunc  = lambda Imask: np.sum(Imask, axis=1)
 	IDKfunc = lambda Imask: np.sum(Imask*(1/(distance_scale + (dists/distance_scale)**3)), axis=1)
 
-	# Compute the mask for each R
-	masks = [(dists <= r) for r in R]
+	# Compute the mask for each radius
+	masks = [(dists <= r) for r in radius]
 
 	# Calculate each K function
 	Kdict = {}
