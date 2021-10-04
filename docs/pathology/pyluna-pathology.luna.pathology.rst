@@ -14,6 +14,7 @@ Subpackages
    pyluna-pathology.luna.pathology.point_annotation
    pyluna-pathology.luna.pathology.proxy_table
    pyluna-pathology.luna.pathology.refined_table
+   pyluna-pathology.luna.pathology.spatial
 
 Module contents
 ---------------
