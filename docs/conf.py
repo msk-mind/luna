@@ -22,7 +22,7 @@ import sys
 sys.path.insert(0, os.path.abspath('../pyluna-common/'))
 sys.path.insert(0, os.path.abspath('../pyluna-pathology/'))
 sys.path.insert(0, os.path.abspath('../pyluna-radiology/'))
-sys.path.insert(0, os.path.abspath('../src/'))
+sys.path.insert(0, os.path.abspath('../pyluna-core/'))
 
 import luna.pathology
 

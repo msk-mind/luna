@@ -24,7 +24,7 @@ def spark(monkeypatch):
     monkeypatch.setenv("PYSPARK_PYTHON", pypath) # python in venv, need to update if running locally!
     monkeypatch.setenv("SPARK_MASTER_URL", "local[*]")
 
-    ConfigSet(name=APP_CFG, config_file='tests/test_config.yml')
+    ConfigSet(name=APP_CFG, config_file='pyluna-radiology/tests/test_config.yml')
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-process-scan')
     yield spark
 
@@ -49,7 +49,7 @@ def test_cli(mocker, spark):
             '-p', project_name,
             '-e', ext,
             '-t', 'scan.unittest',
-            '-f', 'tests/test_config.yml'])
+            '-f', 'pyluna-radiology/tests/test_config.yml'])
 
         assert result.exit_code == 0
         df = spark.read.format("delta").load(scan_table_path)

@@ -19,7 +19,7 @@ data_config_path = png_config_path + "/data_config.yaml"
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yml')
+    ConfigSet(name=const.APP_CFG, config_file='pyluna-radiology/tests/test_config.yml')
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-radiology-refined-annotation')
 
     yield spark
@@ -36,7 +36,7 @@ def test_cli_crop(spark):
     runner = CliRunner()
     result = runner.invoke(cli,
                            ['-d', 'pyluna-radiology/tests/luna/radiology/refined_table/annotation/data_crop.yaml',
-                            '-a', 'tests/test_config.yml'])
+                            '-a', 'pyluna-radiology/tests/test_config.yml'])
 
     assert result.exit_code == 0
 

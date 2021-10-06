@@ -17,6 +17,7 @@ clean-build:
 	rm -fr build/
 	rm -fr dist/
 	rm -fr *.egg-info
+	rm -fr ./*/*.egg-info
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
@@ -32,9 +33,7 @@ clean-test:      ## remove test and coverage artifacts
 dist: clean
 	pip install --upgrade pip
 	pip install --use-feature=2020-resolver -r requirements_dev.txt
-	pyinstaller -F --clean --hidden-import py4j.java_collections --exclude-module tkinter src/luna/preprocess_feature.py
-	python setup.py sdist
-	python setup.py bdist_wheel
+	python setup.py sdist bdist_wheel
 	ls -l dist
 
 # https://packaging.python.org/tutorials/packaging-projects/
@@ -54,7 +53,7 @@ test: clean-test clean-pyc    ## run tests quickly with the default Python
 	pytest
 
 coverage:
-	pytest -s --cov=src --cov=pyluna-common --cov=pyluna-radiology --cov=pyluna-pathology tests
+	pytest -s --cov=pyluna-core --cov=pyluna-common --cov=pyluna-radiology --cov=pyluna-pathology .
 	coverage report -m
 	coverage html
 	open htmlcov/index.html

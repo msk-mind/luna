@@ -10,9 +10,10 @@ import luna.common.constants as const
 from pathlib import Path
 cwd = os.getcwd()
 
-dicom_path = 'tests/testdata/data/2.000000-CTAC-24716/dicoms/1-01.dcm'
-image_path = 'tests/testdata/data/2.000000-CTAC-24716/volumes/image.mhd'
-label_path = 'tests/testdata/data/2.000000-CTAC-24716/volumes/label.mha'
+data_dir = 'pyluna-radiology/tests/luna/testdata/data'
+dicom_path = f'{data_dir}/2.000000-CTAC-24716/dicoms/1-01.dcm'
+image_path = f'{data_dir}/2.000000-CTAC-24716/volumes/image.mhd'
+label_path = f'{data_dir}/2.000000-CTAC-24716/volumes/label.mha'
 
 def test_find_centroid():
 
@@ -51,7 +52,7 @@ def test_slice_to_image():
 
 def test_subset_bound_seg():
 
-    new_filepath = 'tests/testdata/data/2.000000-CTAC-24716/volumes/subset_image.mhd'
+    new_filepath = f'{data_dir}/2.000000-CTAC-24716/volumes/subset_image.mhd'
     modified_file = subset_bound_seg(image_path, new_filepath, 0, 3)
 
     subset_data, subset_hdr = load(modified_file)
@@ -60,15 +61,15 @@ def test_subset_bound_seg():
     
     # cleanup
     os.remove(new_filepath)
-    os.remove('tests/testdata/data/2.000000-CTAC-24716/volumes/subset_image.raw')
+    os.remove(f'{data_dir}/2.000000-CTAC-24716/volumes/subset_image.raw')
 
 
 def test_crop_images():
 
-    ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yml')
+    ConfigSet(name=const.APP_CFG, config_file='pyluna-radiology/tests/test_config.yml')
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-radiology-utils')
 
-    png = spark.read.format("delta").load("tests/testdata/data/test-project/tables/PNG_dsn").toPandas()
+    png = spark.read.format("delta").load(f"{data_dir}/test-project/tables/PNG_dsn").toPandas()
     dicom = png['dicom'][0]
     overlay = png['overlay'][0]
     dicom_overlay = crop_images(360, 198, Image.frombytes("L", (512,512), bytes(dicom)), Image.frombytes("RGB", (512,512), bytes(overlay)), 256, 256, 512, 512)
@@ -80,8 +81,8 @@ def test_crop_images():
 
 def test_extract_voxels_1(tmp_path):
     properties = extract_voxels(
-        image_path = f'tests/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
-        label_path = f'tests/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
+        image_path = f'{data_dir}/2.000000-CTAC-24716/volumes/image.mhd',
+        label_path = f'{data_dir}/2.000000-CTAC-24716/volumes/label.mha',
         output_dir = str(tmp_path),
         params     = {"resampledPixelSpacing": [2.5,2.5,2.5]}
     )
@@ -95,8 +96,8 @@ def test_extract_voxels_1(tmp_path):
 
 def test_extract_voxels_2(tmp_path):
     properties = extract_voxels(
-        image_path = f'tests/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
-        label_path = f'tests/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
+        image_path = f'{data_dir}/2.000000-CTAC-24716/volumes/image.mhd',
+        label_path = f'{data_dir}/2.000000-CTAC-24716/volumes/label.mha',
         output_dir = str(tmp_path),
         params     = {"resampledPixelSpacing": [5,5,5]}
     )
@@ -109,8 +110,8 @@ def test_extract_voxels_2(tmp_path):
 
 def test_extract_radiomics_1(tmp_path):
     properties = extract_radiomics(
-        image_path = f'tests/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
-        label_path = f'tests/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
+        image_path = f'{data_dir}/2.000000-CTAC-24716/volumes/image.mhd',
+        label_path = f'{data_dir}/2.000000-CTAC-24716/volumes/label.mha',
         output_dir = str(tmp_path),
         params     = {"job_tag":"test_1", "radiomicsFeatureExtractor": {'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 25, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001}}
     )
@@ -120,8 +121,8 @@ def test_extract_radiomics_1(tmp_path):
 
 def test_extract_radiomics_2(tmp_path):
     properties = extract_radiomics(
-        image_path = f'tests/testdata/data/2.000000-CTAC-24716/volumes/image.mhd',
-        label_path = f'tests/testdata/data/2.000000-CTAC-24716/volumes/label.mha',
+        image_path = f'{data_dir}/2.000000-CTAC-24716/volumes/image.mhd',
+        label_path = f'{data_dir}/2.000000-CTAC-24716/volumes/label.mha',
         output_dir = str(tmp_path),
         params     = {"job_tag":"test_1", "radiomicsFeatureExtractor": {'interpolator': 'sitkBSpline', 'resampledPixelSpacing': [1, 1, 1], 'padDistance': 10, 'voxelArrayShift': 1000, 'binWidth': 50, 'verbose': 'True', 'label': 1, 'geometryTolerance': 0.0001}}
     )
@@ -131,7 +132,7 @@ def test_extract_radiomics_2(tmp_path):
 
 def test_generate_scan_1(tmp_path):
     properties = generate_scan(
-        dicom_path = f'tests/testdata/data/2.000000-CTAC-24716/dicoms/',
+        dicom_path = f'{data_dir}/2.000000-CTAC-24716/dicoms/',
         output_dir = str(tmp_path),
         params     = {'itkImageType':'mhd'}
     )
@@ -143,7 +144,7 @@ def test_generate_scan_1(tmp_path):
 
 def test_generate_scan_2(tmp_path):
     properties = generate_scan(
-        dicom_path = f'tests/testdata/data/2.000000-CTAC-24716/dicoms/',
+        dicom_path = f'{data_dir}/2.000000-CTAC-24716/dicoms/',
         output_dir = str(tmp_path),
         params     = {'itkImageType':'nrrd'}
     )
@@ -154,7 +155,7 @@ def test_generate_scan_2(tmp_path):
 
 def test_window_dicoms_1(tmp_path):
     properties = window_dicoms(
-        dicom_path = f'tests/testdata/data/2.000000-CTAC-24716/dicoms/',
+        dicom_path = f'{data_dir}/2.000000-CTAC-24716/dicoms/',
         output_dir = tmp_path,
         params     = {'window':False}
     )
@@ -170,7 +171,7 @@ def test_window_dicoms_1(tmp_path):
 
 def test_window_dicoms_2(tmp_path):
     properties = window_dicoms(
-        dicom_path = f'tests/testdata/data/2.000000-CTAC-24716/dicoms/',
+        dicom_path = f'{data_dir}/2.000000-CTAC-24716/dicoms/',
         output_dir = tmp_path,
         params     = {'window':True, 'windowLowLevel': -100, 'windowHighLevel': 100}
     )

@@ -15,7 +15,7 @@ PROJECT_PATH = None
 
 def setup_module(module):
     """ setup any state specific to the execution of the given module."""
-    cfg = ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yml')
+    cfg = ConfigSet(name=const.APP_CFG, config_file='pyluna-pathology/tests/test_config.yml')
     cfg = ConfigSet(name=const.DATA_CFG,
               config_file='pyluna-pathology/tests/luna/pathology/point_annotation/testdata/point_js_config.yaml')
     module.spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-pathology-annotation-proxy')

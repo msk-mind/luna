@@ -16,7 +16,7 @@ data_config_path = config_path + "/POINT_GEOJSON_dsn/data_config.yaml"
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yml')
+    ConfigSet(name=const.APP_CFG, config_file='pyluna-radiology/tests/test_config.yml')
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-point-annot-refined')
 
     yield spark
@@ -32,7 +32,7 @@ def test_cli(spark):
     runner = CliRunner()
     result = runner.invoke(cli, 
         ['-d', 'pyluna-pathology/tests/luna/pathology/point_annotation/testdata/point_geojson_config.yaml',
-         '-a', 'tests/test_config.yml'])
+         '-a', 'pyluna-radiology/tests/test_config.yml'])
 
     print(result.exc_info)
     assert result.exit_code == 0

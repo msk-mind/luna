@@ -16,7 +16,7 @@ data_config_path = landing_path + '/test-project/configs/WSI_dsn/data_config.yam
 @pytest.fixture(autouse=True)
 def spark(monkeypatch):
     print('------setup------')
-    ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yml')
+    ConfigSet(name=const.APP_CFG, config_file='pyluna-radiology/tests/test_config.yml')
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-pathology-proxy')
     monkeypatch.setenv("MIND_GPFS_DIR", "")
     monkeypatch.setenv("HDFS_URI", "")
@@ -32,7 +32,7 @@ def test_cli(spark):
     runner = CliRunner()
     result = runner.invoke(cli, 
         ['-d', 'pyluna-pathology/tests/luna/pathology/proxy_table/data.yaml',
-        '-a', 'tests/test_config.yml',
+        '-a', 'pyluna-radiology/tests/test_config.yml',
         '-p', 'delta'])
 
     assert result.exit_code == 0

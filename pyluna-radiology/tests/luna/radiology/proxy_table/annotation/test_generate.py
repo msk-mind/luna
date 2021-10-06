@@ -22,7 +22,7 @@ mhd_data_csv_path = project_path + "/configs/RADIOLOGY_ANNOTATION_datasetname/me
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yml')
+    ConfigSet(name=const.APP_CFG, config_file='pyluna-radiology/tests/test_config.yml')
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-radiology-proxy-annotation')
 
     yield spark
@@ -40,8 +40,9 @@ def test_cli_mha(spark):
     runner = CliRunner()
     result = runner.invoke(cli, 
         ['-d', 'pyluna-radiology/tests/luna/radiology/proxy_table/annotation/mha_data_config.yaml',
-        '-a', 'tests/test_config.yml',
+        '-a', 'pyluna-radiology/tests/test_config.yml',
         '-p', 'delta'])
+    print(result.exc_info)
     assert result.exit_code == 0
 
     assert os.path.exists(mha_app_config_path)
@@ -62,8 +63,9 @@ def test_cli_both(spark):
     runner = CliRunner()
     result = runner.invoke(cli, 
         ['-d', 'pyluna-radiology/tests/luna/radiology/proxy_table/annotation/data_config.yaml',
-        '-a', 'tests/test_config.yml',
+        '-a', 'pyluna-radiology/tests/test_config.yml',
         '-p', 'delta'])
+    print(result.exc_info)
     assert result.exit_code == 0
 
     assert os.path.exists(mhd_app_config_path)

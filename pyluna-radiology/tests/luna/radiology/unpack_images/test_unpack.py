@@ -16,7 +16,7 @@ def test_cli():
     runner = CliRunner()
     result = runner.invoke(cli, 
         ['-d', 'pyluna-radiology/tests/luna/radiology/unpack_images/data.yaml',
-        '-a', 'tests/test_config.yml'])
+        '-a', 'pyluna-radiology/tests/test_config.yml'])
 
     assert result.exit_code == 0
     assert os.path.exists(unpacked_pngs_path)
