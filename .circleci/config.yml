@@ -33,7 +33,7 @@ jobs:
       - run: echo "export PATH=/home/circleci/.local/bin:$PATH" >> $BASH_ENV  # some python packages get installed  here
       - run: echo "export CODECOV_TOKEN="4d2ae912-4489-4e40-ac13-02add6c0d1a6"" >> $BASH_ENV
       - run: echo "export LUNA_HOME=pyluna-common/tests/luna/common/testdata" >> $BASH_ENV
-      - run: echo "export PYTHONPATH=.:pyluna-common:pyluna-common:pyluna-radiology:pyluna-pathology" >> $BASH_ENV
+      - run: echo "export PYTHONPATH=.:pyluna-common:pyluna-core:pyluna-radiology:pyluna-pathology" >> $BASH_ENV
       - run: export PYSPARK_PYTHON=`which python`
       - run: echo $PATH
       - run: python --version
