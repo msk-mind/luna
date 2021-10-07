@@ -23,7 +23,7 @@ jobs:
   test:
     parallelism: 3
     docker:
-      - image: $DOCKER_USERNAME/luna-dev:latest  # primary container for the build job
+      - image: $DOCKER_ORG/luna-dev:latest  # primary container for the build job
 
     steps:
       - checkout
