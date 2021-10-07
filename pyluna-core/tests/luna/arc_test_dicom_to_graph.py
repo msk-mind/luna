@@ -14,7 +14,7 @@ current_dir = os.getcwd()
 def spark():
     print('------setup------')
     APP_CFG = 'APP_CFG'
-    ConfigSet(name=APP_CFG, config_file='tests/test_config.yml')
+    ConfigSet(name=APP_CFG, config_file='pyluna-core/tests/test_config.yml')
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-dicom-to-graph')
 
     yield spark
@@ -36,7 +36,7 @@ def test_cli(mocker, spark, monkeypatch):
     result = runner.invoke(cli, ['-s', 'local[2]',
                                  '-g', 'bolt://localhost:7883',
                                  '-h', 'file:///',
-                                 '-f', 'tests/test_config.yml'])
+                                 '-f', 'pyluna-core/tests/test_config.yml'])
 
     assert result.exit_code == 0
     # radiology.dcm in testdata has only 1 row

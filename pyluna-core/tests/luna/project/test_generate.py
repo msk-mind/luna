@@ -3,15 +3,15 @@ from click.testing import CliRunner
 
 from luna.project.generate import cli
 
-project_path = 'tests/src/project/testdata/PRO_12-123'
-manifest_path = 'tests/src/project/testdata/PRO_12-123/manifest.yaml'
+project_path = 'pyluna-core/tests/luna/project/testdata/PRO_12-123'
+manifest_path = 'pyluna-core/tests/luna/project/testdata/PRO_12-123/manifest.yaml'
 
 
 
 def test_cli():
     runner = CliRunner()
     result = runner.invoke(cli, [
-        '-m', 'tests/src/project/testdata/project_manifest.yaml'])
+        '-m', 'pyluna-core/tests/luna/project/testdata/project_manifest.yaml'])
     assert result.exit_code == 0
 
     assert(project_path)

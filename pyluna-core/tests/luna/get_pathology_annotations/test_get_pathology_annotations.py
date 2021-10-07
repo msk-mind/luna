@@ -17,7 +17,7 @@ import json
 def client():
 
     APP_CFG = "test_get_path_annots"
-    cfg = ConfigSet(name=APP_CFG, config_file='tests/src/get_pathology_annotations/test_get_pathology_annotations_config.yaml')
+    cfg = ConfigSet(name=APP_CFG, config_file='pyluna-core/tests/luna/get_pathology_annotations/test_get_pathology_annotations_config.yaml')
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-get-pathology-annotations-api')
 
 
@@ -56,7 +56,7 @@ def test_get_bad_slide_id(mocker, client, monkeypatch):
   
     def mock_datastore_get(*args, **kwargs):
         if kwargs['store_id'] == '123456':
-            return 'tests/src/pathology/common/testdata/project/slides/123/CONCAT/RegionalAnnotationJSON/DEFAULT'
+            return 'pyluna-core/tests/luna/pathology/common/testdata/project/slides/123/CONCAT/RegionalAnnotationJSON/DEFAULT'
         else:
             raise RuntimeWarning(f"Data not found at 123456")
 

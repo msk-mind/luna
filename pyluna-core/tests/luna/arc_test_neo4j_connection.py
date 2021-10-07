@@ -15,7 +15,7 @@ Mock tests for Neo4jConnection in common
 def spark():
     print('------setup------')
     APP_CFG = 'APP_CFG'
-    ConfigSet(name=APP_CFG, config_file='tests/test_config.yml')
+    ConfigSet(name=APP_CFG, config_file='pyluna-core/tests/test_config.yml')
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-neo4j-connection')
 
     yield spark

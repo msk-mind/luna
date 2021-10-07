@@ -30,8 +30,8 @@ def test_app_post(client, monkeypatch):
     monkeypatch.setattr(Minio, "make_bucket", mock_bucket)
     monkeypatch.setattr(pq, "write_table", mock_bucket)
 
-    data = {"paths": ["tests/src/api/radiologyPreprocessingLibrary/testdata/1.dcm",
-                      "tests/src/api/radiologyPreprocessingLibrary/testdata/2.dcm"],
+    data = {"paths": ["pyluna-core/tests/luna/api/radiologyPreprocessingLibrary/testdata/1.dcm",
+                      "pyluna-core/tests/luna/api/radiologyPreprocessingLibrary/testdata/2.dcm"],
             "width": 512,
             "height": 512}
 
@@ -52,8 +52,8 @@ def test_app_post_missing_input(client):
 
 def test_app_post_bad_input(client):
 
-    data = {"dicom_paths": ["tests/src/api/radiologyPreprocessingLibrary/testdata/1.dcm",
-                      "tests/src/api/radiologyPreprocessingLibrary/testdata/2.dcm"],
+    data = {"dicom_paths": ["pyluna-core/tests/luna/api/radiologyPreprocessingLibrary/testdata/1.dcm",
+                      "pyluna-core/tests/luna/api/radiologyPreprocessingLibrary/testdata/2.dcm"],
             "width": 512}
 
     response = client.post('/radiology/images/project_id/scan_id', json=data)

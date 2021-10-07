@@ -26,7 +26,7 @@ def test_cli_dicom_table(mocker):
     runner = CliRunner()
     result = runner.invoke(update_graph, [
         '-d', 'tests/luna/services/testdata/dicom-config.yaml',
-        '-a', 'tests/test_config.yml'])
+        '-a', 'pyluna-core/tests/test_config.yml'])
 
     assert result.exit_code == 0
 
@@ -39,7 +39,7 @@ def test_cli_mha_table(mocker):
     runner = CliRunner()
     result = runner.invoke(update_graph, [
         '-d', 'tests/luna/services/testdata/mha-config.yaml',
-        '-a', 'tests/test_config.yml'])
+        '-a', 'pyluna-core/tests/test_config.yml'])
 
     assert result.exit_code == 0
 
@@ -52,7 +52,7 @@ def test_cli_mhd_table(mocker):
     runner = CliRunner()
     result = runner.invoke(update_graph, [
         '-d', 'tests/luna/services/testdata/mhd-config.yaml',
-        '-a', 'tests/test_config.yml'])
+        '-a', 'pyluna-core/tests/test_config.yml'])
 
     assert result.exit_code == 0
 
@@ -65,7 +65,7 @@ def test_cli_png_table(mocker):
     runner = CliRunner()
     result = runner.invoke(update_graph, [
         '-d', 'tests/luna/services/testdata/png-config.yaml',
-        '-a', 'tests/test_config.yml'])
+        '-a', 'pyluna-core/tests/test_config.yml'])
 
     assert result.exit_code == 0
 
@@ -78,7 +78,7 @@ def test_cli_feature_table(mocker):
     runner = CliRunner()
     result = runner.invoke(update_graph, [
         '-d', 'tests/luna/services/testdata/feature-config.yaml',
-        '-a', 'tests/test_config.yml'])
+        '-a', 'pyluna-core/tests/test_config.yml'])
 
     assert result.exit_code == 0
 
@@ -90,7 +90,7 @@ def test_cli_regional_bitmask_table(mocker):
     runner = CliRunner()
     result = runner.invoke(update_graph, [
         '-d', 'tests/luna/services/testdata/regional_bitmask-config.yaml',
-        '-a', 'tests/test_config.yml'])
+        '-a', 'pyluna-core/tests/test_config.yml'])
 
     assert result.exit_code == 0
 
@@ -102,7 +102,7 @@ def test_cli_regional_geojson_table(mocker):
     runner = CliRunner()
     result = runner.invoke(update_graph, [
         '-d', 'tests/luna/services/testdata/regional_geojson-config.yaml',
-        '-a', 'tests/test_config.yml'])
+        '-a', 'pyluna-core/tests/test_config.yml'])
 
     assert result.exit_code == 0
 
@@ -114,7 +114,7 @@ def test_cli_point_raw_json_table(mocker):
     runner = CliRunner()
     result = runner.invoke(update_graph, [
         '-d', 'tests/luna/services/testdata/point_json-config.yaml',
-        '-a', 'tests/test_config.yml'])
+        '-a', 'pyluna-core/tests/test_config.yml'])
 
     assert result.exit_code == 0
 
@@ -126,6 +126,6 @@ def test_cli_point_geojson_table(mocker):
     runner = CliRunner()
     result = runner.invoke(update_graph, [
         '-d', 'tests/luna/services/testdata/point_geojson-config.yaml',
-        '-a', 'tests/test_config.yml'])
+        '-a', 'pyluna-core/tests/test_config.yml'])
 
     assert result.exit_code == 0

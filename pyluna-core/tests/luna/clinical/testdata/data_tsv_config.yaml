@@ -50,17 +50,17 @@ NUM_PARTITION: 10
 HOST:
 
 # mind root data path.
-ROOT_PATH: tests/src/clinical/testdata
+ROOT_PATH: pyluna-core/tests/luna/clinical/testdata
 
 # file path to the source data file(s). if host is specified, the source data location is determined
 # as host:source_path, else the source data location is determined simply as source_path.
-SOURCE_PATH: tests/src/clinical/testdata/test_clinical_patients.tsv
+SOURCE_PATH: pyluna-core/tests/luna/clinical/testdata/test_clinical_patients.tsv
 
 # root path for tables and file transfer
-LANDING_PATH: tests/src/radiology/proxy_table/test_data/OV_16-158_CT_20201028
+LANDING_PATH: pyluna-core/tests/luna/radiology/proxy_table/test_data/OV_16-158_CT_20201028
 
 # location where the data should be transferred on the destination machine.
-RAW_DATA_PATH: tests/src/radiology/proxy_table/test_data/OV_16-158_CT_20201028/raw_data
+RAW_DATA_PATH: pyluna-core/tests/luna/radiology/proxy_table/test_data/OV_16-158_CT_20201028/raw_data
 
 # required: a full include option for rsync. Examples: --include=*.dcm --include=*.mha
 INCLUDE: --include=*.dcm

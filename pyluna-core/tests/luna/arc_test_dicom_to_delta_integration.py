@@ -31,7 +31,7 @@ TABLES = [BINARY_TABLE, DCM_TABLE]
 def spark():
     print('------setup------')
     APP_CFG = 'APP_CFG'
-    ConfigSet(name=APP_CFG, config_file='tests/test_config.yml')
+    ConfigSet(name=APP_CFG, config_file='pyluna-core/tests/test_config.yml')
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-dicom-to-delta')
 
     yield spark

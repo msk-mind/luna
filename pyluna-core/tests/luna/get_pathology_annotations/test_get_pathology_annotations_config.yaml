@@ -24,4 +24,4 @@ spark_application_config:
 
 pathology:
   # root path to pathology data in the data lake
-  - root_path: tests/src/services/get_pathology_annotations/
+  - root_path: pyluna-core/tests/luna/services/get_pathology_annotations/
