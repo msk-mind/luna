@@ -110,7 +110,7 @@ def create_geojson_table():
     TABLE_OUT_DIR           = const.TABLE_LOCATION(cfg)
 
     os.makedirs(TABLE_OUT_DIR, exist_ok=True)
-    logger.info("Table output directory =", TABLE_OUT_DIR)
+    logger.info("Table output directory = %s", TABLE_OUT_DIR)
 
     # setup variables needed for build geojson UDF
     contour_level       = cfg.get_value('DATA_CFG::CONTOUR_LEVEL')
