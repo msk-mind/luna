@@ -138,6 +138,7 @@ def create_geojson_table():
             json_jobs.append ( json_future )
 
     for json_future in as_completed(json_jobs):
+        slide_id = -1
         try:
             if json_future.result() is not None:
                 slide_id, data = json_future.result()
