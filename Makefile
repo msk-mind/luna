@@ -44,8 +44,9 @@ clean-test:      ## remove test and coverage artifacts
 
 # https://python-semantic-release.readthedocs.io/en/latest/#semantic-release-publish
 # Same command can be executed in the subpackage directory for testing purposes.
-# For releases, this will be automated with github actions.
+# For releases, this will be automated with github actions, and these commands in the makefile are for testing purposes only.
 # By default, we increase patch version in MAJOR.MINOR.PATCH
+# This will change your branch to the master branch.
 test-upload:
 	semantic-release publish --patch --noop -v DEBUG -D upload_to_pypi=True -D repository=testpypi -D upload_to_release=False
 
