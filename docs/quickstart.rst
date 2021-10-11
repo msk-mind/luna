@@ -17,7 +17,7 @@ This image includes:
 These set of notebook tutorials walk you through analysis workflows.
 A static version of the notebook :ref:`Tutorials` is also available on the documentation site for your reference.
 
-1. Clone the Git Repository
+1. Clone the git repository
 ---------------------------
 .. code-block::
 
