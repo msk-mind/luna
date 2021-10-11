@@ -5,9 +5,6 @@ Quick Start
 Luna docker images are available to help you get started with Luna.
 Before running these images, be sure to install `Docker <https://docs.docker.com/get-docker/>`_ on your workspace.
 
-These setup of notebook tutorials walk you through analysis workflows.
-A static version of the :ref:`Tutorials` is also available on the documentation site for your reference.
-
 Running Luna Pathology Tutorials on Docker
 ==========================================
 We provide a docker to help you get started with pathology analysis using Luna workflows. This docker includes:
@@ -15,6 +12,9 @@ We provide a docker to help you get started with pathology analysis using Luna w
 - Luna pathology library
 - Jupyter notebook
 - notebook tutorials with sample data
+
+These setup of notebook tutorials walk you through analysis workflows.
+A static version of the notebook :ref:`Tutorials` is also available on the documentation site for your reference.
 
 1. Clone the Git Repository
 ---------------------------
@@ -32,17 +32,22 @@ We provide a docker to help you get started with pathology analysis using Luna w
     cd docker/luna_tutorial
     make build
 
-- Start the jupyter (-d? why docker rm?)
+- Run the docker image
 
 .. code-block::
 
     make run
 
-If you want to
+Copy paste the Jupyter URL printed in the console (alternatively, open it from docker dashboard),
+and you will see a set of ipynb notebooks for exploring end-to-end Luna pathology analysis workflow.
+
+
+If you want to save any changes in the notebooks you've made to your local workspace,
+run this command to save the notebooks in notebooks directory.
 
 .. code-block::
 
-    make run
+    make backup
 
 
 
@@ -68,3 +73,7 @@ This docker includes:
 
     cd docker/dsa_sample_data
     docker-compose up -d
+
+Go to `localhost:8080` and login with admin/password.
+After login, you can navigate to the TCGA Collection, and explore images on HistomicsUI.
+For details on using DSA, please refer to `DSA documentation <https://digitalslidearchive.github.io/digital_slide_archive/>`_
