@@ -38,8 +38,8 @@ and use Luna for your data analysis.
 .. toctree::
    :maxdepth: 2
    
-   installation
    quickstart
+   installation
    user
    modules
    dev

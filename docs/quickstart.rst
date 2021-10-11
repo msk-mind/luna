@@ -7,13 +7,14 @@ Before running these images, be sure to install `Docker <https://docs.docker.com
 
 Running Luna Pathology Tutorials on Docker
 ==========================================
-We provide a docker to help you get started with pathology analysis using Luna workflows. This docker includes:
+We provide a docker image to help you get started with pathology analysis using Luna workflows.
+This image includes:
 
 - Luna pathology library
-- Jupyter notebook
+- JupyterLab
 - notebook tutorials with sample data
 
-These setup of notebook tutorials walk you through analysis workflows.
+These set of notebook tutorials walk you through analysis workflows.
 A static version of the notebook :ref:`Tutorials` is also available on the documentation site for your reference.
 
 1. Clone the Git Repository
