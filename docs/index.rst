@@ -39,6 +39,7 @@ and use Luna for your data analysis.
    :maxdepth: 2
    
    installation
+   quickstart
    user
    modules
    dev
