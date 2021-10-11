@@ -1,0 +1,48 @@
+REQUESTOR: jane
+
+# the department to which the requestor belongs
+REQUESTOR_DEPARTMENT: pathology
+
+REQUESTOR_EMAIL: jane@mskcc.org
+
+ROOT_PATH: tests/luna/testdata/data
+
+LANDING_PATH: tests/luna/testdata/data/test-project/wsi-project
+
+SOURCE_PATH: tests/luna/testdata/data/test-project/wsi
+
+RAW_DATA_PATH: tests/luna/testdata/data/test-project/wsi
+
+PROJECT: test-project
+
+MODALITY: pathology
+
+SOURCE: path
+
+ETL_TYPE: proxy
+
+DATASET_NAME: dsn
+
+DATA_TYPE: WSI
+
+DATE: 2021-01-19
+
+HOST:
+
+FILE_TYPE: svs
+
+FORMAT_TYPE: delta
+
+NUM_PARTITION: 1
+
+FILE_COUNT: 1
+
+DATA_SIZE: 2000
+
+CHUNK_FILE: tests/luna/pathology/proxy_table/chunks.txt
+
+BWLIMIT: 1G
+
+INCLUDE: --include=.svs
+
+COMMENTS: test

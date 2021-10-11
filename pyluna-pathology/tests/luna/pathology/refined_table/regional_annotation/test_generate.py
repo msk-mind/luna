@@ -23,7 +23,7 @@ concat_geojson_data_config_path = project_path + "/configs/REGIONAL_CONCAT_GEOJS
 @pytest.fixture(autouse=True)
 def spark():
     print('------setup------')
-    ConfigSet(name=const.APP_CFG, config_file='tests/test_config.yml')
+    ConfigSet(name=const.APP_CFG, config_file='pyluna-radiology/tests/test_config.yml')
     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-pathology-refined-annot')
 
     yield spark
@@ -39,7 +39,7 @@ def test_cli_geojson(spark):
     runner = CliRunner()
     result = runner.invoke(cli, 
         ['-d', 'pyluna-pathology/tests/luna/pathology/refined_table/regional_annotation/geojson_data.yaml',
-         '-a', 'tests/test_config.yml',
+         '-a', 'pyluna-radiology/tests/test_config.yml',
          '-p', 'geojson'])
 
     assert result.exit_code == 0
@@ -58,7 +58,7 @@ def test_cli_concat(spark):
     runner = CliRunner()
     result = runner.invoke(cli,
                            ['-d', 'pyluna-pathology/tests/luna/pathology/refined_table/regional_annotation/geojson_concat_data.yaml',
-                            '-a', 'tests/test_config.yml',
+                            '-a', 'pyluna-radiology/tests/test_config.yml',
                             '-p', 'concat'])
 
     assert result.exit_code == 0

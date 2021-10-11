@@ -8,7 +8,7 @@ from luna.common.sparksession import SparkConfig
 from luna.common.config import ConfigSet
 import luna.common.constants as const
 
-project_path = "pyluna-radiology/tests/luna/radiology/proxy_table/test_data/OV_16-158/"
+project_path = "pyluna-radiology/tests/luna/radiology/proxy_table/test_data/OV_16-158"
 table_path = project_path + "/tables/CT_OV_16-158_CT_20201028"
 app_config_path = project_path + "/configs/CT_OV_16-158_CT_20201028/app_config.yaml"
 data_config_path = project_path + "/configs/CT_OV_16-158_CT_20201028/data_config.yaml"
@@ -17,7 +17,7 @@ data_config_path = project_path + "/configs/CT_OV_16-158_CT_20201028/data_config
 def spark():
     print('------setup------')
     APP_CFG = 'APP_CFG'
-    ConfigSet(name=APP_CFG, config_file='tests/test_config.yml')
+    ConfigSet(name=APP_CFG, config_file='pyluna-radiology/tests/test_config.yml')
     spark = SparkConfig().spark_session(config_name=APP_CFG, app_name='test-radiology-proxy')
 
     yield spark
@@ -31,12 +31,13 @@ def test_cli(spark):
 
     runner = CliRunner()
     result = runner.invoke(cli, 
-        ['-d', 'pyluna-common/tests/luna/common/testdata/data_ingestion_template_valid.yml',
-        '-a', 'tests/test_config.yml',
+        ['-d', 'pyluna-radiology/tests/luna/radiology/proxy_table/data_ingestion_template_valid.yml',
+        '-a', 'pyluna-radiology/tests/test_config.yml',
         '-p', 'delta'])
+    print(result.exit_code)
+    print(result.exc_info)
 
     assert result.exit_code == 0
-
     assert os.path.exists(app_config_path)
     assert os.path.exists(data_config_path)
 

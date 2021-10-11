@@ -1,13 +1,14 @@
-.PHONY: help clean clean-pyc clean-build list test coverage
+.PHONY: help clean clean-pyc clean-build list test test-all coverage test-upload upload
 
 help:
 	@echo "clean-build - remove build artifacts"
 	@echo "clean-pyc - remove Python file artifacts"
-	@echo "dist - create a distribution"
 	@echo "lint - check style with flake8"
 	@echo "test - run tests quickly with the default Python"
 	@echo "test-all - run tests on every Python version with tox"
 	@echo "coverage - check code coverage quickly with the default Python"
+	@echo "test-upload - dry run of upload wheel to testpypi."
+	@echo "upload - upload wheel to pypi and publish to github."
 	@echo "grpt - generate radiology proxy table."
 	@echo "Usage: make grpt template-file=<data_ingestion_template_file_name> config-file=<config_file> process-string=\"transfer,delta,graph\""
 
@@ -29,21 +30,28 @@ clean-test:      ## remove test and coverage artifacts
 	rm -f .coverage
 	rm -fr htmlcov/
 
-dist: clean
-	pip install --upgrade pip
-	pip install --use-feature=2020-resolver -r requirements_dev.txt
-	pyinstaller -F --clean --hidden-import py4j.java_collections --exclude-module tkinter src/luna/preprocess_feature.py
-	python setup.py sdist
-	python setup.py bdist_wheel
-	ls -l dist
+#dist: clean
+#	pip install --upgrade pip
+#	pip install --use-feature=2020-resolver -r requirements_dev.txt
+#	python setup.py sdist bdist_wheel
+#	ls -l dist
 
-# https://packaging.python.org/tutorials/packaging-projects/
+#test-upload:
+#	python3 -m twine upload --verbose --repository testpypi dist/*.whl
+
+#upload:
+#	python3 -m twine upload dist/*.whl
+
+# https://python-semantic-release.readthedocs.io/en/latest/#semantic-release-publish
+# Same command can be executed in the subpackage directory for testing purposes.
+# For releases, this will be automated with github actions, and these commands in the makefile are for testing purposes only.
+# By default, we increase patch version in MAJOR.MINOR.PATCH
+# This will change your branch to the master branch.
 test-upload:
-	python3 -m twine upload --verbose --repository testpypi dist/*.whl
+	semantic-release publish --patch --noop -v DEBUG -D upload_to_pypi=True -D repository=testpypi -D upload_to_release=False
 
-upload:
-	python3 -m twine upload dist/*.whl
-
+upload-pypi:
+	semantic-release publish --patch -v DEBUG -D upload_to_pypi=True -D repository=pypi -D upload_to_release=True
 
 lint:
 	flake8 data-processing test
@@ -54,7 +62,7 @@ test: clean-test clean-pyc    ## run tests quickly with the default Python
 	pytest
 
 coverage:
-	pytest -s --cov=src --cov=pyluna-common --cov=pyluna-radiology --cov=pyluna-pathology tests
+	pytest -s --cov=pyluna-core --cov=pyluna-common --cov=pyluna-radiology --cov=pyluna-pathology .
 	coverage report -m
 	coverage html
 	open htmlcov/index.html

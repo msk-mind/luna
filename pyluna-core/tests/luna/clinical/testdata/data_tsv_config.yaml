@@ -1,0 +1,103 @@
+# copy-paste this template into a data_ingestion_template.yaml before using
+# as a best practice, config.yaml must not be committed to github
+# as it may contain sensitive information about the data.
+#
+# See data_ingestion_template_schema.yml for valid values
+
+# the name of requestor
+REQUESTOR: jane
+
+# the department to which the requestor belongs
+REQUESTOR_DEPARTMENT: gynocology
+
+# email address of requestor
+REQUESTOR_EMAIL: jane@mskcc.org
+
+# project name decided by data coordination
+PROJECT: test-project
+
+# source name of input data file
+SOURCE: redcap
+
+# data modality
+MODALITY: clinical
+
+# data type within the modality
+DATA_TYPE: TEST_CLINICAL_PATIENTS
+
+# description of the template defined by the requestor
+COMMENTS:
+
+# the data on which the request was made
+DATE: 20201029
+
+# name to be given to the dataset
+DATASET_NAME: 20210308
+
+# Type of ETL
+ETL_TYPE: proxy
+
+# input source file
+FILE_TYPE: tsv
+
+# format type of the output proxy table
+FORMAT_TYPE: delta
+
+# num partition for delta table creation
+NUM_PARTITION: 10
+
+# ip or hostname of machine where source data file(s) reside, if applicable
+HOST:
+
+# mind root data path.
+ROOT_PATH: pyluna-core/tests/luna/clinical/testdata
+
+# file path to the source data file(s). if host is specified, the source data location is determined
+# as host:source_path, else the source data location is determined simply as source_path.
+SOURCE_PATH: pyluna-core/tests/luna/clinical/testdata/test_clinical_patients.tsv
+
+# root path for tables and file transfer
+LANDING_PATH: pyluna-core/tests/luna/radiology/proxy_table/test_data/OV_16-158_CT_20201028
+
+# location where the data should be transferred on the destination machine.
+RAW_DATA_PATH: pyluna-core/tests/luna/radiology/proxy_table/test_data/OV_16-158_CT_20201028/raw_data
+
+# required: a full include option for rsync. Examples: --include=*.dcm --include=*.mha
+INCLUDE: --include=*.dcm
+
+# a file containing names of files and sub-directories that exist under the source_path of the remote system and that
+# need to be transferred. One name should be placed on each line. An easy way to generate such a file is by changing
+# directory to the source_path on the remote file system and executing 'ls -1 . > chunks.txt' and then moving chunks.txt
+# to the destination file system.
+CHUNK_FILE: chunks.txt
+
+# total number of input data files to process. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | wc -l'
+# NOTE: if you get "permission_denied" on some dirs, make sure those dirs have +x permission for "others" as this is required
+# for 'find' and 'ls' operations
+FILE_COUNT: 1000000
+
+# total number of bytes to be transferred. this can be obtained by running the following command on the source directory
+# 'find <source_dir> -type f -name "*.dcm" -o -name "*.mha" | xargs du -ac'
+DATA_SIZE: 291337979
+
+
+# limit socket I/O bandwidth. Set this limit based on available bandwidth between the source
+# and destination servers. The bandwidth can be measured as follows:
+# on source machine, start an iperf3 server
+# $ iperf3 -s
+# -----------------------------------------------------------
+# Server listening on 5201
+# -----------------------------------------------------------
+# on the destination machine, start an iperf3 client
+# iperf3 -c <source_machine> -p <listening_port>
+# Connecting to host <source_machine>, port 5201
+# - - - - - - - - - - - - - - - - - - - - - - - - -
+# [ ID] Interval           Transfer     Bandwidth       Retr
+# [  4]   0.00-10.00  sec  10.7 GBytes  9.20 Gbits/sec    0             sender
+# [  4]   0.00-10.00  sec  10.7 GBytes  9.19 Gbits/sec                  receiver
+# iperf Done.
+#
+# be nice and don't use all available bandwidth. Use up to 50% available bandwidth. The amount specified
+# here is the total bandwidth that will be used by all processes that are spawned for the data transfer.
+BWLIMIT: 5G

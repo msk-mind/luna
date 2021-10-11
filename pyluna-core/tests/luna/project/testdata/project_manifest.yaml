@@ -1,0 +1,24 @@
+# project manifest template
+# copy this template to the project folder and populate the fields
+
+# MIND project id
+PROJECT: PRO_12-123
+
+# IRB
+IRB: 12-123
+
+# project title
+TITLE: title of the project describing targets
+
+# project description
+DESCRIPTION: hypotheses and aims of the project
+
+# data modalities
+DATA_MODALITIES:
+ - clinical
+ - genomics
+ - pathology
+ - radiology
+
+# data lake root path to create the project
+ROOT_PATH: pyluna-core/tests/luna/project/testdata

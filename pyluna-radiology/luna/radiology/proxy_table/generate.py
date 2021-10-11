@@ -26,7 +26,7 @@ from luna.common.utils import get_absolute_path
 
 logger = init_logger()
 
-SCHEMA_FILE=get_absolute_path(__file__, '../../../../src/luna/data_ingestion_template_schema.yml')
+SCHEMA_FILE=get_absolute_path(__file__, 'data_ingestion_template_schema.yml')
 DATA_CFG = 'DATA_CFG'
 APP_CFG = 'APP_CFG'
 
