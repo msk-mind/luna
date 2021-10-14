@@ -1,0 +1,47 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Release Management
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    concurrency: release
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Release pyluna-common
+      uses: relekang/python-semantic-release@master
+      with:
+        directory: ./pyluna-common
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pypi_token: ${{ secrets.PYPI_TOKEN }}
+
+    - name: Release pyluna-core
+      uses: relekang/python-semantic-release@master
+      with:
+        directory: ./pyluna-core
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pypi_token: ${{ secrets.PYPI_TOKEN }}
+
+    - name: Release pyluna-pathology
+      uses: relekang/python-semantic-release@master
+      with:
+        directory: ./pyluna-pathology
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pypi_token: ${{ secrets.PYPI_TOKEN }}
+
+    - name: Release pyluna-radiology
+      uses: relekang/python-semantic-release@master
+      with:
+        directory: ./pyluna-radiology
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pypi_token: ${{ secrets.PYPI_TOKEN }}
