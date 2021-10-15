@@ -1,0 +1,50 @@
+name: Release Management
+
+on:
+  push:
+    branches:
+      - 991-release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    concurrency: release
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Release pyluna-common
+      uses: relekang/python-semantic-release@master
+      with:
+        directory: ./pyluna-common
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pypi_token: ${{ secrets.PYPI_TOKEN }}
+
+    - name: Release pyluna-core
+      uses: relekang/python-semantic-release@master
+      with:
+        directory: ./pyluna-core
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pypi_token: ${{ secrets.PYPI_TOKEN }}
+
+    - name: Release pyluna-pathology
+      uses: relekang/python-semantic-release@master
+      with:
+        directory: ./pyluna-pathology
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pypi_token: ${{ secrets.PYPI_TOKEN }}
+
+    - name: Release pyluna-radiology
+      uses: relekang/python-semantic-release@master
+      with:
+        directory: ./pyluna-radiology
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pypi_token: ${{ secrets.PYPI_TOKEN }}
+
+    - name: Release pyluna
+      uses: relekang/python-semantic-release@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pypi_token: ${{ secrets.PYPI_TOKEN }}
