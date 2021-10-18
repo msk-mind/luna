@@ -6,8 +6,26 @@ on:
       - master
 
 jobs:
+  release:
+    runs-on: ubuntu-latest
+    concurrency: release
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    # create a git release
+    - name: Release pyluna
+      uses: relekang/python-semantic-release@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pypi_token: ${{ secrets.PYPI_TOKEN }}
+
   push-to-pypi:
     runs-on: ubuntu-latest
+    needs: release
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -68,19 +86,3 @@ jobs:
           password: ${{ secrets.PYPI_TOKEN }}
           packages_dir: ./pyluna-pathology/dist
 
-  release:
-    runs-on: ubuntu-latest
-    concurrency: release
-    needs: push-to-pypi
-
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-
-    # create a git release
-    - name: Release pyluna
-      uses: relekang/python-semantic-release@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        pypi_token: ${{ secrets.PYPI_TOKEN }}
