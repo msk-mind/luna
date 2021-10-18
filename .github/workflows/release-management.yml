@@ -9,7 +9,7 @@ jobs:
   push-to-pypi:
     runs-on: ubuntu-latest
     env:
-      PYTHONPATH:  ${{ env.GITHUB_WORKSPACE }}
+      PYTHONPATH:  ${GITHUB_WORKSPACE}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
