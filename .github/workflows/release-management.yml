@@ -6,43 +6,79 @@ on:
       - master
 
 jobs:
+  push-to-pypi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Add wheel dependency
+        run: pip install wheel
+
+      # pyluna-common
+      - name: Generate dist pyluna-common
+        run: python setup.py sdist bdist_wheel
+        working-directory: ./pyluna-common
+
+      - name: Publish pyluna-common to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages_dir: ./pyluna-common/dist
+
+      # pyluna-core
+      - name: Generate dist pyluna-core
+        run: python setup.py sdist bdist_wheel
+        working-directory: ./pyluna-core
+
+      - name: Publish pyluna-core to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages_dir: ./pyluna-core/dist
+
+      # pyluna-radiology
+      - name: Generate dist pyluna-radiology
+        run: python setup.py sdist bdist_wheel
+        working-directory: ./pyluna-radiology
+
+      - name: Publish pyluna-radiology to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages_dir: ./pyluna-radiology/dist
+
+      # pyluna-pathology
+      - name: Generate dist pyluna-pathology
+        run: python setup.py sdist bdist_wheel
+        working-directory: ./pyluna-pathology
+
+      - name: Publish pyluna-pathology to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages_dir: ./pyluna-pathology/dist
+
   release:
     runs-on: ubuntu-latest
     concurrency: release
+    needs: push-to-pypi
 
     steps:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
 
-    - name: Release pyluna-common
-      uses: relekang/python-semantic-release@master
-      with:
-        directory: ./pyluna-common
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        pypi_token: ${{ secrets.PYPI_TOKEN }}
-
-    - name: Release pyluna-core
-      uses: relekang/python-semantic-release@master
-      with:
-        directory: ./pyluna-core
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        pypi_token: ${{ secrets.PYPI_TOKEN }}
-
-    - name: Release pyluna-pathology
-      uses: relekang/python-semantic-release@master
-      with:
-        directory: ./pyluna-pathology
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        pypi_token: ${{ secrets.PYPI_TOKEN }}
-
-    - name: Release pyluna-radiology
-      uses: relekang/python-semantic-release@master
-      with:
-        directory: ./pyluna-radiology
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        pypi_token: ${{ secrets.PYPI_TOKEN }}
-
+    # create a git release
     - name: Release pyluna
       uses: relekang/python-semantic-release@master
       with:
