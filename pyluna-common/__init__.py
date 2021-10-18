@@ -1,7 +1,2 @@
-from pkg_resources import DistributionNotFound, get_distribution
-
-try:
-    __version__ = get_distribution("pyluna").version
-except DistributionNotFound:
-    # package is not installed
-    pass
+with open('../VERSION.txt') as fp:
+    __version__ = fp.readlines()[0]
