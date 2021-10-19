@@ -14,13 +14,22 @@ Development Setup Instructions
 Follow the instructions below to install the latest version of Luna and 
 setup a development environment. 
 
-Developement Installation
--------------------------
+Development Installation
+------------------------
 
 Developers interested in using the newest features of Luna, or are
 actively contributing to Luna should install the latest version available via::
 
     git clone git@github.com:msk-mind/luna.git
+
+
+Download the dependencies with::
+
+    pip install --upgrade pip
+    pip install numpy
+    cd luna
+    pip install -r requirements_dev.txt
+
 
 For development and testing purposes, add the subpackages to your `PYTHONPATH`::
 
@@ -32,6 +41,17 @@ To run tests, specify the subpackage you want to test. For example, this command
 will run all tests under ``pyluna-common``::
     
     pytest pyluna-common
+
+Development with Docker
+-----------------------
+
+`luna-dev <https://hub.docker.com/r/mskmind/luna-dev>`_ docker image is available on DockerHub.
+
+This docker image includes the pre-requisites and python dependencies.
+This is primarily used for circleci testing at the moment, but can be extended based on your development needs.
+
+Once we have a stable release, docker images that includes pyluna packages can be made available.
+
 
 Documentation Generation
 ------------------------

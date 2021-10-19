@@ -46,7 +46,7 @@ The following notebook tutorials walk you through analysis workflows.
     tutorials/inference-and-visualization.ipynb
     tutorials/end-to-end-pipeline.ipynb
     tutorials/dsa-tools.ipynb
-
+    tutorials/setup.ipynb
 
 Pathology Workflow
 ==================
