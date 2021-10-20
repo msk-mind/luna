@@ -96,7 +96,7 @@ def cli(data_config_file: str, app_config_file: str):
 
 def get_slide_annotation(
     slide_id: str, annotation_name: str, collection_name: str, uri: str, token: str
-) -> Optional[Tuple[str, dict[str, any], dict[str, any]]]:
+) -> Optional[Tuple[str, Dict[str, any], Dict[str, any]]]:
     """A helper function that pulls json annotations along with
     metadata for a particular slide from DSA.
 
@@ -381,7 +381,7 @@ def generate_annotation_table() -> None:
     (collection_uuid, collection_metadata) = get_collection_metadata(
         collection_name, uri
     )
-    logger.info("Retreived collection metadata")
+    logger.info("Retrieved collection metadata")
 
     # get slide names
     slide_fnames = get_slides_from_collection(collection_uuid, uri)
