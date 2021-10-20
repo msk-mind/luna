@@ -1,6 +1,3 @@
-"""dsa_regional_annotations
-CLI tools to pull and process regional annotations from DSA
-"""
 import copy
 import os
 import json
@@ -19,11 +16,11 @@ from dask.distributed import as_completed, Client, progress
 # import data_processing
 import luna.common.constants as const
 
-from dsa_api_handler import get_collection_uuid, get_item_uuid, system_check
-from luna.common.DataStore import DataStore_v2a
+from luna.common.DataStore import DataStore_v2
 from luna.common.CodeTimer import CodeTimer
 from luna.common.config import ConfigSet
 from luna.common.custom_logger import init_logger
+from luna.pathology.cli.dsa.dsa_api_handler import get_collection_uuid, get_item_uuid, system_check
 
 
 # templates for geoJSON format
