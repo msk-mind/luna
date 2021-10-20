@@ -100,11 +100,7 @@ def cli(data_config_file: str, app_config_file: str):
 def get_slide_annotation(
     slide_id: str, annotation_name: str, collection_name: str, uri: str, token: str
 ) -> Optional[Tuple[str, dict[str, any], dict[str, any]]]:
-    """get_slide_annotation
-
-    TODO: refactor w. sub func that gets slide metadata
-
-    A helper function that pulls json annotations along with
+    """A helper function that pulls json annotations along with
     metadata for a particular slide from DSA.
 
     Args:
@@ -202,9 +198,7 @@ def get_slide_annotation(
 
 
 def get_slides_from_collection(collection_uuid: str, uri: str) -> List[str]:
-    """get_slides_from_collection
-
-    A helper function that retrieves all slide names from a provided collection via
+    """A helper function that retrieves all slide names from a provided collection via
     accessing DSA resource tree
 
     Args:
@@ -234,9 +228,7 @@ def get_slides_from_collection(collection_uuid: str, uri: str) -> List[str]:
 def get_collection_metadata(
     collection_name: str, uri: str
 ) -> Optional[Tuple[str, Dict[str, any]]]:
-    """get_collection_metadata
-
-    Function used to get the stylehseet associated with a DSA collection. The stylesheet
+    """A function used to get the stylehseet associated with a DSA collection. The stylesheet
     can store the labels used in the annotation process
 
     Args:
@@ -269,8 +261,7 @@ def get_collection_metadata(
 
 
 def regional_json_to_geojson(dsa_annotation_json: Dict[str, any]) -> Dict[str, any]:
-    """regioinal_json_to_geojson
-    converts DSA regional annotations (JSON) to geoJSON format
+    """converts DSA regional annotations (JSON) to geoJSON format
 
     Args:
         dsa_annotation_json (Dict[str, any]): JSON annotation object pulled from DSA
@@ -309,9 +300,7 @@ def generate_geojson(
     labelset: str,
     slide_store_dir: str,
 ) -> pd.DataFrame:
-    """generate_geojson
-
-    Wrapper function that converts DSA json object to a geojson, saves
+    """Wrapper function that converts DSA json object to a geojson, saves
     the geojson to the object store then gathers associated metadata for the parquet table
 
     Args:
@@ -358,9 +347,7 @@ def generate_geojson(
 
 
 def generate_annotation_table() -> None:
-    """generate_annotation_table
-
-    CLI driver function. provided a collection name and annotation name, this
+    """CLI driver function. provided a collection name and annotation name, this
     method generates the annotation table by first retriving the slides associated
     with the collection along with the collection stylesheet. Then, the process
     of pulling the JSON-formated regional annotations, converting them to geoJSON,
