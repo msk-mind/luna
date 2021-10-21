@@ -1,5 +1,2 @@
-"""Top-level package for luna"""
-
-__author__ = """msk-mind"""
-__email__ = 'CompOncBST@mskcc.org'
-__version__ = '0.0.1'
+with open('../VERSION.txt') as fp:
+    __version__ = fp.readlines()[0]
