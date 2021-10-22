@@ -1,19 +1,18 @@
 import copy
-import os
 import json
 import logging
-import re
+import os
 import requests
-import timeit
+import shutil
 
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 import click
 import pandas as pd
 
-from dask.distributed import as_completed, Client, progress
+from dask.distributed import as_completed, Client
 
-# import data_processing
 import luna.common.constants as const
 
 from luna.common.DataStore import DataStore_v2
@@ -141,8 +140,6 @@ def get_slide_annotation(
         except AttributeError:
             break
 
-    # print(f"annotation id: {annotation_id} found")
-
     if annotation_id is None:
         print(
             f"Annotiaton not found for slide: {slide_id} and annotation name: {annotation_name}"
@@ -150,7 +147,7 @@ def get_slide_annotation(
         return None
 
     annotation_url = f"http://{uri}/api/v1/annotation/{annotation_id}?sort=_id&sordir=1"
-    # print("starting request for annotation url")
+
     response = requests.get(annotation_url, headers=header)
 
     annotation_response = json.loads(response.text)
@@ -169,61 +166,66 @@ def get_slide_annotation(
     creator_id = annotation_response["creatorId"]
     creator_updated_id = annotation_response["updatedId"]
 
-    # query for creator names
+    # query for creator logins
     creator_response = requests.get(
         f"http://{uri}/api/v1/user/{creator_id}", headers=header
     )
     creator_response = json.loads(creator_response.text)
-    creator = creator_response["lastName"]
+    creator_login = creator_response["login"]
 
     creator_updated_response = requests.get(
         f"http://{uri}/api/v1/user/{creator_updated_id}", headers=header
     )
     creator_updated_response = json.loads(creator_updated_response.text)
-    creator_updated_name = creator_updated_response["lastName"]
-    # creator_updated_name = None
+    creator_login_updated = creator_updated_response["login"]
+
     slide_metadata = {
         "date": date_created,
         "date_updated": date_updated,
-        "user": creator,
-        "user_updated": creator_updated_name,
+        "user": creator_login,
+        "user_updated": creator_login_updated,
     }
-
-    # save metadata
 
     return (slide_id, slide_metadata, json.dumps(annotation))
 
 
-def get_slides_from_collection(collection_uuid: str, uri: str) -> List[str]:
+def get_slides_from_collection(collection_uuid: str, uri: str, token:str) -> List[str]:
     """A helper function that retrieves all slide names from a provided collection via
     accessing DSA resource tree
 
     Args:
         collection_uuid (str): DSA collection uuid
         uri (str): DSA uri
+        token (str): girder client token
     Returns:
         List[str]: a list of all slide file names belonging to the collection
     """
     # get request for all resources (folder, collection, user) that are
     # children of the collection
     request_url = f"http://{uri}/api/v1/resource/{collection_uuid}/items?type=collection&limit=1000&sort=_id&sortdir=1"
+    
+    header = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Girder-Token": f"{token}",
+    }
 
-    response = requests.get(request_url, headers=HEADER)
+    response = requests.get(request_url, headers=header)
 
     collection_response = json.loads(response.text)
 
-    # getting slide fnames via .svs extension in name
+    # getting slide filenames if 'largeImage' key in the response
     slide_fnames = [
         resource["name"]
         for resource in collection_response
-        if ".svs" in resource["name"]
+        if 'largeImage' in resource
     ]
 
     return slide_fnames
 
 
 def get_collection_metadata(
-    collection_name: str, uri: str
+    collection_name: str, uri: str, token:str,
 ) -> Optional[Tuple[str, Dict[str, any]]]:
     """A function used to get the stylehseet associated with a DSA collection. The stylesheet
     can store the labels used in the annotation process
@@ -231,19 +233,27 @@ def get_collection_metadata(
     Args:
         collection_name (str): name of DSA collection used to store the slides
         uri (str): DSA uri
+        token (str): girder client token
     Returns:
         Optional[Tuple[str, Dict[str, any]]]: a tuple consisting of the collection uuid
             and thei stylesheet in JSON format or None if no stylesheet is associated
             with the provided collection
     """
 
-    collection_uuid = get_collection_uuid(URI, TOKEN, collection_name)
+    collection_uuid = get_collection_uuid(uri, token, collection_name)
+    
+    header = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Girder-Token": f"{token}",
+    }
+
 
     if collection_uuid is not None:
         print("retreived collection uuid")
         request_url = f"http://{uri}/api/v1/collection/{collection_uuid}"
-
-        response = requests.get(request_url, headers=HEADER)
+        
+        response = requests.get(request_url, headers=header)
         collection_response = json.loads(response.text)
         try:
             metadata_stylesheet = collection_response["meta"]["stylesheet"]
@@ -269,7 +279,7 @@ def regional_json_to_geojson(dsa_annotation_json: Dict[str, any]) -> Dict[str, a
     # load json annotation
     dsa_annotation = json.loads(dsa_annotation_json)
 
-    annotation_geojson = copy.deepcopy(geojson_base)
+    annotation_geojson = copy.deepcopy(GEOJSON_BASE)
 
     for element in dsa_annotation.get("elements"):
 
@@ -280,7 +290,7 @@ def regional_json_to_geojson(dsa_annotation_json: Dict[str, any]) -> Dict[str, a
         for p in points:
             point_list.append(p[:2])
 
-        polygon = copy.deepcopy(geojson_polygon)
+        polygon = copy.deepcopy(GEOJSON_POLYGON)
 
         # no label number here, just labelname
         polygon["properties"]["label_name"] = label
@@ -331,7 +341,7 @@ def generate_geojson(
 
     df = pd.DataFrame(
         {
-            "project_namei": None,
+            "project_name": None, # gets assigned in outer loop
             "slide_id": slide_id,
             "user": "CONCAT",
             "geojson_path": path,
@@ -364,9 +374,9 @@ def generate_annotation_table() -> None:
     uri = cfg.get_value("DATA_CFG::DSA_URI")
     collection_name = cfg.get_value("DATA_CFG::COLLECTION_NAME")
     annotation_name = cfg.get_value("DATA_CFG::ANNOTATION_NAME")
-    girder_token = cfg.get_value("DATA_CFG::GRIDER_TOKEN")
+    girder_token = cfg.get_value("DATA_CFG::GIRDER_TOKEN")
     landing_path = cfg.get_value("DATA_CFG::LANDING_PATH")
-    label_set = cfg.get_value("DATA_CFG:LABEL_SETS")
+    label_set = cfg.get_value("DATA_CFG::LABEL_SETS")
 
     slide_store_dir = os.path.join(landing_path, "slides")
 
@@ -378,13 +388,14 @@ def generate_annotation_table() -> None:
     system_check(uri, girder_token)
 
     # get collection uuid and stylesheet
+    # collection metadata is unused, but could be used to set the labelset
     (collection_uuid, collection_metadata) = get_collection_metadata(
-        collection_name, uri
+        collection_name, uri, girder_token
     )
     logger.info("Retrieved collection metadata")
 
     # get slide names
-    slide_fnames = get_slides_from_collection(collection_uuid, uri)
+    slide_fnames = get_slides_from_collection(collection_uuid, uri, girder_token)
 
     annotation_data = {
         "project_name": [collection_name] * len(slide_fnames),
@@ -422,14 +433,13 @@ def generate_annotation_table() -> None:
 
             slide_id, slide_metadata, annotation_json = json_future.result()
 
-            # should be submit to build_geojson_segment which constructs dataframe
-            # and saves json object to datastore
             geojson_future = client.submit(
                 generate_geojson,
                 annotation_json,
                 slide_id,
                 slide_metadata,
                 label_set,
+                slide_store_dir
             )
             geojson_futures.append(geojson_future)
 
@@ -446,7 +456,7 @@ def generate_annotation_table() -> None:
                 geojson_segment_df.to_parquet(
                     f"{table_out_dir}/regional_annot_slice_slide={slide_id}.parquet"
                 )
-                logger.info("Annotation for slide {slide_id} generated successfully")
+                logger.info(f"Annotation for slide {slide_id} generated successfully")
 
         except:
             logger.warning(f"Something wrong with future {geojson_future}, skipping")

@@ -35,18 +35,6 @@ DSA_URI: pllimskhpc2:8080
 ANNOTATION_NAME: test-annotations
 
 # DSA girder API token
-GIRDER_TOKEN: 
+GIRDER_TOKEN:
 
-LABEL_SETS:
-    DEFAULT_LABELS:
-        1: lympho_rich_stroma
-        2: lympho_poor_stroma
-        3: lympho_rich_tumor
-        4: lympho_poor_tumor
-        5: adipocytes
-    PIXEL_CLASSIFIER_LABELS:
-        1: Stroma
-        2: Stroma
-        3: Tumor
-        4: Tumor
-        5: Adipocytes
+LABEL_SETS: DEFAULT_LABELS
