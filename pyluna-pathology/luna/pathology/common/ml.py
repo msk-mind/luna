@@ -32,8 +32,10 @@ class BaseTorchTileDataset(Dataset):
         """Tile accessor
         
         Loads a tile image from the tile manifest
+
         Args:
             idx (int): Integer index 
+
         Returns:
             address, image, (str, torch.tensor): tuple of the tile index and corresponding tile as a torch tensor
         """ 
@@ -53,8 +55,10 @@ class BaseTorchTileDataset(Dataset):
         """Preprocessing method called for each tile patch
         
         Loads a tile image from the tile manifest
+
         Args:
             input_tile (Image): Integer index 
+
         Returns:
             output_tile (torch.tensor): Output tile as preprocess tensor
         """ 
@@ -79,9 +83,11 @@ class BaseTorchTileClassifier(nn.Module):
         """Forward pass for base classifier class
         
         Loads a tile image from the tile manifest
+
         Args:
             index (list[str]): Tile address indicies with length B
             tile_data (torch.tensor): Input tiles of shape (B, *)
+
         Returns:
             pd.DataFrame: Dataframe of output features
         """ 
@@ -93,6 +99,7 @@ class BaseTorchTileClassifier(nn.Module):
         """Set classifier modules
         
         Template/abstract method where individual modules that make up the forward pass are configured
+
         Args:
             kwargs: Keyward arguements passed onto the subclass method
         """
@@ -102,8 +109,10 @@ class BaseTorchTileClassifier(nn.Module):
         """predict method
         
         Loads a tile image from the tile manifest
+
         Args:
             input_tiles (torch.tensor): Input tiles of shape (B, *)
+
         Returns:
             torch.tensor: 2D tensor with (B, C) where B is the batch dimension and C are output classes or features
         """ 
