@@ -11,6 +11,8 @@ class BaseTorchTileDataset(Dataset):
     
     Impliments the usual torch dataset methods, and additionally provides a decoding of the binary tile data.
     PIL images can be further preprocessed before becoming torch tensors via an abstract preprocess method
+
+    Will send the tensors to gpu if available, on the device specified by CUDA_VISIBLE_DEVICES="1"
     """ 
     
     def __init__(self, tile_manifest=None, tile_path=None, label_cols=[]):
@@ -84,6 +86,8 @@ class BaseTorchTileDataset(Dataset):
 class BaseTorchTileClassifier(nn.Module):
     def __init__(self, **kwargs):
         """Initialize BaseTorchTileClassifier 
+
+        Will run on cuda if available, on the device specified by CUDA_VISIBLE_DEVICES="1"
         
         Args:
             kwargs: Keyward arguements passed onto the subclass method
@@ -110,7 +114,8 @@ class BaseTorchTileClassifier(nn.Module):
         """ 
         if self.cuda_is_available: tile_data = tile_data.cuda()
 
-        return pd.DataFrame(self.predict(tile_data).cpu().numpy(), index=index)
+        with torch.no_grad():
+            return pd.DataFrame(self.predict(tile_data).cpu().numpy(), index=index)
     
     def setup(self, **kwargs):
         """Set classifier modules

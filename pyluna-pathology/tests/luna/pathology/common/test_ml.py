@@ -37,6 +37,8 @@ class MyClassifier(BaseTorchTileClassifier):
 # Test clf init
 def test_init_clf():
     tile_classifier = MyClassifier(num_classes=4)
+    out = tile_classifier(range(8), torch.rand(8,20))
+    assert len(out) == 8
 
 # We need tiles for TileDataset
 def test_wrong_args_ds():
