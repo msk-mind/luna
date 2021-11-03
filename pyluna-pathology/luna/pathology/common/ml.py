@@ -13,43 +13,60 @@ class BaseTorchTileDataset(Dataset):
     PIL images can be further preprocessed before becoming torch tensors via an abstract preprocess method
     """ 
     
-    def __init__(self, tile_path):
+    def __init__(self, tile_manifest=None, tile_path=None, label_cols=[]):
         """Initialize BaseTileDataset
+
+        Can accept either a tile dataframe or a path to tile data
         
         Args:
+            tile_manifest (pd.DataFrame): Dataframe of tile data
             tile_path (str): Base path of tile data
+            label_cols (list[str]): (Optional) label columns to return as tensors, e.g. for training
         """
-        self.tile_manifest = pd.read_csv(tile_path + 'address.slice.csv')
-        self.pil_data = tile_path + 'tiles.slice.pil'
+
+        if tile_manifest is not None:
+            self.tile_manifest = tile_manifest 
+        elif tile_path is not None: 
+            self.tile_manifest = pd.read_csv(tile_path + 'address.slice.csv').set_index("address")
+            self.tile_manifest['data_path'] = tile_path + 'tiles.slice.pil'
+        else:
+            raise RuntimeError("Must specifiy either tile_manifest or tile_path")
+        
+        self.label_cols = label_cols
         
     def __len__(self):
         return len(self.tile_manifest)
     
     def __repr__(self):
-        return f"TileDataset with {len(self.tile_manifest)} tiles"
+        return f"TileDataset with {len(self.tile_manifest)} tiles, indexed by {self.tile_manifest.index.names}, returning label columns: {self.label_cols}"
     
     def __getitem__(self, idx: int):
         """Tile accessor
         
-        Loads a tile image from the tile manifest
+        Loads a tile image from the tile manifest.  Returns a batch of the indicies of the input dataframe, the tile data always. 
+        If label columns where specified, the 3rd position of the tuple is a tensor of the label data.
 
         Args:
             idx (int): Integer index 
 
         Returns:
-            address, image, (str, torch.tensor): tuple of the tile index and corresponding tile as a torch tensor
+            (str, torch.tensor, optional torch.tensor): tuple of the tile index and corresponding tile as a torch tensor, and metadata labels if specified
         """ 
             
         if not type(idx)==int: raise TypeError(f"BaseTileDataset only accepts interger indicies, got {type(idx)}")
         row = self.tile_manifest.iloc[idx]
-        with open(self.pil_data, "rb") as fp:
+        with open(row.data_path, "rb") as fp:
             fp.seek(int(row.tile_image_offset))
             img = Image.frombytes(
                 row.tile_image_mode,
                 (int(row.tile_image_size_xy), int(row.tile_image_size_xy)),
                 fp.read(int(row.tile_image_length)),
-            )                    
-        return row.address, self.preprocess(img)
+            )    
+
+        if len(self.label_cols):                
+            return row.name, self.preprocess(img), torch.tensor(row[self.label_cols].to_list())
+        else:
+            return row.name, self.preprocess(img)
        
     def preprocess(self, input_tile: Image):
         """Preprocessing method called for each tile patch
@@ -60,7 +77,7 @@ class BaseTorchTileDataset(Dataset):
             input_tile (Image): Integer index 
 
         Returns:
-            output_tile (torch.tensor): Output tile as preprocess tensor
+            torch.tensor: Output tile as preprocessed tensor
         """ 
         raise NotImplementedError("preprocess() has not be implimented in the subclass!")
         
