@@ -6,6 +6,8 @@ import torch
 
 from torch import nn
 
+import numpy as np
+
 # we are using sample PIL data
 test_data = 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/test/slides/123/test_generate_tile_ov_labels/TileImages/data/'
 
@@ -23,7 +25,7 @@ def test_clf_not_implimented():
 # Implimentation
 class TileDataset(BaseTorchTileDataset):
     def preprocess(self, input_tile):
-        return torch.tensor(input_tile).flatten()
+        return torch.tensor(np.array(input_tile)).flatten()
     
 class MyClassifier(BaseTorchTileClassifier):
     def setup(self, num_classes):
@@ -46,13 +48,13 @@ def test_init_ds_no_labels():
     tile_dataset = TileDataset(tile_path=test_data)
     assert len(tile_dataset[0]) == 2
     assert tile_dataset[0][0] == 'x1_y1_z20'
-    assert tile_dataset[0][1].shape == torch.Size([3, 128, 128])
+    assert tile_dataset[0][1].shape == torch.Size([49152])
 
 def test_init_ds_with_labels():
     tile_dataset = TileDataset(tile_path=test_data, label_cols=['otsu_score'])
     assert len(tile_dataset[0]) == 3
     assert tile_dataset[0][0] == 'x1_y1_z20'
-    assert tile_dataset[0][1].shape == torch.Size([3, 128, 128])
+    assert tile_dataset[0][1].shape == torch.Size([49152])
     assert tile_dataset[0][2].shape == torch.Size([1])
 
 
