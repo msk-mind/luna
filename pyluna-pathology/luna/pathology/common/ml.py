@@ -71,7 +71,7 @@ class BaseTorchTileDataset(Dataset):
     def preprocess(self, input_tile: Image):
         """Preprocessing method called for each tile patch
         
-        Loads a tile image from the tile manifest
+        Loads a tile image from the tile manifest, must be manually implimented to accept a single PIL image and return a torch tensor.
 
         Args:
             input_tile (Image): Integer index 
@@ -125,7 +125,7 @@ class BaseTorchTileClassifier(nn.Module):
     def predict(self, input_tiles: torch.tensor):
         """predict method
         
-        Loads a tile image from the tile manifest
+        Loads a tile image from the tile manifest, must be manually implimented to pass the input tensor through the modules specified in setup()
 
         Args:
             input_tiles (torch.tensor): Input tiles of shape (B, *)
