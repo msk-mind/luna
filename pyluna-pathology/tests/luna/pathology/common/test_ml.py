@@ -5,8 +5,6 @@ from luna.pathology.common.ml import BaseTorchTileDataset, BaseTorchTileClassifi
 import torch
 
 from torch import nn
-from torchvision import transforms
-from torchvision import models
 
 # we are using sample PIL data
 test_data = 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/test/slides/123/test_generate_tile_ov_labels/TileImages/data/'
@@ -25,11 +23,11 @@ def test_clf_not_implimented():
 # Implimentation
 class TileDataset(BaseTorchTileDataset):
     def preprocess(self, input_tile):
-        return transforms.ToTensor()(input_tile)
+        return torch.tensor(input_tile).flatten()
     
 class MyClassifier(BaseTorchTileClassifier):
     def setup(self, num_classes):
-        self.clf = models.resnet18(num_classes=num_classes)
+        self.clf = nn.Linear(20,10)
         self.sm = nn.Softmax(dim=1)
     def predict(self, input_tiles):
         return self.sm(self.clf(input_tiles))
