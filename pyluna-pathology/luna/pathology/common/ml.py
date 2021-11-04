@@ -73,7 +73,7 @@ class BaseTorchTileDataset(Dataset):
             return row.name, self.preprocess(img)
        
     def setup(self, **kwargs):
-        """Set classifier modules
+        """Set additional attributes for dataset class 
         
         Template/abstract method where a dataset is configured 
 
