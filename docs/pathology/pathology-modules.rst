@@ -6,6 +6,5 @@ pyluna-pathology
 
    pathology-data-eng-cli
    pathology-feature-generation-cli
-   pathology-qupath-tools
    pyluna-pathology.luna
 

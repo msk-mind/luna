@@ -103,6 +103,15 @@ both tissue-level models and cellular models.
 We also offer statistical analysis modules to take features derived from infered
 tissue types and cells to predict clinical endpoints  
 
+Qupath and Stardist
+--------------------------------------
+Since some of the processes in Luna Pathology can interface with output from Qupath (https://qupath.github.io/), 
+we provide a a way to use Qupath in a headless, dockerized form in the repository at https://github.com/msk-mind/docker/tree/master/qupath.
+The container in this repository includes (Cuda-based) GPU support and additional convience scripts.
+
+This can be primiarly used to run Stardist (https://github.com/stardist/stardist), a sophisticated algorthim 
+for nuclear segmentation and classification.  
+The results of the cellular segmentation can be used as inputs to e.g. the spatial statistics modules.
 
 Troubleshooting
 ===============
