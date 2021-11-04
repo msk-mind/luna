@@ -109,9 +109,9 @@ Since some of the processes in Luna Pathology can interface with output from Qup
 a digital image analysis platform that can be quite useful when it comes to analyzing pathology images.  
 Qupath runs using Groovy-based scripts, which can be run through the UI, or in this case, headless through a docker container. 
 
-Qupath can be used to run Stardist (https://github.com/stardist/stardist), a sophisticated algorthim 
+Qupath can also be used to run Stardist (https://github.com/stardist/stardist), a sophisticated algorthim 
 for nuclear segmentation and classification. It runs using a tensorflow backend, and has some prebuilt models available to perform cellular segmentation in H&E and IF images.
-When running Stardist in Qupath, nuclear/cellular objects will be created as well as a dictionary of per-cell features such as staining properties ((hematoxylin and eosin staining metrics for H&E), 
+When running Stardist in Qupath, nuclear/cellular objects will be created as well as a dictionary of per-cell features such as staining properties (hematoxylin and eosin staining metrics for H&E), 
 and geometric properties (size, shape, lengths, etc).  The results of the cellular segmentation can be used as inputs to e.g. the spatial statistics modules.
 
 We provide a a way to use Qupath (and Stardist) in a headless, dockerized form in the repository at https://github.com/msk-mind/docker/tree/master/qupath.
