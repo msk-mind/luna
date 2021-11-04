@@ -24,6 +24,8 @@ def test_clf_not_implimented():
 
 # Implimentation
 class TileDataset(BaseTorchTileDataset):
+    def setup(self):
+        pass
     def preprocess(self, input_tile):
         return torch.tensor(np.array(input_tile)).flatten()
     
