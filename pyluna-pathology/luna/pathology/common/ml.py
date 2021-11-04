@@ -15,7 +15,7 @@ class BaseTorchTileDataset(Dataset):
     Will send the tensors to gpu if available, on the device specified by CUDA_VISIBLE_DEVICES="1"
     """ 
     
-    def __init__(self, tile_manifest=None, tile_path=None, label_cols=[]):
+    def __init__(self, tile_manifest=None, tile_path=None, label_cols=[], **kwargs):
         """Initialize BaseTileDataset
 
         Can accept either a tile dataframe or a path to tile data
@@ -35,6 +35,8 @@ class BaseTorchTileDataset(Dataset):
             raise RuntimeError("Must specifiy either tile_manifest or tile_path")
         
         self.label_cols = label_cols
+
+        self.setup(**kwargs)
         
     def __len__(self):
         return len(self.tile_manifest)
@@ -70,6 +72,16 @@ class BaseTorchTileDataset(Dataset):
         else:
             return row.name, self.preprocess(img)
        
+    def setup(self, **kwargs):
+        """Set classifier modules
+        
+        Template/abstract method where a dataset is configured 
+
+        Args:
+            kwargs: Keyward arguements passed onto the subclass method
+        """
+        raise NotImplementedError("setup() has not be implimented in the subclass!")
+
     def preprocess(self, input_tile: Image):
         """Preprocessing method called for each tile patch
         
