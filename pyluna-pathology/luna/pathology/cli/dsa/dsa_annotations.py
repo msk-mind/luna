@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 import click
+import girder_client
 import pandas as pd
 
 from dask.distributed import as_completed, Client
@@ -110,7 +111,8 @@ def regional_json_to_geojson(
     """converts DSA regional annotations (JSON) to geoJSON format
 
     Args:
-        dsa_annotation_json (Dict[str, any]): JSON annotation object pulled from DSA
+        dsa_annotation_json (Dict[str, any]): JSON regional annotation object
+            pulled from DSA
 
     Returns:
         Dict[str, any]: geoJSON formatted annotation object
@@ -139,12 +141,48 @@ def regional_json_to_geojson(
     return json.dumps(annotation_geojson)
 
 
+def point_json_to_geojson(
+    dsa_annotation_json: Dict[str, any]
+) -> Dict[str, any]:
+    """converts DSA point annotations (JSON) to geoJSON format
+
+    Args:
+        dsa_annotation_json (Dict[str, any]): JSON point annotation object pulled
+            from DSA
+
+    Returns:
+        Dict[str, any]: geoJSON formatted point annotation object
+    """
+
+    dsa_annotation = json.loads(dsa_annotation_json)
+
+    annotation_geojson = copy.deepcopy(geojson_base)
+
+    output_geojson = []
+    for element in dsa_annotation["elements"]:
+        point = {}
+        x = element["center"][0]
+        y = element["center"][1]
+        label = element["label"]["value"]
+
+        coordinates = [x, y]
+
+        point["type"] = "Feature"
+        point["id"] = "PathAnnotationObject"
+        point["geometry"] = {"type": "Point", "coordinates": coordinates}
+        point["properties"] = {"classification": {"name": label}}
+        output_geojson.append(point)
+
+    return output_geojson
+
+
 def generate_geojson(
     dsa_annotation_json: Dict[str, any],
     slide_id: str,
     metadata: Dict[str, any],
     labelset: str,
     slide_store_dir: str,
+    annotation_type: str,
 ) -> pd.DataFrame:
     """Wrapper function that converts DSA json object to a geojson, saves
     the geojson to the object store then gathers associated metadata for the parquet table
@@ -155,13 +193,20 @@ def generate_geojson(
         metadata (Dict[str, any]): slide metadata
         labelset (str): name of the labelset
         slide_store_dir (str): filepath to slide datastore
+        annotation_type (str): the type of annotation to pull from DSA. Either 'regional'
+            or 'point.
     Returns:
         pd.DataFrame: a pandas dataframe to be saved as a slice of a regional annotation parquet
             table
     """
 
-    # build geojson
-    geojson_annotation = regional_json_to_geojson(dsa_annotation_json)
+    # build geojsoa
+    if annotation_type == "regional":
+        geojson_annotation = regional_json_to_geojson(dsa_annotation_json)
+        data_type = "RegionalAnnotationJSON"
+    else:
+        geojson_annotation = point_json_to_geojson(dsa_annotation_json)
+        data_type = "PointAnnotationJSON"
 
     # TODO:
     # user field should be derived from metadata, downstream processes
@@ -174,7 +219,7 @@ def generate_geojson(
         json.dumps(geojson_annotation, indent=4),
         store_id=slide_id,
         namespace_id="CONCAT",
-        data_type="RegionalAnnotationJSON",
+        data_type=data_type,
         data_tag=labelset,
     )
 
@@ -186,6 +231,7 @@ def generate_geojson(
             "geojson_path": path,
             "date": datetime.now(),
             "labelset": labelset,
+            "annotation_type": data_type,
         },
         index=[0],
     )
@@ -216,6 +262,14 @@ def generate_annotation_table() -> None:
     girder_token = cfg.get_value("DATA_CFG::GIRDER_TOKEN")
     landing_path = cfg.get_value("DATA_CFG::LANDING_PATH")
     label_set = cfg.get_value("DATA_CFG::LABEL_SETS")
+    annotation_type = cfg.get_value("DATA_CFG::ANNOTATION_TYPE")
+
+    # checking annotation type
+    if annotation_type not in ["regional", "point"]:
+        logger.error(
+            f"Invalid annotation type: {annotation_type}, must be either 'regional' or 'point' "
+        )
+        quit()
 
     slide_store_dir = os.path.join(landing_path, "slides")
 
@@ -225,6 +279,10 @@ def generate_annotation_table() -> None:
 
     # check DSA connection
     system_check(uri, girder_token)
+
+    # instantiate girder client
+    #gc = girder_client.GirderClient(apiURL=f"https://{uri}/app/v1")
+    #gc.authenticate(DSA_USERNAME, DSA_PASSWORD)
 
     # get collection uuid and stylesheet
     # collection metadata is unused, but could be used to set the labelset
