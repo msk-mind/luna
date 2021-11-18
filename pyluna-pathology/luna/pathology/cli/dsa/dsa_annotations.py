@@ -2,11 +2,10 @@ import copy
 import json
 import logging
 import os
-import requests
 import shutil
 
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict
 
 import click
 import girder_client
@@ -21,8 +20,6 @@ from luna.common.CodeTimer import CodeTimer
 from luna.common.config import ConfigSet
 from luna.common.custom_logger import init_logger
 from luna.pathology.cli.dsa.dsa_api_handler import (
-    get_collection_uuid,
-    get_item_uuid,
     system_check,
     get_collection_metadata,
     get_slides_from_collection,
@@ -121,23 +118,25 @@ def regional_json_to_geojson(
     dsa_annotation = json.loads(dsa_annotation_json)
 
     annotation_geojson = copy.deepcopy(GEOJSON_BASE)
+    try:
+        for element in dsa_annotation.get("elements"):
 
-    for element in dsa_annotation.get("elements"):
+            label = element["label"]["value"]
+            points = element["points"]
 
-        label = element["label"]["value"]
-        points = element["points"]
+            point_list = []
+            for p in points:
+                point_list.append(p[:2])
 
-        point_list = []
-        for p in points:
-            point_list.append(p[:2])
+            polygon = copy.deepcopy(GEOJSON_POLYGON)
 
-        polygon = copy.deepcopy(GEOJSON_POLYGON)
-
-        # no label number here, just labelname
-        polygon["properties"]["label_name"] = label
-        polygon["geometry"]["coordinates"].append(point_list)
-        annotation_geojson["features"].append(polygon)
-
+            # no label number here, just labelname
+            polygon["properties"]["label_name"] = label
+            polygon["geometry"]["coordinates"].append(point_list)
+            annotation_geojson["features"].append(polygon)
+    except KeyError:
+        print("Annotation isn't a valid regional annotation")
+        return None
     return json.dumps(annotation_geojson)
 
 
@@ -156,23 +155,24 @@ def point_json_to_geojson(
 
     dsa_annotation = json.loads(dsa_annotation_json)
 
-    annotation_geojson = copy.deepcopy(geojson_base)
-
     output_geojson = []
-    for element in dsa_annotation["elements"]:
-        point = {}
-        x = element["center"][0]
-        y = element["center"][1]
-        label = element["label"]["value"]
+    try:
+        for element in dsa_annotation["elements"]:
+            point = {}
+            x = element["center"][0]
+            y = element["center"][1]
+            label = element["label"]["value"]
 
-        coordinates = [x, y]
+            coordinates = [x, y]
 
-        point["type"] = "Feature"
-        point["id"] = "PathAnnotationObject"
-        point["geometry"] = {"type": "Point", "coordinates": coordinates}
-        point["properties"] = {"classification": {"name": label}}
-        output_geojson.append(point)
-
+            point["type"] = "Feature"
+            point["id"] = "PathAnnotationObject"
+            point["geometry"] = {"type": "Point", "coordinates": coordinates}
+            point["properties"] = {"classification": {"name": label}}
+            output_geojson.append(point)
+    except KeyError:
+        print("Annotation isn't a valid point annotation")
+        return None
     return output_geojson
 
 
@@ -182,7 +182,7 @@ def generate_geojson(
     metadata: Dict[str, any],
     labelset: str,
     slide_store_dir: str,
-    annotation_type: str,
+    data_type: str,
 ) -> pd.DataFrame:
     """Wrapper function that converts DSA json object to a geojson, saves
     the geojson to the object store then gathers associated metadata for the parquet table
@@ -193,20 +193,20 @@ def generate_geojson(
         metadata (Dict[str, any]): slide metadata
         labelset (str): name of the labelset
         slide_store_dir (str): filepath to slide datastore
-        annotation_type (str): the type of annotation to pull from DSA. Either 'regional'
-            or 'point.
+        annotation_type (str): the type of annotation to pull from DSA, cooresponding to either
+            regional or point annotations
     Returns:
         pd.DataFrame: a pandas dataframe to be saved as a slice of a regional annotation parquet
             table
     """
 
-    # build geojsoa
-    if annotation_type == "regional":
+    # build geojson based on type of annotation (regional or point)
+    if data_type == "REGIONAL_METADATA_RESULTS":
         geojson_annotation = regional_json_to_geojson(dsa_annotation_json)
-        data_type = "RegionalAnnotationJSON"
+        annotation_type = "RegionalAnnotationJSON"
     else:
         geojson_annotation = point_json_to_geojson(dsa_annotation_json)
-        data_type = "PointAnnotationJSON"
+        annotation_type = "PointAnnotationJSON"
 
     # TODO:
     # user field should be derived from metadata, downstream processes
@@ -231,7 +231,7 @@ def generate_geojson(
             "geojson_path": path,
             "date": datetime.now(),
             "labelset": labelset,
-            "annotation_type": data_type,
+            "annotation_type": annotation_type,
         },
         index=[0],
     )
@@ -262,13 +262,13 @@ def generate_annotation_table() -> None:
     girder_token = cfg.get_value("DATA_CFG::GIRDER_TOKEN")
     landing_path = cfg.get_value("DATA_CFG::LANDING_PATH")
     label_set = cfg.get_value("DATA_CFG::LABEL_SETS")
-    annotation_type = cfg.get_value("DATA_CFG::ANNOTATION_TYPE")
+    data_type = cfg.get_value("DATA_CFG::DATA_TYPE")
+    dsa_username = cfg.get_value("DATA_CFG::DSA_USERNAME")
+    dsa_password = cfg.get_value("DATA_CFG::DSA_PASSWORD")
 
     # checking annotation type
-    if annotation_type not in ["regional", "point"]:
-        logger.error(
-            f"Invalid annotation type: {annotation_type}, must be either 'regional' or 'point' "
-        )
+    if data_type not in ["REGIONAL_METADATA_RESULTS", "POINT_GEOJSON"]:
+        logger.error(f"Invalid annotation type: {data_type}")
         quit()
 
     slide_store_dir = os.path.join(landing_path, "slides")
@@ -277,24 +277,22 @@ def generate_annotation_table() -> None:
     os.makedirs(table_out_dir, exist_ok=True)
     logger.info(f"Table output directory: {table_out_dir}")
 
-    # check DSA connection
-    system_check(uri, girder_token)
-
     # instantiate girder client
-    #gc = girder_client.GirderClient(apiURL=f"https://{uri}/app/v1")
-    #gc.authenticate(DSA_USERNAME, DSA_PASSWORD)
+    gc = girder_client.GirderClient(apiUrl=f"http://{uri}/api/v1")
+    gc.authenticate(dsa_username, dsa_password)
+
+    # check DSA connection
+    system_check(gc)
 
     # get collection uuid and stylesheet
     # collection metadata is unused, but could be used to set the labelset
     (collection_uuid, collection_metadata) = get_collection_metadata(
-        collection_name, uri, girder_token
+        collection_name, gc
     )
     logger.info("Retrieved collection metadata")
 
     # get slide names
-    slide_fnames = get_slides_from_collection(
-        collection_uuid, uri, girder_token
-    )
+    slide_fnames = get_slides_from_collection(collection_uuid, gc)
 
     annotation_data = {
         "project_name": [collection_name] * len(slide_fnames),
@@ -322,8 +320,7 @@ def generate_annotation_table() -> None:
             row["slide_id"],
             row["annotation_name"],
             row["project_name"],
-            uri,
-            girder_token,
+            gc,
         )
         json_futures.append(json_future)
 
@@ -339,6 +336,7 @@ def generate_annotation_table() -> None:
                 slide_metadata,
                 label_set,
                 slide_store_dir,
+                data_type,
             )
             geojson_futures.append(geojson_future)
 
