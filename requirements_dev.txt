@@ -64,5 +64,3 @@ sphinx-click
 nbsphinx
 ipython
 sphinx-book-theme
-girder-client==3.1.3
-girder-slicer-cli-web==1.1.1

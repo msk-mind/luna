@@ -59,4 +59,4 @@ python-semantic-release
 m2r2
 twine
 Sphinx
-
+girder-client
