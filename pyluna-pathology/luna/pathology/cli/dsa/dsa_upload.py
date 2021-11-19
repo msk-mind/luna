@@ -54,11 +54,12 @@ def cli(config, data_config):
 
     uri = dsa_config_dict["host"] + ":" + str(dsa_config_dict["port"])
 
-    dsa_username = data_config_dict["dsa_username"]
-    dsa_password = data_config_dict["dsa_password"]
+    dsa_username = dsa_config_dict["dsa_username"]
+    dsa_password = dsa_config_dict["dsa_password"]
 
     gc = girder_client.GirderClient(apiUrl=f"http://{uri}/api/v1")
     gc.authenticate(dsa_username, dsa_password)
+
     # check DSA connection
     system_check(gc)
 
@@ -92,6 +93,7 @@ def upload_annotation_to_dsa(
         dsa_annotation = json.load(annotation_json)
 
     dsa_uuid = get_item_uuid(image_filename, collection_name, gc)
+
     if dsa_uuid:
         push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, uri, gc)
 

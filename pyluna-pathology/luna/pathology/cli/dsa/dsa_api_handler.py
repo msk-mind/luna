@@ -57,6 +57,7 @@ def get_item_uuid(image_name: str, collection_name: str, gc) -> Optional[str]:
     Returns:
         string: DSA item uuid. None if nothing matches the collection/image name.
     """
+
     collection_uuid = get_collection_uuid(gc, collection_name)
     if not collection_uuid:
         return None
@@ -64,7 +65,8 @@ def get_item_uuid(image_name: str, collection_name: str, gc) -> Optional[str]:
     image_id = re.search(image_id_regex, image_name).group(1)
 
     try:
-        uuid_response = gc.get(f"item?text={image_id}")
+        uuid_response = gc.get(f"/item?text={image_id}")
+        
     except requests.exceptions.HTTPError as err:
         print(
             f"Error in item get request: {err.response.status_code}, {err.response.text}"
@@ -132,7 +134,7 @@ def system_check(gc):
     """
 
     try:
-        _ = gc.get("system/check")
+        _ = gc.get("/system/check")
 
     except requests.exceptions.HTTPError as err:
 

@@ -81,13 +81,14 @@ def test_upload(monkeypatch):
 
 
     def mock_get(*args, **kwargs):
-        if args == '/system/check':
+
+        if args[1] == '/system/check':
             return {}
 
-        if args == '/collection?text=test_collection':
+        if args[1] == '/collection?text=test_collection':
             return [{'name': 'test_collection', '_id': 'uuid', '_modelType':'collection'}]
 
-        if args == '/item?text=123':
+        if args[1] == '/item?text=123':
             return [{"annotation": {"name": "123.svs"}, "_id": "uuid", "_modelType":"annotation"}]
 
         pass
@@ -100,7 +101,8 @@ def test_upload(monkeypatch):
         pass
     
     def mock_auth(*args, **kwargs):
-        if kwargs['username'] is not None and kwargs['password'] is not None:
+
+        if args[1] == 'myuser' and args[2] == 'mypassword':
             return 0 # success
         else:
             return 1 # Access Error 
@@ -112,6 +114,6 @@ def test_upload(monkeypatch):
     runner = CliRunner()
     result = runner.invoke(upload,
                            ["-c", "pyluna-pathology/tests/luna/pathology/cli/dsa/testdata/dsa_config.yml",
-                            "-d","pyluna-pathology/tests/luna/pathology/cli/dsa/testdata/bitmask_polygon_upload.yml"])
+                            "-d", "pyluna-pathology/tests/luna/pathology/cli/dsa/testdata/bitmask_polygon_upload.yml"])
 
     assert result.exit_code == 0
