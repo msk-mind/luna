@@ -193,8 +193,9 @@ def generate_geojson(
         metadata (Dict[str, any]): slide metadata
         labelset (str): name of the labelset
         slide_store_dir (str): filepath to slide datastore
-        annotation_type (str): the type of annotation to pull from DSA, cooresponding to either
-            regional or point annotations
+        data_type (str): the type of annotation to pull from DSA, cooresponding to either
+            regional or point annotations depending on if the DATA_TYPE argument in the input
+            yaml config is "REGIONAL_METADATA_RESULTS" or "POINT_GEOJSON" resepectively.
     Returns:
         pd.DataFrame: a pandas dataframe to be saved as a slice of a regional annotation parquet
             table
@@ -259,7 +260,6 @@ def generate_annotation_table() -> None:
     uri = cfg.get_value("DATA_CFG::DSA_URI")
     collection_name = cfg.get_value("DATA_CFG::COLLECTION_NAME")
     annotation_name = cfg.get_value("DATA_CFG::ANNOTATION_NAME")
-    girder_token = cfg.get_value("DATA_CFG::GIRDER_TOKEN")
     landing_path = cfg.get_value("DATA_CFG::LANDING_PATH")
     label_set = cfg.get_value("DATA_CFG::LABEL_SETS")
     data_type = cfg.get_value("DATA_CFG::DATA_TYPE")
@@ -268,7 +268,9 @@ def generate_annotation_table() -> None:
 
     # checking annotation type
     if data_type not in ["REGIONAL_METADATA_RESULTS", "POINT_GEOJSON"]:
-        logger.error(f"Invalid annotation type: {data_type}")
+        logger.error(
+            f"Invalid data type: {data_type}, Expected data types are 'REGIONAL_METADATA_RESULTS' or 'POINT_GEOJSON'"
+        )
         quit()
 
     slide_store_dir = os.path.join(landing_path, "slides")

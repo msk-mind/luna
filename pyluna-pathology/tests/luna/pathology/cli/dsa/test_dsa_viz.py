@@ -1,6 +1,8 @@
 from click.testing import CliRunner
 import os
 
+from girder_client import GirderClient
+
 from luna.pathology.cli.dsa.dsa_viz import cli
 from luna.pathology.cli.dsa.dsa_upload import cli as upload
 
@@ -75,12 +77,37 @@ def test_qupath_polygon():
     # cleanup
     os.remove(output_file)
 
-def test_upload(requests_mock):
+def test_upload(monkeypatch):
 
-    requests_mock.get('http://localhost:8080/api/v1/system/check?mode=basic', text='{}')
-    requests_mock.get('http://localhost:8080/api/v1/collection?text=test_collection&limit=5&sort=name&sortdir=1', text='[{\"name\": \"test_collection\", \"_id\": \"uuid\", \"_modelType\":\"collection\"}]')
-    requests_mock.get('http://localhost:8080/api/v1/item?text=123&limit=50&sort=lowerName&sortdir=1', text='[{\"annotation\": {\"name\": \"123.svs\"}, \"_id\": \"uuid\", \"_modelType\":\"annotation\"}]')
-    requests_mock.post('http://localhost:8080/api/v1/annotation?itemId=None', text='{}')
+
+    def mock_get(*args, **kwargs):
+        if args == '/system/check':
+            return {}
+
+        if args == '/collection?text=test_collection':
+            return [{'name': 'test_collection', '_id': 'uuid', '_modelType':'collection'}]
+
+        if args == '/item?text=123':
+            return [{"annotation": {"name": "123.svs"}, "_id": "uuid", "_modelType":"annotation"}]
+
+        pass
+    
+    def mock_put(*args, **kwargs):
+
+        if args == '/annotation?itemId=None':
+            return {}
+
+        pass
+    
+    def mock_auth(*args, **kwargs):
+        if kwargs['username'] is not None and kwargs['password'] is not None:
+            return 0 # success
+        else:
+            return 1 # Access Error 
+
+    monkeypatch.setattr(GirderClient, "get", mock_get)
+    monkeypatch.setattr(GirderClient, "authenticate", mock_auth)
+    monkeypatch.setattr(GirderClient, "put", mock_put)
 
     runner = CliRunner()
     result = runner.invoke(upload,

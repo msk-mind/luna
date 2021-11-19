@@ -34,7 +34,9 @@ def cli(config, data_config):
 
     - port: DSA port e.g. 8080
 
-    - token: DSA token from /token/current HistomicsUI API
+    - dsa_username: DSA username
+
+    - dsa_password: DSA password
 
     data_config - yaml file with input, output, and method parameters:
 
@@ -50,9 +52,7 @@ def cli(config, data_config):
     with open(data_config) as data_config_yaml:
         data_config_dict = yaml.safe_load(data_config_yaml)
 
-    # Girder Token can be found in the DSA API Swagger Docs under 'token': (http://{host}:8080/api/v1#!/token/token_currentSession)
     uri = dsa_config_dict["host"] + ":" + str(dsa_config_dict["port"])
-    token = dsa_config_dict["token"]
 
     dsa_username = data_config_dict["dsa_username"]
     dsa_password = data_config_dict["dsa_password"]
@@ -67,12 +67,12 @@ def cli(config, data_config):
     image_filename = data_config_dict["image_filename"]
 
     upload_annotation_to_dsa(
-        annotation_filepath, image_filename, collection_name, uri, token, gc
+        annotation_filepath, image_filename, collection_name, uri, gc
     )
 
 
 def upload_annotation_to_dsa(
-    annotation_filepath, image_filename, collection_name, uri, token, gc
+    annotation_filepath, image_filename, collection_name, uri, gc
 ):
     """Upload annotation to DSA
 
@@ -83,7 +83,6 @@ def upload_annotation_to_dsa(
         image_filename (string): name of the image file in DSA e.g. 123.svs
         collection_name (string): name of the collection in DSA
         uri (string): DSA host:port e.g. localhost:8080
-        token (string): DSA token from /token/current HistomicsUI API
         gc: girder client
 
     Returns:
@@ -94,7 +93,7 @@ def upload_annotation_to_dsa(
 
     dsa_uuid = get_item_uuid(image_filename, collection_name, gc)
     if dsa_uuid:
-        push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, uri, token)
+        push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, uri, gc)
 
 
 if __name__ == "__main__":

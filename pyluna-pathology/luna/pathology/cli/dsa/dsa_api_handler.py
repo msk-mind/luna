@@ -87,7 +87,7 @@ def get_item_uuid(image_name: str, collection_name: str, gc) -> Optional[str]:
 
 
 def push_annotation_to_dsa_image(
-    item_uuid: str, dsa_annotation_json: Dict[str, any], uri: str, token: str
+    item_uuid: str, dsa_annotation_json: Dict[str, any], uri: str, gc
 ):
     """Pushes annotation to DSA, adding given item_uuid (slide-specific id)
 
@@ -95,42 +95,35 @@ def push_annotation_to_dsa_image(
         item_uuid (str): DSA item uuid to be tied to the annotation
         dsa_annotation_json (Dict[str, any]): annotation JSON in DSA compatable format
         uri (str): DSA host:port e.g. localhost:8080
-        token (str): DSA token from /token/current HistomicsUI API
+        gc: girder client
 
     Returns:
         int: 0 for successful upload, 1 otherwise
     """
     start = time.time()
 
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Girder-Token": f"{token}",
-    }
-
     # always post a new annotation.
     # updating or deleting an existing annotation for a large annotation document results in timeout.
-    request_url = f"http://{uri}/api/v1/annotation?itemId={item_uuid}"
-    response = requests.post(
-        request_url,
-        data=orjson.dumps(dsa_annotation_json).decode(),
-        headers=headers,
-    )
+    try:
+        gc.put(
+            f"/annotation?itemID={item_uuid}",
+            data=orjson.dumps(dsa_annotation_json).decode(),
+        )
 
-    if response.status_code == 200:
-        print("Annotation successfully pushed to DSA.")
-        print("Time to push annotation", time.time() - start)
-        print(f"http://{uri}/histomics#?image={item_uuid}")
-        return 0
-    else:
+    except requests.exceptions.HTTPError as err:
         print(
-            "Error in annotation upload:", response.status_code, response.text
+            f"Error in annotation upload: {err.response.status_code}, {err.response.text}"
         )
         return 1
 
+    print("Annotation successfully pushed to DSA.")
+    print("Time to push annotation", time.time() - start)
+    print(f"http://{uri}/histomics#?image={item_uuid}")
+    return 0
+
 
 def system_check(gc):
-    """Check DSA connection with the given host/token
+    """Check DSA connection with the girder client
 
     Args:
         gc: girder client
@@ -143,7 +136,7 @@ def system_check(gc):
 
     except requests.exceptions.HTTPError as err:
 
-        print(f"Please check your host/token/credentials")
+        print(f"Please check your host or credentials")
         print(err)
         return 1
 
@@ -241,7 +234,7 @@ def get_slide_annotation(
         slide_id (str): id of WSI on DSA (filename without extension). assumes .svs format
         annotation_name (str): name of annotation, or label, created on DSA
         collection_name (str): name of DSA collection the WSI belongs to
-        gc: girder token
+        gc: girder client
 
     Returns:
         Optional[Tuple[str, dict[str, any], dict[str, any]. A tuple consisting of the slide id,
