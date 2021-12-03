@@ -4,9 +4,7 @@ import re
 import time
 
 from typing import Dict, List, Optional, Tuple
-
-
-image_id_regex = "(.*).svs"
+from pathlib import Path
 
 
 def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
@@ -62,7 +60,7 @@ def get_item_uuid(image_name: str, collection_name: str, gc) -> Optional[str]:
     if not collection_uuid:
         return None
 
-    image_id = re.search(image_id_regex, image_name).group(1)
+    image_id = Path(image_name).stem
 
     try:
         uuid_response = gc.get(f"/item?text={image_id}")
@@ -233,7 +231,7 @@ def get_slide_annotation(
     annotation types.
 
     Args:
-        slide_id (str): id of WSI on DSA (filename without extension). assumes .svs format
+        slide_id (str): id of WSI on DSA (filename without extension).
         annotation_name (str): name of annotation, or label, created on DSA
         collection_name (str): name of DSA collection the WSI belongs to
         gc: girder client
@@ -245,7 +243,7 @@ def get_slide_annotation(
             mis-specified)
     """
 
-    item_uuid = get_item_uuid(slide_id + ".svs", collection_name, gc)
+    item_uuid = get_item_uuid(slide_id, collection_name, gc)
 
     # search for annotation
 
@@ -298,6 +296,7 @@ def get_slide_annotation(
 
     creator_id = annotation_response["creatorId"]
     creator_updated_id = annotation_response["updatedId"]
+    annotation_name = annotation["name"]    
 
     try:
         creator_response = gc.get(f"/user/{creator_id}")
@@ -320,6 +319,7 @@ def get_slide_annotation(
     creator_login_updated = creator_updated_response["login"]
 
     slide_metadata = {
+        "annotation_name": annotation_name,
         "date": date_created,
         "date_updated": date_updated,
         "user": creator_login,

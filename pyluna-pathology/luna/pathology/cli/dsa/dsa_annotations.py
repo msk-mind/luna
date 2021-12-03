@@ -6,6 +6,7 @@ import shutil
 
 from datetime import datetime
 from typing import Dict
+from pathlib import Path
 
 import click
 import girder_client
@@ -61,15 +62,19 @@ def cli(data_config_file: str, app_config_file: str):
     - project_name: name of DSA collection
     - slide_id: slide id. synonymous with image_id
     - user: username of the annotator for a given annotation. For all slides, we combine
-        multiple annotations from
-    - geojson_path: file path to  geojson file converted from slideviewer json format
-    - date: table creation date
+        multiple annotations as CONCAT user
+    - dsa_json_path: file path to json file downloaded from DSA
+    - geojson_path: file path to geojson file converted from DSA json format
+    - date_updated: annotation updated time
+    - date_created: annotation creation time
     - labelset: name of the provided labelset
+    - annotation_name: name of the annotation in DSA
+    - annotation_type: annotation type
 
     Args:
         app_config_file (str): path to yaml file containing application runtime parameters.
             See config.yaml.template
-        data_config_file (str): path to yaml file containing data input and output parameters.
+	data_config_file (str): path to yaml file containing data input and output parameters.
             See dask_data_config.yaml.template
 
     Returns:
@@ -197,10 +202,21 @@ def generate_geojson(
             regional or point annotations depending on if the DATA_TYPE argument in the input
             yaml config is "REGIONAL_METADATA_RESULTS" or "POINT_GEOJSON" resepectively.
     Returns:
-        pd.DataFrame: a pandas dataframe to be saved as a slice of a regional annotation parquet
-            table
+        Dict[str, any]: a dictionary to be saved as in the annotation parquet table
     """
+    slide_id = Path(slide_id).stem
 
+    store = DataStore_v2(slide_store_dir) 
+
+    # save dsa annotation json
+    dsa_json_path = store.write(
+        json.dumps(dsa_annotation_json, indent=4),
+        store_id=slide_id,
+        namespace_id=metadata["user"],
+        data_type=data_type+"_DSA_JSON",
+        data_tag=labelset,
+    )
+   
     # build geojson based on type of annotation (regional or point)
     if data_type == "REGIONAL_METADATA_RESULTS":
         geojson_annotation = regional_json_to_geojson(dsa_annotation_json)
@@ -212,11 +228,8 @@ def generate_geojson(
     # TODO:
     # user field should be derived from metadata, downstream processes
     # requires user field to be CONCAT
-    # datetime field uses table generation time, not annotation time
 
-    store = DataStore_v2(slide_store_dir)
-
-    path = store.write(
+    geojson_path = store.write(
         json.dumps(geojson_annotation, indent=4),
         store_id=slide_id,
         namespace_id="CONCAT",
@@ -224,19 +237,18 @@ def generate_geojson(
         data_tag=labelset,
     )
 
-    df = pd.DataFrame(
-        {
+    return {
             "project_name": None,  # gets assigned in outer loop
             "slide_id": slide_id,
             "user": "CONCAT",
-            "geojson_path": path,
-            "date": datetime.now(),
+            "dsa_json_path": dsa_json_path,
+            "geojson_path": geojson_path,
+            "date_updated": metadata["date_updated"],
+            "date_created": metadata["date"],
             "labelset": labelset,
+            "annotation_name": metadata["annotation_name"],
             "annotation_type": annotation_type,
-        },
-        index=[0],
-    )
-    return df
+    }
 
 
 def generate_annotation_table() -> None:
@@ -254,17 +266,21 @@ def generate_annotation_table() -> None:
 
     cfg = ConfigSet()
 
-    global params
-    params = cfg.get_config_set("APP_CFG")
+    #global params
+    #params = cfg.get_config_set("APP_CFG")
 
     uri = cfg.get_value("DATA_CFG::DSA_URI")
     collection_name = cfg.get_value("DATA_CFG::COLLECTION_NAME")
     annotation_name = cfg.get_value("DATA_CFG::ANNOTATION_NAME")
-    landing_path = cfg.get_value("DATA_CFG::LANDING_PATH")
+    landing_path = const.PROJECT_LOCATION(cfg)
     label_set = cfg.get_value("DATA_CFG::LABEL_SETS")
     data_type = cfg.get_value("DATA_CFG::DATA_TYPE")
     dsa_username = cfg.get_value("DATA_CFG::DSA_USERNAME")
     dsa_password = cfg.get_value("DATA_CFG::DSA_PASSWORD")
+
+    dask_threads_per_worker = cfg.get_value("APP_CFG::DASK_THREADS_PER_WORKER")
+    dask_n_workers = cfg.get_value("APP_CFG::DASK_N_WORKERS")
+    dask_memory_limit = cfg.get_value("APP_CFG::DASK_MEMORY_LIMIT")
 
     # checking annotation type
     if data_type not in ["REGIONAL_METADATA_RESULTS", "POINT_GEOJSON"]:
@@ -299,14 +315,15 @@ def generate_annotation_table() -> None:
     annotation_data = {
         "project_name": [collection_name] * len(slide_fnames),
         "annotation_name": [annotation_name] * len(slide_fnames),
-        "slide_id": [fname.strip(".svs.") for fname in slide_fnames],
+        "slide_id": [fname for fname in slide_fnames],
     }
 
     # metadata table
     df = pd.DataFrame.from_dict(annotation_data)
 
-    # TODO: pass dask params via dask data config once spark is fully depreciated
-    client = Client(threads_per_worker=1, n_workers=25, memory_limit=0.1)
+    client = Client(threads_per_worker=dask_threads_per_worker,
+			n_workers=dask_n_workers,
+			memory_limit=dask_memory_limit)
 
     client.run(init_logger)
     logger.info(client)
@@ -342,19 +359,16 @@ def generate_annotation_table() -> None:
             )
             geojson_futures.append(geojson_future)
 
+    table_data = []
     for geojson_future in as_completed(geojson_futures):
 
         try:
             if geojson_future.result() is not None:
 
-                geojson_segment_df = geojson_future.result()
+                geojson_dict = geojson_future.result()
+                geojson_dict["project_name"] = collection_name
+                table_data.append(geojson_dict)
 
-                slide_id = geojson_segment_df["slide_id"].values[0]
-                geojson_segment_df["project_name"] = collection_name
-
-                geojson_segment_df.to_parquet(
-                    f"{table_out_dir}/regional_annot_slice_slide={slide_id}.parquet"
-                )
                 logger.info(
                     f"Annotation for slide {slide_id} generated successfully"
                 )
@@ -365,6 +379,10 @@ def generate_annotation_table() -> None:
             )
 
     client.shutdown()
+
+    df = pd.DataFrame(table_data)
+    df.to_parquet(f"{table_out_dir}/{data_type}.parquet")
+
 
 
 if __name__ == "__main__":
