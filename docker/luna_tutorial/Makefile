@@ -6,6 +6,9 @@ GROUP_NAME=$(shell id -g -n $(USER))
 USER_ID=$(shell id -u)
 GROUP_ID=$(shell id -g)
 CURRENT_UID=$(USER):$(GID)
+HOST_IP=127.0.0.1
+HOST_PORT=8888
+
 
 .PHONY: all help build clean test run
 .DEFAULT_GOAL := help
@@ -51,8 +54,8 @@ clean-image:  ## remove luna tutorial image
 build:      ## build luna tutorial docker image
 	DOCKER_BUILDKIT=0 time docker build --build-arg USER_ID=$(USER_ID) --build-arg GROUP_ID=$(GROUP_ID) --build-arg USER_NAME=$(USER_NAME) --build-arg GROUP_NAME=$(GROUP_NAME) -t $(IMAGE) .
 
-run:       ## run the luna-tutorial container
-	docker run -it --name $(CONTAINER) -v $(PWD)/vmount:/home/$(USER_NAME)/vmount:rw -p 127.0.0.1:8888:8888/tcp $(IMAGE)
+run:       ## run the luna-tutorial container. Default IP:PORT=127.0.0.1:8888. Optionally specify args HOST_IP=xxx.xxx.xxx.xxx HOST_PORT=xxxx.
+	docker run -it --name $(CONTAINER) -v $(PWD)/vmount:/home/$(USER_NAME)/vmount:rw -p $(HOST_IP):$(HOST_PORT):8888/tcp -p $(HOST_IP):6006:6006/tcp  $(IMAGE)
 	docker rm $(CONTAINER)
 
 exec:      ## enter the luna-tutorial container
