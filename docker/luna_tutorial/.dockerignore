@@ -1,0 +1,7 @@
+*/*.svs
+*/*.tar
+*/*.parquet
+*/*.pt
+*/*.pil
+*/*.npy
+*/*.bmp
