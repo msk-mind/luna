@@ -1,0 +1,6 @@
+{
+	"job_tag": "ov_slides",
+	"table_path": "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/PRO_12-123/data/PRO_12-123/tables/WSI_toy_data_set",
+	"datastore_path": "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/tiles",
+	"patient_id_column_name": "patient_id"
+}

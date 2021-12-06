@@ -1,0 +1,7 @@
+{
+  "input_label_tag": "ov_default_labels",
+  "input_wsi_tag": "ov_slides",
+  "output_datastore": "ov_tileset",
+  "root_path": "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/PRO_12-123/tiles"
+}
+

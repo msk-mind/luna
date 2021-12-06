@@ -1,0 +1,13 @@
+{
+	"input_label_tag": "ov_default_labels",
+	"job_tag": "infer_ov_clf",
+	"tile_size": 128,
+	"scale_factor": 16,
+	"magnification": 20,
+	"model_package": "data_processing.pathology.models.eng_tissuenet",
+	"model": {
+		"checkpoint_path": "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/model/outputs/ckpts/ckpt_8.pt",
+	"n_classes": 3
+	},
+	"root_path": "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/tiles"
+}

@@ -1,0 +1,19 @@
+# copy-paste this template into a config.yaml before using
+# as a best practice, config.yaml must not be committed to github
+# as it may contain sensitive deployment information.
+spark_cluster_config:
+  - spark.uri: local[*]
+  - spark.driver.host: 127.0.0.1
+spark_application_config:
+  # 5% total number of cores in cluster
+  - spark.executor.cores: 2
+  # 50% total number of cores in cluster
+  - spark.cores.max: 6
+  # 5% total memory in cluster
+  - spark.executor.memory: 2g
+  # 80% executor memory
+  - spark.executor.pyspark.memory: 2g
+  - spark.sql.shuffle.partitions: 200
+  - spark.driver.maxResultSize: 2g
+
+OBJECT_STORE_ENABLED: False

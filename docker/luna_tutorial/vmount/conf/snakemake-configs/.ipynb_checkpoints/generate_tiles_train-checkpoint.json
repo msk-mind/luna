@@ -1,0 +1,14 @@
+{
+	"input_wsi_tag": "ov_slides",
+	"job_tag": "ov_default_labels",
+	"tile_size": 128,
+	"scale_factor": 16,
+	"magnification": 20,
+	"project_id": "PRO_12-123",
+	"labelset": "DEFAULT_LABELS",
+	"filter": {
+		"otsu_score": 0.5
+	},
+	"root_path": "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/tiles",
+	"annotation_table_path": "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/PRO_12-123/tables/REGIONAL_METADATA_RESULTS"
+}

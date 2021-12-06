@@ -1,0 +1,16 @@
+{
+	"input_wsi_tag": "ov_slides",
+	"input_label_tag": "infer_ov_clf",
+	"job_tag": "visualize_infer_ov_clf",
+	"scale_factor": 16,
+	"tile_size": 128,
+	"magnification": 20,
+	"dsa_config": {
+		"host": "pllimskhpc2",
+		"port": "80",
+		"token": "H2GzwMvGwdij4wexEekrZBpjFq4aOXG4kyMRVox8k7lkHE3LfMIBD9LsdXGX0Ci0"
+	},
+	"root_path": "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/tiles",
+	"output_folder": "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/tiles/dsa_annotations",
+	"collection_name": "pathology-tutorial"
+}

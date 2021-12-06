@@ -1,0 +1,11 @@
+# tag used for generating tile labels
+input_label_tag: ov_default_labels
+
+# job tag used for loading the slide
+input_wsi_tag: ov_slides
+
+# job tag for collecting tiles 
+output_datastore: ov_tileset
+
+# destination where the tiles will be loaded and stored (path to output data)
+root_path: ../PRO_12-123/tables/tiles
