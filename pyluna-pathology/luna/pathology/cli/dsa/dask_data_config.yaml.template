@@ -34,8 +34,3 @@ ANNOTATION_NAME: test-annotations
 
 # annotation labels. the result geojsons will be saved with this name
 LABEL_SETS: DEFAULT_LABELS
-
-# DSA credentials
-DSA_USERNAME:
-
-DSA_PASSWORD: 

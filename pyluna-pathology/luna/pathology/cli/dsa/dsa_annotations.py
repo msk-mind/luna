@@ -42,6 +42,7 @@ GEOJSON_POLYGON = {
 @click.option(
     "-d",
     "--data_config_file",
+    required=True,
     default=None,
     type=click.Path(exists=True),
     help="path to yaml file containing data input and output parameters. "
@@ -50,12 +51,29 @@ GEOJSON_POLYGON = {
 @click.option(
     "-a",
     "--app_config_file",
+    required=True,
     default="config.yaml",
     type=click.Path(exists=True),
     help="path to yaml file containing application runtime parameters. "
     "See config.yaml.template",
 )
-def cli(data_config_file: str, app_config_file: str):
+@click.option(
+    "-u",
+    "--user",
+    required=False,
+    type=str,
+    help="DSA username. This can be provided as an argument or as an "
+    "environment variable DSA_USERNAME."
+)
+@click.option(
+    "-p",
+    "--password",
+    required=False,
+    type=str,
+    help="DSA password. This can be provided as an argument or as an "
+    "environment variable DSA_USERNAME."
+)
+def cli(data_config_file: str, app_config_file: str, user: str, password: str):
     """This module generates parquets with regional annotation pathology data from DSA
 
     TABLE SCHEMA
@@ -76,6 +94,10 @@ def cli(data_config_file: str, app_config_file: str):
             See config.yaml.template
 	data_config_file (str): path to yaml file containing data input and output parameters.
             See dask_data_config.yaml.template
+        user (str, optional): DSA username. This can be provided as an argument or as an
+            environment variable DSA_USERNAME.
+        password (str, optional): DSA password. This can be provided as an argument or as an
+            environment variable DSA_PASSWORD.
 
     Returns:
         None
@@ -85,6 +107,14 @@ def cli(data_config_file: str, app_config_file: str):
     # load configs
     cfg = ConfigSet(name="DATA_CFG", config_file=data_config_file)
     cfg = ConfigSet(name="APP_CFG", config_file=app_config_file)
+
+    try:
+        dsa_username = user if user else os.environ['DSA_USERNAME']
+        dsa_password = password if password else os.environ['DSA_PASSWORD']
+    except KeyError:
+        logger.error("Please set DSA_USERNAME/DSA_PASSWORD environment variable, " +\
+            "or pass user/password arguments")
+        exit()
 
     with CodeTimer(logger, f"generate DSA annotation geojson table"):
         logger.info("data template: " + data_config_file)
@@ -102,7 +132,7 @@ def cli(data_config_file: str, app_config_file: str):
         )
         logger.info("config files copied to %s", config_location)
 
-        generate_annotation_table()
+        generate_annotation_table(dsa_username, dsa_password)
 
         return
 
@@ -251,7 +281,7 @@ def generate_geojson(
     }
 
 
-def generate_annotation_table() -> None:
+def generate_annotation_table(dsa_username, dsa_password) -> None:
     """CLI driver function. provided a collection name and annotation name, this
     method generates the annotation table by first retriving the slides associated
     with the collection along with the collection stylesheet. Then, the process
@@ -275,8 +305,6 @@ def generate_annotation_table() -> None:
     landing_path = const.PROJECT_LOCATION(cfg)
     label_set = cfg.get_value("DATA_CFG::LABEL_SETS")
     data_type = cfg.get_value("DATA_CFG::DATA_TYPE")
-    dsa_username = cfg.get_value("DATA_CFG::DSA_USERNAME")
-    dsa_password = cfg.get_value("DATA_CFG::DSA_PASSWORD")
 
     dask_threads_per_worker = cfg.get_value("APP_CFG::DASK_THREADS_PER_WORKER")
     dask_n_workers = cfg.get_value("APP_CFG::DASK_N_WORKERS")
