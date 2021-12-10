@@ -1,0 +1,9 @@
+# path to DSA compatible annotation
+annotation_filepath: ./dsa_annotations/Full_Res_Tile-Based_Pixel_Classifier_Inference_HobI16-670289739721.json
+
+# image file name from DSA
+image_filename: HobI16-670289739721.svs
+
+# collection name from DSA
+collection_name: test-path
+

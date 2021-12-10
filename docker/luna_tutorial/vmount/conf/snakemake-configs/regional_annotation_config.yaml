@@ -1,0 +1,73 @@
+REQUESTOR: viki mancoridis                                  # The name of requestor. You are likely the requestor
+REQUESTOR_DEPARTMENT: computational oncology                # The department to which the requestor belongs
+REQUESTOR_EMAIL: MancoriV@mskcc.org                         # The email address of the requestor
+PROJECT: PRO_12-123                                         # Project name decided by data coordination
+PROJECT_ID: 134                                             # Project ID in SlideViewer
+SOURCE: slide_viewer                                        # Source name of input data file
+MODALITY: pathology                                         # Data modality
+DATA_TYPE: REGIONAL_METADATA_RESULTS                        # Data type within the modality
+DATE: 2021-07-06                                            # The date on which the request was made
+ETL_TYPE: pathology_annotation_etl                          # Type of ETL
+ROOT_PATH: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/data                    # Data directory 
+DATASET_NAME: ""                                            # Dataset name set to empty string
+
+# Root path for tables and file transfer
+LANDING_PATH: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/data/snakemake_PRO_12-123/regional-annotations          
+SLIDEVIEWER_API_URL: "https://slides-res.mskcc.org/"        # Slide viewer api url (must contain trailing slash)
+
+# an optional path to a SlideViewer csv file to use that lists the names of the whole slide images
+# and for which the regional annotation proxy table generator should download point annotations.
+# If this field is left blank, then the regional annotation proxy table generator will attempt to
+# download this file from SlideViewer.
+SLIDEVIEWER_CSV_FILE: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/configs/snakemake_configs/project_slides.csv
+ 
+CONTOUR_LEVEL: 0.5                                          # Set CONTOUR_LEVEL=0.5 to vectorize pixels
+
+# list of expert annotators
+USERS:
+    - ellensol
+    - soslowr
+    - boehmk
+
+LABEL_SETS:
+    DEFAULT_LABELS:
+      1: lympho_rich_stroma
+      2: lympho_poor_stroma
+      3: lympho_rich_tumor
+      4: lympho_poor_tumor
+      5: adipocytes
+      6: arteries
+      7: veins
+      8: psammoma_bodies
+      9: stic_lesions
+      10: necrosis
+      11: glass
+      12: qc_tissue_fold
+      13: qc_air_bubbles
+      14: qc_pen
+      15: qc_other
+    PIXEL_CLASSIFIER_LABELS:
+      1: Stroma
+      2: Stroma
+      3: Tumor
+      4: Tumor
+      5: Adipocytes
+      6: Arteries
+      7: Veins
+      10: Necrosis
+      11: Glass
+    OBJECT_CLASSIFIER_LABELS:
+      1: Lymphocyte
+      2: Other
+      3: Lymphocyte
+      4: Other
+    SIMPLIFIED_PIXEL_CLASSIFIER_LABELS:
+      1: Stroma
+      2: Stroma
+      3: Tumor
+      4: Tumor
+      5: Adipocytes
+      10: Necrosis
+      11: Glass
+
+

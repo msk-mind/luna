@@ -1,0 +1,25 @@
+# job tab used to generate tile labels
+input_label_tag: ov_default_labels
+
+# job tag for the inference
+job_tag: infer_ov_clf
+
+# pixel width/height of slide tiles (size of patches)
+tile_size: 128
+
+# desired downscale factor
+scale_factor: 16
+
+# desired magnification
+magnification: 20
+
+# path to model and output checkpoints
+model: 
+    model_package: data_processing.pathology.models.eng_tissuenet
+    checkpoint_path: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/model/outputs/ckpts/ckpt_8.pt
+    
+# number of classification groups for model
+n_classes: 3
+
+# path to output directory 
+root_path: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/tiles

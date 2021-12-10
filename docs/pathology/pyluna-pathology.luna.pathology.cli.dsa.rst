@@ -36,6 +36,14 @@ pyluna\-pathology.luna.pathology.cli.dsa.utils module
    :undoc-members:
    :show-inheritance:
 
+pyluna\-pathology.luna.pathology.cli.dsa.dsa\_regional\_annotations module
+--------------------------------------------------------------------------
+
+.. automodule:: luna.pathology.cli.dsa.dsa_regional_annotations
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

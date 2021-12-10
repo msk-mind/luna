@@ -1,0 +1,24 @@
+REQUESTOR: viki mancoridis                                     # The name of the requestor. You are likely the requestor
+REQUESTOR_DEPARTMENT: computational oncology                   # The department to which the requestor belongs
+REQUESTOR_EMAIL: MancoriV@mskcc.org                            # The email address of the requestor
+PROJECT: PRO_12-123                                            # The project name decided by data coordination
+SOURCE: toy_set                                                # Source name of the input data file
+MODALITY: radiology                                            # Data modality
+DATA_TYPE: WSI                                                 # Data type within this modality
+COMMENTS:                                                      # Description of template defined by requestor. You may leave blank
+DATE: 2021-07-06                                               # The date on which the request was made, likely today
+DATASET_NAME: toy_data_set                                     # Name to be given to the dataset
+ETL_TYPE: proxy                                                # Type of ETL
+FILE_TYPE: svs                                                 # Input source file
+FORMAT_TYPE: delta                                             # Format type of the output proxy table
+NUM_PARTITION: 1                                               # Number of partitions for the delta table creation
+HOST: localhost                                                # IP or hostname of machine where source data fil(s) reside
+ROOT_PATH: ../                                                 # File path to the root of your local folder of data
+SOURCE_PATH: ../PRO_12-123/data/toy_data_set                   # Path to your specific data folder
+LANDING_PATH: .                                                # Path for tables and file transfer
+RAW_DATA_PATH: .                                               # Path to data transfer on destination machine
+INCLUDE: --include=.svs                                        # Specifies inclusion of svs files
+CHUNK_FILE: ../PRO_12-123/data/chunks.txt                      # Output text will redirect here
+FILE_COUNT: 5                                                  # Number of files for the table
+DATA_SIZE: 5000000000                                          # Upper bound for the number of bytes of data
+BWLIMIT: 5G                                                    # Amount of network bandwidth to utilize for the data transfer

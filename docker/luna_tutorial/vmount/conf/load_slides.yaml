@@ -1,0 +1,13 @@
+# job tab used for loading the slides
+job_tag: ov_slides
+
+# # path to whole slide image table
+table_path: ../PRO_12-123/tables/WSI_toy_data_set
+
+# # path to store data
+datastore_path: ../PRO_12-123/tables/tiles
+
+# # column name dedicated to storing the patient ids
+patient_id_column_name: patient_id
+
+
