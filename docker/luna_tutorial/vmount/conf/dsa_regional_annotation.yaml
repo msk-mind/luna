@@ -1,0 +1,36 @@
+# project name decided by data coordination
+PROJECT: test-project 
+
+# name of the DSA collection 
+COLLECTION_NAME: pathology-tutorial
+
+# source name of input data file
+SOURCE: DSA 
+
+# data modality
+MODALITY: pathology
+
+# data type within the modality
+# REGIONAL_METADATA_RESULTS or POINT_GEOJSON
+DATA_TYPE: REGIONAL_METADATA_RESULTS
+
+# the data on which the request was made
+DATE: 2021-12-02
+
+# Type of ETL
+ETL_TYPE: pathology_annotation_etl
+
+# data directory  
+ROOT_PATH: .
+
+# dataset name set to empty string
+DATASET_NAME: ""
+
+# DSA api uri (ie host:portnumber)
+DSA_URI: localhost:8080
+
+# DSA annotation name
+ANNOTATION_NAME: ov_regional
+
+# annotation labels. the result geojsons will be saved with this name
+LABEL_SETS: DEFAULT_LABELS
