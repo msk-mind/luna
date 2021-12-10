@@ -13,6 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
+        ref: 'master'
         fetch-depth: 0
         persist-credentials: false
 
@@ -63,6 +64,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          ref: 'master'
 
       - name: Setup python 3.9
         uses: actions/setup-python@v2
