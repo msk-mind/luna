@@ -1,0 +1,17 @@
+# project manifest template
+
+# MIND project id
+PROJECT: PRO_12-123
+
+# IRB
+IRB:
+
+# project title
+TITLE: pathology-tutorial
+
+# project description
+DESCRIPTION: End-to-end pathology analysis tutorial
+
+DATA_MODALITIES: pathology
+
+ROOT_PATH: ../

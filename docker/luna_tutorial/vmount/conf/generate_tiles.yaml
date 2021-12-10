@@ -1,0 +1,32 @@
+# job tag used to load slides
+input_wsi_tag: ov_slides
+
+# job tag for generating tile labels
+job_tag: ov_default_labels
+
+# pixel width/height of slide tiles (size of patches)
+tile_size: 128
+
+# desired downscale factor (scanned magnification // requested magnification)
+scale_factor: 16
+
+# desired magnification
+requested_magnification: 20
+
+# optional project id, if using regional annotations
+project_id: PRO_12-123
+
+# optional annotation labelset name, if using regional annotations
+labelset: DEFAULT_LABELS
+
+# optional filter to selet subset of the tiles
+filter:
+    #an otsu score is calculated using the otsu foreground/background detection algorithm commonly used to filter out the background of the slide
+    otsu_score: 0.5
+
+# destination path (path to output data)
+root_path: ../PRO_12-123/tables/tiles
+
+# optional path to the regional annotation table
+annotation_table_path: ../PRO_12-123/tables/REGIONAL_METADATA_RESULTS
+

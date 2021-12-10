@@ -1,0 +1,32 @@
+# job tag used in loading the whole slide image
+input_wsi_tag: ov_slides
+
+# job tag used in generating the tile labels
+input_label_tag: infer_ov_clf
+
+# job tag for this visualization
+job_tag: visualize_infer_ov_clf
+
+# scale for generation of thumbnails, e.g. 8 will generate a thumbnail scaled at 1/8 of the wsi
+scale_factor: 16
+
+# requested tile size
+tile_size: 128
+
+# requested magnification
+magnification: 20
+
+# map of dsa instance details
+dsa_config:
+    host: localhost
+    port: 80
+    token: your-dsa-config-token
+    
+# path to output directory
+root_path: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/tiles
+
+# path to output folder within output directory
+output_folder: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/tiles/dsa_annotations
+
+# name given to the collection
+collection_name: pathology-tutorial

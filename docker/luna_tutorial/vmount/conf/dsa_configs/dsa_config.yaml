@@ -1,0 +1,9 @@
+# DSA host
+host: localhost
+
+# DSA port
+port: 8080
+
+# token retrieved from HistomicsUI API /token/current
+token: your-dsa-token
+

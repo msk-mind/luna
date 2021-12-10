@@ -1,17 +1,30 @@
-import click,json
+import click, json
 import yaml
 
-from luna.pathology.cli.dsa.dsa_api_handler import get_item_uuid, push_annotation_to_dsa_image, system_check
+import girder_client
+
+from luna.pathology.cli.dsa.dsa_api_handler import (
+    get_item_uuid,
+    push_annotation_to_dsa_image,
+    system_check,
+)
+
 
 @click.command()
-@click.option('-c', '--config',
-              help="path to your application config file that includes DSA instance details.",
-              type=click.Path(exists=True),
-              required=True)
-@click.option("-d", "--data_config",
-              help="path to your data config file that includes input/output parameters.",
-              required=True,
-              type=click.Path(exists=True))
+@click.option(
+    "-c",
+    "--config",
+    help="path to your application config file that includes DSA instance details.",
+    type=click.Path(exists=True),
+    required=True,
+)
+@click.option(
+    "-d",
+    "--data_config",
+    help="path to your data config file that includes input/output parameters.",
+    required=True,
+    type=click.Path(exists=True),
+)
 def cli(config, data_config):
     """DSA Annotation Upload CLI
 
@@ -21,7 +34,9 @@ def cli(config, data_config):
 
     - port: DSA port e.g. 8080
 
-    - token: DSA token from /token/current HistomicsUI API
+    - dsa_username: DSA username
+
+    - dsa_password: DSA password
 
     data_config - yaml file with input, output, and method parameters:
 
@@ -31,29 +46,35 @@ def cli(config, data_config):
 
     - collection_name: name of the collection in DSA
     """
-    with open(config, 'r') as config_yaml:
+    with open(config, "r") as config_yaml:
         dsa_config_dict = yaml.safe_load(config_yaml)
 
     with open(data_config) as data_config_yaml:
         data_config_dict = yaml.safe_load(data_config_yaml)
 
-    # Girder Token can be found in the DSA API Swagger Docs under 'token': (http://{host}:8080/api/v1#!/token/token_currentSession)
     uri = dsa_config_dict["host"] + ":" + str(dsa_config_dict["port"])
-    token = dsa_config_dict["token"]
 
-    # TODO use girder client
-    # https://girder.readthedocs.io/en/latest/python-client.html#the-python-client-library
+    dsa_username = dsa_config_dict["dsa_username"]
+    dsa_password = dsa_config_dict["dsa_password"]
+
+    gc = girder_client.GirderClient(apiUrl=f"http://{uri}/api/v1")
+    gc.authenticate(dsa_username, dsa_password)
 
     # check DSA connection
-    system_check(uri,token)
+    system_check(gc)
 
-    annotation_filepath = data_config_dict['annotation_filepath']
-    collection_name = data_config_dict['collection_name']
-    image_filename = data_config_dict['image_filename']
-    upload_annotation_to_dsa(annotation_filepath, image_filename, collection_name, uri, token)
+    annotation_filepath = data_config_dict["annotation_filepath"]
+    collection_name = data_config_dict["collection_name"]
+    image_filename = data_config_dict["image_filename"]
+
+    upload_annotation_to_dsa(
+        annotation_filepath, image_filename, collection_name, uri, gc
+    )
 
 
-def upload_annotation_to_dsa(annotation_filepath, image_filename, collection_name, uri, token):
+def upload_annotation_to_dsa(
+    annotation_filepath, image_filename, collection_name, uri, gc
+):
     """Upload annotation to DSA
 
     Upload json annotation file as a new annotation to the image in the DSA collection.
@@ -63,7 +84,7 @@ def upload_annotation_to_dsa(annotation_filepath, image_filename, collection_nam
         image_filename (string): name of the image file in DSA e.g. 123.svs
         collection_name (string): name of the collection in DSA
         uri (string): DSA host:port e.g. localhost:8080
-        token (string): DSA token from /token/current HistomicsUI API
+        gc: girder client
 
     Returns:
         None
@@ -71,9 +92,11 @@ def upload_annotation_to_dsa(annotation_filepath, image_filename, collection_nam
     with open(annotation_filepath) as annotation_json:
         dsa_annotation = json.load(annotation_json)
 
-    dsa_uuid = get_item_uuid(image_filename, uri, token, collection_name)
-    if dsa_uuid:
-        push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, uri, token)
+    dsa_uuid = get_item_uuid(image_filename, collection_name, gc)
 
-if __name__ == '__main__':
+    if dsa_uuid:
+        push_annotation_to_dsa_image(dsa_uuid, dsa_annotation, uri, gc)
+
+
+if __name__ == "__main__":
     cli()
