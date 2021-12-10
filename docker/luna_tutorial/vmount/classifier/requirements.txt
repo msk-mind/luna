@@ -1,9 +1,0 @@
-typing
-matplotlib
-numpy
-pandas
-seaborn
-sklearn
-torch
-tensorboard
-torchvision

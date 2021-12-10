@@ -46,7 +46,3 @@ A set of CLIs are available to help you convert your pathologist or model-genera
 .. click:: luna.pathology.cli.dsa.dsa_viz:cli
    :prog: dsa_viz
    :nested: full
-
-.. click:: luna.pathology.cli.dsa.dsa_regional_annotations:cli
-   :prog: load_regional_annotations
-   :nested: full

@@ -1,9 +1,0 @@
-# path to DSA compatible annotation
-annotation_filepath: ./dsa_annotations/Regional_Annotation_2551571.json
-    
-# path to DSA compatible annotation
-image_filename: 2551571.svs
-    
-# collection name from DSA
-collection_name: test-path
-

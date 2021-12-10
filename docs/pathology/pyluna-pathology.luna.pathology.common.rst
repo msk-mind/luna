@@ -28,14 +28,6 @@ pyluna\-pathology.luna.pathology.common.build\_geojson module
    :undoc-members:
    :show-inheritance:
 
-pyluna\-pathology.luna.pathology.common.ml module
----------------------------------------------------------
-
-.. automodule:: luna.pathology.common.ml
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 pyluna\-pathology.luna.pathology.common.preprocess module
 ---------------------------------------------------------
 
