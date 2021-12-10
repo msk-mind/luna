@@ -2,5 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.0 (2021-12-10)
+### Feature
+* Tile Dataset and Classifier API ([`0f45f81`](https://github.com/msk-mind/luna/commit/0f45f817c90137639df732eca76d9cfe34bd509e))
+
+### Fix
+* Pathology - dsa annotation etl minor clean up ([#250](https://github.com/msk-mind/luna/issues/250)) ([`40650bb`](https://github.com/msk-mind/luna/commit/40650bb153658fdcbfa506bbe74e98cd528b52a8))
+* Dataset setup function ([#247](https://github.com/msk-mind/luna/issues/247)) ([`d171f86`](https://github.com/msk-mind/luna/commit/d171f86a1df6258b5eab267bb1be7483b4b1b422))
+* Update release action ([#242](https://github.com/msk-mind/luna/issues/242)) ([`6179c6b`](https://github.com/msk-mind/luna/commit/6179c6be3982f497a02e235cfdaba4c6a070a16c))
+
+### Documentation
+* Update subpackage readme ([`68403cc`](https://github.com/msk-mind/luna/commit/68403ccc2c3dfbf07c5d530efec0814446622a2d))
+* Clean up installation docs ([#243](https://github.com/msk-mind/luna/issues/243)) ([`bc2c493`](https://github.com/msk-mind/luna/commit/bc2c49398385080d03b54358e46bb2da47484e25))
+
 ## version 0.0.1
 
