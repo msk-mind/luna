@@ -1,5 +1,5 @@
 # project name decided by data coordination
-PROJECT: test-project 
+PROJECT: PRO_12-123 
 
 # name of the DSA collection 
 COLLECTION_NAME: pathology-tutorial
@@ -21,7 +21,7 @@ DATE: 2021-12-02
 ETL_TYPE: pathology_annotation_etl
 
 # data directory  
-ROOT_PATH: .
+ROOT_PATH: ../
 
 # dataset name set to empty string
 DATASET_NAME: ""

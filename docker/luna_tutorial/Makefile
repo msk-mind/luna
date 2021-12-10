@@ -45,9 +45,9 @@ help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 
-clean:      ## cleanup all images volumes and containers
-	docker system prune -a -f
-	docker system prune --volumes -f
+clean:      ## cleanup luna-tutorial images and containers
+	docker rmi (docker images *luna-tutorial* -q)
+	docker rmi (docker container ls -f "name=luna-tutorial" -q)
 
 clean-image:  ## remove luna tutorial image
 	docker rmi -f $(IMAGE)

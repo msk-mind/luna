@@ -39,7 +39,7 @@ RUN python3 -m pip install --no-cache-dir --user --upgrade pip \
 RUN python3 -m pip install --no-cache-dir jupyter
 
 ## set env vars
-ENV LUNA_HOME="/home/$USER_NAME/luna"
+ENV LUNA_HOME="/home/$USER_NAME/vmount"
 # pyspark adds /bin/java
 ENV JAVA_HOME="/usr"
 ENV LANG="C.UTF-8"
