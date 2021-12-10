@@ -18,20 +18,20 @@ jobs:
 
     # temporarily turn branch protection off for semantic release
     - name: Branch protection OFF
-        uses: octokit/request-action@v2.x
-        with:
-          route: PUT /repos/msk-mind/luna/branches/master/protection
-          repository: ${{ github.repository }}
-          required_status_checks: |
-            null
-          enforce_admins: |
-            null
-          required_pull_request_reviews: |
-            null
-          restrictions: |
-            null
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_ADMIN_TOKEN }}
+      uses: octokit/request-action@v2.x
+      with:
+        route: PUT /repos/msk-mind/luna/branches/master/protection
+        repository: ${{ github.repository }}
+        required_status_checks: |
+          null
+        enforce_admins: |
+          null
+        required_pull_request_reviews: |
+          null
+        restrictions: |
+          null
+      env:
+        GITHUB_TOKEN: ${{ secrets.GIT_ADMIN_TOKEN }}
     # create a git release
     - name: Release pyluna
       uses: relekang/python-semantic-release@master
@@ -41,20 +41,20 @@ jobs:
 
     # turn branch protection back on
     - name: Branch protection ON
-        uses: octokit/request-action@v2.x
-        with:
-          route: PUT /repos/msk-mind/luna/branches/master/protection
-          repository: ${{ github.repository }}
-          required_status_checks: |
-            null
-          enforce_admins: |
-            null
-          required_pull_request_reviews: |
-            required_approving_review_count: 1
-          restrictions: |
-            null
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_ADMIN_TOKEN }}
+      uses: octokit/request-action@v2.x
+      with:
+        route: PUT /repos/msk-mind/luna/branches/master/protection
+        repository: ${{ github.repository }}
+        required_status_checks: |
+          null
+        enforce_admins: |
+          null
+        required_pull_request_reviews: |
+          required_approving_review_count: 1
+        restrictions: |
+          null
+      env:
+        GITHUB_TOKEN: ${{ secrets.GIT_ADMIN_TOKEN }}
 
   push-to-pypi:
     runs-on: ubuntu-latest
