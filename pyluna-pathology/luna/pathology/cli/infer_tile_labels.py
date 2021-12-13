@@ -45,10 +45,10 @@ def cli(**cli_kwargs):
         infer_tile_labels
             -i 1412934/data/TileImages
             -o 1412934/data/TilePredictions
-            -r msk-mind/luna-ml:main 
-            -t tissue_tile_net_transform 
-            -m tissue_tile_net_model_5_class
-            -w main:tissue_net_2021-01-19_21.05.24-e17.pth
+            -rn msk-mind/luna-ml:main 
+            -tn tissue_tile_net_transform 
+            -mn tissue_tile_net_model_5_class
+            -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
 
     Run with implicit arguments:
 
@@ -56,7 +56,7 @@ def cli(**cli_kwargs):
         infer_tile_labels -m 1412934/data/TilePredictions/metadata.json
     
     Run with mixed arguments (CLI args override yaml/json arguments):
-    
+
     \b
         infer_tile_labels --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
     """
