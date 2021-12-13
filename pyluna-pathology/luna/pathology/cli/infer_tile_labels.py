@@ -42,7 +42,7 @@ def cli(**cli_kwargs):
     Run with explicit arguments:
 
     \b
-        infer_tile_labels
+        infer_tiles
             -i 1412934/data/TileImages
             -o 1412934/data/TilePredictions
             -rn msk-mind/luna-ml:main 
@@ -53,12 +53,12 @@ def cli(**cli_kwargs):
     Run with implicit arguments:
 
     \b
-        infer_tile_labels -m 1412934/data/TilePredictions/metadata.json
+        infer_tiles -m 1412934/data/TilePredictions/metadata.json
     
     Run with mixed arguments (CLI args override yaml/json arguments):
 
     \b
-        infer_tile_labels --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
+        infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
     """
     kwargs = {}
 
