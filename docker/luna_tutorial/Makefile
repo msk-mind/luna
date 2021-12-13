@@ -10,7 +10,6 @@ CURRENT_UID=$(USER):$(GID)
 HOST_IP=127.0.0.1
 HOST_PORT=8888
 
-
 .PHONY: all help build clean test run
 .DEFAULT_GOAL := help
 
@@ -44,10 +43,9 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-
 clean:      ## cleanup luna-tutorial images and containers
-	docker rmi (docker images *luna-tutorial* -q)
-	docker rmi (docker container ls -f "name=luna-tutorial" -q)
+	docker rmi $$(docker images *luna-tutorial* -q)
+	docker rmi $$(docker container ls -f "name=luna-tutorial" -q)
 
 clean-image:  ## remove luna tutorial image
 	docker rmi -f $(IMAGE)
