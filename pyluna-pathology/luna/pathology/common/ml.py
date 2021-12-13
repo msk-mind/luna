@@ -127,7 +127,7 @@ class BaseTorchTileClassifier(nn.Module):
         if self.cuda_is_available: tile_data = tile_data.cuda()
 
         with torch.no_grad():
-            return pd.DataFrame(self.predict(tile_data).cpu().numpy(), index=index)
+            return pd.DataFrame(self.predict(tile_data).cpu().numpy(), index=index, )
     
     def setup(self, **kwargs):
         """Set classifier modules

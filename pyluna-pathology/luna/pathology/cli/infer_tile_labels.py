@@ -1,95 +1,148 @@
 # General imports
-import os, json, logging
+import os, json, logging, yaml
 import click
-import yaml
 
-# From common
 from luna.common.custom_logger   import init_logger
-from luna.common.DataStore       import DataStore_v2
-from luna.common.config          import ConfigSet
 
-# From radiology.common
-from luna.pathology.common.preprocess import run_model
+init_logger()
+logger = logging.getLogger('infer_tille_labels')
+
+from luna.common.utils import validate_params
+
+import torch
+from torch.utils.data import DataLoader
+from luna.pathology.common.ml import BaseTorchTileDataset, BaseTorchTileClassifier
+
+import pandas as pd
+from tqdm import tqdm
+
+_params = [('input_data', str), ('output_dir', str), ('repo_name', str), ('transform_name', str), ('model_name', str), ('weight_tag', str), ('num_cores', int), ('batch_size', int)]
 
 @click.command()
-@click.option('-a', '--app_config', required=True,
-              help="application configuration yaml file. See config.yaml.template for details.")
-@click.option('-s', '--datastore_id', required=True,
-              help='datastore name. usually a slide id.')
-@click.option('-m', '--method_param_path', required=True,
-              help='json file with method parameters for loading a saved model.')
-def cli(app_config, datastore_id, method_param_path):
-    """Infer tile labels with a trained model.
-
-    app_config - application configuration yaml file. See config.yaml.template for details.
-
-    datastore_id - datastore name. usually a slide id.
-
-    method_param_path - json file with method parameters for loading a saved model.
-
-    - input_label_tag: job tag used to generate tile labels
-
-    - job_tag: job tag for the inference
-
-    - model_package: package to load your model e.g. luna.pathology.models.ov_tissuenet
-
-    - model: model details e.g. {
-          "checkpoint_path": "/path/to/checkpoint",
-          "n_classes": 4
-      }
-
-    - root_path: path to output directory
+@click.option('-i', '--input_data', required=False,
+              help='path to input data')
+@click.option('-o', '--output_dir', required=False,
+              help='path to output directory to save results')
+@click.option('-rn', '--repo_name', required=False,
+              help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
+@click.option('-tn', '--transform_name', required=False,
+              help="torch hub transform name")   
+@click.option('-mn', '--model_name', required=False,
+              help="torch hub model name")    
+@click.option('-wt', '--weight_tag', required=False,
+              help="weight tag filename")  
+@click.option('-nc', '--num_cores', required=False,
+              help="Number of cores to use", default=4)  
+@click.option('-bx', '--batch_size', required=False,
+              help="weight tag filename", default=256)    
+@click.option('-m', '--method_param_path', required=False,
+              help='json file with method parameters for tile generation and filtering')
+def cli(**cli_kwargs):
     """
-    init_logger()
+    Run with explicit arguments:
 
-    with open(method_param_path, 'r') as yaml_file:
-        method_data = yaml.safe_load(yaml_file)
-    infer_tile_labels_with_datastore(app_config, datastore_id, method_data)
+    \b
+        infer_tiles
+            -i 1412934/data/TileImages
+            -o 1412934/data/TilePredictions
+            -rn msk-mind/luna-ml:main 
+            -tn tissue_tile_net_transform 
+            -mn tissue_tile_net_model_5_class
+            -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
 
-def infer_tile_labels_with_datastore(app_config: str, datastore_id: str, method_data: dict):
-    """Infer tile labels with a trained model.
+    Run with implicit arguments:
+
+    \b
+        infer_tiles -m 1412934/data/TilePredictions/metadata.json
+    
+    Run with mixed arguments (CLI args override yaml/json arguments):
+
+    \b
+        infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
+    """
+    kwargs = {}
+
+    # Get params from param file
+    if cli_kwargs.get('method_param_path'):
+        with open(cli_kwargs.get('method_param_path'), 'r') as yaml_file:
+            yaml_kwargs = yaml.safe_load(yaml_file)
+        kwargs.update(yaml_kwargs) # Fill from json
+    
+    for key in list(cli_kwargs.keys()):
+        if cli_kwargs[key] is None: del cli_kwargs[key]
+
+    # Override with CLI arguments
+    kwargs.update(cli_kwargs) # 
+
+    # Validate them
+    kwargs = validate_params(kwargs, _params)
+
+    infer_tile_labels(**kwargs)
+
+# We are acting a bit like a consumer of the base classes here-
+class TileDatasetGithub(BaseTorchTileDataset):
+    def setup(self, repo_name, transform_name):
+        self.transform = torch.hub.load(repo_name, transform_name)
+    def preprocess(self, input_tile):
+        return self.transform(input_tile)
+    
+class TileClassifierGithub(BaseTorchTileClassifier):
+    def setup(self, repo_name, model_name, weight_tag):
+        self.model = torch.hub.load(repo_name, model_name, weight_tag=weight_tag)
+    def predict(self, input_tiles):
+        return self.model(input_tiles)
+
+def infer_tile_labels(input_data, output_dir, repo_name, transform_name, model_name, weight_tag, num_cores, batch_size):
+    """Generate tile addresses, scores and optionally annotation labels using models stored in torch.hub format
 
     Args:
-        app_config (string): path to application configuration file.
-        datastore_id (string): datastore name. usually a slide id.
-        method_data (dict): method parameters including input, output details.
+        input_data (str): path to application configuration file.
+        output_dir (str): datastore name. usually a slide id.
+        repo_name (str): method parameters including input, output details.
+        transform_name (str):
+        model_name (str):
+        weight_tag (str):
 
     Returns:
         None
     """
-    logger = logging.getLogger(f"[datastore={datastore_id}]")
+    input_params = validate_params(locals(), _params) # Capture input parameters as dict
+    os.makedirs(output_dir, exist_ok=True)
 
-    # Do some setup
-    cfg = ConfigSet("APP_CFG",  config_file=app_config)
-    datastore   = DataStore_v2(method_data.get("root_path"))
-    method_id   = method_data.get("job_tag", "none")
+    # Get our model and transforms and construct the Tile Dataset and Classifier
+    logger.info(f"Loading model and transform: repo_name={repo_name}, transform_name={transform_name}, model_name={model_name}")
+    logger.info(f"Using weights weight_tag={weight_tag}")
 
-    tile_path           = datastore.get(datastore_id, method_data['input_label_tag'], "TileImages")
-    if tile_path is None:
-        raise ValueError("Tile path not found")
+    tile_dataset     = TileDatasetGithub(tile_path=input_data, repo_name=repo_name, transform_name=transform_name)
+    tile_classifier  = TileClassifierGithub(repo_name=repo_name, model_name=model_name, weight_tag=weight_tag)
 
-    tile_image_path     = os.path.join(tile_path, "tiles.slice.pil")
-    tile_label_path     = os.path.join(tile_path, "address.slice.csv")
+    tile_loader = DataLoader(tile_dataset, num_workers=num_cores, batch_size=batch_size, pin_memory=True)
 
-    # get image_id
-    # TODO - allow -s to take in slide (container) id
+    # Generate aggregate dataframe
+    with torch.no_grad():
+        df_scores = pd.concat([tile_classifier(index, data) for index, data in tqdm(tile_loader)])
+        
+    if hasattr(tile_classifier.model, 'class_labels'):
+        logger.info(f"Mapping column labels -> {tile_classifier.model.class_labels}")
+        df_scores = df_scores.rename(columns=tile_classifier.model.class_labels)
 
-    try:
-        # Data just goes under namespace/name
-        # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(method_data.get("root_path"), datastore_id, method_id, "TileScores", "data")
-        if not os.path.exists(output_dir): os.makedirs(output_dir)
+    df_output = tile_dataset.tile_manifest.join(df_scores)    
 
-        properties = run_model(tile_image_path, tile_label_path, output_dir, method_data)
+    logger.info(df_output)
 
-    except Exception as e:
-        logger.exception (f"{e}, stopping job execution...")
-        raise e
+    output_file = os.path.join(output_dir, "tile_scores_and_labels_pytorch_inference.csv")
+    df_output.to_csv(output_file)
 
-    # Save metadata
+    # Save our properties and params
+    extra_props = {
+        "total_tiles": len(df_output),
+        "available_labels": list(df_output.columns)
+    }
+
+    input_params.update(extra_props)
+
     with open(os.path.join(output_dir, "metadata.json"), "w") as fp:
-        json.dump(properties, fp)
-
+        json.dump(input_params, fp, indent=4, sort_keys=True)
 
 if __name__ == "__main__":
     cli()

@@ -2,6 +2,8 @@ from filehash import FileHash
 from io import BytesIO
 import os, json
 
+import logging
+logger = logging.getLogger(__name__)
 
 def to_sql_field(s):
 	filter1 = s.replace(".","_").replace(" ","_")
@@ -153,3 +155,18 @@ def get_absolute_path(module_path, relative_path):
 
 	# resolve any back-paths with ../ to simplify absolute path
 	return os.path.realpath(path)
+
+def validate_params(given_params, params_list):
+    logger = logging.getLogger(__name__)
+
+    d_params = {}
+    for name, type in params_list:
+        if given_params.get(name, None) == None: 
+            raise RuntimeError(f"Param {name} of type {type} was never set, but required by transform, please check your input variables.")
+        try:
+            d_params[name] = type(given_params[name])
+        except ValueError:
+            raise RuntimeError(f"Param {name} could not be cast to {type}")
+        logger.info (f"Param {name} set = {d_params[name]}")
+    return d_params
+
