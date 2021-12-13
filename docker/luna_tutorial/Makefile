@@ -2,13 +2,13 @@ IMAGE=$(USER)-luna-tutorial:0.0.1
 CONTAINER=$(USER)-luna-tutorial
 PWD=$(shell pwd)
 USER_NAME=$(USER)
-GROUP_NAME=$(shell id -g -n $(USER))
+#GROUP_NAME=$(shell id -g -n $(USER))
+GROUP_NAME=$(USER)
 USER_ID=$(shell id -u)
 GROUP_ID=$(shell id -g)
 CURRENT_UID=$(USER):$(GID)
 HOST_IP=127.0.0.1
 HOST_PORT=8888
-
 
 .PHONY: all help build clean test run
 .DEFAULT_GOAL := help
@@ -43,10 +43,9 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-
-clean:      ## cleanup all images volumes and containers
-	docker system prune -a -f
-	docker system prune --volumes -f
+clean:      ## cleanup luna-tutorial images and containers
+	docker rmi $$(docker images *luna-tutorial* -q)
+	docker rmi $$(docker container ls -f "name=luna-tutorial" -q)
 
 clean-image:  ## remove luna tutorial image
 	docker rmi -f $(IMAGE)

@@ -27,8 +27,10 @@ ENV PATH=$PATH:/home/$USER_NAME/.local/bin
 ## install luna
 # applying temp hack for getting pyspark v3.1.2 to play well with deltalake
 # tensorboard and sklearn are missing pyluna dependencies
+# pip timeout error
+ENV PIP_DEFAULT_TIMEOUT=100
 RUN python3 -m pip install --no-cache-dir --user --upgrade pip \
-	&& pip3 install pillow>=8.1.1 pyluna pyluna_pathology \
+	&& pip3 install pillow>=8.1.1 pyluna[pathology] \
 	&& pip3 uninstall -y pyspark \
 	&& pip3 install pyspark==3.1.2 \
 	&& pip3 install tensorboard sklearn
@@ -37,7 +39,7 @@ RUN python3 -m pip install --no-cache-dir --user --upgrade pip \
 RUN python3 -m pip install --no-cache-dir jupyter
 
 ## set env vars
-ENV LUNA_HOME="/home/$USER_NAME/luna"
+ENV LUNA_HOME="/home/$USER_NAME/vmount"
 # pyspark adds /bin/java
 ENV JAVA_HOME="/usr"
 ENV LANG="C.UTF-8"
@@ -49,14 +51,15 @@ ENV PYSPARK_DRIVER_PYTHON="/usr/bin/python3"
 RUN java --version
 RUN echo $JAVA_HOME
 RUN echo $LUNA_HOME
-RUN echo PYSPARK_PYTHON
-RUN echo PYSPARK_DRIVER_PYTHON
+RUN echo $PYSPARK_PYTHON
+RUN echo $PYSPARK_DRIVER_PYTHON
 RUN which jupyter
 RUN pip list | grep luna
 RUN python3 -c 'import luna'
 
 
-## entrypoint
-CMD jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount/notebooks
+## entrypoint # more flexibility
+CMD jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount
+#CMD jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount/notebooks
 
 
