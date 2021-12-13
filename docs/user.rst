@@ -40,13 +40,14 @@ The following notebook tutorials walk you through analysis workflows.
 .. toctree::
     :maxdepth: 1
 
-    tutorials/dataset-prep.ipynb
-    tutorials/tiling.ipynb
-    tutorials/model-training.ipynb
-    tutorials/inference-and-visualization.ipynb
-    tutorials/end-to-end-pipeline.ipynb
-    tutorials/dsa-tools.ipynb
-    tutorials/setup.ipynb
+    tutorials/1_dataset-prep.ipynb
+    tutorials/2_tiling.ipynb
+    tutorials/3_model-training.ipynb
+    tutorials/4_inference-and-visualization.ipynb
+    tutorials/5_end-to-end-pipeline.ipynb
+    tutorials/6_dsa-tools.ipynb
+    tutorials/7_dsa-annotation.ipynb
+    tutorials/8_teardown.ipynb
 
 Pathology Workflow
 ==================
