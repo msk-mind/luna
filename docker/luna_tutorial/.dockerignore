@@ -5,3 +5,6 @@
 */*.pil
 */*.npy
 */*.bmp
+assetstore
+db
+logs
