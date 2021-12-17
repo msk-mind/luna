@@ -4,22 +4,12 @@
 # - apply namespaced volume labels - https://docs.docker.com/compose/compose-file/compose-file-v3/#volume-configuration-reference
 # - make certain volumes external so "docker-compose down" does not remove them
 # - parameterize make exec container name
+# - set user in girder container to match host user
+# - label network explicitly (currently luna_tutorial_default)
+# prefix container names with user name
 ---
 version: '3'
 services:
-  traefik:
-    image: "traefik:v2.4"
-    container_name: "traefik"
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-    ports:
-      - "80:80" # HTTP port
-      - "8090:8080" # traefik UI
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
   girder:
     image: luna_tutorial_girder:v1.0.0
     build:
@@ -27,98 +17,19 @@ services:
       dockerfile: dockerfile_girder
       args:
         - user=${USER_NAME}
-    privileged: true
-    # Set USER_ID to your user id (e.g., `USER_ID=$(id -u):$(id -g)`)
-    # so that assetstores and logs are owned by yourself.
-    user: ${USER_NAME}
     restart: unless-stopped
-    # Set DSA_PORT to expose the interface on another port (default 8080).
     ports:
-      #- "${DSA_PORT:-8080}:8080"
       - "8080:8080"
-    environment:
-      - GIRDER_CONFIG=/conf/girder.local.conf
-    command: bash -c 'python /conf/girder_config.py && girder mount /fuse && girder serve'
     volumes:
-      # Default assetstore
-      - ${PWD}/vmount:/assetstore
-      # Location of girder.local.conf and girder_config.py
-      - .:/conf
-      # Location to store logs
-      - ${PWD}/vmount/logs:/logs
-      # Needed to use slicer_cli_web to run docker containers.  These really
-      # should be based on the DOCKER_* environment variables as well.
-      - ${DOCKER_PATH}:/usr/bin/docker:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-      # Needed to mount remote assetstores as if they were filesystems (i.e.,
-      # to work fully with S3)
-      - /etc/passwd:/etc/passwd:ro
-      # Add additional mounts here to get access to existing files on your
-      # system.  Also add them to the worker container to reduce copying.
-    ### modify REPLACE_WITH_HOST
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.girder.rule=Host(`REPLACE_WITH_HOST`)"
-      - "traefik.http.routers.girder.entrypoints=web"  
+      - ${PWD}/vmount/assetstore:/home/${USER_NAME}/vmount/assetstore
     depends_on:
       - mongodb
-      - memcached
-      - rabbitmq
   mongodb:
     image: "mongo:latest"
-    # Set USER_ID to your user id (e.g., `USER_ID=$(id -u):$(id -g)`)
-    # so that database files and logs are owned by yourself.
-    user: ${USER_ID}
     restart: unless-stopped
-    command: --nojournal --logpath /var/log/mongodb/mongodb.log
+    command: --nojournal
     volumes:
-      # Location to store database files
-      - ${PWD}/vmount/db:/data/db
-      - ${PWD}/vmount/logs:/var/log/mongodb
-    # Uncomment to allow access to the database from outside of the docker
-    # network.
-    # ports:
-    #  - "27017"
-  memcached:
-    image: "memcached:latest"
-    command: -m 4096
-    restart: unless-stopped
-    # Uncomment to allow access to memcached from outside of the docker network
-    # ports:
-    #   - "11211"
-  rabbitmq:
-    image: "rabbitmq:latest"
-    restart: unless-stopped
-    # Uncomment to allow access to rabbitmq from outside of the docker network
-    # ports:
-    #   - "5672"
-  worker:
-    image: luna_tutorial_worker:v1.0.0
-    build:
-      context: .
-      dockerfile: dockerfile_girder
-      args:
-      - user=${USER_NAME}
-    privileged: true
-    # Set USER_ID to your user id (e.g., `USER_ID=$(id -u):$(id -g)`)
-    # so that logs and tmp files are owned by yourself.
-    user: ${USER_ID}
-    restart: unless-stopped
-    command: |
-      bash -c "TEMP=${TEMP:-vmount/tmp} python -m girder_worker --concurrency=2 -Ofair --prefetch-multiplier=1 >>/logs/worker.log 2>&1"
-    volumes:
-      # Location to store logs
-      - ${PWD}/vmount/logs:/logs
-      # Needed to use slicer_cli_web to run docker containers
-      - ${DOCKER_PATH}:/usr/bin/docker:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-      # Needed to allow transferring data to slicer_cli_web docker containuers
-      #- ${TEMP:-vmount/tmp}:${TEMP:-~/vmount/tmp}
-      - ${PWD}/vmount/tmp:/home/${USER_NAME}/vmount/tmp:rw
-      # Assetstore to reduce copying
-      - ${PWD}/vmount:/assetstore
-    depends_on:
-      - rabbitmq
+      - ${PWD}/vmount/db:/${USER_NAME}/vmount/db
   luna_tutorial:
     image: luna_tutorial_main:v0.0.1
     build:
@@ -129,17 +40,16 @@ services:
         - GROUP_ID=${GROUP_ID}
         - USER_NAME=${USER_NAME}
         - GROUP_NAME=${GROUP_NAME}
-    privileged: true
     # Set USER_ID to your user id (e.g., `USER_ID=$(id -u):$(id -g)`)
     # so that logs and tmp files are owned by yourself.
     user: ${USER_ID}
     restart: unless-stopped
     ports:
-    - "8888:8888"
-    - "6006:6006"
+      - "8888:8888"
+      - "6006:6006"
     command: |
       bash -c "jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount >>~/vmount/logs/tutorial.log 2>&1"
     volumes:
-    - ${PWD}/vmount:/home/${USER_NAME}/vmount
+      - ${PWD}/vmount:/home/${USER_NAME}/vmount
     depends_on:
-    - worker
+      - girder
