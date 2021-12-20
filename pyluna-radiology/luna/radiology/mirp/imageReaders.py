@@ -1,6 +1,6 @@
 
-from data_processing.radiology.mirp.imageClass import ImageClass
-from data_processing.radiology.mirp.roiClass import RoiClass
+from luna.radiology.mirp.imageClass import ImageClass
+from luna.radiology.mirp.roiClass import RoiClass
 import SimpleITK as sitk
 import numpy as np
 

@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from pydicom import FileDataset, Sequence, Dataset
 
-from data_processing.radiology.mirp.utilities import get_version
+from luna.radiology.mirp.utilities import get_version
 
 # Monolithic classes.....
 class ImageClass:

@@ -9,9 +9,9 @@ import numpy as np
 import pandas as pd
 from pydicom import FileDataset
 
-from data_processing.radiology.mirp.imageClass   import ImageClass
-from data_processing.radiology.mirp.imageProcess import gaussian_preprocess_filter
-from data_processing.radiology.mirp.imageProcess import interpolate_to_new_grid
+from luna.radiology.mirp.imageClass   import ImageClass
+from luna.radiology.mirp.imageProcess import gaussian_preprocess_filter
+from luna.radiology.mirp.imageProcess import interpolate_to_new_grid
 
 from scipy.stats       import mstats
 from scipy.ndimage import binary_dilation
