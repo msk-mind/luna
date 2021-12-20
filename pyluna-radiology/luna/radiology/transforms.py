@@ -20,6 +20,7 @@ from luna.radiology.mirp.imageProcess          import combine_all_rois, combine_
 
 class MatchRadiologyLabelFile:
     logger = logging.getLogger(__qualname__)
+
     def __init__(self):
         pass
     def __call__(self, tree_folder, input_label_data):
@@ -42,6 +43,7 @@ class MatchRadiologyLabelFile:
 
 class DicomToITK:
     logger = logging.getLogger(__qualname__)
+
     def __init__(self, itk_image_type, ctype='signed short'):
         self.itk_image_type = itk_image_type
         self.ctype = ctype
@@ -111,6 +113,8 @@ class DicomToITK:
         return properties
 
 class LesionRadiomicsExtractor:
+    logger = logging.getLogger(__qualname__)
+
     def __init__(self, lesion_indicies, enable_all_filters=False, check_geometry_strict=True, **kwargs):
         self.lesion_indicies = lesion_indicies
         self.enable_all_filters = enable_all_filters
@@ -163,6 +167,8 @@ class LesionRadiomicsExtractor:
 
             extractor = featureextractor.RadiomicsFeatureExtractor(label=lesion_index, **self.kwargs)
 
+            if self.enable_all_filters: extractor.enableAllImageTypes()
+
             for label_path in label_path_list:
 
                 result = extractor.execute(input_image_data, label_path)
@@ -175,7 +181,7 @@ class LesionRadiomicsExtractor:
 
         output_filename = os.path.join(output_dir, "radiomics.csv")
 
-        df_result.T.to_csv(output_filename, index=False)
+        df_result.T.astype(float, errors='ignore').to_csv(output_filename, index=False)
 
         properties = {
             'data' : output_filename,
@@ -185,6 +191,8 @@ class LesionRadiomicsExtractor:
         return properties
         
 class WindowVolume:
+    logger = logging.getLogger(__qualname__)
+
     def __init__(self, low_level, high_level):
         self.low_level = low_level
         self.high_level = high_level
@@ -211,6 +219,8 @@ class WindowVolume:
         return properties
 
 class MirpProcessor:
+    logger = logging.getLogger(__qualname__)
+
     def __init__(self, resample_pixel_spacing, resample_beta):
         self.resample_pixel_spacing = resample_pixel_spacing
         self.resample_beta = resample_beta

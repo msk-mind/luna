@@ -104,7 +104,6 @@ class TextureAnalysis:
 
             if not texture_values is None:
                 features.append(texture_values)
-                break
             
         features = np.concatenate(features).flatten()
 
