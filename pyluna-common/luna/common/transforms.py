@@ -14,7 +14,7 @@ class SaveParquet:
         df = pd.read_csv(input_data)
 
         for col in df.columns:
-            df[col] = df[col].astype(float, errors='ignore')
+            df[col] = df[col].astype(np, errors='ignore')
         
         df['segment_id'] = segment_id
         df = df.set_index('segment_id')
