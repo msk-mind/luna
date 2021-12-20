@@ -245,7 +245,7 @@ class ImageClass:
 
     def interpolate(self, by_slice, settings):
         """Performs interpolation of the image volume"""
-        from data_processing.radiology.mirp.imageProcess import interpolate_to_new_grid, gaussian_preprocess_filter # aauker: Circular import
+        from luna.radiology.mirp.imageProcess import interpolate_to_new_grid, gaussian_preprocess_filter # aauker: Circular import
 
         # Skip for missing images
         if self.is_missing:
@@ -564,7 +564,7 @@ class ImageClass:
             return
 
         import scipy.ndimage as ndi
-        from data_processing.radiology.mirp.featureSets.volumeMorphology import get_rotation_matrix
+        from luna.radiology.mirp.featureSets.volumeMorphology import get_rotation_matrix
 
         # Find actual output size of x-y plane
         new_z_dim = np.asmatrix([self.size[0], 0.0, 0.0]) * get_rotation_matrix(np.radians(angle), dim=3, rot_axis=0)
@@ -595,7 +595,7 @@ class ImageClass:
     def crop(self, ind_ext_z=None, ind_ext_y=None, ind_ext_x=None,
              xy_only=False, z_only=False):
         """"Crop image to the provided map extent."""
-        from data_processing.radiology.mirp.utilities import world_to_index
+        from luna.radiology.mirp.utilities import world_to_index
 
         # Skip for missing images
         if self.is_missing:
