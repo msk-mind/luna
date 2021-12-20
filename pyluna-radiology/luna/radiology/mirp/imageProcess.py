@@ -1,6 +1,6 @@
 import logging
 
-from luna.radiology.mirp.imageClass import ImageClass
+from data_processing.radiology.mirp.imageClass import ImageClass
 
 from skimage.segmentation import slic
 from scipy.ndimage import binary_dilation, binary_erosion

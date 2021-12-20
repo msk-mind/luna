@@ -2,8 +2,8 @@ import logging
 
 import numpy as np
 
-from luna.radiology.mirp.imageProcess import crop_image, get_supervoxels, get_supervoxel_overlap
-from luna.radiology.mirp.utilities import extract_roi_names
+from data_processing.radiology.mirp.imageProcess import crop_image, get_supervoxels, get_supervoxel_overlap
+from data_processing.radiology.mirp.utilities import extract_roi_names
 
 
 def rotate_image(img_obj, settings=None, rot_angle=None, roi_list=None):
@@ -41,7 +41,7 @@ def randomise_roi_contours(img_obj, roi_list, settings):
     if not settings.vol_adapt.randomise_roi:
         return roi_list
 
-    from luna.radiology.mirp.utilities import world_to_index
+    from data_processing.radiology.mirp.utilities import world_to_index
     from scipy.ndimage  import binary_closing
 
     new_roi_list = []

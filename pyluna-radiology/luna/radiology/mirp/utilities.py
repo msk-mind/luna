@@ -86,7 +86,7 @@ def get_most_common_element(input_list):
 
 
 def get_version():
-    with open(os.path.join("../../..", 'VERSION.txt')) as version_file:
+    with open(os.path.join("..", 'VERSION.txt')) as version_file:
         version = version_file.read().strip()
 
     return version
