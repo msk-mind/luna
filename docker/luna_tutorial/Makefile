@@ -9,6 +9,7 @@ GROUP_ID=$(shell id -g)
 CURRENT_UID=$(USER):$(GID)
 HOST_IP=127.0.0.1
 HOST_PORT=8888
+DOCKER_PATH=$(shell which docker)
 
 .PHONY: all help build clean test run
 .DEFAULT_GOAL := help
@@ -43,20 +44,30 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
+
 clean:      ## cleanup luna-tutorial images and containers
 	docker rmi $$(docker images *luna-tutorial* -q)
 	docker rmi $$(docker container ls -f "name=luna-tutorial" -q)
 
+
 clean-image:  ## remove luna tutorial image
-	docker rmi -f $(IMAGE)
+	docker rmi -f $$(docker images *luna-tutorial* -q)
 
-build:      ## build luna tutorial docker image
-	DOCKER_BUILDKIT=0 time docker build --build-arg USER_ID=$(USER_ID) --build-arg GROUP_ID=$(GROUP_ID) --build-arg USER_NAME=$(USER_NAME) --build-arg GROUP_NAME=$(GROUP_NAME) -t $(IMAGE) .
 
-run:       ## run the luna-tutorial container. Default IP:PORT=127.0.0.1:8888. Optionally specify args HOST_IP=xxx.xxx.xxx.xxx HOST_PORT=xxxx.
-	docker run -it --name $(CONTAINER) -v $(PWD)/vmount:/home/$(USER_NAME)/vmount:rw -p $(HOST_IP):$(HOST_PORT):8888/tcp -p $(HOST_IP):6006:6006/tcp  $(IMAGE)
-	docker rm $(CONTAINER)
+build:        ## build containers
+	mkdir -p vmount/logs vmount/db vmount/tmp
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) HOST_IP=$(HOST_IP) HOST_PORT=$(HOST_PORT) docker-compose --verbose build
 
-exec:      ## enter the luna-tutorial container
-	docker exec -it $(CONTAINER) /bin/bash
+
+run:        ## launch containers. Default IP:PORT=127.0.0.1:8888. Optionally specify args HOST_IP=xxx.xxx.xxx.xxx HOST_PORT=xxxx.
+	mkdir -p vmount/logs vmount/db vmount/tmp
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) HOST_IP=$(HOST_IP) HOST_PORT=$(HOST_PORT) docker-compose --log-level INFO --verbose up -d
+
+
+stop:       ## terminate containers but keep volumes
+	docker-compose down
+
+
+exec:       ## launches terminal prompt inside luna_tutorial container
+	docker exec -it luna_tutorial_luna_tutorial_1 /bin/bash
 

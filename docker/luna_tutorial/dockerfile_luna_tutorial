@@ -59,7 +59,7 @@ RUN python3 -c 'import luna'
 
 
 ## entrypoint # more flexibility
-CMD jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount
+#CMD jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount
 #CMD jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount/notebooks
 
 
