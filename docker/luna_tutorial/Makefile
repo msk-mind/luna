@@ -45,13 +45,13 @@ help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 
-clean:      ## cleanup luna-tutorial images and containers
-	docker rmi $$(docker images *luna-tutorial* -q)
-	docker rmi $$(docker container ls -f "name=luna-tutorial" -q)
+clean:      ## cleanup luna_tutorial images and containers
+	docker rmi $$(docker images luna* -q)
+	docker rmi $$(docker container ls -f "name=luna*" -q)
 
 
 clean-image:  ## remove luna tutorial image
-	docker rmi -f $$(docker images *luna-tutorial* -q)
+	docker rmi -f $$(docker images luna* -q)
 
 
 build:        ## build containers

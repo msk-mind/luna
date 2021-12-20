@@ -2,7 +2,7 @@
 PROJECT: PRO_12-123
 
 # name of the DSA collection 
-COLLECTION_NAME: pathology-tutorial
+COLLECTION_NAME: TCGA collection
 
 # source name of input data file
 SOURCE: DSA 
