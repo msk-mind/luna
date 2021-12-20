@@ -181,7 +181,7 @@ class LesionRadiomicsExtractor:
 
         output_filename = os.path.join(output_dir, "radiomics.csv")
 
-        df_result.T.astype(float, errors='ignore').to_csv(output_filename, index=False)
+        df_result.T.to_csv(output_filename, index=False)
 
         properties = {
             'data' : output_filename,
