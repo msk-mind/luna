@@ -11,17 +11,21 @@
 version: '3'
 services:
   girder:
-    image: luna_tutorial_girder:v1.0.0
+    image: luna_tutorial_girder:v0.0.1
     build:
       context: .
       dockerfile: dockerfile_girder
       args:
-        - user=${USER_NAME}
+        - USER_ID=${USER_ID}
+        - GROUP_ID=${GROUP_ID}
+        - USER_NAME=${USER_NAME}
+        - GROUP_NAME=${GROUP_NAME}
     restart: unless-stopped
     ports:
       - "8080:8080"
     volumes:
-      - ${PWD}/vmount/assetstore:/home/${USER_NAME}/vmount/assetstore
+      - ${PWD}/vmount/assetstore:/assetstore 
+      - ${PWD}/vmount:/home/${USER_NAME}/vmount
     depends_on:
       - mongodb
   mongodb:
@@ -29,7 +33,7 @@ services:
     restart: unless-stopped
     command: --nojournal
     volumes:
-      - ${PWD}/vmount/db:/${USER_NAME}/vmount/db
+      - ${PWD}/vmount/db:/db
   luna_tutorial:
     image: luna_tutorial_main:v0.0.1
     build:
@@ -51,5 +55,4 @@ services:
       bash -c "jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount >>~/vmount/logs/tutorial.log 2>&1"
     volumes:
       - ${PWD}/vmount:/home/${USER_NAME}/vmount
-    depends_on:
-      - girder
+

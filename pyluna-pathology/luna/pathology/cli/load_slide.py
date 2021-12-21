@@ -72,7 +72,7 @@ def load_slide_with_datastore(app_config, datastore_id, method_data):
             # assumes if patient_id column, source is parquet from dremio
             # right now has nested row-type into dict, todo: account for map type representation of dict in dremio
             df = spark.read.parquet(method_data['table_path'])\
-                .where(f"UPPER(slide_id)='{slide_id}'")\
+                .where(f"slide_id='{slide_id}'")\
                 .select("path", "metadata", patient_id_column)\
                 .toPandas()
 
@@ -85,7 +85,7 @@ def load_slide_with_datastore(app_config, datastore_id, method_data):
             properties['patient_id'] = str(record[patient_id_column])
         else:
             df = spark.read.format("delta").load(method_data['table_path'])\
-                .where(f"UPPER(slide_id)='{slide_id}'")\
+                .where(f"slide_id='{slide_id}'")\
                 .select("path", "metadata")\
                 .toPandas()
 
