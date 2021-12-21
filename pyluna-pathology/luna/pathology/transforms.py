@@ -46,7 +46,7 @@ class GenerateMaskImage:
 
         mask_arr = convert_xml_to_mask(roi_path, wsi_shape, self.annotation_name)
 
-        openslide.ImageSlide(Image.fromarray(255 * mask_arr)).get_thumbnail((1000, 1000)).save(f"{output_dir}/mask_thumbnail.png")
+#        openslide.ImageSlide(Image.fromarray(255 * mask_arr)).get_thumbnail((1000, 1000)).save(f"{output_dir}/mask_thumbnail.png")
 
         tifffile.imsave(f"{output_dir}/mask_full_res.tif", mask_arr, compress=5)
 
