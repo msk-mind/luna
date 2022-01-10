@@ -1,5 +1,4 @@
-# General imports
-import os, json, logging, yaml
+import os, logging
 import click
 
 from luna.common.custom_logger   import init_logger
@@ -17,33 +16,21 @@ _params_ = [('input_data', str), ('output_dir', str), ('low_level', float), ('hi
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-ll', '--low_level', required=False,
-              help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
+              help="lower bound of window")
 @click.option('-hl', '--high_level', required=False,
-              help="torch hub transform name")   
+              help="upper bound of window")   
 @click.option('-m', '--method_param_path', required=False,
               help='json file with method parameters for tile generation and filtering')
 def cli(**cli_kwargs):
     """
-    Run with explicit arguments:
+    Applies a window function to an input volume
 
     \b
-        infer_tiles
-            -i 1412934/data/TileImages
-            -o 1412934/data/TilePredictions
-            -rn msk-mind/luna-ml:main 
-            -tn tissue_tile_net_transform 
-            -mn tissue_tile_net_model_5_class
-            -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
-
-    Run with implicit arguments:
-
-    \b
-        infer_tiles -m 1412934/data/TilePredictions/metadata.json
-    
-    Run with mixed arguments (CLI args override yaml/json arguments):
-
-    \b
-        infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
+        window_volume
+            -i volume_ct.nii
+            -ll 0
+            -hl 250
+            -o ./windowed_volume/
     """
     cli_runner(cli_kwargs, _params_, window_volume)
 

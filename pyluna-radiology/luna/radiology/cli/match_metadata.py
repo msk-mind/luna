@@ -1,8 +1,4 @@
-
-
-
-# General imports
-import os, json, logging
+import logging
 import click
 
 from luna.common.custom_logger   import init_logger
@@ -26,26 +22,15 @@ _params_ = [('input_image_data', str), ('input_label_data', str), ('output_dir',
               help='json file with method parameters for tile generation and filtering')
 def cli(**cli_kwargs):
     """
-    Run with explicit arguments:
+    Resamples and co-registeres two input volumes to occupy the same physical coordinates
 
     \b
-        infer_tiles
-            -i 1412934/data/TileImages
-            -o 1412934/data/TilePredictions
-            -rn msk-mind/luna-ml:main 
-            -tn tissue_tile_net_transform 
-            -mn tissue_tile_net_model_5_class
-            -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
-
-    Run with implicit arguments:
-
-    \b
-        infer_tiles -m 1412934/data/TilePredictions/metadata.json
-    
-    Run with mixed arguments (CLI args override yaml/json arguments):
-
-    \b
-        infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
+        coregister_volumes
+            -i1 volume_ct.nii
+            -i2 volume_pet.nii
+            -rps 1.5
+            -o ./registered/
+            -save_npy
     """
     cli_runner(cli_kwargs, _params_, match_metadata )
 

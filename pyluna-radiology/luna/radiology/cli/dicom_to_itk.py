@@ -1,4 +1,3 @@
-# General imports
 import os, logging
 import click
 
@@ -13,37 +12,24 @@ _params_ = [('input_data', str), ('output_dir', str), ('itk_image_type', str), (
 
 @click.command()
 @click.option('-i', '--input_data', required=False,
-              help='path to input data')
+              help='path to input data (dicom directory_')
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-it', '--itk_image_type', required=False,
-              help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
+              help="desired ITK image extention")
 @click.option('-ct', '--itk_c_type', required=False,
-              help="torch hub transform name")   
+              help="desired C datatype (float, unsigned short)")   
 @click.option('-m', '--method_param_path', required=False,
               help='json file with method parameters for tile generation and filtering')
 def cli(**cli_kwargs):
     """
-    Run with explicit arguments:
+    Generates a ITK compatible image from a dicom series
 
     \b
-        infer_tiles
-            -i 1412934/data/TileImages
-            -o 1412934/data/TilePredictions
-            -rn msk-mind/luna-ml:main 
-            -tn tissue_tile_net_transform 
-            -mn tissue_tile_net_model_5_class
-            -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
-
-    Run with implicit arguments:
-
-    \b
-        infer_tiles -m 1412934/data/TilePredictions/metadata.json
-    
-    Run with mixed arguments (CLI args override yaml/json arguments):
-
-    \b
-        infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
+        dicom_to_itk
+            -i 10000/2/DICOM/
+            -it nrrd
+            -ct 'unsigned short'
     """
     cli_runner(cli_kwargs, _params_, dicom_to_itk)
 

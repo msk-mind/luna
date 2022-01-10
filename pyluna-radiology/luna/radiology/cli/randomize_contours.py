@@ -1,5 +1,4 @@
-# General imports
-import os, json, logging, yaml
+import os, logging
 import click
 
 from luna.common.custom_logger   import init_logger
@@ -26,26 +25,15 @@ _params_ = [('input_image_data', str), ('input_label_data', str), ('resample_pix
               help='json file with method parameters for tile generation and filtering')
 def cli(**cli_kwargs):
     """
-    Run with explicit arguments:
+    RRandomize contours given and image, label to and output_dir using MIRP processing library
 
     \b
-        infer_tiles
-            -i 1412934/data/TileImages
-            -o 1412934/data/TilePredictions
-            -rn msk-mind/luna-ml:main 
-            -tn tissue_tile_net_transform 
-            -mn tissue_tile_net_model_5_class
-            -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
-
-    Run with implicit arguments:
-
-    \b
-        infer_tiles -m 1412934/data/TilePredictions/metadata.json
-    
-    Run with mixed arguments (CLI args override yaml/json arguments):
-
-    \b
-        infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
+        coregister_volumes
+            -ii volume_ct.nii
+            -il labels.nii
+            -rps 1.5
+            -rsb 0.9
+            -o ./mirp_results/
     """
     cli_runner(cli_kwargs, _params_, randomize_contours )
 

@@ -39,6 +39,7 @@ _params = [('input_data', str), ('output_dir', str), ('repo_name', str), ('trans
               help='json file with method parameters for tile generation and filtering')
 def cli(**cli_kwargs):
     """
+
     Run with explicit arguments:
 
     \b

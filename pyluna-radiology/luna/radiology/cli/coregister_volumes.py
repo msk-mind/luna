@@ -1,4 +1,4 @@
-import os, json, logging, yaml
+import logging
 import click
 
 from luna.common.custom_logger   import init_logger
@@ -12,39 +12,28 @@ _params_ = [('input_image_1', str), ('input_image_2', str), ('output_dir', str),
 
 @click.command()
 @click.option('-i1', '--input_image_1', required=False,
-              help='path to input data')
+              help='path to input ITK image (reference)')
 @click.option('-i2', '--input_image_2', required=False,
-              help='path to output directory to save results')
+              help='path to input ITK image (reference)')
 @click.option('-npy', '--save_npy', required=False, is_flag=True,
-              help='path to output directory to save results')
+              help='whether to additionally save the volumes as numpy files')
 @click.option('-rps', '--resample_pixel_spacing', required=False,
-              help='path to input label data')
+              help='isotropic voxel size (in mm)')
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-m', '--method_param_path', required=False,
               help='json file with method parameters for tile generation and filtering')
 def cli(**cli_kwargs):
     """
-    Run with explicit arguments:
+    Resamples and co-registeres two input volumes to occupy the same physical coordinates
 
     \b
-        infer_tiles
-            -i 1412934/data/TileImages
-            -o 1412934/data/TilePredictions
-            -rn msk-mind/luna-ml:main 
-            -tn tissue_tile_net_transform 
-            -mn tissue_tile_net_model_5_class
-            -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
-
-    Run with implicit arguments:
-
-    \b
-        infer_tiles -m 1412934/data/TilePredictions/metadata.json
-    
-    Run with mixed arguments (CLI args override yaml/json arguments):
-
-    \b
-        infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
+        coregister_volumes
+            -i1 volume_ct.nii
+            -i2 volume_pet.nii
+            -rps 1.5
+            -o ./registered/
+            -save_npy
     """
     cli_runner(cli_kwargs, _params_, coregister_volumes)
 

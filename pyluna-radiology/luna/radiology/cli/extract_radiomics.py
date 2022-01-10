@@ -1,11 +1,10 @@
-# General imports
 import os, json, logging
 import click
 
 from luna.common.custom_logger   import init_logger
 
 init_logger()
-logger = logging.getLogger('window_volume')
+logger = logging.getLogger('extract_radiomics')
 
 from luna.common.utils import cli_runner
 
@@ -18,39 +17,29 @@ _params_ = [('input_image_data', str), ('input_label_data', str), ('lesion_indic
 @click.option('-il', '--input_label_data', required=False,
               help='path to input label data')
 @click.option('-idx', '--lesion_indicies', required=False,
-              help='path to input label data')
+              help='lesion labels given as a comma-separated list')
 @click.option('-rcfg', '--pyradiomics_config', required=False,
-              help='path to input label data')
+              help='radiomic feature extractor parameters in json format')
 @click.option('--check_geometry_strict', is_flag=True,
-              help='')
+              help='enfource strictly matching geometries')
 @click.option('--enable_all_filters', is_flag=True,
-              help='')
+              help='enable all image filters automatically')
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-m', '--method_param_path', required=False,
               help='json file with method parameters for tile generation and filtering')
 def cli(**cli_kwargs):
     """
-    Run with explicit arguments:
+    Extract radiomics given and image, label to and output_dir, parameterized by params
 
     \b
-        infer_tiles
-            -i 1412934/data/TileImages
-            -o 1412934/data/TilePredictions
-            -rn msk-mind/luna-ml:main 
-            -tn tissue_tile_net_transform 
-            -mn tissue_tile_net_model_5_class
-            -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
-
-    Run with implicit arguments:
-
-    \b
-        infer_tiles -m 1412934/data/TilePredictions/metadata.json
-    
-    Run with mixed arguments (CLI args override yaml/json arguments):
-
-    \b
-        infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
+        extract_radiomics
+            -ii volume_ct.nii
+            -il labels.nii
+            -idx 1,2,3
+            -rcfg '{"interpolator": "sitkBSpline","resampledPixelSpacing":[2.5,2.5,2.5]}'
+            --enable_all_filters
+			-o ./radiomics_result/
     """
     cli_runner(cli_kwargs, _params_, extract_radiomics_multiple_labels )
 
