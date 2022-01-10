@@ -1,7 +1,6 @@
 from filehash import FileHash
 from io import BytesIO
-import os, json
-
+import os, json, yaml
 import logging
 logger = logging.getLogger(__name__)
 
@@ -126,17 +125,17 @@ def replace_token(token, token_replacement, value):
 
 
 def get_method_data(cohort_id, method_id):
-    """
-    Return method dict
+	"""
+	Return method dict
 
-    :param: cohort_id: string
-    :param: method_id: string
-    """
+	:param: cohort_id: string
+	:param: method_id: string
+	"""
 
-    method_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", cohort_id, "methods")
-    with open(os.path.join(method_dir, f'{method_id}.json')) as json_file:
-        method_config = json.load(json_file)['params']
-    return method_config
+	method_dir = os.path.join(os.environ['MIND_GPFS_DIR'], "data", cohort_id, "methods")
+	with open(os.path.join(method_dir, f'{method_id}.json')) as json_file:
+		method_config = json.load(json_file)['params']
+	return method_config
 
 def get_absolute_path(module_path, relative_path):
 	""" Given the path to a module file and the path, relative to the module file, of another file
@@ -157,16 +156,66 @@ def get_absolute_path(module_path, relative_path):
 	return os.path.realpath(path)
 
 def validate_params(given_params, params_list):
-    logger = logging.getLogger(__name__)
+	logger = logging.getLogger(__name__)
 
-    d_params = {}
-    for name, type in params_list:
-        if given_params.get(name, None) == None: 
-            raise RuntimeError(f"Param {name} of type {type} was never set, but required by transform, please check your input variables.")
-        try:
-            d_params[name] = type(given_params[name])
-        except ValueError:
-            raise RuntimeError(f"Param {name} could not be cast to {type}")
-        logger.info (f"Param {name} set = {d_params[name]}")
-    return d_params
+	d_params = {}
+	for name, dtype in params_list:
+		if given_params.get(name, None) == None: 
+			raise RuntimeError(f"Param {name} of type {type} was never set, but required by transform, please check your input variables.")
+		try:
+			if 'List' in str(dtype):
+				if type (given_params[name])==list:
+					d_params[name] = given_params[name]
+				else:
+					d_params[name] = [dtype.__args__[0](s) for s in given_params[name].split(',')]
+			elif dtype==dict:
+				if type (given_params[name])==dict:
+					d_params[name] = given_params[name]
+				else:
+					d_params[name] = {s.split('=')[0] : s.split('=')[1] for s in given_params[name].split(',')}
+			elif dtype==json:
+				if type (given_params[name])==dict:
+					d_params[name] = given_params[name]
+				else:
+					d_params[name] = json.loads(given_params[name])
+			elif type(dtype)==type:
+				d_params[name] = dtype(given_params[name])
+			else:
+				raise RuntimeError(f"Type {type(dtype)} invalid!")
+		except ValueError:
+			raise RuntimeError(f"Param {name} could not be cast to {dtype}")
+		except RuntimeError as e:
+			raise e
+		logger.info (f"Param {name} set = {d_params[name]}")
+	return d_params
 
+def cli_runner(cli_kwargs, cli_params, cli_function):
+	logger.info ("Running {cli_function} with {cli_kwargs}")
+	kwargs = {}
+	if not 'output_dir' in cli_kwargs.keys():
+		raise RuntimeError("CLI Runners assume an output directory")
+
+	# Get params from param file
+	if cli_kwargs.get('method_param_path'):
+		with open(cli_kwargs.get('method_param_path'), 'r') as yaml_file:
+			yaml_kwargs = yaml.safe_load(yaml_file)
+		kwargs.update(yaml_kwargs) # Fill from json
+	
+	for key in list(cli_kwargs.keys()):
+		if cli_kwargs[key] is None: del cli_kwargs[key]
+
+	# Override with CLI arguments
+	kwargs.update(cli_kwargs) # 
+
+	print (kwargs)
+	# Validate them
+	kwargs = validate_params(kwargs, cli_params)
+
+	result = cli_function(**kwargs)
+
+	kwargs.update(result)
+
+	output_dir = kwargs['output_dir']
+
+	with open(os.path.join(output_dir, "metadata.json"), "w") as fp:
+		json.dump(kwargs, fp, indent=4, sort_keys=True)

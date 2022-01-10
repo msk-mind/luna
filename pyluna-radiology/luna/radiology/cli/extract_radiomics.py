@@ -1,83 +1,133 @@
-'''
-Created: January 2021
-@author: aukermaa@mskcc.org
-
-Given a scan (container) ID
-1. resolve the path to a volumentric image and annotation (label) files
-2. extract radiomics features into a vector (csv)
-3. store results on HDFS and add metadata to the graph
-
-'''
-
 # General imports
 import os, json, logging
 import click
 
-# From common
 from luna.common.custom_logger   import init_logger
-from luna.common.DataStore       import DataStore
-from luna.common.Node            import Node
-from luna.common.config          import ConfigSet
 
-# From radiology.common
-from luna.radiology.common.preprocess   import extract_radiomics
+init_logger()
+logger = logging.getLogger('window_volume')
 
-cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
+from luna.common.utils import cli_runner
+
+from typing import List
+_params_ = [('input_image_data', str), ('input_label_data', str), ('lesion_indicies', List[int]), ('output_dir', str), ('pyradiomics_config', json), ('check_geometry_strict', bool), ('enable_all_filters', bool)]
 
 @click.command()
-@click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--datastore_id', required=True)
-@click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, datastore_id, method_param_path):
-    init_logger()
-
-    with open(method_param_path) as json_file:
-        method_data = json.load(json_file)
-    extract_radiomics_with_container(cohort_id, datastore_id, method_data)
-
-def extract_radiomics_with_container(cohort_id, container_id, method_data, semaphore=0):
+@click.option('-ii', '--input_image_data', required=False,
+              help='path to input image data')
+@click.option('-il', '--input_label_data', required=False,
+              help='path to input label data')
+@click.option('-idx', '--lesion_indicies', required=False,
+              help='path to input label data')
+@click.option('-rcfg', '--pyradiomics_config', required=False,
+              help='path to input label data')
+@click.option('--check_geometry_strict', is_flag=True,
+              help='')
+@click.option('--enable_all_filters', is_flag=True,
+              help='')
+@click.option('-o', '--output_dir', required=False,
+              help='path to output directory to save results')
+@click.option('-m', '--method_param_path', required=False,
+              help='json file with method parameters for tile generation and filtering')
+def cli(**cli_kwargs):
     """
-    Using the container API interface, extract radiomics for a given scan container
+    Run with explicit arguments:
+
+    \b
+        infer_tiles
+            -i 1412934/data/TileImages
+            -o 1412934/data/TilePredictions
+            -rn msk-mind/luna-ml:main 
+            -tn tissue_tile_net_transform 
+            -mn tissue_tile_net_model_5_class
+            -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
+
+    Run with implicit arguments:
+
+    \b
+        infer_tiles -m 1412934/data/TilePredictions/metadata.json
+    
+    Run with mixed arguments (CLI args override yaml/json arguments):
+
+    \b
+        infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
     """
-    logger = logging.getLogger(f"[datastore={container_id}]")
+    cli_runner(cli_kwargs, _params_, extract_radiomics_multiple_labels )
 
-    # Do some setup
-    datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
-    method_id   = method_data.get("job_tag", "none")
 
-    try:
-        image_node  = datastore.get("VolumetricImage",    method_data['image_input_tag'])
+import medpy.io 
+from pathlib import Path
+import numpy as np
+import pandas as pd
+from radiomics import featureextractor  # This module is used for interaction with pyradiomics
 
-        if method_data.get("usingPertubations", False):
-            label_node  = datastore.get("VolumetricLabelSet", method_data['label_input_tag'])
-        else: 
-            label_node  = datastore.get("VolumetricLabel", method_data['label_input_tag'])
+def extract_radiomics_multiple_labels(input_image_data, input_label_data, lesion_indicies, pyradiomics_config, check_geometry_strict, enable_all_filters, output_dir):
+        """
+        Extract radiomics given and image, label to and output_dir, parameterized by params
 
-        if image_node is None: raise ValueError("Image node not found")
-        if label_node is None: raise ValueError("Label node not found")
+        :param image_path: filepath to image
+        :param label_path: filepath to 3d segmentation(s) as single path or list
+        :param output_dir: destination directory
+        :param params {
+            radiomicsFeatureExtractor dict: configuration for the RadiomicsFeatureExtractor
+            enableAllImageTypes bool: flag to enable all image types
+        }
+
+        :return: property dict, None if function fails
+        """
+        os.makedirs(output_dir, exist_ok=True)
         
-        # Data just goes under namespace/name
-        # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], method_data.get("env", "data"),
-                                  datastore._namespace_id, datastore._name, method_id)
-        if not os.path.exists(output_dir): os.makedirs(output_dir)
+        image, image_header = medpy.io.load(input_image_data)
 
-        properties = extract_radiomics(
-            image_path = image_node.data,
-            label_path = label_node.data,
-            output_dir = output_dir,
-            params     = method_data
-        )
-    except Exception as e:
-        logger.exception (f"{e}, stopping job execution...")
-        raise e
-    else:
-        if properties:
-            output_node = Node("Radiomics", method_id, properties)
-            datastore.put(output_node)
+        if   Path(input_label_data).is_dir():  label_path_list = [str(path) for path in Path(input_label_data).glob("*")]
+        elif Path(input_label_data).is_file(): label_path_list = [input_label_data]
+        else: raise RuntimeError("Issue with detecting label format")
+
+        available_labels = set()
+        for label_path in label_path_list:
+            label, label_header = medpy.io.load(label_path)
+
+            available_labels.update
+
+            available_labels.update(np.unique(label))
+
+            logger.info(f"Checking {label_path}")
+
+            if check_geometry_strict and not image_header.get_voxel_spacing() == label_header.get_voxel_spacing(): 
+                raise RuntimeError(f"Voxel spacing mismatch, image.spacing={image_header.get_voxel_spacing()}, label.spacing={label_header.get_voxel_spacing()}" )
             
-    finally:
-        return semaphore + 1   
+            if not image.shape == label.shape:
+                raise RuntimeError(f"Shape mismatch: image.shape={image.shape}, label.shape={label.shape}")
+
+        df_result = pd.DataFrame()
+
+        for lesion_index in available_labels.intersection(lesion_indicies):
+
+            extractor = featureextractor.RadiomicsFeatureExtractor(label=lesion_index, **pyradiomics_config)
+
+            if enable_all_filters: extractor.enableAllImageTypes()
+
+            for label_path in label_path_list:
+
+                result = extractor.execute(input_image_data, label_path)
+
+                result['lesion_index'] = lesion_index 
+
+                df_result = pd.concat([df_result, pd.Series(result).to_frame()], axis=1)
+
+        output_filename = os.path.join(output_dir, "radiomics.csv")
+
+        df_result.T.to_csv(output_filename, index=False)
+
+        logger.info(df_result.T)
+
+        properties = {
+            'data' : output_filename,
+            'lesion_indicies': lesion_indicies,
+        }
+
+        return properties
+
 
 if __name__ == "__main__":
     cli()

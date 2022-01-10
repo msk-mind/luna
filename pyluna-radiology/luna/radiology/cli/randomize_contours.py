@@ -1,86 +1,129 @@
-'''
-Created: February 2021
-@author: aukermaa@mskcc.org
-
-Given a scan (container) ID
-1. resolve the path to a volumentric image and annotation (label) files
-2. resample image and segmentation, and save voxels as a 3d numpy array (.npy)
-3. store results on HDFS and add metadata to the graph
-
-'''
-
 # General imports
-import os, json, logging
+import os, json, logging, yaml
 import click
 
-# From common
 from luna.common.custom_logger   import init_logger
-from luna.common.DataStore       import DataStore
-from luna.common.Node            import Node
-from luna.common.config          import ConfigSet
 
-# From radiology.common
-from luna.radiology.common.preprocess   import randomize_contours
+init_logger()
+logger = logging.getLogger('window_volume')
 
-cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
+from luna.common.utils import cli_runner
+
+_params_ = [('input_image_data', str), ('input_label_data', str), ('resample_pixel_spacing', float), ('resample_smoothing_beta', float), ('output_dir', str)]
 
 @click.command()
-@click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--datastore_id', required=True)
-@click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, datastore_id, method_param_path):
-    init_logger()
-
-    with open(method_param_path) as json_file:
-        method_data = json.load(json_file)
-    randomize_contours_with_container(cohort_id, datastore_id, method_data)
-
-def randomize_contours_with_container(cohort_id: str, container_id: str, method_data: dict, semaphore=0):
+@click.option('-ii', '--input_image_data', required=False,
+              help='path to input image data')
+@click.option('-il', '--input_label_data', required=False,
+              help='path to input label data')
+@click.option('-rps', '--resample_pixel_spacing', required=False,
+              help='path to input label data')
+@click.option('-rsb', '--resample_smoothing_beta', required=False,
+              help='path to input label data')
+@click.option('-o', '--output_dir', required=False,
+              help='path to output directory to save results')
+@click.option('-m', '--method_param_path', required=False,
+              help='json file with method parameters for tile generation and filtering')
+def cli(**cli_kwargs):
     """
-    Using the container API interface, perform MIRP contour randomization
+    Run with explicit arguments:
+
+    \b
+        infer_tiles
+            -i 1412934/data/TileImages
+            -o 1412934/data/TilePredictions
+            -rn msk-mind/luna-ml:main 
+            -tn tissue_tile_net_transform 
+            -mn tissue_tile_net_model_5_class
+            -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
+
+    Run with implicit arguments:
+
+    \b
+        infer_tiles -m 1412934/data/TilePredictions/metadata.json
+    
+    Run with mixed arguments (CLI args override yaml/json arguments):
+
+    \b
+        infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
     """
-    logger = logging.getLogger(f"[datastore={container_id}]")
+    cli_runner(cli_kwargs, _params_, randomize_contours )
 
-    # Do some setup
-    datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
-    method_id   = method_data.get("job_tag", "none")
 
-    image_node  = datastore.get("VolumetricImage", method_data['image_input_tag'])
-    label_node  = datastore.get("VolumetricLabel", method_data['label_input_tag'])
 
-    try:
-        if image_node is None: raise ValueError("Image node not found")
-        if label_node is None: raise ValueError("Label node not found")
+from luna.radiology.mirp.importSettings        import Settings
+from luna.radiology.mirp.imageReaders          import read_itk_image, read_itk_segmentation
+from luna.radiology.mirp.imageProcess          import interpolate_image, interpolate_roi, crop_image
+from luna.radiology.mirp.imagePerturbations    import randomise_roi_contours
+from luna.radiology.mirp.imageProcess          import combine_all_rois, combine_pertubation_rois
 
-        # Data just goes under namespace/name
-        # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], method_data.get("env", "data"),
-                                  datastore._namespace_id, datastore._name, method_id)
-        if not os.path.exists(output_dir): os.makedirs(output_dir)
+import numpy as np
 
-        image_properties, label_properties, pertubation_properties, supervoxel_properties = randomize_contours(
-            image_path = image_node.data,
-            label_path = label_node.data,
-            output_dir = output_dir,
-            params     = method_data
-        )
+def randomize_contours(input_image_data, input_label_data, resample_pixel_spacing, resample_smoothing_beta, output_dir):
+        """
+        Randomize contours given and image, label to and output_dir using MIRP processing library
 
-    except Exception as e:
-        logger.exception (f"{e}, stopping job execution...")
-        raise e
-    else:
-        new_image_node          = Node("VolumetricImage",    method_id, image_properties)
-        new_label_node          = Node("VolumetricLabel",    method_id, label_properties)
-        new_pertubation_node    = Node("VolumetricLabelSet", method_id, pertubation_properties)
-        new_supervoxel_node     = Node("Voxels", method_id, supervoxel_properties)
+        :param image_path: filepath to image
+        :param label_path: filepath to 3d segmentation
+        :param output_dir: destination directory
+        :param params {
 
-        datastore.put(new_image_node)
-        datastore.put(new_label_node)
-        datastore.put(new_pertubation_node)
-        datastore.put(new_supervoxel_node)
-        
-    finally:
-        return semaphore + 1   
+        }
+
+        :return: property dict, None if function fails
+        """
+        os.makedirs(output_dir, exist_ok=True)
+
+        logger.info("Hello, processing %s, %s", input_image_data, input_label_data)
+        settings = Settings()
+
+        print (settings)
+
+        resample_pixel_spacing = np.full((3), resample_pixel_spacing)
+
+        settings.img_interpolate.new_spacing = resample_pixel_spacing
+        settings.roi_interpolate.new_spacing = resample_pixel_spacing
+        settings.img_interpolate.smoothing_beta = resample_smoothing_beta
+
+        # Read
+        image_class_object      = read_itk_image(input_image_data, "CT")
+        roi_class_object_list   = read_itk_segmentation(input_label_data)
+
+        # Crop for faster interpolation
+        image_class_object, roi_class_object_list = crop_image(img_obj=image_class_object, roi_list=roi_class_object_list, boundary=50.0, z_only=True)
+
+        # Interpolation
+        image_class_object    = interpolate_image (img_obj=image_class_object, settings=settings)
+        roi_class_object_list = interpolate_roi   (img_obj=image_class_object, roi_list=roi_class_object_list, settings=settings)
+
+        # Export
+        image_file = image_class_object.export(file_path=f"{output_dir}/main_image")
+
+        # ROI processing
+        roi_class_object = combine_all_rois (roi_list=roi_class_object_list, settings=settings)
+        label_file = roi_class_object.export(img_obj=image_class_object, file_path=f"{output_dir}/main_label")
+
+        roi_class_object_list, svx_class_object_list = randomise_roi_contours (img_obj=image_class_object, roi_list=roi_class_object_list, settings=settings)
+
+        roi_supervoxels = combine_all_rois (roi_list=svx_class_object_list, settings=settings)
+        voxels_file = roi_supervoxels.export(img_obj=image_class_object, file_path=f"{output_dir}/supervoxels")
+
+        for roi in combine_pertubation_rois (roi_list=roi_class_object_list, settings=settings): 
+            if "COMBINED" in roi.name: roi.export(img_obj=image_class_object, file_path=f"{output_dir}/pertubations")
+
+        print (image_file, label_file)
+
+        # Construct return dicts
+        properties = {
+            "resampled_image_data": image_file,
+            "resampled_label_data": label_file,
+            "pertubation_set": f"{output_dir}/pertubations",
+            "supervoxel_data": voxels_file
+        }
+
+        return properties
+    
 
 if __name__ == "__main__":
     cli()
+
