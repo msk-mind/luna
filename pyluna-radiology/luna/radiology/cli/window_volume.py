@@ -27,7 +27,7 @@ def cli(**cli_kwargs):
 
     \b
         window_volume
-            -i volume_ct.nii
+            -input_data volume_ct.nii
             -ll 0
             -hl 250
             -o ./windowed_volume/

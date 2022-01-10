@@ -26,11 +26,9 @@ def cli(**cli_kwargs):
 
     \b
         coregister_volumes
-            -i1 volume_ct.nii
-            -i2 volume_pet.nii
-            -rps 1.5
+            --input_image_data volume_ct.nii
+            --input_label_data volume_pet.nii
             -o ./registered/
-            -save_npy
     """
     cli_runner(cli_kwargs, _params_, match_metadata )
 

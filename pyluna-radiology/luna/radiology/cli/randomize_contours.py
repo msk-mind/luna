@@ -25,12 +25,12 @@ _params_ = [('input_image_data', str), ('input_label_data', str), ('resample_pix
               help='json file with method parameters for tile generation and filtering')
 def cli(**cli_kwargs):
     """
-    RRandomize contours given and image, label to and output_dir using MIRP processing library
+    Randomize contours given and image, label to and output_dir using MIRP processing library
 
     \b
         coregister_volumes
-            -ii volume_ct.nii
-            -il labels.nii
+            --input_image_data volume_ct.nii
+            --input_label_data labels.nii
             -rps 1.5
             -rsb 0.9
             -o ./mirp_results/

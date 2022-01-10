@@ -12,7 +12,7 @@ _params_ = [('input_data', str), ('output_dir', str), ('itk_image_type', str), (
 
 @click.command()
 @click.option('-i', '--input_data', required=False,
-              help='path to input data (dicom directory_')
+              help='path to input data (dicom directory)')
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-it', '--itk_image_type', required=False,
@@ -27,9 +27,10 @@ def cli(**cli_kwargs):
 
     \b
         dicom_to_itk
-            -i 10000/2/DICOM/
-            -it nrrd
-            -ct 'unsigned short'
+            --input_data 10000/2/DICOM/
+            --itk_image_type nrrd
+            --itk_c_type 'unsigned short'
+            -o 10000/2/NRRD
     """
     cli_runner(cli_kwargs, _params_, dicom_to_itk)
 

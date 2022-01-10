@@ -34,10 +34,10 @@ def cli(**cli_kwargs):
 
     \b
         extract_radiomics
-            -ii volume_ct.nii
-            -il labels.nii
-            -idx 1,2,3
-            -rcfg '{"interpolator": "sitkBSpline","resampledPixelSpacing":[2.5,2.5,2.5]}'
+            --input_image_data volume_ct.nii
+            --input_label_data labels.nii
+            --lesion_indicies 1,2,3
+            --pyradiomics_config '{"interpolator": "sitkBSpline","resampledPixelSpacing":[2.5,2.5,2.5]}'
             --enable_all_filters
 			-o ./radiomics_result/
     """

@@ -29,11 +29,11 @@ def cli(**cli_kwargs):
 
     \b
         coregister_volumes
-            -i1 volume_ct.nii
-            -i2 volume_pet.nii
-            -rps 1.5
+            --input_image_1 volume_ct.nii
+            --input_image_2 volume_pet.nii
+            -rsp 1.5
+            -npy
             -o ./registered/
-            -save_npy
     """
     cli_runner(cli_kwargs, _params_, coregister_volumes)
 
