@@ -7,7 +7,7 @@ from luna.common.custom_logger   import init_logger
 init_logger()
 logger = logging.getLogger('infer_tille_labels')
 
-from luna.common.utils import validate_params
+from luna.common.utils import cli_runner
 
 import torch
 from torch.utils.data import DataLoader
@@ -16,7 +16,7 @@ from luna.pathology.common.ml import BaseTorchTileDataset, BaseTorchTileClassifi
 import pandas as pd
 from tqdm import tqdm
 
-_params = [('input_data', str), ('output_dir', str), ('repo_name', str), ('transform_name', str), ('model_name', str), ('weight_tag', str), ('num_cores', int), ('batch_size', int)]
+_params_ = [('input_data', str), ('output_dir', str), ('repo_name', str), ('transform_name', str), ('model_name', str), ('weight_tag', str), ('num_cores', int), ('batch_size', int)]
 
 @click.command()
 @click.option('-i', '--input_data', required=False,
@@ -61,24 +61,7 @@ def cli(**cli_kwargs):
     \b
         infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
     """
-    kwargs = {}
-
-    # Get params from param file
-    if cli_kwargs.get('method_param_path'):
-        with open(cli_kwargs.get('method_param_path'), 'r') as yaml_file:
-            yaml_kwargs = yaml.safe_load(yaml_file)
-        kwargs.update(yaml_kwargs) # Fill from json
-    
-    for key in list(cli_kwargs.keys()):
-        if cli_kwargs[key] is None: del cli_kwargs[key]
-
-    # Override with CLI arguments
-    kwargs.update(cli_kwargs) # 
-
-    # Validate them
-    kwargs = validate_params(kwargs, _params)
-
-    infer_tile_labels(**kwargs)
+    cli_runner( cli_kwargs, _params_, infer_tile_labels)
 
 # We are acting a bit like a consumer of the base classes here-
 class TileDatasetGithub(BaseTorchTileDataset):

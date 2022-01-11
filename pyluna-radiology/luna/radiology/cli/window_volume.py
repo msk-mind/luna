@@ -24,7 +24,7 @@ _params_ = [('input_data', str), ('output_dir', str), ('low_level', float), ('hi
 def cli(**cli_kwargs):
     """
     Applies a window function to an input volume
-
+os
     \b
         window_volume
             -input_data volume_ct.nii
@@ -38,8 +38,6 @@ import medpy.io
 import numpy as np
 from pathlib import Path
 def window_volume(input_data, output_dir, low_level, high_level):
-
-        os.makedirs(output_dir, exist_ok=True)
         
         file_stem = Path(input_data).stem
         file_ext  = Path(input_data).suffix

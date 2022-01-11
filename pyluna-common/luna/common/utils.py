@@ -211,11 +211,12 @@ def cli_runner(cli_kwargs, cli_params, cli_function):
 	# Validate them
 	kwargs = validate_params(kwargs, cli_params)
 
+	output_dir = kwargs['output_dir']
+	os.makedirs(output_dir, exist_ok=True)
+
 	result = cli_function(**kwargs)
 
 	kwargs.update(result)
-
-	output_dir = kwargs['output_dir']
 
 	with open(os.path.join(output_dir, "metadata.json"), "w") as fp:
 		json.dump(kwargs, fp, indent=4, sort_keys=True)

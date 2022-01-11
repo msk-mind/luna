@@ -27,10 +27,10 @@ def cli(**cli_kwargs):
 
     \b
         dicom_to_itk
-            --input_data 10000/2/DICOM/
+            --input_data ./10000/2/DICOM/
             --itk_image_type nrrd
             --itk_c_type 'unsigned short'
-            -o 10000/2/NRRD
+            -o ./10000/2/NRRD
     """
     cli_runner(cli_kwargs, _params_, dicom_to_itk)
 
@@ -47,8 +47,6 @@ def dicom_to_itk(input_data, output_dir, itk_image_type, itk_c_type):
 
         :return: property dict, None if function fails
         """
-        os.makedirs(output_dir, exist_ok=True)
-
         PixelType = itk.ctype(itk_c_type)
         ImageType = itk.Image[PixelType, 3]
 

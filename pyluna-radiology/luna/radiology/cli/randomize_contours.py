@@ -60,8 +60,6 @@ def randomize_contours(input_image_data, input_label_data, resample_pixel_spacin
 
         :return: property dict, None if function fails
         """
-        os.makedirs(output_dir, exist_ok=True)
-
         logger.info("Hello, processing %s, %s", input_image_data, input_label_data)
         settings = Settings()
 

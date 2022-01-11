@@ -63,9 +63,7 @@ def extract_radiomics_multiple_labels(input_image_data, input_label_data, lesion
         }
 
         :return: property dict, None if function fails
-        """
-        os.makedirs(output_dir, exist_ok=True)
-        
+        """        
         image, image_header = medpy.io.load(input_image_data)
 
         if   Path(input_label_data).is_dir():  label_path_list = [str(path) for path in Path(input_label_data).glob("*")]
