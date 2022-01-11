@@ -9,12 +9,12 @@ logger = logging.getLogger('extract_stain_texture')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_slide_path', str), ('input_mask_path', str), ('output_dir', str), ('stain_sample_factor', int), ('glcm_feature', str), ('tile_size', int), ('stain_channel', int)]
+_params_ = [('input_slide_image', str), ('input_slide_mask', str), ('output_dir', str), ('stain_sample_factor', int), ('glcm_feature', str), ('tile_size', int), ('stain_channel', int)]
 
 @click.command()
-@click.option('-insp', '--input_slide_path', required=False,
+@click.option('-insp', '--input_slide_image', required=False,
               help='path to input data')
-@click.option('-inmp', '--input_mask_path', required=False,
+@click.option('-inmp', '--input_slide_mask', required=False,
               help='path to input data')
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
@@ -46,9 +46,9 @@ import pandas as pd
 from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 
-def extract_stain_texture(input_slide_path, input_mask_path, stain_sample_factor, stain_channel, tile_size, glcm_feature, output_dir):
-    slide = openslide.OpenSlide(input_slide_path)
-    mask  = openslide.ImageSlide(input_mask_path)
+def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_factor, stain_channel, tile_size, glcm_feature, output_dir):
+    slide = openslide.OpenSlide(input_slide_image)
+    mask  = openslide.ImageSlide(input_slide_mask)
 
     logger.info (f"Slide dimensions {slide.dimensions}, Mask dimensions {mask.dimensions}")
 
@@ -109,8 +109,8 @@ def extract_stain_texture(input_slide_path, input_mask_path, stain_sample_factor
     df_result.to_csv(output_filename, index=False)
 
     properties = {
-        'n_obs': n,
-        'data': output_filename
+        'num_pixel_observations': n,
+        'csv': output_filename,
     }
 
     return properties

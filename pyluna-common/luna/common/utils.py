@@ -189,6 +189,38 @@ def validate_params(given_params, params_list):
 		logger.info (f"Param {name} set = {d_params[name]}")
 	return d_params
 
+def expand_inputs(given_params):
+	d_params = {}
+
+	for key, value in given_params.items():
+		if 'input_' in key:
+			# For some inputs, they may be implicit, where metadata about them is at the provided directory path
+			expected_metadata = os.path.join(value, 'metadata.json')
+
+			if os.path.isdir(value) and os.path.exists(expected_metadata):
+				# We supplied an inferred input from some previous output, so figure it out from the metadata of this output fold
+
+				with open(expected_metadata, 'r') as yaml_file:
+					metadata = yaml.safe_load(yaml_file)
+
+				# Output names/slots are same as input names/slots, just without input_ prefix
+				expanded_input = metadata.get ( key.replace('input_', ''), None)
+
+				# Tree output_directories should never be passed to functions which cannot accept them
+				if expanded_input is None:
+					raise RuntimeError (f"No matching output slot of type [{key.replace('input_', '')}] at given input directory")
+
+				logger.info(f"Expanded input {value} -> {expanded_input}")
+
+				d_params[key] = expanded_input
+			else:
+				d_params[key] = value
+		else:
+			d_params[key] = value
+
+	return d_params
+
+
 def cli_runner(cli_kwargs, cli_params, cli_function):
 	logger.info ("Running {cli_function} with {cli_kwargs}")
 	kwargs = {}
@@ -206,10 +238,12 @@ def cli_runner(cli_kwargs, cli_params, cli_function):
 
 	# Override with CLI arguments
 	kwargs.update(cli_kwargs) # 
-
-	print (kwargs)
+	
 	# Validate them
 	kwargs = validate_params(kwargs, cli_params)
+
+	# Expand implied inputs
+	kwargs = expand_inputs(kwargs)
 
 	output_dir = kwargs['output_dir']
 	os.makedirs(output_dir, exist_ok=True)
