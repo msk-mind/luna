@@ -1,0 +1,58 @@
+# future enhancements"
+# - choose a proper init system - https://ahmet.im/blog/minimal-init-process-for-containers/
+#                               - https://docs.docker.com/config/containers/multi-service_container/
+# - apply namespaced volume labels - https://docs.docker.com/compose/compose-file/compose-file-v3/#volume-configuration-reference
+# - make certain volumes external so "docker-compose down" does not remove them
+# - parameterize make exec container name
+# - set user in girder container to match host user
+# - label network explicitly (currently luna_tutorial_default)
+# prefix container names with user name
+---
+version: '3'
+services:
+  girder:
+    image: luna_tutorial_girder:v0.0.1
+    build:
+      context: .
+      dockerfile: dockerfile_girder
+      args:
+        - USER_ID=${USER_ID}
+        - GROUP_ID=${GROUP_ID}
+        - USER_NAME=${USER_NAME}
+        - GROUP_NAME=${GROUP_NAME}
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${PWD}/vmount/assetstore:/assetstore 
+      - ${PWD}/vmount:/home/${USER_NAME}/vmount
+    depends_on:
+      - mongodb
+  mongodb:
+    image: "mongo:latest"
+    restart: unless-stopped
+    command: --nojournal
+    volumes:
+      - ${PWD}/vmount/db:/db
+  luna_tutorial:
+    image: luna_tutorial_main:v0.0.1
+    build:
+      context: .
+      dockerfile: dockerfile_luna_tutorial
+      args:
+        - USER_ID=${USER_ID}
+        - GROUP_ID=${GROUP_ID}
+        - USER_NAME=${USER_NAME}
+        - GROUP_NAME=${GROUP_NAME}
+    # Set USER_ID to your user id (e.g., `USER_ID=$(id -u):$(id -g)`)
+    # so that logs and tmp files are owned by yourself.
+    user: ${USER_ID}
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+      - "6006:6006"
+    command: |
+      bash -c "jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount >>~/vmount/logs/tutorial.log 2>&1"
+    volumes:
+      - ${PWD}/vmount:/home/${USER_NAME}/vmount
+

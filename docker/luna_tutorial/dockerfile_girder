@@ -1,0 +1,45 @@
+FROM python:3.9-slim
+
+ARG USER_NAME
+#ENV user=$user
+ARG USER_ID
+ARG GROUP_NAME
+ARG GROUP_ID
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# so host system user can delete files created by this container
+RUN groupadd $GROUP_NAME
+RUN useradd -l -rm -d /home/$USER_NAME -s /bin/bash -g $GROUP_NAME -u $USER_ID $USER_NAME
+WORKDIR /home/$USER_NAME
+ENV PATH=$PATH:/home/$USER_NAME/.local/bin
+
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN curl -LJ https://github.com/krallin/tini/releases/download/v0.19.0/tini -o /usr/bin/tini && \
+    chmod +x /usr/bin/tini
+
+RUN python -m pip install --pre --no-cache-dir \
+    histomicsui \
+    large_image[sources] \
+    # girder[mount] adds dependencies to show tiles from S3 assets \
+    girder[mount] \
+    girder-homepage \
+    girder_client \
+    --find-links https://girder.github.io/large_image_wheels
+
+RUN girder build
+
+COPY girder.cfg /etc/.
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+RUN mkdir /logs && chmod -R 777 /logs
+USER $USER_NAME
+CMD python vmount/provision.py --sample-data && girder serve --database mongodb://mongodb:27017/girder

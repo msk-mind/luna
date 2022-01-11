@@ -17,8 +17,8 @@
 # relative to the documentation root, use os.path.abspath to make it
 # absolute, like shown here.
 #
-import os
-import sys
+import os, sys, glob, shutil
+
 sys.path.insert(0, os.path.abspath('../pyluna-common/'))
 sys.path.insert(0, os.path.abspath('../pyluna-pathology/'))
 sys.path.insert(0, os.path.abspath('../pyluna-radiology/'))
@@ -26,6 +26,16 @@ sys.path.insert(0, os.path.abspath('../pyluna-core/'))
 
 import luna.pathology
 
+# nbpsphinx work around for ipynb outside of docs https://github.com/spatialaudio/nbsphinx/issues/170
+os.makedirs("tutorials", exist_ok=True)
+os.makedirs("img", exist_ok=True)
+for nb in glob.glob("../docker/luna_tutorial/vmount/notebooks/*ipynb"):
+    shutil.copy(nb, "tutorials")
+for img in glob.glob("../docker/luna_tutorial/vmount/img/*png"):
+    shutil.copy(img, "img")
+
+# TODO fix error
+os.remove("tutorials/8_teardown.ipynb")
 
 # -- General configuration ---------------------------------------------
 

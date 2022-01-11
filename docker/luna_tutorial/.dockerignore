@@ -5,3 +5,6 @@
 */*.pil
 */*.npy
 */*.bmp
+vmount/assetstore
+vmount/db
+vmount/logs

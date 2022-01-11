@@ -12,3 +12,7 @@ tests/data_mock/
 # *.cfg # ignores setup.cfg
 **dask-worker-space**
 **/.ipynb_checkpoints
+
+# docs
+docs/tutorials
+docs/img
