@@ -228,6 +228,8 @@ def extract_patch_texture_features(image_patch, mask_patch, stain_vectors,
         np.ndarray: texture features from image patch
     
     """
+
+    logging.getLogger('radiomics.featureextractor').setLevel(logging.WARNING)
     if not (len(np.unique(mask_patch)) > 1 and np.count_nonzero(mask_patch) > 1): return None
     
     stain_patch = pull_stain_channel(image_patch, stain_vectors, channel=stain_channel)

@@ -1,5 +1,5 @@
 # General imports
-import os, json, logging, yaml
+import os, logging, sys
 import click
 
 from luna.common.custom_logger   import init_logger
@@ -9,7 +9,7 @@ logger = logging.getLogger('extract_stain_texture')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_slide_path', str), ('input_mask_path', str), ('output_dir', str)]
+_params_ = [('input_slide_path', str), ('input_mask_path', str), ('output_dir', str), ('stain_sample_factor', int), ('glcm_feature', str), ('tile_size', int), ('stain_channel', int)]
 
 @click.command()
 @click.option('-insp', '--input_slide_path', required=False,
@@ -18,7 +18,13 @@ _params_ = [('input_slide_path', str), ('input_mask_path', str), ('output_dir', 
               help='path to input data')
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
-@click.option('-an', '--annotation_name', required=False,
+@click.option('-tx', '--tile_size', required=False,
+              help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
+@click.option('-sc', '--stain_channel', required=False,
+              help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
+@click.option('-sf', '--stain_sample_factor', required=False,
+              help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
+@click.option('-glcm', '--glcm_feature', required=False,
               help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
 @click.option('-m', '--method_param_path', required=False,
               help='json file with method parameters for tile generation and filtering')
@@ -40,19 +46,19 @@ import pandas as pd
 from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 
-def extract_stain_texture(input_slide_path, input_mask_path, output_dir):
+def extract_stain_texture(input_slide_path, input_mask_path, stain_sample_factor, stain_channel, tile_size, glcm_feature, output_dir):
     slide = openslide.OpenSlide(input_slide_path)
     mask  = openslide.ImageSlide(input_mask_path)
 
     logger.info (f"Slide dimensions {slide.dimensions}, Mask dimensions {mask.dimensions}")
 
-    sample_arr = get_downscaled_thumbnail(slide, self.stain_sample_factor)
+    sample_arr = get_downscaled_thumbnail(slide, stain_sample_factor)
     stain_vectors = get_stain_vectors_macenko(sample_arr)
 
     logger.info (f"Stain vectors={stain_vectors}")
 
-    slide_full_generator, slide_full_level = get_full_resolution_generator(slide, tile_size=self.tile_size)
-    mask_full_generator, mask_full_level   = get_full_resolution_generator(mask,  tile_size=self.tile_size)
+    slide_full_generator, slide_full_level = get_full_resolution_generator(slide, tile_size=tile_size)
+    mask_full_generator, mask_full_level   = get_full_resolution_generator(mask,  tile_size=tile_size)
 
     tile_x_count, tile_y_count = slide_full_generator.level_tiles[slide_full_level]
     logger.info("Tiles x %s, Tiles y %s", tile_x_count, tile_y_count)
@@ -62,14 +68,14 @@ def extract_stain_texture(input_slide_path, input_mask_path, output_dir):
     logger.info("Number of tiles in raster: %s", len(address_raster))
 
     features = []
-    for address in tqdm(address_raster):
+    for address in tqdm(address_raster, file=sys.stdout):
         mask_patch = np.array(mask_full_generator.get_tile(mask_full_level, address))[:, :, 0]
 
         if not np.count_nonzero(mask_patch) > 1: continue
 
         image_patch  = np.array(slide_full_generator.get_tile(slide_full_level, address))
 
-        texture_values = extract_patch_texture_features(image_patch, mask_patch, stain_vectors, self.stain_channel, self.glcm_feature, plot=False)
+        texture_values = extract_patch_texture_features(image_patch, mask_patch, stain_vectors, stain_channel, glcm_feature, plot=False)
 
         if not texture_values is None:
             features.append(texture_values)
@@ -81,7 +87,7 @@ def extract_stain_texture(input_slide_path, input_mask_path, output_dir):
     n, (smin, smax), sm, sv, ss, sk = scipy.stats.describe(features)
     ln_params = scipy.stats.lognorm.fit(features, floc=0)
 
-    fx_name_prefix = f'pixel_original_glcm_{self.glcm_feature}_scale_{self.scale_factor}_channel_{self.stain_channel}'
+    fx_name_prefix = f'pixel_original_glcm_{glcm_feature}_channel_{stain_channel}'
     hist_features = {
         f'{fx_name_prefix}_nobs': n,
         f'{fx_name_prefix}_min': smin,
