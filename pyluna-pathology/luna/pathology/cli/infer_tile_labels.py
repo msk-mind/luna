@@ -90,9 +90,6 @@ def infer_tile_labels(input_data, output_dir, repo_name, transform_name, model_n
     Returns:
         None
     """
-    input_params = validate_params(locals(), _params) # Capture input parameters as dict
-    os.makedirs(output_dir, exist_ok=True)
-
     # Get our model and transforms and construct the Tile Dataset and Classifier
     logger.info(f"Loading model and transform: repo_name={repo_name}, transform_name={transform_name}, model_name={model_name}")
     logger.info(f"Using weights weight_tag={weight_tag}")
@@ -118,15 +115,13 @@ def infer_tile_labels(input_data, output_dir, repo_name, transform_name, model_n
     df_output.to_csv(output_file)
 
     # Save our properties and params
-    extra_props = {
+    properties = {
         "total_tiles": len(df_output),
         "available_labels": list(df_output.columns)
     }
 
-    input_params.update(extra_props)
+    return properties
 
-    with open(os.path.join(output_dir, "metadata.json"), "w") as fp:
-        json.dump(input_params, fp, indent=4, sort_keys=True)
 
 if __name__ == "__main__":
     cli()

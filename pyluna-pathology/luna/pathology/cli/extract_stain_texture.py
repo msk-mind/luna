@@ -9,25 +9,17 @@ logger = logging.getLogger('extract_stain_texture')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_data', str), ('output_dir', str), ('repo_name', str), ('transform_name', str), ('model_name', str), ('weight_tag', str), ('num_cores', int), ('batch_size', int)]
+_params_ = [('input_slide_path', str), ('input_mask_path', str), ('output_dir', str)]
 
 @click.command()
-@click.option('-i', '--input_data', required=False,
+@click.option('-insp', '--input_slide_path', required=False,
+              help='path to input data')
+@click.option('-inmp', '--input_mask_path', required=False,
               help='path to input data')
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
-@click.option('-rn', '--repo_name', required=False,
+@click.option('-an', '--annotation_name', required=False,
               help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
-@click.option('-tn', '--transform_name', required=False,
-              help="torch hub transform name")   
-@click.option('-mn', '--model_name', required=False,
-              help="torch hub model name")    
-@click.option('-wt', '--weight_tag', required=False,
-              help="weight tag filename")  
-@click.option('-nc', '--num_cores', required=False,
-              help="Number of cores to use", default=4)  
-@click.option('-bx', '--batch_size', required=False,
-              help="weight tag filename", default=256)    
 @click.option('-m', '--method_param_path', required=False,
               help='json file with method parameters for tile generation and filtering')
 def cli(**cli_kwargs):
@@ -36,27 +28,38 @@ def cli(**cli_kwargs):
     """
     cli_runner( cli_kwargs, _params_, extract_stain_texture)
 
+import openslide
+from luna.pathology.common.preprocess import get_downscaled_thumbnail, get_full_resolution_generator
+from luna.pathology.common.utils import get_stain_vectors_macenko, extract_patch_texture_features
+import itertools
+import numpy as np
+from tqdm import tqdm
+import scipy.stats
+import pandas as pd
 
-def extract_stain_texture():
-    slide = openslide.OpenSlide(slide_path)
-    mask  = openslide.ImageSlide(mask_path)
+from PIL import Image
+Image.MAX_IMAGE_PIXELS = None
 
-    self.logger.info (f"Slide dimensions {slide.dimensions}, Mask dimensions {mask.dimensions}")
+def extract_stain_texture(input_slide_path, input_mask_path, output_dir):
+    slide = openslide.OpenSlide(input_slide_path)
+    mask  = openslide.ImageSlide(input_mask_path)
+
+    logger.info (f"Slide dimensions {slide.dimensions}, Mask dimensions {mask.dimensions}")
 
     sample_arr = get_downscaled_thumbnail(slide, self.stain_sample_factor)
     stain_vectors = get_stain_vectors_macenko(sample_arr)
 
-    self.logger.info (f"Stain vectors={stain_vectors}")
+    logger.info (f"Stain vectors={stain_vectors}")
 
     slide_full_generator, slide_full_level = get_full_resolution_generator(slide, tile_size=self.tile_size)
     mask_full_generator, mask_full_level   = get_full_resolution_generator(mask,  tile_size=self.tile_size)
 
     tile_x_count, tile_y_count = slide_full_generator.level_tiles[slide_full_level]
-    self.logger.info("Tiles x %s, Tiles y %s", tile_x_count, tile_y_count)
+    logger.info("Tiles x %s, Tiles y %s", tile_x_count, tile_y_count)
 
     # populate address, coordinates
     address_raster = [address for address in itertools.product(range(tile_x_count), range(tile_y_count))]
-    self.logger.info("Number of tiles in raster: %s", len(address_raster))
+    logger.info("Number of tiles in raster: %s", len(address_raster))
 
     features = []
     for address in tqdm(address_raster):
@@ -75,8 +78,8 @@ def extract_stain_texture():
 
     np.save(os.path.join(output_dir, "feature_vector.npy"), features)
 
-    n, (smin, smax), sm, sv, ss, sk = stats.describe(features)
-    ln_params = stats.lognorm.fit(features, floc=0)
+    n, (smin, smax), sm, sv, ss, sk = scipy.stats.describe(features)
+    ln_params = scipy.stats.lognorm.fit(features, floc=0)
 
     fx_name_prefix = f'pixel_original_glcm_{self.glcm_feature}_scale_{self.scale_factor}_channel_{self.stain_channel}'
     hist_features = {
@@ -93,7 +96,7 @@ def extract_stain_texture():
 
     # The fit may fail sometimes, replace inf with 0
     df_result = pd.DataFrame(data=hist_features, index=[0]).replace([np.inf, -np.inf], 0.0).astype(float)
-    self.logger.info (df_result)
+    logger.info (df_result)
 
     output_filename = os.path.join(output_dir, "stainomics.csv")
 
@@ -105,3 +108,6 @@ def extract_stain_texture():
     }
 
     return properties
+
+if __name__ == "__main__":
+    cli()

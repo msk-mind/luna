@@ -9,25 +9,17 @@ logger = logging.getLogger('generate_mask')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_data', str), ('output_dir', str), ('repo_name', str), ('transform_name', str), ('model_name', str), ('weight_tag', str), ('num_cores', int), ('batch_size', int)]
+_params_ = [('input_slide_path', str), ('input_roi_path', str), ('output_dir', str), ('annotation_name', str)]
 
 @click.command()
-@click.option('-i', '--input_data', required=False,
+@click.option('-insp', '--input_slide_path', required=False,
+              help='path to input data')
+@click.option('-inrp', '--input_roi_path', required=False,
               help='path to input data')
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
-@click.option('-rn', '--repo_name', required=False,
+@click.option('-an', '--annotation_name', required=False,
               help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
-@click.option('-tn', '--transform_name', required=False,
-              help="torch hub transform name")   
-@click.option('-mn', '--model_name', required=False,
-              help="torch hub model name")    
-@click.option('-wt', '--weight_tag', required=False,
-              help="weight tag filename")  
-@click.option('-nc', '--num_cores', required=False,
-              help="Number of cores to use", default=4)  
-@click.option('-bx', '--batch_size', required=False,
-              help="weight tag filename", default=256)    
 @click.option('-m', '--method_param_path', required=False,
               help='json file with method parameters for tile generation and filtering')
 def cli(**cli_kwargs):
@@ -37,24 +29,27 @@ def cli(**cli_kwargs):
     cli_runner( cli_kwargs, _params_, generate_mask)
 
 
-def generate_mask():
-    slide = openslide.OpenSlide(slide_path)
+import openslide
+import tifffile
+import numpy as np
+from PIL import Image
+from luna.pathology.common.utils import get_layer_names, convert_xml_to_mask
+from skimage.measure import block_reduce
+
+def generate_mask(input_slide_path, input_roi_path, output_dir, annotation_name):
+    slide = openslide.OpenSlide(input_slide_path)
     slide.get_thumbnail((1000, 1000)).save(f"{output_dir}/slide_thumbnail.png")
 
     wsi_shape = slide.dimensions[1], slide.dimensions[0] # Annotation file has flipped dimensions w.r.t openslide conventions
-    self.logger.info(f"Slide shape={wsi_shape}")
+    logger.info(f"Slide shape={wsi_shape}")
 
-    layer_names     = get_layer_names(roi_path)
-    self.logger.info(f"Available layer names={layer_names}")
-    
-    # x_pol, y_pol    = get_polygon_bounding_box(roi_path, self.annotation_name)
-    # self.logger.info(f"Bounding box={x_pol}, {y_pol}")
+    layer_names     = get_layer_names(input_roi_path)
+    logger.info(f"Available layer names={layer_names}")
 
-    # x_roi, y_roi    = convert_halo_xml_to_roi(roi_path)
+    mask_arr = convert_xml_to_mask(input_roi_path, wsi_shape, annotation_name)
 
-    mask_arr = convert_xml_to_mask(roi_path, wsi_shape, self.annotation_name)
-
-#        openslide.ImageSlide(Image.fromarray(255 * mask_arr)).get_thumbnail((1000, 1000)).save(f"{output_dir}/mask_thumbnail.png")
+    logger.info(f"Generating mask thumbnail, mask size={mask_arr.shape}")
+    openslide.ImageSlide(Image.fromarray(255 * block_reduce(mask_arr, block_size=(10, 10), func=np.mean, cval=0.0))).get_thumbnail((1000, 1000)).save(f"{output_dir}/mask_thumbnail.png")
 
     tifffile.imsave(f"{output_dir}/mask_full_res.tif", mask_arr, compress=5)
 
@@ -63,6 +58,7 @@ def generate_mask():
         'data': f"{output_dir}/mask_full_res.tif"
     }
 
-    self.logger.info(properties)
-
     return properties
+
+if __name__ == "__main__":
+    cli()
