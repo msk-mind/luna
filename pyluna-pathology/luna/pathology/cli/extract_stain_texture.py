@@ -12,25 +12,38 @@ from luna.common.utils import cli_runner
 _params_ = [('input_slide_image', str), ('input_slide_mask', str), ('output_dir', str), ('stain_sample_factor', int), ('glcm_feature', str), ('tile_size', int), ('stain_channel', int)]
 
 @click.command()
-@click.option('-insp', '--input_slide_image', required=False,
-              help='path to input data')
-@click.option('-inmp', '--input_slide_mask', required=False,
-              help='path to input data')
+@click.argument('input_slide_image', nargs=1)
+@click.argument('input_slide_mask', nargs=1)
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-tx', '--tile_size', required=False,
-              help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
+              help="size of tiles to use as inputs to the glcm calculation")
 @click.option('-sc', '--stain_channel', required=False,
-              help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
+              help="which stain channel to use for texture features")
 @click.option('-sf', '--stain_sample_factor', required=False,
-              help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
+              help="downsample factor for the image used in stain vector estimation")
 @click.option('-glcm', '--glcm_feature', required=False,
-              help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
+              help="name of the glcm feature to use (e.g. Autocorrelation)")
 @click.option('-m', '--method_param_path', required=False,
-              help='json file with method parameters for tile generation and filtering')
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """ 
+    """ Compute GLCM texture features on a de-convolved slide image
 
+    \b
+    Inputs:
+        input_slide_image: slide image (.svs)
+        input_slide_mask: whole-slide mask image (.tif)
+    \b
+    Outputs:
+        feature_csv
+    \b
+    Example:
+        extract_stain_texture ./slides/10001.svs ./masks/10001/tumor_mask.tif
+            -tx 500
+            -sc 0
+            -sf 10
+            -glcm ClusterTendency
+            -o ./stain_features/10001/
     """
     cli_runner( cli_kwargs, _params_, extract_stain_texture)
 
@@ -110,7 +123,7 @@ def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_fact
 
     properties = {
         'num_pixel_observations': n,
-        'csv': output_filename,
+        'feature_csv': output_filename,
     }
 
     return properties

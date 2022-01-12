@@ -9,26 +9,28 @@ logger = logging.getLogger('match_metadata')
 from luna.common.utils import cli_runner
 
 from typing import List
-_params_ = [('dicom_tree_folder', str), ('input_label_data', str), ('output_dir', str)]
+_params_ = [('dicom_tree_folder', str), ('input_itk_labels', str), ('output_dir', str)]
 
 @click.command()
-@click.option('-ii', '--dicom_tree_folder', required=False,
-              help='path to input image data')
-@click.option('-il', '--input_label_data', required=False,
-              help='path to input label data')
+@click.argument('dicom_tree_folder', nargs=1)
+@click.argument('input_itk_labels', nargs=1)
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-m', '--method_param_path', required=False,
-              help='json file with method parameters for tile generation and filtering')
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """
-    Resamples and co-registeres two input volumes to occupy the same physical coordinates
+    """Resamples and co-registeres two input volumes to occupy the same physical coordinates
 
     \b
-        coregister_volumes
-            --dicom_tree_folder volume_ct.nii
-            --input_label_data volume_pet.nii
-            -o ./registered/
+    Input:
+        dicom_tree_folder: path a dicom tree folder containing many scans and many dicoms
+    \b
+    Output:
+        dicom_folder: path to a single dicom series
+    \b
+    Example:
+        match_metadata ./scan_folder/ scan_segmentation.nii
+            -o ./matched_dicoms/
     """
     cli_runner(cli_kwargs, _params_, match_metadata )
 
@@ -36,12 +38,12 @@ import medpy.io
 from pydicom import dcmread
 from pathlib import Path
 
-def match_metadata(dicom_tree_folder, input_label_data, output_dir):
+def match_metadata(dicom_tree_folder, input_itk_labels, output_dir):
     dicom_folders = set()
     for dicom in Path(dicom_tree_folder).rglob("*.dcm"):
         dicom_folders.add(dicom.parent)
     
-    label, _ = medpy.io.load(input_label_data)
+    label, _ = medpy.io.load(input_itk_labels)
     found_dicom_paths = set()
     for dicom_folder in dicom_folders:
         n_slices_dcm = len(list((dicom_folder).glob("*.dcm")))

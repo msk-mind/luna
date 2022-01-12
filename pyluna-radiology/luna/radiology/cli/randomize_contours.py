@@ -4,17 +4,15 @@ import click
 from luna.common.custom_logger   import init_logger
 
 init_logger()
-logger = logging.getLogger('window_volume')
+logger = logging.getLogger('randomize_contours')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_image_data', str), ('input_label_data', str), ('resample_pixel_spacing', float), ('resample_smoothing_beta', float), ('output_dir', str)]
+_params_ = [('input_itk_volume', str), ('input_itk_labels', str), ('resample_pixel_spacing', float), ('resample_smoothing_beta', float), ('output_dir', str)]
 
 @click.command()
-@click.option('-ii', '--input_image_data', required=False,
-              help='path to input image data')
-@click.option('-il', '--input_label_data', required=False,
-              help='path to input label data')
+@click.argument('input_itk_volume', nargs=1)
+@click.argument('input_itk_labels', nargs=1)
 @click.option('-rps', '--resample_pixel_spacing', required=False,
               help='path to input label data')
 @click.option('-rsb', '--resample_smoothing_beta', required=False,
@@ -22,15 +20,23 @@ _params_ = [('input_image_data', str), ('input_label_data', str), ('resample_pix
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-m', '--method_param_path', required=False,
-              help='json file with method parameters for tile generation and filtering')
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """
-    Randomize contours given and image, label to and output_dir using MIRP processing library
+    """Generate randomize contours given and image, label after resampling using MIRP processing library
 
     \b
-        coregister_volumes
-            --input_image_data volume_ct.nii
-            --input_label_data labels.nii
+    Inputs:
+        input_itk_volume: itk compatible image volume (.mhd, .nrrd, .nii, etc.)
+        input_itk_labels: itk compatible label volume (.mha, .nii, etc.)
+    \b
+    Outputs:
+        itk_volume
+        itk_labels
+        mirp_pertubations
+        mirp_supervoxels
+    \b
+    Example:
+        extract_radiomics ct_image.mhd, ct_lesions.mha
             -rps 1.5
             -rsb 0.9
             -o ./mirp_results/
@@ -47,7 +53,7 @@ from luna.radiology.mirp.imageProcess          import combine_all_rois, combine_
 
 import numpy as np
 
-def randomize_contours(input_image_data, input_label_data, resample_pixel_spacing, resample_smoothing_beta, output_dir):
+def randomize_contours(input_itk_volume, input_itk_labels, resample_pixel_spacing, resample_smoothing_beta, output_dir):
         """
         Randomize contours given and image, label to and output_dir using MIRP processing library
 
@@ -60,7 +66,7 @@ def randomize_contours(input_image_data, input_label_data, resample_pixel_spacin
 
         :return: property dict, None if function fails
         """
-        logger.info("Hello, processing %s, %s", input_image_data, input_label_data)
+        logger.info("Hello, processing %s, %s", input_itk_volume, input_itk_labels)
         settings = Settings()
 
         print (settings)
@@ -72,8 +78,8 @@ def randomize_contours(input_image_data, input_label_data, resample_pixel_spacin
         settings.img_interpolate.smoothing_beta = resample_smoothing_beta
 
         # Read
-        image_class_object      = read_itk_image(input_image_data, "CT")
-        roi_class_object_list   = read_itk_segmentation(input_label_data)
+        image_class_object      = read_itk_image(input_itk_volume, "CT")
+        roi_class_object_list   = read_itk_segmentation(input_itk_labels)
 
         # Crop for faster interpolation
         image_class_object, roi_class_object_list = crop_image(img_obj=image_class_object, roi_list=roi_class_object_list, boundary=50.0, z_only=True)
@@ -101,10 +107,10 @@ def randomize_contours(input_image_data, input_label_data, resample_pixel_spacin
 
         # Construct return dicts
         properties = {
-            "resampled_image_data": image_file,
-            "resampled_label_data": label_file,
-            "pertubation_set": f"{output_dir}/pertubations",
-            "supervoxel_data": voxels_file
+            "itk_volume": image_file,
+            "itk_labels": label_file,
+            "mirp_pertubations": f"{output_dir}/pertubations",
+            "mirp_supervoxels": voxels_file
         }
 
         return properties

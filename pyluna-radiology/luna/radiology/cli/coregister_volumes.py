@@ -8,13 +8,11 @@ logger = logging.getLogger('coregister_volumes')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_image_1', str), ('input_image_2', str), ('output_dir', str), ('order', int), ('resample_pixel_spacing', float), ('save_npy', bool)]
+_params_ = [('input_itk_volume', str), ('input_itk_geometry', str), ('output_dir', str), ('order', int), ('resample_pixel_spacing', float), ('save_npy', bool)]
 
 @click.command()
-@click.option('-i1', '--input_image_1', required=False,
-              help='path to input ITK image (reference)')
-@click.option('-i2', '--input_image_2', required=False,
-              help='path to input ITK image (reference)')
+@click.argument('input_itk_volume', nargs=1)
+@click.argument('input_itk_geometry', nargs=1)
 @click.option('-npy', '--save_npy', required=False, is_flag=True,
               help='whether to additionally save the volumes as numpy files')
 @click.option('-rps', '--resample_pixel_spacing', required=False,
@@ -24,18 +22,25 @@ _params_ = [('input_image_1', str), ('input_image_2', str), ('output_dir', str),
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-m', '--method_param_path', required=False,
-              help='json file with method parameters for tile generation and filtering')
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """
-    Resamples and co-registeres two input volumes to occupy the same physical coordinates
+    """Resamples and co-registeres all volumes to occupy the same physical coordinates of a reference geometry (given as a itk_volume)
+
+    NB: Pass the same image as both the volume and geometry to simply resample a given volume. Useful for PET/CT coregistration.
 
     \b
-        coregister_volumes
-            --input_image_1 volume_ct.nii
-            --input_image_2 volume_pet.nii
-            -rsp 1.5
-            -ord 3
-            -npy
+    Inputs:
+        input_itk_volume: itk compatible image volume (.mhd, .nrrd, .nii, etc.)
+        input_itk_geometry: itk compatible image volume (.mhd, .nrrd, .nii, etc.) to use as reference geometry
+    \b
+    Outputs:
+        itk_volume
+    \b
+    Example: (Resample a pet image to match dimensions of a CT image)
+        coregister_volumes ./scans/10001/CT/pet_image.nii ./scans/10001/CT/ct_image.nii
+            --resample_pixel_spacing 1.5
+            --order 3
+            --save_npy
             -o ./registered/
     """
     cli_runner(cli_kwargs, _params_, coregister_volumes)
@@ -46,24 +51,23 @@ import scipy.ndimage
 from luna.radiology.mirp.imageReaders import read_itk_image, read_itk_segmentation
 from pathlib import Path
 
-def coregister_volumes(input_image_1, input_image_2, resample_pixel_spacing, output_dir, order, save_npy):
+def coregister_volumes(input_itk_volume, input_itk_geometry, resample_pixel_spacing, output_dir, order, save_npy):
     resample_pixel_spacing = np.full((3), resample_pixel_spacing)
 
-    image_class_object_1      = read_itk_image(input_image_1, modality=str(Path(input_image_1).stem))
-    image_class_object_2      = read_itk_image(input_image_2, modality=str(Path(input_image_2).stem))
+    image_class_object_volume      = read_itk_image(input_itk_volume, modality=str(Path(input_itk_volume).stem))
+    image_class_object_geometry    = read_itk_image(input_itk_geometry, modality=str(Path(input_itk_geometry).stem))
 
-    ct_iso = interpolate(image_class_object_1, resample_pixel_spacing, reference_geometry=image_class_object_1, order=order)
-    pt_iso = interpolate(image_class_object_2, resample_pixel_spacing, reference_geometry=image_class_object_1, order=order)
+    voxels_iso = interpolate(image_class_object_volume, resample_pixel_spacing, reference_geometry=image_class_object_geometry, order=order)
 
-    image_file_1 = image_class_object_1.export(file_path=output_dir)
-    image_file_2 = image_class_object_2.export(file_path=output_dir)
-
+    image_file = image_class_object_volume.export(file_path=output_dir)
+    
     if save_npy:
-        np.save(image_file_1 + '.npy', image_class_object_1.get_voxel_grid())
-        np.save(image_file_2 + '.npy', image_class_object_2.get_voxel_grid())
+        np.save(image_file + '.npy', image_class_object_volume.get_voxel_grid())
 
     return {
-        'reference_origin': list(image_class_object_1.origin)
+        'itk_volume': image_file,
+        'npy_volume': image_file + '.npy',
+        'reference_origin': list(image_class_object_geometry.origin)
     }
 
 

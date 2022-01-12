@@ -9,13 +9,11 @@ logger = logging.getLogger('extract_radiomics')
 from luna.common.utils import cli_runner
 
 from typing import List
-_params_ = [('input_image_data', str), ('input_label_data', str), ('lesion_indicies', List[int]), ('output_dir', str), ('pyradiomics_config', json), ('check_geometry_strict', bool), ('enable_all_filters', bool)]
+_params_ = [('input_itk_volume', str), ('input_itk_labels', str), ('lesion_indicies', List[int]), ('output_dir', str), ('pyradiomics_config', json), ('check_geometry_strict', bool), ('enable_all_filters', bool)]
 
 @click.command()
-@click.option('-ii', '--input_image_data', required=False,
-              help='path to input image data')
-@click.option('-il', '--input_label_data', required=False,
-              help='path to input label data')
+@click.argument('input_itk_volume', nargs=1)
+@click.argument('input_itk_labels', nargs=1)
 @click.option('-idx', '--lesion_indicies', required=False,
               help='lesion labels given as a comma-separated list')
 @click.option('-rcfg', '--pyradiomics_config', required=False,
@@ -27,15 +25,20 @@ _params_ = [('input_image_data', str), ('input_label_data', str), ('lesion_indic
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-m', '--method_param_path', required=False,
-              help='json file with method parameters for tile generation and filtering')
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """
-    Extract radiomics given and image, label to and output_dir, parameterized by params
+    """Extract radiomics given and image, label to and output_dir, parameterized by params
 
     \b
-        extract_radiomics
-            --input_image_data volume_ct.nii
-            --input_label_data labels.nii
+    Inputs:
+        input_itk_volume: itk compatible image volume (.mhd, .nrrd, .nii, etc.)
+        input_itk_labels: itk compatible label volume (.mha, .nii, etc.)
+    \b
+    Outpus:
+        feature_csv
+    \b
+    Example:
+        extract_radiomics ct_image.mhd, ct_lesions.mha
             --lesion_indicies 1,2,3
             --pyradiomics_config '{"interpolator": "sitkBSpline","resampledPixelSpacing":[2.5,2.5,2.5]}'
             --enable_all_filters
@@ -50,7 +53,7 @@ import numpy as np
 import pandas as pd
 from radiomics import featureextractor  # This module is used for interaction with pyradiomics
 
-def extract_radiomics_multiple_labels(input_image_data, input_label_data, lesion_indicies, pyradiomics_config, check_geometry_strict, enable_all_filters, output_dir):
+def extract_radiomics_multiple_labels(input_itk_volume, input_itk_labels, lesion_indicies, pyradiomics_config, check_geometry_strict, enable_all_filters, output_dir):
         """
         Extract radiomics given and image, label to and output_dir, parameterized by params
 
@@ -64,10 +67,10 @@ def extract_radiomics_multiple_labels(input_image_data, input_label_data, lesion
 
         :return: property dict, None if function fails
         """        
-        image, image_header = medpy.io.load(input_image_data)
+        image, image_header = medpy.io.load(input_itk_volume)
 
-        if   Path(input_label_data).is_dir():  label_path_list = [str(path) for path in Path(input_label_data).glob("*")]
-        elif Path(input_label_data).is_file(): label_path_list = [input_label_data]
+        if   Path(input_itk_labels).is_dir():  label_path_list = [str(path) for path in Path(input_itk_labels).glob("*")]
+        elif Path(input_itk_labels).is_file(): label_path_list = [input_itk_labels]
         else: raise RuntimeError("Issue with detecting label format")
 
         available_labels = set()
@@ -96,7 +99,7 @@ def extract_radiomics_multiple_labels(input_image_data, input_label_data, lesion
 
             for label_path in label_path_list:
 
-                result = extractor.execute(input_image_data, label_path)
+                result = extractor.execute(input_itk_volume, label_path)
 
                 result['lesion_index'] = lesion_index 
 
@@ -109,7 +112,7 @@ def extract_radiomics_multiple_labels(input_image_data, input_label_data, lesion
         logger.info(df_result.T)
 
         properties = {
-            'data' : output_filename,
+            'feature_csv' : output_filename,
             'lesion_indicies': lesion_indicies,
         }
 

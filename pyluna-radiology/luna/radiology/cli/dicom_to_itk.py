@@ -8,11 +8,10 @@ logger = logging.getLogger('dicom_to_itk')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_data', str), ('output_dir', str), ('itk_image_type', str), ('itk_c_type', str)]
+_params_ = [('input_dicom_folder', str), ('output_dir', str), ('itk_image_type', str), ('itk_c_type', str)]
 
 @click.command()
-@click.option('-i', '--input_data', required=False,
-              help='path to input data (dicom directory)')
+@click.argument('input_dicom_folder', nargs=1)
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-it', '--itk_image_type', required=False,
@@ -20,22 +19,27 @@ _params_ = [('input_data', str), ('output_dir', str), ('itk_image_type', str), (
 @click.option('-ct', '--itk_c_type', required=False,
               help="desired C datatype (float, unsigned short)")   
 @click.option('-m', '--method_param_path', required=False,
-              help='json file with method parameters for tile generation and filtering')
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """
-    Generates a ITK compatible image from a dicom series
-
+    """Generates a ITK compatible image from a dicom series
+    
     \b
-        dicom_to_itk
-            --input_data ./10000/2/DICOM/
+    Inputs:
+        input_dicom_folder: A folder containing a dicom series
+    \b
+    Outputs:
+        itk_volume
+    \b
+    Example:
+        dicom_to_itk ./scans/10000/2/DICOM/
             --itk_image_type nrrd
             --itk_c_type 'unsigned short'
-            -o ./10000/2/NRRD
+            -o ./scans/10000/2/NRRD
     """
     cli_runner(cli_kwargs, _params_, dicom_to_itk)
 
 import itk
-def dicom_to_itk(input_data, output_dir, itk_image_type, itk_c_type):
+def dicom_to_itk(input_dicom_folder, output_dir, itk_image_type, itk_c_type):
         """
         Generate an ITK compatible image from a dicom series
 
@@ -54,16 +58,16 @@ def dicom_to_itk(input_data, output_dir, itk_image_type, itk_c_type):
         namesGenerator.SetUseSeriesDetails(True)
         namesGenerator.AddSeriesRestriction("0008|0021")
         namesGenerator.SetGlobalWarningDisplay(False)
-        namesGenerator.SetDirectory(input_data)
+        namesGenerator.SetDirectory(input_dicom_folder)
 
         seriesUIDs = namesGenerator.GetSeriesUIDs()
         num_dicoms = len(seriesUIDs)
 
         if num_dicoms < 1:
-            logger.warning('No DICOMs in: ' + input_data)
+            logger.warning('No DICOMs in: ' + input_dicom_folder)
             return None
 
-        logger.info('The directory {} contains {} DICOM Series'.format(input_data, str(num_dicoms)))
+        logger.info('The directory {} contains {} DICOM Series'.format(input_dicom_folder, str(num_dicoms)))
 
         n_slices = 0
 
@@ -91,7 +95,7 @@ def dicom_to_itk(input_data, output_dir, itk_image_type, itk_c_type):
 
         # Prepare metadata and commit
         properties = {
-            'output_file+name' : outFileName,
+            'itk_volume' : outFileName,
             'num_slices' : n_slices,
         }
 

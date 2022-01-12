@@ -4,6 +4,12 @@ import os, json, yaml
 import logging
 logger = logging.getLogger(__name__)
 
+# Distinct types that are actually the same (effectively)
+TYPE_ALIASES = {
+	'itk_geometry': 'itk_volume'
+}
+
+
 def to_sql_field(s):
 	filter1 = s.replace(".","_").replace(" ","_")
 	filter2 = ''.join(e for e in filter1 if e.isalnum() or e=='_')
@@ -189,6 +195,7 @@ def validate_params(given_params, params_list):
 		logger.info (f"Param {name} set = {d_params[name]}")
 	return d_params
 
+
 def expand_inputs(given_params):
 	d_params = {}
 
@@ -204,7 +211,13 @@ def expand_inputs(given_params):
 					metadata = yaml.safe_load(yaml_file)
 
 				# Output names/slots are same as input names/slots, just without input_ prefix
-				expanded_input = metadata.get ( key.replace('input_', ''), None)
+				input_type = key.replace('input_', '')
+
+				# Convert any known type aliases 
+				input_type = TYPE_ALIASES.get(input_type, input_type)
+
+				# Query the metadata dictionary for that type
+				expanded_input = metadata.get (input_type, None)
 
 				# Tree output_directories should never be passed to functions which cannot accept them
 				if expanded_input is None:
@@ -254,3 +267,5 @@ def cli_runner(cli_kwargs, cli_params, cli_function):
 
 	with open(os.path.join(output_dir, "metadata.json"), "w") as fp:
 		json.dump(kwargs, fp, indent=4, sort_keys=True)
+	
+	logger.info("Done.")

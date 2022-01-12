@@ -8,11 +8,10 @@ logger = logging.getLogger('window_volume')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_data', str), ('output_dir', str), ('low_level', float), ('high_level', float)]
+_params_ = [('input_itk_volume', str), ('output_dir', str), ('low_level', float), ('high_level', float)]
 
 @click.command()
-@click.option('-i', '--input_data', required=False,
-              help='path to input data')
+@click.argument('input_itk_volume', nargs=1)
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-ll', '--low_level', required=False,
@@ -20,38 +19,44 @@ _params_ = [('input_data', str), ('output_dir', str), ('low_level', float), ('hi
 @click.option('-hl', '--high_level', required=False,
               help="upper bound of window")   
 @click.option('-m', '--method_param_path', required=False,
-              help='json file with method parameters for tile generation and filtering')
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
     """
-    Applies a window function to an input volume
-os
+    Applies a window function to an input itk volume, outputs windowed volume
+
     \b
-        window_volume
-            -input_data volume_ct.nii
-            -ll 0
-            -hl 250
-            -o ./windowed_volume/
+    Inputs:
+        input_itk_volume: itk compatible image volume (.mhd, .nrrd, .nii, etc.)
+    \b
+    Outputs:
+        itk_volume
+    \b
+    Example:
+        window_volume ./scans/original/NRRDs/10001.nrrd
+            --low_level 0
+            --high_level 250
+            -o scans/windowed/NRRDs/10001
     """
     cli_runner(cli_kwargs, _params_, window_volume)
 
 import medpy.io
 import numpy as np
 from pathlib import Path
-def window_volume(input_data, output_dir, low_level, high_level):
+def window_volume(input_itk_volume, output_dir, low_level, high_level):
         
-        file_stem = Path(input_data).stem
-        file_ext  = Path(input_data).suffix
+        file_stem = Path(input_itk_volume).stem
+        file_ext  = Path(input_itk_volume).suffix
 
         outFileName = os.path.join(output_dir, file_stem + '.windowed' + file_ext)
 
         logger.info ("Applying window [%s,%s]", low_level, high_level)
 
-        image, header = medpy.io.load(input_data)
+        image, header = medpy.io.load(input_itk_volume)
         image = np.clip(image, low_level, high_level )
         medpy.io.save(image, outFileName, header)
         # Prepare metadata and commit
         properties = {
-            'data' : outFileName,
+            'itk_volume' : outFileName,
         }
 
         return properties

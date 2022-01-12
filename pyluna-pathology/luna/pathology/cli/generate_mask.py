@@ -12,19 +12,29 @@ from luna.common.utils import cli_runner
 _params_ = [('input_slide_image', str), ('input_slide_roi', str), ('output_dir', str), ('annotation_name', str)]
 
 @click.command()
-@click.option('-insp', '--input_slide_image', required=False,
-              help='path to input data')
-@click.option('-inrp', '--input_slide_roi', required=False,
-              help='path to input data')
+@click.argument('input_slide_image', nargs=1)
+@click.argument('input_slide_roi', nargs=1)
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-an', '--annotation_name', required=False,
-              help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
+              help="annotation layer name to use (e.g. Tumor, Tissue)")
 @click.option('-m', '--method_param_path', required=False,
-              help='json file with method parameters for tile generation and filtering')
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """ 
+    """ Generate a full resolution mask image (.tif) from vector annotations (polygons, shapes)
 
+    \b
+    Inputs:
+        input_slide_image: slide image (.svs)
+        input_slide_roi: roi containing vector shapes (*.annotations, *.json)
+    \b
+    Outputs:
+        slide_mask
+    \b
+    Example:
+        generate_mask ./slides/10001.svs ./halo/10001.job18484.annotations
+            -an Tumor
+            -o ./masks/10001/
     """
     cli_runner( cli_kwargs, _params_, generate_mask)
 
@@ -35,7 +45,6 @@ import numpy as np
 from PIL import Image
 from luna.pathology.common.utils import get_layer_names, convert_xml_to_mask
 from skimage.measure import block_reduce
-
 def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_name):
     slide = openslide.OpenSlide(input_slide_image)
     slide.get_thumbnail((1000, 1000)).save(f"{output_dir}/slide_thumbnail.png")
@@ -55,8 +64,8 @@ def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_nam
     tifffile.imsave(slide_mask, mask_arr, compress=5)
 
     properties = {
-        'mask_size': wsi_shape,
         'slide_mask': slide_mask,
+        'mask_size': wsi_shape,
     }
 
     return properties
