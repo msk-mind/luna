@@ -235,7 +235,7 @@ def expand_inputs(given_params):
 
 
 def cli_runner(cli_kwargs, cli_params, cli_function):
-	logger.info ("Running {cli_function} with {cli_kwargs}")
+	logger.info (f"Running {cli_function} with {cli_kwargs}")
 	kwargs = {}
 	if not 'output_dir' in cli_kwargs.keys():
 		raise RuntimeError("CLI Runners assume an output directory")
