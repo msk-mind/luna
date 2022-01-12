@@ -17,4 +17,4 @@ def test_cli(tmp_path):
             ])
 
     # No longer error gracefully -- can update tests with proper data and they'll work
-    assert result.exit_code == 0
+    assert result.exit_code == 1

@@ -5,7 +5,7 @@ import click
 from luna.common.custom_logger   import init_logger
 
 init_logger()
-logger = logging.getLogger('infer_tille_labels')
+logger = logging.getLogger('infer_tile_labels')
 
 from luna.common.utils import cli_runner
 
