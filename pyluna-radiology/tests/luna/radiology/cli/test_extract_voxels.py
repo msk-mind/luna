@@ -1,4 +1,4 @@
-import os, json
+import os, yaml
 from pathlib import Path
 from click.testing import CliRunner
 
@@ -18,7 +18,7 @@ def test_cli_voxels(tmp_path):
     assert os.path.exists(str(tmp_path) + '/metadata.yml')
 
     with open ((str(tmp_path) + '/metadata.yml'), 'r') as fp:
-        metadata = json.load(fp)
+        metadata = yaml.safe_load(fp)
 
     assert os.path.exists(metadata['npy_volume'])
 

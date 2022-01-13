@@ -1,4 +1,4 @@
-import os, json
+import os, yaml
 from pathlib import Path
 from click.testing import CliRunner
 
@@ -16,10 +16,10 @@ def test_cli_nii(tmp_path):
         '--itk_image_type', 'nii'])
 
     assert result.exit_code == 0
-    assert os.path.exists(str(tmp_path) + '/metadata.json')
+    assert os.path.exists(str(tmp_path) + '/metadata.yml')
 
-    with open ((str(tmp_path) + '/metadata.json'), 'r') as fp:
-        metadata = json.load(fp)
+    with open ((str(tmp_path) + '/metadata.yml'), 'r') as fp:
+        metadata = yaml.safe_load(fp)
 
     assert os.path.exists(metadata['itk_volume'])
 
@@ -38,7 +38,7 @@ def test_cli_mhd(tmp_path):
     assert os.path.exists(str(tmp_path) + '/metadata.yml')
 
     with open ((str(tmp_path) + '/metadata.yml'), 'r') as fp:
-        metadata = json.load(fp)
+        metadata = yaml.safe_load(fp)
 
     assert os.path.exists(metadata['itk_volume'])
 
