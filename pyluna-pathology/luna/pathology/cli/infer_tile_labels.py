@@ -73,15 +73,17 @@ def infer_tile_labels(input_slide_tiles, output_dir, repo_name, transform_name, 
     """Generate tile addresses, scores and optionally annotation labels using models stored in torch.hub format
 
     Args:
-        input_slide_tiles (str): path to application configuration file.
-        output_dir (str): datastore name. usually a slide id.
-        repo_name (str): method parameters including input, output details.
-        transform_name (str):
-        model_name (str):
-        weight_tag (str):
+        input_slide_tiles (str): path to a slide-tile directory (contains .tiles.pil)
+        output_dir (str): output/working directory
+        repo_name (str): repository root name like (namespace/repo) at github.com to serve torch.hub models
+        transform_name (str): torch hub transform name (a function at the repo repo_name)
+        model_name (str): torch hub model name (a nn.Module at the repo repo_name)
+        weight_tag (str): what weight tag to use
+        num_cores (int): how many cores to use for dataloading
+        batch_size (int): size in batch dimension to chuck inference (8-256 recommended, depending on memory usage)
 
     Returns:
-        None
+        dict: metadata about function call
     """
     # Get our model and transforms and construct the Tile Dataset and Classifier
     logger.info(f"Loading model and transform: repo_name={repo_name}, transform_name={transform_name}, model_name={model_name}")

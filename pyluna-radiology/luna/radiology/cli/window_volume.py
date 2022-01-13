@@ -42,24 +42,34 @@ def cli(**cli_kwargs):
 import medpy.io
 import numpy as np
 from pathlib import Path
-def window_volume(input_itk_volume, output_dir, low_level, high_level):
-        
-        file_stem = Path(input_itk_volume).stem
-        file_ext  = Path(input_itk_volume).suffix
+def window_volume(input_itk_volume: str, output_dir: str, low_level: float, high_level: float):
+    """Applies a window function (clipping) to an input itk volume, outputs windowed volume 
 
-        outFileName = os.path.join(output_dir, file_stem + '.windowed' + file_ext)
+    Args:
+        input_itk_volume (str): path to itk compatible image volume (.mhd, .nrrd, .nii, etc.)
+        output_dir (str): output/working directory
+        low_level (float): lower bound of clipping operation
+        high_level (float): higher bound of clipping operation
+    
+    Returns:
+        dict: metadata about function call
+    """
+    file_stem = Path(input_itk_volume).stem
+    file_ext  = Path(input_itk_volume).suffix
 
-        logger.info ("Applying window [%s,%s]", low_level, high_level)
+    outFileName = os.path.join(output_dir, file_stem + '.windowed' + file_ext)
 
-        image, header = medpy.io.load(input_itk_volume)
-        image = np.clip(image, low_level, high_level )
-        medpy.io.save(image, outFileName, header)
-        # Prepare metadata and commit
-        properties = {
-            'itk_volume' : outFileName,
-        }
+    logger.info ("Applying window [%s,%s]", low_level, high_level)
 
-        return properties
+    image, header = medpy.io.load(input_itk_volume)
+    image = np.clip(image, low_level, high_level )
+    medpy.io.save(image, outFileName, header)
+    # Prepare metadata and commit
+    properties = {
+        'itk_volume' : outFileName,
+    }
+
+    return properties
 
 
 if __name__ == "__main__":

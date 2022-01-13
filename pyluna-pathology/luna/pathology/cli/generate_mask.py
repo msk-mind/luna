@@ -46,6 +46,20 @@ from PIL import Image
 from luna.pathology.common.utils import get_layer_names, convert_xml_to_mask
 from skimage.measure import block_reduce
 def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_name):
+    """ Generate a full resolution mask image (.tif) from vector annotations (polygons, shapes)
+
+    Take into account positive and negative spaces.  Essentially rasterizes a polygon file.
+
+    Args:
+        input_slide_image (str): path to slide image (.svs)
+        input_slide_roi (str): path to a halo or other polygonal annotation file
+        output_dir (str): output/working directory
+        annotation_name (str): name of annotation layer to use
+
+    Returns:
+        dict: metadata about function call
+    """
+
     slide = openslide.OpenSlide(input_slide_image)
     slide.get_thumbnail((1000, 1000)).save(f"{output_dir}/slide_thumbnail.png")
 

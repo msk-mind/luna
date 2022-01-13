@@ -53,8 +53,24 @@ from luna.radiology.mirp.imageProcess          import combine_all_rois, combine_
 
 import numpy as np
 
-def randomize_contours(input_itk_volume, input_itk_labels, resample_pixel_spacing, resample_smoothing_beta, output_dir):
+def randomize_contours(input_itk_volume: str, input_itk_labels: str, resample_pixel_spacing: float, resample_smoothing_beta: float, output_dir: str):
+    """Generate randomize contours given and image, label after resampling using MIRP processing library
+
+    First, we interpolate the inputs to a isotropic spacing, then get the supervoxel pertubations using the MIRP methods, 
+    as defined in:
     
+    Zwanenburg, A., Leger, S., Agolli, L. et al. Assessing robustness of radiomic features by image perturbation. Sci Rep 9, 614 (2019). https://doi.org/10.1038/s41598-018-36938-4
+
+    Args:
+        input_itk_volume (str): path to itk compatible image volume (.mhd, .nrrd, .nii, etc.)
+        input_itk_labels (str): path to itk compatible label volume (.mha)
+        output_dir (str): output/working directory
+        resample_pixel_spacing (float): voxel size in mm
+        resample_smoothing_beta (float): smoothing beta of gaussian filter
+
+    Returns:
+        dict: metadata about function call
+    """
     logger.info("Hello, processing %s, %s", input_itk_volume, input_itk_labels)
     settings = Settings()
 

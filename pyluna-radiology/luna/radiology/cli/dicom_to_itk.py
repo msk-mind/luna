@@ -40,66 +40,66 @@ def cli(**cli_kwargs):
 
 import itk
 def dicom_to_itk(input_dicom_folder, output_dir, itk_image_type, itk_c_type):
-        """
-        Generate an ITK compatible image from a dicom series
+    """Generate an ITK compatible image from a dicom series/folder
 
-        :param dicom_path: filepath to folder of dicom images
-        :param output_dir: destination directory
-        :param params {
-            file_ext str: file extention for scan generation
-        }
+    Args:
+        input_dicom_folder (str): path to dicom series within a folder
+        output_dir (str): output/working directory
+        itk_image_type (str): ITK volume image type to output (mhd, nrrd, nii, etc.)
+        itk_c_type (str): pixel (C) type for pixels, e.g. float or unsigned short
 
-        :return: property dict, None if function fails
-        """
-        PixelType = itk.ctype(itk_c_type)
-        ImageType = itk.Image[PixelType, 3]
+    Returns:
+        dict: metadata about function call
+    """
+    PixelType = itk.ctype(itk_c_type)
+    ImageType = itk.Image[PixelType, 3]
 
-        namesGenerator = itk.GDCMSeriesFileNames.New()
-        namesGenerator.SetUseSeriesDetails(True)
-        namesGenerator.AddSeriesRestriction("0008|0021")
-        namesGenerator.SetGlobalWarningDisplay(False)
-        namesGenerator.SetDirectory(input_dicom_folder)
+    namesGenerator = itk.GDCMSeriesFileNames.New()
+    namesGenerator.SetUseSeriesDetails(True)
+    namesGenerator.AddSeriesRestriction("0008|0021")
+    namesGenerator.SetGlobalWarningDisplay(False)
+    namesGenerator.SetDirectory(input_dicom_folder)
 
-        seriesUIDs = namesGenerator.GetSeriesUIDs()
-        num_dicoms = len(seriesUIDs)
+    seriesUIDs = namesGenerator.GetSeriesUIDs()
+    num_dicoms = len(seriesUIDs)
 
-        if num_dicoms < 1:
-            logger.warning('No DICOMs in: ' + input_dicom_folder)
-            return None
+    if num_dicoms < 1:
+        logger.warning('No DICOMs in: ' + input_dicom_folder)
+        return None
 
-        logger.info('The directory {} contains {} DICOM Series'.format(input_dicom_folder, str(num_dicoms)))
+    logger.info('The directory {} contains {} DICOM Series'.format(input_dicom_folder, str(num_dicoms)))
 
-        n_slices = 0
+    n_slices = 0
 
-        for uid in seriesUIDs:
-            logger.info('Reading: ' + uid)
-            fileNames = namesGenerator.GetFileNames(uid)
-            if len(fileNames) < 1: continue
+    for uid in seriesUIDs:
+        logger.info('Reading: ' + uid)
+        fileNames = namesGenerator.GetFileNames(uid)
+        if len(fileNames) < 1: continue
 
-            n_slices = len(fileNames)
+        n_slices = len(fileNames)
 
-            reader = itk.ImageSeriesReader[ImageType].New()
-            dicomIO = itk.GDCMImageIO.New()
-            reader.SetImageIO(dicomIO)
-            reader.SetFileNames(fileNames)
-            reader.ForceOrthogonalDirectionOff()
+        reader = itk.ImageSeriesReader[ImageType].New()
+        dicomIO = itk.GDCMImageIO.New()
+        reader.SetImageIO(dicomIO)
+        reader.SetFileNames(fileNames)
+        reader.ForceOrthogonalDirectionOff()
 
-            writer = itk.ImageFileWriter[ImageType].New()
+        writer = itk.ImageFileWriter[ImageType].New()
 
-            outFileName = os.path.join(output_dir, uid + '_volumetric_image.' + itk_image_type)
-            writer.SetFileName(outFileName)
-            writer.UseCompressionOn()
-            writer.SetInput(reader.GetOutput())
-            logger.info('Writing: ' + outFileName)
-            writer.Update()
+        outFileName = os.path.join(output_dir, uid + '_volumetric_image.' + itk_image_type)
+        writer.SetFileName(outFileName)
+        writer.UseCompressionOn()
+        writer.SetInput(reader.GetOutput())
+        logger.info('Writing: ' + outFileName)
+        writer.Update()
 
-        # Prepare metadata and commit
-        properties = {
-            'itk_volume' : outFileName,
-            'num_slices' : n_slices,
-        }
+    # Prepare metadata and commit
+    properties = {
+        'itk_volume' : outFileName,
+        'num_slices' : n_slices,
+    }
 
-        return properties
+    return properties
 
 
 if __name__ == "__main__":

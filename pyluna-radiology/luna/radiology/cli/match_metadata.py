@@ -19,7 +19,7 @@ _params_ = [('dicom_tree_folder', str), ('input_itk_labels', str), ('output_dir'
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """Resamples and co-registeres two input volumes to occupy the same physical coordinates
+    """Scans a dicom tree for images that match the z-dimension (number of slices), useful to matching case segmentations to their associated scans
 
     \b
     Input:
@@ -38,7 +38,17 @@ import medpy.io
 from pydicom import dcmread
 from pathlib import Path
 
-def match_metadata(dicom_tree_folder, input_itk_labels, output_dir):
+def match_metadata(dicom_tree_folder: str, input_itk_labels: str, output_dir: str):
+    """Generate an ITK compatible image from a dicom series/folder
+
+    Args:
+        dicom_tree_folder (str): path to root/tree dicom folder that may contained multiple dicom series
+        input_itk_labels (str): path to itk compatible label volume (.mha)
+        output_dir (str): output/working directory
+
+    Returns:
+        dict: metadata about function call
+    """
     dicom_folders = set()
     for dicom in Path(dicom_tree_folder).rglob("*.dcm"):
         dicom_folders.add(dicom.parent)

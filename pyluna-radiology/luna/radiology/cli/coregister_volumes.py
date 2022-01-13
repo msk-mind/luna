@@ -51,8 +51,21 @@ import scipy.ndimage
 from luna.radiology.mirp.imageReaders import read_itk_image, read_itk_segmentation
 from pathlib import Path
 
-def coregister_volumes(input_itk_volume, input_itk_geometry, resample_pixel_spacing, output_dir, order, save_npy):
-    resample_pixel_spacing = np.full((3), resample_pixel_spacing)
+def coregister_volumes(input_itk_volume: str, input_itk_geometry: str, resample_pixel_spacing: float, output_dir: str, order: int, save_npy: bool):
+     """Resamples and co-registeres all volumes to occupy the same physical coordinates of a reference geometry (given as a itk_volume) and desired voxel size
+
+    Args:
+        input_itk_volume (str): path to itk compatible image volume (.mhd, .nrrd, .nii, etc.)
+        input_itk_geometry (str): path to itk compatible image volume (.mhd, .nrrd, .nii, etc.) to use as a reference geometry
+        output_dir (str): output/working directory
+        resample_pixel_spacing (float): voxel size in mm
+        order (int): interpolation order [0-5]
+        save_npy(bool): whether to also save a numpy file representing the volume
+
+    Returns:
+        dict: metadata about function call
+    """
+   resample_pixel_spacing = np.full((3), resample_pixel_spacing)
 
     image_class_object_volume      = read_itk_image(input_itk_volume, modality=str(Path(input_itk_volume).stem))
     image_class_object_geometry    = read_itk_image(input_itk_geometry, modality=str(Path(input_itk_geometry).stem))
@@ -72,6 +85,17 @@ def coregister_volumes(input_itk_volume, input_itk_geometry, resample_pixel_spac
 
 
 def interpolate(image, resample_spacing, reference_geometry, order=3):
+    """Run interplation 
+    
+    Args:
+        image (imageClass): mirp image class object
+        resample_spacing (np.ndarray): spacing of resample as a 1D vector
+        reference_geometry (imageClass): output/working directory
+        order (int): interpolation order [0-5]
+
+    Returns:
+        imageClass: mirp image class object after resample
+    """
 
     image_size    = image.size
     image_spacing = image.spacing

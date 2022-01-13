@@ -60,6 +60,24 @@ from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 
 def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_factor, stain_channel, tile_size, glcm_feature, output_dir):
+    """Compute GLCM texture after automatically deconvolving the image into stain channels, using tile-based processing
+
+    Runs statistics on distribution.
+
+    Save a feature csv file at the output directory.
+
+    Args:
+        input_slide_image (str): path to slide image (.svs)
+        output_dir (str): output/working directory
+        stain_sample_factor (float): downsample factor to use for stain vector estimation
+        stain_channel (int): which channel of the deconvovled image to use for texture analysis
+        tile_size (int): size of tiles to use (500-1000 recommended)
+        glcm_feature (str): name of GLCM feature to enable
+
+    Returns:
+        dict: metadata about function call
+    """
+
     slide = openslide.OpenSlide(input_slide_image)
     mask  = openslide.ImageSlide(input_slide_mask)
 
