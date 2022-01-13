@@ -1,4 +1,4 @@
-import pytest, os, pathlib
+import os
 import sys
 from medpy.io import load
 import numpy as np

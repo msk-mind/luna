@@ -4,6 +4,8 @@ import os, json, yaml
 import logging
 logger = logging.getLogger(__name__)
 
+from typing import Callable, List
+
 # Distinct types that are actually the same (effectively)
 TYPE_ALIASES = {
     'itk_geometry': 'itk_volume'
@@ -161,7 +163,18 @@ def get_absolute_path(module_path, relative_path):
     # resolve any back-paths with ../ to simplify absolute path
     return os.path.realpath(path)
 
-def validate_params(given_params, params_list):
+def validate_params(given_params: dict, params_list: List[tuple]):
+    """Ensure that a dictonary of params or keyword arguments is correct given a parameter list
+
+    Checks that neccessary parameters exist, and that their type can be casted corretly. There's special logic for list, json, and dictonary types
+
+    Args:
+        given_params (dict): keyword arguments to check types
+        params_list (List[tuple]): param list, where each element is the parameter (name, type)
+
+    Returns:
+        dict: Validated and casted keyword argument dictonary
+    """
     logger = logging.getLogger(__name__)
 
     d_params = {}
@@ -188,23 +201,34 @@ def validate_params(given_params, params_list):
                 d_params[name] = dtype(given_params[name])
             else:
                 raise RuntimeError(f"Type {type(dtype)} invalid!")
+
         except ValueError:
             raise RuntimeError(f"Param {name} could not be cast to {dtype}")
+
         except RuntimeError as e:
             raise e
         logger.info (f"Param {name} set = {d_params[name]}")
     return d_params
 
 
-def expand_inputs(given_params):
+def expand_inputs(given_params: dict):
+    """For special input_* parameters, see if we should infer the input given an output/result directory
+
+    Args:
+        given_params (dict): keyword arguments to check types
+
+    Returns:
+        dict: Input- expanded keyword argument dictonary
+    """
     d_params = {}
 
     for key, value in given_params.items():
-        if 'input_' in key:
-            # For some inputs, they may be implicit, where metadata about them is at the provided directory path
-            expected_metadata = os.path.join(value, 'metadata.json')
+        if 'input_' in key: # We want to treat input_ params a bit differently
 
-            if os.path.isdir(value) and os.path.exists(expected_metadata):
+            # For some inputs, they may be defined as a directory, where metadata about them is at the provided directory path
+            expected_metadata = os.path.join(value, 'metadata.yml')
+            print (expected_metadata)
+            if os.path.isdir(value) and os.path.exists(expected_metadata): # Check for this metadata file
                 # We supplied an inferred input from some previous output, so figure it out from the metadata of this output fold
 
                 with open(expected_metadata, 'r') as yaml_file:
@@ -234,7 +258,18 @@ def expand_inputs(given_params):
     return d_params
 
 
-def cli_runner(cli_kwargs, cli_params, cli_function):
+def cli_runner(cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable[..., dict]):
+    """For special input_* parameters, see if we should infer the input given an output/result directory
+
+    Args:
+        cli_kwargs (dict): keyword arguments from the CLI call
+        cli_params (List[tuple]): param list, where each element is the parameter (name, type)
+        cli_function (Callable[..., dict]): cli_function entry point, should accept exactly the arguments given by cli_params
+    
+    Returns:
+        None
+
+    """
     logger.info (f"Running {cli_function} with {cli_kwargs}")
     kwargs = {}
     if not 'output_dir' in cli_kwargs.keys():
@@ -261,11 +296,15 @@ def cli_runner(cli_kwargs, cli_params, cli_function):
     output_dir = kwargs['output_dir']
     os.makedirs(output_dir, exist_ok=True)
 
+    # Nice little log break
+    print("\n" + "-"*35 + f' Running {cli_function.__name__} ' + "-" *35 + "\n")
+
     result = cli_function(**kwargs)
 
     kwargs.update(result)
 
-    with open(os.path.join(output_dir, "metadata.json"), "w") as fp:
-        json.dump(kwargs, fp, indent=4, sort_keys=True)
+    with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
+        yaml.dump(kwargs, fp)
+        # json.dump(kwargs, fp, indent=4, sort_keys=True)
     
     logger.info("Done.")

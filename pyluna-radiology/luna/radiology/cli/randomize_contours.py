@@ -54,67 +54,56 @@ from luna.radiology.mirp.imageProcess          import combine_all_rois, combine_
 import numpy as np
 
 def randomize_contours(input_itk_volume, input_itk_labels, resample_pixel_spacing, resample_smoothing_beta, output_dir):
-        """
-        Randomize contours given and image, label to and output_dir using MIRP processing library
-
-        :param image_path: filepath to image
-        :param label_path: filepath to 3d segmentation
-        :param output_dir: destination directory
-        :param params {
-
-        }
-
-        :return: property dict, None if function fails
-        """
-        logger.info("Hello, processing %s, %s", input_itk_volume, input_itk_labels)
-        settings = Settings()
-
-        print (settings)
-
-        resample_pixel_spacing = np.full((3), resample_pixel_spacing)
-
-        settings.img_interpolate.new_spacing = resample_pixel_spacing
-        settings.roi_interpolate.new_spacing = resample_pixel_spacing
-        settings.img_interpolate.smoothing_beta = resample_smoothing_beta
-
-        # Read
-        image_class_object      = read_itk_image(input_itk_volume, "CT")
-        roi_class_object_list   = read_itk_segmentation(input_itk_labels)
-
-        # Crop for faster interpolation
-        image_class_object, roi_class_object_list = crop_image(img_obj=image_class_object, roi_list=roi_class_object_list, boundary=50.0, z_only=True)
-
-        # Interpolation
-        image_class_object    = interpolate_image (img_obj=image_class_object, settings=settings)
-        roi_class_object_list = interpolate_roi   (img_obj=image_class_object, roi_list=roi_class_object_list, settings=settings)
-
-        # Export
-        image_file = image_class_object.export(file_path=f"{output_dir}/main_image")
-
-        # ROI processing
-        roi_class_object = combine_all_rois (roi_list=roi_class_object_list, settings=settings)
-        label_file = roi_class_object.export(img_obj=image_class_object, file_path=f"{output_dir}/main_label")
-
-        roi_class_object_list, svx_class_object_list = randomise_roi_contours (img_obj=image_class_object, roi_list=roi_class_object_list, settings=settings)
-
-        roi_supervoxels = combine_all_rois (roi_list=svx_class_object_list, settings=settings)
-        voxels_file = roi_supervoxels.export(img_obj=image_class_object, file_path=f"{output_dir}/supervoxels")
-
-        for roi in combine_pertubation_rois (roi_list=roi_class_object_list, settings=settings): 
-            if "COMBINED" in roi.name: roi.export(img_obj=image_class_object, file_path=f"{output_dir}/pertubations")
-
-        print (image_file, label_file)
-
-        # Construct return dicts
-        properties = {
-            "itk_volume": image_file,
-            "itk_labels": label_file,
-            "mirp_pertubations": f"{output_dir}/pertubations",
-            "mirp_supervoxels": voxels_file
-        }
-
-        return properties
     
+    logger.info("Hello, processing %s, %s", input_itk_volume, input_itk_labels)
+    settings = Settings()
+
+    print (settings)
+
+    resample_pixel_spacing = np.full((3), resample_pixel_spacing)
+
+    settings.img_interpolate.new_spacing = resample_pixel_spacing
+    settings.roi_interpolate.new_spacing = resample_pixel_spacing
+    settings.img_interpolate.smoothing_beta = resample_smoothing_beta
+
+    # Read
+    image_class_object      = read_itk_image(input_itk_volume, "CT")
+    roi_class_object_list   = read_itk_segmentation(input_itk_labels)
+
+    # Crop for faster interpolation
+    image_class_object, roi_class_object_list = crop_image(img_obj=image_class_object, roi_list=roi_class_object_list, boundary=50.0, z_only=True)
+
+    # Interpolation
+    image_class_object    = interpolate_image (img_obj=image_class_object, settings=settings)
+    roi_class_object_list = interpolate_roi   (img_obj=image_class_object, roi_list=roi_class_object_list, settings=settings)
+
+    # Export
+    image_file = image_class_object.export(file_path=f"{output_dir}/main_image")
+
+    # ROI processing
+    roi_class_object = combine_all_rois (roi_list=roi_class_object_list, settings=settings)
+    label_file = roi_class_object.export(img_obj=image_class_object, file_path=f"{output_dir}/main_label")
+
+    roi_class_object_list, svx_class_object_list = randomise_roi_contours (img_obj=image_class_object, roi_list=roi_class_object_list, settings=settings)
+
+    roi_supervoxels = combine_all_rois (roi_list=svx_class_object_list, settings=settings)
+    voxels_file = roi_supervoxels.export(img_obj=image_class_object, file_path=f"{output_dir}/supervoxels")
+
+    for roi in combine_pertubation_rois (roi_list=roi_class_object_list, settings=settings): 
+        if "COMBINED" in roi.name: roi.export(img_obj=image_class_object, file_path=f"{output_dir}/pertubations")
+
+    print (image_file, label_file)
+
+    # Construct return dicts
+    properties = {
+        "itk_volume": image_file,
+        "itk_labels": label_file,
+        "mirp_pertubations": f"{output_dir}/pertubations",
+        "mirp_supervoxels": voxels_file
+    }
+
+    return properties
+
 
 if __name__ == "__main__":
     cli()
