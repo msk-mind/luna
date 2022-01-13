@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.1 (2022-01-11)
+### Documentation
+* Pathology - use sample data from kitware ([#262](https://github.com/msk-mind/luna/issues/262)) ([`c016d21`](https://github.com/msk-mind/luna/commit/c016d218da2eca003d06b96f2c03f16b3ce97873))
+* Pathology - add tutorials from docker ([#259](https://github.com/msk-mind/luna/issues/259)) ([`4e78e7c`](https://github.com/msk-mind/luna/commit/4e78e7c1b951a45709b889b57048c8010613a5d6))
+
+### Performance
+* Pathology - Update tile inference CLI tool ([#258](https://github.com/msk-mind/luna/issues/258)) ([`6099f15`](https://github.com/msk-mind/luna/commit/6099f1574ce990fbb2cf133822ef95bccc5c8788))
+
 ## v0.1.0 (2021-12-10)
 ### Feature
 * Tile Dataset and Classifier API ([`0f45f81`](https://github.com/msk-mind/luna/commit/0f45f817c90137639df732eca76d9cfe34bd509e))

@@ -41,11 +41,30 @@ def get_labelset_keys():
 
     return labelsets
 
+def get_layer_names(xml_fn):
+    """get available layer names
+    
+    Finds all possible annotation layer names from a Halo generated xml ROI file 
+    
+    Args:
+        xml_fn (str): file path to input halo XML file
+    
+    Returns:
+        set: Available region names
+    """    # Annotations >> 
+    e = et.parse(xml_fn).getroot()
+    e = e.findall('Annotation')
+    names = set()        
+
+    [names.add(ann.get('Name')) for ann in e]
+
+    return names
+    
 
 def convert_xml_to_mask(xml_fn: str, shape:list, annotation_name:str) -> np.ndarray:
     """convert xml to bitmask
     
-    converts a sparse halo XML annotation file (polygons) to a dense bitmask 
+    Converts a sparse halo XML annotation file (polygons) to a dense bitmask 
     
     Args:
         xml_fn (str): file path to input halo XML file
@@ -65,43 +84,41 @@ def convert_xml_to_mask(xml_fn: str, shape:list, annotation_name:str) -> np.ndar
     for ann in e:
         if ann.get('Name') != annotation_name:
                 continue
+
+        logger.debug(f"Found region {ann.get('Name')}")
+
         board_pos = np.zeros(shape, dtype=np.uint8)
         board_neg = np.zeros(shape, dtype=np.uint8)
+
         regions = ann.findall('Regions')
         assert(len(regions) == 1)
+
         rs = regions[0].findall('Region')
-        plistlist = list()
-        nlistlist = list()
-        #print('rs:', len(rs))
+        
         for i, r in enumerate(rs):
-            ylist = list()
-            xlist = list()
-            plist, nlist = list(), list()
+
             negative_flag = int(r.get('NegativeROA'))
             assert negative_flag == 0 or negative_flag == 1
             negative_flag = bool(negative_flag)
+            
             vs = r.findall('Vertices')[0]
             vs = vs.findall('V')
             vs.append(vs[0]) # last dot should be linked to the first dot
+
+            plist = list()
             for v in vs:
-                y, x = int(v.get('Y').split('.')[0]), int(v.get('X').split('.')[0])
-                ylist.append(y)
-                xlist.append(x)
-                if negative_flag:
-                    nlist.append((x, y))
-                else:
-                    plist.append((x, y))
-            if plist:
-                plistlist.append(plist)
+                x, y = int(v.get('X').split('.')[0]), int(v.get('Y').split('.')[0])
+                plist.append((x, y))
+
+            if negative_flag:
+                board_neg = cv2.drawContours(board_neg, [np.array(plist, dtype=np.int32)], -1, [0, 0, 0], -1)
             else:
-                nlistlist.append(nlist)
-        for plist in plistlist:
-            thiscontour = np.array(plist, dtype=np.int32)
-            board_pos = cv2.drawContours(board_pos, [np.array(plist, dtype=np.int32)], -1, [255, 0, 0], -1)
-        for nlist in nlistlist:
-            board_neg = cv2.drawContours(board_neg, [np.array(nlist, dtype=np.int32)], -1, [255, 0, 0], -1)
+                board_pos = cv2.drawContours(board_pos, [np.array(plist, dtype=np.int32)], contourIdx=-1, color=[255, 0, 0], thickness=-1)
+
         ret = (board_pos>0) * (board_neg==0)
-    return ret
+
+    mask = ret.astype(np.uint8)
+    return mask
 
 
 def convert_halo_xml_to_roi(xml_fn:str) -> Tuple[List, List]:
@@ -119,11 +136,14 @@ def convert_halo_xml_to_roi(xml_fn:str) -> Tuple[List, List]:
     
     ylist = list()
     xlist = list()
-        
+
+    print ("Converting to ROI:", xml_fn) 
     e = et.parse(xml_fn).getroot()
     for ann in e.findall('Annotation'):
 
         regions = ann.findall('Regions')[0]
+        if len(regions)==0: continue
+
         if not regions[0].get('Type')=='Rectangle': continue
         
         for i, r in enumerate(regions):
@@ -133,56 +153,19 @@ def convert_halo_xml_to_roi(xml_fn:str) -> Tuple[List, List]:
                 y, x = int(v.get('Y').split('.')[0]), int(v.get('X').split('.')[0])
                 ylist.append(y)
                 xlist.append(x)
+
+    if xlist == [] or ylist == []:
+        logger.warning ("No Rectangle found, returning None, None!")
+        return None, None
+
+    if min(xlist) < 0: 
+        logger.warning ("Somehow a negative x rectangle coordinate!")
+        xlist = [0, max(xlist)] 
+    if min(ylist) < 0: 
+        logger.warning ("Somehow a negative y rectangle coordinate!")
+        ylist = [0, max(ylist)] 
+
     return xlist, ylist
-
-def get_slide_roi_masks(slide_path, halo_roi_path, annotation_name, slide_id:str=None,
-        output_dir:str=None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]: 
-    """get roi masks from slides 
-
-    Given a slide, halo annotation xml file, generate labels from xml polygons, 
-    then crop both the image and mask to ROI (rectangle) region
-    Optionally: save the RGB image, downsampled image sample, and interger label mask as a tiff 
-    
-    Args:
-        slide_path (str): path to input slide
-        halo_roi_path (str): path to halo annotation file
-        annotation_name (str): name of annotation 
-        slide_id (Optional, str): slide id
-        output_dir (Optional, str): destination to save RGB image, thumbnail and mask 
-    
-    Returns:
-        Tuple[np.ndarray, np.ndarray, np.ndarray]: the cropped image as RGB numpy array, a 
-        downsampled array (as sample for stains), and mask array as single channel
-    """
-
-    slide = openslide.OpenSlide(slide_path)
-    wsi_shape = slide.dimensions[1], slide.dimensions[0] # Annotation file has flipped dimensions w.r.t openslide conventions
-
-    annotation_mask = convert_xml_to_mask(halo_roi_path, wsi_shape, annotation_name)
-    x_roi, y_roi    = convert_halo_xml_to_roi(halo_roi_path)
-
-    print (x_roi, y_roi)
-#    print ((min(x_roi), min(y_roi)), 0, (abs(x_roi[1] - x_roi[0]), abs(y_roi[1] - y_roi[1])))
-    slide_image_cropped  = slide.read_region((min(x_roi), min(y_roi)), 0, (abs(x_roi[1] - x_roi[0]), abs(y_roi[1] - y_roi[0]))).convert('RGB')
-
-    print (slide_image_cropped)
-
-    slide_array  = np.array(slide_image_cropped, dtype=np.uint8)
-    sample_array = np.array(slide_image_cropped.resize( (slide_image_cropped.size[0] // 80, slide_image_cropped.size[1] // 80)  ),  dtype=np.uint8)
-    mask_array   = annotation_mask[ min(y_roi):max(y_roi), min(x_roi):max(x_roi)].astype(np.uint8)
-
-    if slide_id is not None and output_dir is not None:
-
-        with tifffile.TiffWriter(f'{output_dir}/{slide_id}/{slide_id}_slideImage_roi_inRGB.tiff', bigtiff=True) as tiff:
-            tiff.save(slide_array)
-        
-        with tifffile.TiffWriter(f'{output_dir}/{slide_id}/{slide_id}_slideSample_roi_inRGB.tiff', bigtiff=True) as tiff:
-            tiff.save(sample_array)
-        
-        with tifffile.TiffWriter(f'{output_dir}/{slide_id}/{slide_id}_annotMask_roi_uint8.tiff', bigtiff=True) as tiff:
-            tiff.save(mask_array)
-    
-    return slide_array, sample_array, mask_array
 
 
 def get_stain_vectors_macenko(sample: np.ndarray):
@@ -226,7 +209,7 @@ def pull_stain_channel(patch:np.ndarray, vectors:np.ndarray, channel:int=0)->np.
     return tmp[:,:,channel]
 
 
-def extract_patch_texture_features(address, image_patch, mask_patch, stain_vectors,
+def extract_patch_texture_features(image_patch, mask_patch, stain_vectors,
         stain_channel, glcm_feature, plot=False) -> np.ndarray:
     """extact patch texture features
 
@@ -234,11 +217,10 @@ def extract_patch_texture_features(address, image_patch, mask_patch, stain_vecto
     vector and stain channel.
 
     Args:
-        address (str): unused? 
         image_patch (np.ndarray): input image patch
         mask_patch (np.ndarray): input image mask
         stain_vectors (np.ndarray): stain vectors extacted from the image patch
-        stain_channels (int): stain channel 
+        stain_channel (int): stain channel 
         glcm_feature (str): unused? 
         plot (Optional, bool): unused? 
 
@@ -247,35 +229,36 @@ def extract_patch_texture_features(address, image_patch, mask_patch, stain_vecto
     
     """
 
-    extractor = radiomics.featureextractor.RadiomicsFeatureExtractor(binWidth=16)
-    extractor.disableAllFeatures()
-    extractor.enableFeaturesByName(glcm=['ClusterTendency'])
-    extractor.enableImageTypeByName('Original')
-    
-    logger.debug (f"Label sum= {mask_patch.sum()}")
-   
-    #mask_patch = np.array( Image.fromarray(mask_patch).resize((250,250))).astype(np.uint8)
+    logging.getLogger('radiomics.featureextractor').setLevel(logging.WARNING)
     if not (len(np.unique(mask_patch)) > 1 and np.count_nonzero(mask_patch) > 1): return None
     
     stain_patch = pull_stain_channel(image_patch, stain_vectors, channel=stain_channel)
-    
-    #stain_patch = np.array( Image.fromarray(stain_patch).resize((250,250)))
-    
+
+    if glcm_feature==None:
+        original_pixels = stain_patch.astype(np.uint8)[np.where(mask_patch.astype(np.bool))].flatten()
+        original_pixels_valid = original_pixels[original_pixels > 0]
+        return original_pixels_valid 
+
+    extractor = radiomics.featureextractor.RadiomicsFeatureExtractor(binWidth=16)
+    extractor.disableAllFeatures()
+    extractor.enableFeaturesByName(glcm=[glcm_feature])
+    extractor.enableImageTypeByName('Original')
+
     sitk_image  = sitk.GetImageFromArray(stain_patch.astype(np.uint8))
-    sitk_mask   = sitk.GetImageFromArray(mask_patch.astype(np.uint8))
+    sitk_mask   = sitk.GetImageFromArray(mask_patch. astype(np.uint8))
 
     try:
         bbox, _ = radiomics.imageoperations.checkMask(sitk_image, sitk_mask)
     except Exception as exc:
         logger.warning (f"Skipping this patch, mask pair due to '{exc}'")
+        return None
     else:
-        cimg, cmas = radiomics.imageoperations.cropToTumorMask(sitk_image, sitk_mask, bbox)
+        # cimg, cmas = radiomics.imageoperations.cropToTumorMask(sitk_image, sitk_mask, bbox)
 
         fts = extractor.execute(sitk_image, sitk_mask, voxelBased=True)
 
-        cluster_tend_patch   = sitk.GetArrayFromImage(fts['original_glcm_ClusterTendency']).astype(np.float).flatten()
-        cluster_tend_nonzero = cluster_tend_patch[cluster_tend_patch != 0]
-        cluster_tend_valid   = cluster_tend_nonzero[~np.isnan(cluster_tend_nonzero)]
+        stainomics_patch   = sitk.GetArrayFromImage(fts[f'original_glcm_{glcm_feature}']).astype(np.float)
+        stainomics_nonzero = stainomics_patch[stainomics_patch != 0].flatten()
+        stainomics_valid   = stainomics_nonzero[~np.isnan(stainomics_nonzero)]
 
-        return cluster_tend_valid
-            
+        return stainomics_valid

@@ -50,9 +50,7 @@ def test_array_to_slide():
     assert isinstance(res, openslide.ImageSlide)
 
 def test_make_otsu():
-    # pass a rgb image
-    res = make_otsu(img_arr)
-
+    res = make_otsu(img_arr) # This takes a RGB
     assert 0 == np.count_nonzero(res[0])
     assert isinstance(res, np.ndarray)
 

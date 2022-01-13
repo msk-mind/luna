@@ -3,13 +3,13 @@ from click.testing import CliRunner
 from luna.pathology.cli.infer_tile_labels import cli
 
 
-def test_cli():
+def test_cli(tmp_path):
 
     runner = CliRunner()
 
     result = runner.invoke(cli, [
-            '-i', 'pyluna-pathology/tests/luna/pathology/cli/testdata/123/data',
-            '-o', './tmp/123',
+            'pyluna-pathology/tests/luna/pathology/cli/testdata/data/test/slides/123/test_generate_tile_ov_labels/TileImages/data/',
+            '-o', tmp_path,
             '-rn', 'msk-mind/luna-ml',
             '-tn', 'tissue_tile_net_transform',
             '-mn', 'tissue_tile_net_model_5_class',
