@@ -17,9 +17,9 @@ def test_cli_window(tmp_path):
         '--high_level', 100])
 
     assert result.exit_code == 0
-    assert os.path.exists(str(tmp_path) + '/metadata.json')
+    assert os.path.exists(str(tmp_path) + '/metadata.yml')
 
-    with open ((str(tmp_path) + '/metadata.json'), 'r') as fp:
+    with open ((str(tmp_path) + '/metadata.yml'), 'r') as fp:
         metadata = json.load(fp)
 
     assert os.path.exists(metadata['itk_volume'])

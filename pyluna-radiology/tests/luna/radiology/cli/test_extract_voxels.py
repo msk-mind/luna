@@ -15,9 +15,9 @@ def test_cli_voxels(tmp_path):
         '-o', tmp_path])
 
     assert result.exit_code == 0
-    assert os.path.exists(str(tmp_path) + '/metadata.json')
+    assert os.path.exists(str(tmp_path) + '/metadata.yml')
 
-    with open ((str(tmp_path) + '/metadata.json'), 'r') as fp:
+    with open ((str(tmp_path) + '/metadata.yml'), 'r') as fp:
         metadata = json.load(fp)
 
     assert os.path.exists(metadata['npy_volume'])
