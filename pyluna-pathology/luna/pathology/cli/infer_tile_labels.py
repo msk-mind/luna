@@ -5,9 +5,9 @@ import click
 from luna.common.custom_logger   import init_logger
 
 init_logger()
-logger = logging.getLogger('infer_tille_labels')
+logger = logging.getLogger('infer_tile_labels')
 
-from luna.common.utils import validate_params
+from luna.common.utils import cli_runner
 
 import torch
 from torch.utils.data import DataLoader
@@ -16,11 +16,10 @@ from luna.pathology.common.ml import BaseTorchTileDataset, BaseTorchTileClassifi
 import pandas as pd
 from tqdm import tqdm
 
-_params = [('input_data', str), ('output_dir', str), ('repo_name', str), ('transform_name', str), ('model_name', str), ('weight_tag', str), ('num_cores', int), ('batch_size', int)]
+_params_ = [('input_slide_tiles', str), ('output_dir', str), ('repo_name', str), ('transform_name', str), ('model_name', str), ('weight_tag', str), ('num_cores', int), ('batch_size', int)]
 
 @click.command()
-@click.option('-i', '--input_data', required=False,
-              help='path to input data')
+@click.argument('input_slide_tiles', nargs=1)
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-rn', '--repo_name', required=False,
@@ -34,50 +33,28 @@ _params = [('input_data', str), ('output_dir', str), ('repo_name', str), ('trans
 @click.option('-nc', '--num_cores', required=False,
               help="Number of cores to use", default=4)  
 @click.option('-bx', '--batch_size', required=False,
-              help="weight tag filename", default=256)    
+              help="batch size used for inference speedup", default=64)    
 @click.option('-m', '--method_param_path', required=False,
-              help='json file with method parameters for tile generation and filtering')
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """
-    Run with explicit arguments:
+    """ Run a model with a specific pre-transform for all tiles in a slide (tile_images)
 
     \b
-        infer_tiles
-            -i 1412934/data/TileImages
-            -o 1412934/data/TilePredictions
+    Inputs:
+        input_slide_tiles: path to tile images (.tiles.pil)
+    \b
+    Outputs:
+        tile_scores
+    \b
+    Example:
+        infer_tiles tiles/slide-100012/tiles
             -rn msk-mind/luna-ml:main 
-            -tn tissue_tile_net_transform 
             -mn tissue_tile_net_model_5_class
+            -tn tissue_tile_net_transform 
             -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
-
-    Run with implicit arguments:
-
-    \b
-        infer_tiles -m 1412934/data/TilePredictions/metadata.json
-    
-    Run with mixed arguments (CLI args override yaml/json arguments):
-
-    \b
-        infer_tiles --input_data 1412934/data/TileImages -m 1412934/data/TilePredictions/metadata.json
+            -o tiles/slide-100012/scores
     """
-    kwargs = {}
-
-    # Get params from param file
-    if cli_kwargs.get('method_param_path'):
-        with open(cli_kwargs.get('method_param_path'), 'r') as yaml_file:
-            yaml_kwargs = yaml.safe_load(yaml_file)
-        kwargs.update(yaml_kwargs) # Fill from json
-    
-    for key in list(cli_kwargs.keys()):
-        if cli_kwargs[key] is None: del cli_kwargs[key]
-
-    # Override with CLI arguments
-    kwargs.update(cli_kwargs) # 
-
-    # Validate them
-    kwargs = validate_params(kwargs, _params)
-
-    infer_tile_labels(**kwargs)
+    cli_runner( cli_kwargs, _params_, infer_tile_labels)
 
 # We are acting a bit like a consumer of the base classes here-
 class TileDatasetGithub(BaseTorchTileDataset):
@@ -92,28 +69,27 @@ class TileClassifierGithub(BaseTorchTileClassifier):
     def predict(self, input_tiles):
         return self.model(input_tiles)
 
-def infer_tile_labels(input_data, output_dir, repo_name, transform_name, model_name, weight_tag, num_cores, batch_size):
+def infer_tile_labels(input_slide_tiles, output_dir, repo_name, transform_name, model_name, weight_tag, num_cores, batch_size):
     """Generate tile addresses, scores and optionally annotation labels using models stored in torch.hub format
 
     Args:
-        input_data (str): path to application configuration file.
-        output_dir (str): datastore name. usually a slide id.
-        repo_name (str): method parameters including input, output details.
-        transform_name (str):
-        model_name (str):
-        weight_tag (str):
+        input_slide_tiles (str): path to a slide-tile directory (contains .tiles.pil)
+        output_dir (str): output/working directory
+        repo_name (str): repository root name like (namespace/repo) at github.com to serve torch.hub models
+        transform_name (str): torch hub transform name (a function at the repo repo_name)
+        model_name (str): torch hub model name (a nn.Module at the repo repo_name)
+        weight_tag (str): what weight tag to use
+        num_cores (int): how many cores to use for dataloading
+        batch_size (int): size in batch dimension to chuck inference (8-256 recommended, depending on memory usage)
 
     Returns:
-        None
+        dict: metadata about function call
     """
-    input_params = validate_params(locals(), _params) # Capture input parameters as dict
-    os.makedirs(output_dir, exist_ok=True)
-
     # Get our model and transforms and construct the Tile Dataset and Classifier
     logger.info(f"Loading model and transform: repo_name={repo_name}, transform_name={transform_name}, model_name={model_name}")
     logger.info(f"Using weights weight_tag={weight_tag}")
 
-    tile_dataset     = TileDatasetGithub(tile_path=input_data, repo_name=repo_name, transform_name=transform_name)
+    tile_dataset     = TileDatasetGithub(tile_path=input_slide_tiles, repo_name=repo_name, transform_name=transform_name)
     tile_classifier  = TileClassifierGithub(repo_name=repo_name, model_name=model_name, weight_tag=weight_tag)
 
     tile_loader = DataLoader(tile_dataset, num_workers=num_cores, batch_size=batch_size, pin_memory=True)
@@ -134,15 +110,14 @@ def infer_tile_labels(input_data, output_dir, repo_name, transform_name, model_n
     df_output.to_csv(output_file)
 
     # Save our properties and params
-    extra_props = {
+    properties = {
+        "tile_scores": output_file,
         "total_tiles": len(df_output),
-        "available_labels": list(df_output.columns)
+        "available_labels": list(df_output.columns),
     }
 
-    input_params.update(extra_props)
+    return properties
 
-    with open(os.path.join(output_dir, "metadata.json"), "w") as fp:
-        json.dump(input_params, fp, indent=4, sort_keys=True)
 
 if __name__ == "__main__":
     cli()

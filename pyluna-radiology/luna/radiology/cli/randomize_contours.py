@@ -1,86 +1,126 @@
-'''
-Created: February 2021
-@author: aukermaa@mskcc.org
-
-Given a scan (container) ID
-1. resolve the path to a volumentric image and annotation (label) files
-2. resample image and segmentation, and save voxels as a 3d numpy array (.npy)
-3. store results on HDFS and add metadata to the graph
-
-'''
-
-# General imports
-import os, json, logging
+import os, logging
 import click
 
-# From common
 from luna.common.custom_logger   import init_logger
-from luna.common.DataStore       import DataStore
-from luna.common.Node            import Node
-from luna.common.config          import ConfigSet
 
-# From radiology.common
-from luna.radiology.common.preprocess   import randomize_contours
+init_logger()
+logger = logging.getLogger('randomize_contours')
 
-cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
+from luna.common.utils import cli_runner
+
+_params_ = [('input_itk_volume', str), ('input_itk_labels', str), ('resample_pixel_spacing', float), ('resample_smoothing_beta', float), ('output_dir', str)]
 
 @click.command()
-@click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--datastore_id', required=True)
-@click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, datastore_id, method_param_path):
-    init_logger()
+@click.argument('input_itk_volume', nargs=1)
+@click.argument('input_itk_labels', nargs=1)
+@click.option('-rps', '--resample_pixel_spacing', required=False,
+              help='path to input label data')
+@click.option('-rsb', '--resample_smoothing_beta', required=False,
+              help='path to input label data')
+@click.option('-o', '--output_dir', required=False,
+              help='path to output directory to save results')
+@click.option('-m', '--method_param_path', required=False,
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
+def cli(**cli_kwargs):
+    """Generate randomize contours given and image, label after resampling using MIRP processing library
 
-    with open(method_param_path) as json_file:
-        method_data = json.load(json_file)
-    randomize_contours_with_container(cohort_id, datastore_id, method_data)
-
-def randomize_contours_with_container(cohort_id: str, container_id: str, method_data: dict, semaphore=0):
+    \b
+    Inputs:
+        input_itk_volume: itk compatible image volume (.mhd, .nrrd, .nii, etc.)
+        input_itk_labels: itk compatible label volume (.mha, .nii, etc.)
+    \b
+    Outputs:
+        itk_volume
+        itk_labels
+        mirp_pertubations
+        mirp_supervoxels
+    \b
+    Example:
+        extract_radiomics ct_image.mhd, ct_lesions.mha
+            -rps 1.5
+            -rsb 0.9
+            -o ./mirp_results/
     """
-    Using the container API interface, perform MIRP contour randomization
+    cli_runner(cli_kwargs, _params_, randomize_contours )
+
+
+
+from luna.radiology.mirp.importSettings        import Settings
+from luna.radiology.mirp.imageReaders          import read_itk_image, read_itk_segmentation
+from luna.radiology.mirp.imageProcess          import interpolate_image, interpolate_roi, crop_image
+from luna.radiology.mirp.imagePerturbations    import randomise_roi_contours
+from luna.radiology.mirp.imageProcess          import combine_all_rois, combine_pertubation_rois
+
+import numpy as np
+
+def randomize_contours(input_itk_volume: str, input_itk_labels: str, resample_pixel_spacing: float, resample_smoothing_beta: float, output_dir: str):
+    """Generate randomize contours given and image, label after resampling using MIRP processing library
+
+    First, we interpolate the inputs to a isotropic spacing, then get the supervoxel pertubations using the MIRP methods, 
+    as defined in:
+    
+    Zwanenburg, A., Leger, S., Agolli, L. et al. Assessing robustness of radiomic features by image perturbation. Sci Rep 9, 614 (2019). https://doi.org/10.1038/s41598-018-36938-4
+
+    Args:
+        input_itk_volume (str): path to itk compatible image volume (.mhd, .nrrd, .nii, etc.)
+        input_itk_labels (str): path to itk compatible label volume (.mha)
+        output_dir (str): output/working directory
+        resample_pixel_spacing (float): voxel size in mm
+        resample_smoothing_beta (float): smoothing beta of gaussian filter
+
+    Returns:
+        dict: metadata about function call
     """
-    logger = logging.getLogger(f"[datastore={container_id}]")
+    logger.info("Hello, processing %s, %s", input_itk_volume, input_itk_labels)
+    settings = Settings()
 
-    # Do some setup
-    datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
-    method_id   = method_data.get("job_tag", "none")
+    print (settings)
 
-    image_node  = datastore.get("VolumetricImage", method_data['image_input_tag'])
-    label_node  = datastore.get("VolumetricLabel", method_data['label_input_tag'])
+    resample_pixel_spacing = np.full((3), resample_pixel_spacing)
 
-    try:
-        if image_node is None: raise ValueError("Image node not found")
-        if label_node is None: raise ValueError("Label node not found")
+    settings.img_interpolate.new_spacing = resample_pixel_spacing
+    settings.roi_interpolate.new_spacing = resample_pixel_spacing
+    settings.img_interpolate.smoothing_beta = resample_smoothing_beta
 
-        # Data just goes under namespace/name
-        # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], method_data.get("env", "data"),
-                                  datastore._namespace_id, datastore._name, method_id)
-        if not os.path.exists(output_dir): os.makedirs(output_dir)
+    # Read
+    image_class_object      = read_itk_image(input_itk_volume, "CT")
+    roi_class_object_list   = read_itk_segmentation(input_itk_labels)
 
-        image_properties, label_properties, pertubation_properties, supervoxel_properties = randomize_contours(
-            image_path = image_node.data,
-            label_path = label_node.data,
-            output_dir = output_dir,
-            params     = method_data
-        )
+    # Crop for faster interpolation
+    image_class_object, roi_class_object_list = crop_image(img_obj=image_class_object, roi_list=roi_class_object_list, boundary=50.0, z_only=True)
 
-    except Exception as e:
-        logger.exception (f"{e}, stopping job execution...")
-        raise e
-    else:
-        new_image_node          = Node("VolumetricImage",    method_id, image_properties)
-        new_label_node          = Node("VolumetricLabel",    method_id, label_properties)
-        new_pertubation_node    = Node("VolumetricLabelSet", method_id, pertubation_properties)
-        new_supervoxel_node     = Node("Voxels", method_id, supervoxel_properties)
+    # Interpolation
+    image_class_object    = interpolate_image (img_obj=image_class_object, settings=settings)
+    roi_class_object_list = interpolate_roi   (img_obj=image_class_object, roi_list=roi_class_object_list, settings=settings)
 
-        datastore.put(new_image_node)
-        datastore.put(new_label_node)
-        datastore.put(new_pertubation_node)
-        datastore.put(new_supervoxel_node)
-        
-    finally:
-        return semaphore + 1   
+    # Export
+    image_file = image_class_object.export(file_path=f"{output_dir}/main_image")
+
+    # ROI processing
+    roi_class_object = combine_all_rois (roi_list=roi_class_object_list, settings=settings)
+    label_file = roi_class_object.export(img_obj=image_class_object, file_path=f"{output_dir}/main_label")
+
+    roi_class_object_list, svx_class_object_list = randomise_roi_contours (img_obj=image_class_object, roi_list=roi_class_object_list, settings=settings)
+
+    roi_supervoxels = combine_all_rois (roi_list=svx_class_object_list, settings=settings)
+    voxels_file = roi_supervoxels.export(img_obj=image_class_object, file_path=f"{output_dir}/supervoxels")
+
+    for roi in combine_pertubation_rois (roi_list=roi_class_object_list, settings=settings): 
+        if "COMBINED" in roi.name: roi.export(img_obj=image_class_object, file_path=f"{output_dir}/pertubations")
+
+    print (image_file, label_file)
+
+    # Construct return dicts
+    properties = {
+        "itk_volume": image_file,
+        "itk_labels": label_file,
+        "mirp_pertubations": f"{output_dir}/pertubations",
+        "mirp_supervoxels": voxels_file
+    }
+
+    return properties
+
 
 if __name__ == "__main__":
     cli()
+
