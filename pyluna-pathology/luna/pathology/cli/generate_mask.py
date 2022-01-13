@@ -79,7 +79,7 @@ def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_nam
 
     properties = {
         'slide_mask': slide_mask,
-        'mask_size': wsi_shape,
+        'mask_size': list (wsi_shape),
     }
 
     return properties
