@@ -140,7 +140,7 @@ def test_cli_runner(tmp_path):
     assert os.path.exists(str(tmp_path) + '/message.txt')
 
     with open (str(tmp_path) + '/metadata.yml') as fp:
-        metadata = yaml.load(fp)
+        metadata = yaml.safe_load(fp)
         assert metadata['num_characters']== 24
 
 
@@ -177,5 +177,5 @@ def test_cli_runner_reruns(tmp_path):
 
 
     with open (str(tmp_path) + 'rerun' + '/metadata.yml') as fp:
-        metadata = yaml.load(fp)
+        metadata = yaml.safe_load(fp)
         assert metadata['num_characters']== 24
