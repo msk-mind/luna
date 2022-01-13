@@ -1,18 +1,21 @@
 from pathlib import Path
 from medpy.io import save, load
 import dicom2nifti
-import os, time
+import os
 import click
 import pandas as pd
 import dask.dataframe as dd
-import json, yaml
 import numpy as np
 from typing import Dict, List, Optional, Tuple
 
+from luna.common.utils import cli_runner
 from luna.common.custom_logger import init_logger
 from luna.common.utils import generate_uuid
 
 logger = init_logger()
+
+_params_ = [('raw_data_path', str), ('mapping_csv_path', str), ('output_dir', str),
+            ('scan_table_path', str), ('npartitions', int), ('subset', bool)]
 
 def find_z_nbound(dim: Tuple) -> Tuple[int, int]:
     """
@@ -143,37 +146,21 @@ def dicom_to_nifti(row: pd.DataFrame, raw_data_path: str, output_dir: str, subse
 
 
 @click.command()
-@click.option('-r', '--raw_data_path', help="path to raw data. e.g /data/radiology/project_name/dicoms", required=True,
+@click.option('-r', '--raw_data_path', help="path to raw data. e.g /data/radiology/project_name/dicoms",
               type=click.Path())
-@click.option('-c', '--mapping_csv_path', help="csv with AccessionNumber, SeriesNumber columns", required=True,
+@click.option('-c', '--mapping_csv_path', help="csv with AccessionNumber, SeriesNumber columns",
               type=click.Path())
-@click.option('-o', '--output_dir', help="path to scan output folder", required=True)
-@click.option('-t', '--scan_table_path', help="path to save scan table", required=True)
-@click.option('-s', '--subset', help="extract first post contrast in bound series", default=False, show_default=True)
+@click.option('-o', '--output_dir', help="path to scan output folder")
+@click.option('-t', '--scan_table_path', help="path to save scan table")
+@click.option('-s', '--subset', help="extract first post contrast in bound series", is_flag=True)
 @click.option('-n', '--npartitions', help="npartitions for parallelization", default=20, show_default=True)
-@click.option('-m', '--method_param_path', help='json file with method parameters for tile generation and filtering',
+@click.option('-m', '--method_param_path', help='path to a metadata json/yaml file with method parameters to reproduce results',
               type=click.Path())
 def cli(**cli_kwargs):
     """
     Convert dicoms to nii.gz format and optionally subset bound series.
     """
-    # input args
-    kwargs = {}
-
-    # Get params from param file
-    if cli_kwargs.get('method_param_path'):
-        with open(cli_kwargs.get('method_param_path'), 'r') as yaml_file:
-            yaml_kwargs = yaml.safe_load(yaml_file)
-        kwargs.update(yaml_kwargs)  # Fill from json
-
-    for key in list(cli_kwargs.keys()):
-        if cli_kwargs[key] is None: del cli_kwargs[key]
-
-    # Override with CLI arguments
-    kwargs.update(cli_kwargs)
-
-    generate_scan_table(**kwargs)
-
+    cli_runner(cli_kwargs, _params_, generate_scan_table)
 
 def generate_scan_table(raw_data_path: str, mapping_csv_path: str, output_dir: str,
                         scan_table_path: str, subset=False, npartitions=20):
@@ -215,9 +202,10 @@ def generate_scan_table(raw_data_path: str, mapping_csv_path: str, output_dir: s
     df = df.dropna(subset=["record_uuid"])
     df.to_parquet(scan_table_path)
 
-    # save method params in configs
-    with open(f"{scan_table_path}_params.json", "w") as fp:
-        json.dump(input_params, fp, indent=4, sort_keys=True)
+    return {
+        'table_path': scan_table_path,
+        'n_records': len(df)
+    }
 
 if __name__ == "__main__":
     cli()

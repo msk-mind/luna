@@ -157,30 +157,6 @@ def subset_bound_seg(src_path, output_path, start_slice, end_slice):
     return output_path
 
 
-def subset_bound_dicom(src_path, output_path, index):
-    """
-    Pull out a from bound series, where the image array has dimensions like
-    (x, y, n_bound_series, z)
-
-    :param src_path: path to nifti file
-    :param output_path: path to new dicom series file
-    :param index: index to subset. should be less than n_bound_series
-    :return: path to new dicom series file
-    """
-    index = int(index)
-    try:
-        file_path = src_path.split(':')[-1]
-        data, header = load(file_path)
-        subset = data[:,:,index,:]
-        # re-arrange the array
-        subset = np.swapaxes(np.swapaxes(subset, 1,2), 0,1)
-        save(np.fliplr(subset), output_path)
-    except Exception as err:
-        print(err)
-        return None
-    return output_path
-
-
 def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
                       width, height, crop_width, crop_height, n_slices=None):
     """

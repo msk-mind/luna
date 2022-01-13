@@ -1,37 +1,29 @@
 import os
-import shutil
-
-import pytest
+import yaml
 import pandas as pd
 from click.testing import CliRunner
 from luna.radiology.cli.generate_scan_table import *
 
-scan_table_path = 'pyluna-radiology/tests/luna/radiology/cli/testdata/scan_table'
-method_param_path = scan_table_path + "_params.json"
-output_dir = 'pyluna-radiology/tests/luna/radiology/cli/testdata/scans'
 
-def teardown():
-    # cleanup
-    shutil.rmtree(output_dir)
-    os.remove(scan_table_path)
-    os.remove(method_param_path)
+def test_cli(tmpdir):
 
-
-def test_cli():
-
+    scan_table_path = str(tmpdir) + "/scan_table"
     runner = CliRunner()
     result = runner.invoke(cli,
         ['--raw_data_path', 'pyluna-radiology/tests/luna/radiology/cli/testdata/',
          '--mapping_csv_path', 'pyluna-radiology/tests/luna/radiology/cli/testdata/series_mapping.csv',
-         '--output_dir', output_dir,
+         '--output_dir', tmpdir,
          '--scan_table_path', scan_table_path,
-         '--npartitions', 1])
+         '--npartitions', 1,
+         '--subset'])
     print(result.exit_code)
     print(result.exc_info)
 
     assert result.exit_code == 0
-    assert os.path.exists(method_param_path)
-    assert os.path.exists(os.path.join(output_dir, "123"))
+    assert os.path.exists(str(tmpdir)+"/123")
+    with open (str(tmpdir) + '/metadata.yml') as fp:
+        metadata = yaml.safe_load(fp)
+        assert metadata['table_path']== scan_table_path
 
     df = pd.read_parquet(scan_table_path)
     print(df)
