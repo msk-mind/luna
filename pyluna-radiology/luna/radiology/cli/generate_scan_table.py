@@ -121,6 +121,7 @@ def dicom_to_nifti(row: pd.DataFrame, raw_data_path: str, output_dir: str, subse
                 scan_file = fn
                 break
         if not scan_file:
+            # use dicom2nifti to handle bound series
             dicom2nifti.convert_directory(dicom_dir, scan_dir)
 
         print(os.listdir(scan_dir))
@@ -159,6 +160,9 @@ def dicom_to_nifti(row: pd.DataFrame, raw_data_path: str, output_dir: str, subse
 def cli(**cli_kwargs):
     """
     Convert dicoms to nii.gz format and optionally subset bound series.
+
+    dicom2nifti is used to convert bound series into 4D volumes.
+    For more simple dicom to scan function, see luna.radiology.cli.dicom_to_itk.
     """
     cli_runner(cli_kwargs, _params_, generate_scan_table)
 
