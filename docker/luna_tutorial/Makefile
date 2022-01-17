@@ -55,6 +55,7 @@ clean-image:  ## remove luna tutorial image
 
 
 build:        ## build containers
+	apply_ports.sh
 	mkdir -p vmount/logs vmount/db vmount/tmp
 	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) HOST_IP=$(HOST_IP) HOST_PORT=$(HOST_PORT) docker-compose --verbose build
 
