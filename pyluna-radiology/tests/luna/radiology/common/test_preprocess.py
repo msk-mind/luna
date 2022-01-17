@@ -77,4 +77,3 @@ def test_crop_images():
     assert 256*256 == len(dicom_overlay[0])
     # RGB overlay image
     assert 256*256*3 == len(dicom_overlay[1])
-
