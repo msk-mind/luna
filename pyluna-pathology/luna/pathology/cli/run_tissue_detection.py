@@ -88,7 +88,7 @@ def detect_tissue(input_slide_image, input_slide_tiles, output_dir, num_cores):
 
     threshold = threshold_otsu(rgb2gray(sample_arr))
 
-    df = pd.read_csv(input_slide_tiles)
+    df = pd.read_csv(input_slide_tiles).set_index('address')
 
     logger.info(f"Starting otsu thresholding, threshold={threshold}")
     with Pool(num_cores) as p:
