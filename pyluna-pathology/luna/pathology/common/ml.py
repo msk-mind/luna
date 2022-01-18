@@ -29,8 +29,7 @@ class BaseTorchTileDataset(Dataset):
         if tile_manifest is not None:
             self.tile_manifest = tile_manifest 
         elif tile_path is not None: 
-            self.tile_manifest = pd.read_csv(tile_path + 'address.slice.csv').set_index("address")
-            self.tile_manifest['data_path'] = tile_path + 'tiles.slice.pil'
+            self.tile_manifest = pd.read_csv(tile_path).set_index("address")
         else:
             raise RuntimeError("Must specifiy either tile_manifest or tile_path")
         
@@ -59,7 +58,7 @@ class BaseTorchTileDataset(Dataset):
             
         if not type(idx)==int: raise TypeError(f"BaseTileDataset only accepts interger indicies, got {type(idx)}")
         row = self.tile_manifest.iloc[idx]
-        with open(row.data_path, "rb") as fp:
+        with open(row.tile_image_binary, "rb") as fp:
             fp.seek(int(row.tile_image_offset))
             img = Image.frombytes(
                 row.tile_image_mode,

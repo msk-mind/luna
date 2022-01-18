@@ -111,7 +111,7 @@ def infer_tile_labels(input_slide_tiles, output_dir, repo_name, transform_name, 
 
     # Save our properties and params
     properties = {
-        "tile_scores": output_file,
+        "slide_tiles": output_file,
         "total_tiles": len(df_output),
         "available_labels": list(df_output.columns),
     }
