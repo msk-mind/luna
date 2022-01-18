@@ -4,6 +4,7 @@
 
 
 # find and apply open port for girder
+echo "Finding available port for girder..."
 PORT=$(find_open_port.sh 8080 8180)
 
 unameOut="$(uname -s)"
@@ -21,6 +22,7 @@ fi
 
 
 # find and apply open port for jupyterlab
+echo "Finding available ports for jupyterlab..."
 PORT=$(find_open_port.sh 8888 8988)
 
 unameOut="$(uname -s)"
