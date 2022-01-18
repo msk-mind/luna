@@ -38,5 +38,5 @@ do
     fi
 done
 
-echo "$PORT"
+echo "Found port $PORT"
 exit 0
