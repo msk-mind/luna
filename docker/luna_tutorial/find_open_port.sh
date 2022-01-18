@@ -15,6 +15,8 @@ then
     exit 1
 fi
 
+unameOut="$(uname -s)"
+
 ERR=$(which seq)
 EXIT_VALUE=$?
 
@@ -28,15 +30,25 @@ fi
 # search for an available port in the specified range
 for ii in $(seq $1 $2);
 do
-    RESULT=$(nc -zvw100 localhost $ii 2>&1)
-
-    # if connection is refused, port is open
-    if [[ "$RESULT" == *"refused"* ]];
+    if [[ "$unameOut" == *"Darwin"* ]];  # if mac
     then
-        PORT=$ii
-        break
-    fi
+	RESULT=$(nc -zvw100 localhost $ii 2>&1)
+	# if connection is refused, port is open
+	if [[ "$RESULT" == *"refused"* ]];
+        then
+           PORT=$ii
+           break
+         fi
+    else   # if linux
+	RESULT=$(netstat -nltp | grep $ii 2>&1)
+        # if connection is refused, port is open
+        if [[ "$RESULT" != *"LISTEN"* ]];
+        then
+           PORT=$ii
+           break
+        fi
+    fi 
 done
 
-echo "Found port $PORT"
+echo "$PORT"
 exit 0

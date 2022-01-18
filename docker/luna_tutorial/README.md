@@ -19,10 +19,7 @@ exec                 launches terminal prompt inside luna_tutorial container
 
 ```
 
-In order to run this tutorial, first build the docker-compose images using `make build` and then lauch the containers using `make run`. Once the containers are launched, the URL for jupyterlab is available at `vmount/logs/tutorial.log`. Typically, the URLs are as shown below but they may vary based on whether the tutorial is executed on a remove server and depending on the available ports on the host operating system.  
-
-    jupyterlab: http://localhost:8888  # NOTE available in vmount/logs/tutorial.log 
-    DSA:        http://localhost:8080
+In order to run this tutorial, first build the docker-compose images using `make build` and then lauch the containers using `make run`. Once the containers are launched, copy-paste the URL from the `make run` command into a browser and enter the token from `vmount/logs/tutorial.log`.  
 
 You may then step through the notebooks in jupyterlab. Note that the url by default is set to localhost. If you need to run the tutorial from a remote system, you may specify the host IP and port of the remote system as arguments to the Makefile. 
 
