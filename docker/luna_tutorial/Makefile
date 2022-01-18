@@ -7,8 +7,6 @@ GROUP_NAME=$(USER)
 USER_ID=$(shell id -u)
 GROUP_ID=$(shell id -g)
 CURRENT_UID=$(USER):$(GID)
-HOST_IP=127.0.0.1
-HOST_PORT=8888
 DOCKER_PATH=$(shell which docker)
 
 .PHONY: all help build clean test run
@@ -57,12 +55,12 @@ clean-image:  ## remove luna tutorial image
 build:        ## build containers
 	apply_ports.sh
 	mkdir -p vmount/logs vmount/db vmount/tmp
-	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) HOST_IP=$(HOST_IP) HOST_PORT=$(HOST_PORT) docker-compose --verbose build
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose --project-name $(USER_NAME)-luna-tutorial- --verbose build
 
 
-run:        ## launch containers. Default IP:PORT=127.0.0.1:8888. Optionally specify args HOST_IP=xxx.xxx.xxx.xxx HOST_PORT=xxxx.
+run:        ## launch containers
 	mkdir -p vmount/logs vmount/db vmount/tmp
-	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) HOST_IP=$(HOST_IP) HOST_PORT=$(HOST_PORT) docker-compose --log-level INFO --verbose up -d
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose --project-name $(USER_NAME)-luna-tutorial- --verbose up -d
 
 
 stop:       ## terminate containers but keep volumes
