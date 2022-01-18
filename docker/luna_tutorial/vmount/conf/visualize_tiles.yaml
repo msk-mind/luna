@@ -18,9 +18,9 @@ magnification: 20
 
 # map of dsa instance details
 dsa_config:
-    host: localhost
-    port: 80
-    token: your-dsa-config-token
+    host: host.docker.internal
+    port: 8080
+    token: <your-dsa-config-token>
     
 # path to output directory
 root_path: ../PRO_12-123/tiles
