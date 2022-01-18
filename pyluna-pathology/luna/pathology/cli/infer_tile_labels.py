@@ -1,5 +1,5 @@
 # General imports
-import os, json, logging, yaml
+import os, json, logging, yaml, sys
 import click
 
 from luna.common.custom_logger   import init_logger
@@ -96,7 +96,7 @@ def infer_tile_labels(input_slide_tiles, output_dir, repo_name, transform_name, 
 
     # Generate aggregate dataframe
     with torch.no_grad():
-        df_scores = pd.concat([tile_classifier(index, data) for index, data in tqdm(tile_loader)])
+        df_scores = pd.concat([tile_classifier(index, data) for index, data in tqdm(tile_loader, file=sys.stdout)])
         
     if hasattr(tile_classifier.model, 'class_labels'):
         logger.info(f"Mapping column labels -> {tile_classifier.model.class_labels}")

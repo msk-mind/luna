@@ -1,36 +1,29 @@
 # General imports
-import os, json, logging, yaml
+import os, json, logging, yaml, sys
 import click
 
 from luna.common.custom_logger   import init_logger
 
 init_logger()
-logger = logging.getLogger('infer_tile_labels')
+logger = logging.getLogger('generate_tiles')
 
 from luna.common.utils import cli_runner
-
-import torch
-from torch.utils.data import DataLoader
-from luna.pathology.common.ml import BaseTorchTileDataset, BaseTorchTileClassifier
 
 import pandas as pd
 from tqdm import tqdm
 
-_params_ = [('input_slide_image', str), ('output_dir', str), ('requested_tile_size', int), ('batch_size', int), ('scale_factor', int), ('requested_magnification', float), ('num_cores', int)]
+_params_ = [('input_slide_image', str), ('output_dir', str), ('requested_tile_size', int), ('batch_size', int), ('requested_magnification', float), ('num_cores', int)]
 
 @click.command()
 @click.argument('input_slide_image', nargs=1)
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
-
 @click.option('-nc', '--num_cores', required=False,
               help="Number of cores to use", default=4)  
 @click.option('-rts', '--requested_tile_size', required=False,
               help="Number of cores to use")
 @click.option('-rmg', '--requested_magnification', required=False,
               help="Number of cores to use")
-@click.option('-sf', '--scale_factor', required=False,
-              help="Thumnail scale factor")  
 @click.option('-bx', '--batch_size', required=False,
               help="batch size used for inference speedup", default=64)    
 @click.option('-m', '--method_param_path', required=False,
@@ -51,7 +44,7 @@ def cli(**cli_kwargs):
     cli_runner( cli_kwargs, _params_, generate_tiles)
 
 import openslide
-from luna.pathology.common.preprocess import get_scale_factor_at_magnfication, get_downscaled_thumbnail, make_otsu, get_full_resolution_generator, get_otsu_scores, get_purple_scores, coord_to_address, address_to_coord
+from luna.pathology.common.preprocess import get_scale_factor_at_magnfication, get_full_resolution_generator, coord_to_address, address_to_coord
 import itertools
 from pathlib import Path
 
@@ -67,7 +60,7 @@ def get_tile_bytes(indices, input_slide_image, full_resolution_tile_size, reques
     full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
     return [(index, full_generator.get_tile(full_level, address_to_coord(index)).resize((requested_tile_size,requested_tile_size)).tobytes()) for index in indices]
 
-def generate_tiles(input_slide_image, requested_tile_size, requested_magnification, scale_factor, output_dir, num_cores, batch_size):
+def generate_tiles(input_slide_image, requested_tile_size, requested_magnification, output_dir, num_cores, batch_size):
     """Generate tile addresses, scores and optionally annotation labels using models stored in torch.hub format
 
     Args:
@@ -78,23 +71,19 @@ def generate_tiles(input_slide_image, requested_tile_size, requested_magnificati
     Returns:
         dict: metadata about function call
     """
-    slide = openslide.OpenSlide(str(input_slide_image))
-
     slide_name = Path(input_slide_image).stem
 
+    slide = openslide.OpenSlide(str(input_slide_image))
     logger.info("Slide size = [%s,%s]", slide.dimensions[0], slide.dimensions[1])
 
     to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)
-    to_thumbnail_scale_factor   = to_mag_scale_factor * scale_factor
 
-    if not to_mag_scale_factor % 1 == 0 or not requested_tile_size % scale_factor == 0: 
+    if not to_mag_scale_factor % 1 == 0: 
         raise ValueError("You chose a combination of requested tile sizes and magnification that resulted in non-integer tile sizes at different scales")
 
     full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
-    thumbnail_tile_size       = requested_tile_size // scale_factor
-
-    logger.info("Normalized magnification scale factor for %sx is %s, overall thumbnail scale factor is %s", requested_magnification, to_mag_scale_factor, to_thumbnail_scale_factor)
-    logger.info("Requested tile size=%s, tile size at full magnficiation=%s, tile size at thumbnail=%s", requested_tile_size, full_resolution_tile_size, thumbnail_tile_size)
+    logger.info("Normalized magnification scale factor for %sx is %s", requested_magnification, to_mag_scale_factor)
+    logger.info("Requested tile size=%s, tile size at full magnficiation=%s", requested_tile_size, full_resolution_tile_size)
 
     # get DeepZoomGenerator, level
     full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
@@ -120,7 +109,7 @@ def generate_tiles(input_slide_image, requested_tile_size, requested_magnificati
     logger.info(f"Now generating tiles with num_cores={num_cores} and batch_size={batch_size}!")
     with ProcessPoolExecutor(num_cores) as executor:
         out = [executor.submit(get_tile_bytes, index, input_slide_image, full_resolution_tile_size, requested_tile_size ) for index in grouper(df.index, batch_size)]
-        for future in as_completed(out):
+        for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
             # if counter % 10000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df))
             for index, tile in future.result(): 
                 fp.write( tile )
