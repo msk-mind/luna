@@ -9,6 +9,8 @@ GROUP_ID=$(shell id -g)
 CURRENT_UID=$(USER):$(GID)
 DOCKER_PATH=$(shell which docker)
 
+export COMPOSE_PROJECT_NAME=$(USER_NAME)-luna-tutorial-
+
 .PHONY: all help build clean test run
 .DEFAULT_GOAL := help
 
@@ -53,19 +55,26 @@ clean-image:  ## remove luna tutorial image
 
 
 build:        ## build containers
-	apply_ports.sh
 	mkdir -p vmount/logs vmount/db vmount/tmp
-	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose --project-name $(USER_NAME)-luna-tutorial- --verbose build
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose build
 
 
 run:        ## launch containers
+	./apply_ports.sh
 	mkdir -p vmount/logs vmount/db vmount/tmp
-	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose --project-name $(USER_NAME)-luna-tutorial- --verbose up -d
-
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d
+	@echo
+	@echo DSA is available at,  
+	@echo "$$(hostname):$$(cat .dsa_port)"
+	@echo
+	@echo To access the tutorial, copy-paste this URL in your browser. Then enter the token from vmount/logs/tutorial.log 
+	@echo "$$(hostname):$$(cat .jupyter_port)"
+	@echo
 
 stop:       ## terminate containers but keep volumes
-	docker-compose down
-
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose down
+	rm -f .dsa_port
+	rm -f .jupyter_port
 
 exec:       ## launches terminal prompt inside luna_tutorial container
 	docker exec -it luna_tutorial_luna_tutorial_1 /bin/bash
