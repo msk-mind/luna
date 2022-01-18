@@ -67,7 +67,8 @@ run:        ## launch containers
 	@echo DSA is available at,  
 	@echo "$$(hostname):$$(cat .dsa_port)"
 	@echo
-	@echo To access the tutorial, copy-paste this URL in your browser. Then enter the token from vmount/logs/tutorial.log 
+	@echo To access the tutorial, copy-paste this URL in your browser.
+	@echo Then get token by running the command \"tail vmount/logs/tutorial.log\" and enter the token into the browser page.
 	@echo "$$(hostname):$$(cat .jupyter_port)"
 	@echo
 
