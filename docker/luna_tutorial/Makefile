@@ -46,12 +46,12 @@ help:
 
 
 clean:      ## cleanup luna_tutorial images and containers
-	docker rmi $$(docker images luna* -q)
-	docker rmi $$(docker container ls -f "name=luna*" -q)
+	-docker rmi $$(docker images luna* -q)
+	-docker rmi $$(docker container ls -f "name=luna*" -q)
 
 
 clean-image:  ## remove luna tutorial image
-	docker rmi -f $$(docker images luna* -q)
+	-docker rmi -f $$(docker images luna* -q)
 
 
 build:        ## build containers
@@ -61,10 +61,10 @@ build:        ## build containers
 
 run:        ## launch containers
 	./apply_ports.sh
-	mkdir -p vmount/logs vmount/db vmount/tmp
+	mkdir -p vmount/logs vmount/db vmount/tmp vmount/assetstore
 	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d
 	@echo
-	@echo DSA is available at,  
+	@echo DSA will take a few minutes to become available at,
 	@echo "$$(hostname):$$(cat .dsa_port)"
 	@echo
 	@echo To access the tutorial, copy-paste this URL in your browser.
