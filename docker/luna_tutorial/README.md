@@ -2,6 +2,8 @@ Luna Tutorial
 =============
 Prerequisites: 
 
+Host OS - Mac or Linux.
+
 Docker version 1.13+
 Docker-Compose version 1.18+
 
