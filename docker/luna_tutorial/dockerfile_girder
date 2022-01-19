@@ -26,6 +26,7 @@ RUN curl -LJ https://github.com/krallin/tini/releases/download/v0.19.0/tini -o /
     chmod +x /usr/bin/tini
 
 RUN python -m pip install --pre --no-cache-dir \
+    packaging \
     histomicsui \
     large_image[sources] \
     # girder[mount] adds dependencies to show tiles from S3 assets \
@@ -42,4 +43,4 @@ ENTRYPOINT ["/usr/bin/tini", "--"]
 
 RUN mkdir /logs && chmod -R 777 /logs
 USER $USER_NAME
-CMD python vmount/provision.py --sample-data && girder serve --database mongodb://mongodb:27017/girder
+CMD python vmount/provision.py --sample-data --user $USER_NAME && girder serve --database mongodb://mongodb:27017/girder
