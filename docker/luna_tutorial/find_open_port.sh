@@ -33,7 +33,7 @@ do
     if [[ "$unameOut" == *"Darwin"* ]];  # if mac
     then
 	RESULT=$(nc -zvw100 localhost $ii 2>&1)
-	# if connection is refused, port is open
+	# if connection is refused, then port is open
 	if [[ "$RESULT" == *"refused"* ]];
         then
            PORT=$ii
@@ -41,7 +41,7 @@ do
          fi
     else   # if linux
 	RESULT=$(netstat -nltp | grep $ii 2>&1)
-        # if connection is refused, port is open
+        # if no LISTEN in output, then port is open
         if [[ "$RESULT" != *"LISTEN"* ]];
         then
            PORT=$ii
