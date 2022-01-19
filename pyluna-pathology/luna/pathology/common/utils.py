@@ -186,7 +186,7 @@ def get_stain_vectors_macenko(sample: np.ndarray):
     return vectors
 
 
-def pull_stain_channel(patch:np.ndarray, vectors:np.ndarray, channel:int=0)->np.ndarray:
+def pull_stain_channel(patch:np.ndarray, vectors:np.ndarray, channel:int=None)->np.ndarray:
     """pull stain channel
     
     adds 'stain channel' to the image patch
@@ -206,7 +206,10 @@ def pull_stain_channel(patch:np.ndarray, vectors:np.ndarray, channel:int=0)->np.
     identity = np.array([[1,0,0],[0,1,0]])
     tmp = 255 * (1 - np.exp(-1 * np.dot(tile_concentrations, identity)))
     tmp = tmp.reshape(patch.shape).astype(np.uint8)   
-    return tmp[:,:,channel]
+    if not channel is None:
+        return tmp[:,:,channel]
+    else:
+        return tmp
 
 
 def extract_patch_texture_features(image_patch, mask_patch, stain_vectors,

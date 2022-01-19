@@ -92,7 +92,7 @@ def generate_tiles(input_slide_image, requested_tile_size, requested_magnificati
     logger.info("tiles x %s, tiles y %s", tile_x_count, tile_y_count)
 
     # populate address, coordinates
-    address_raster = [{"address": coord_to_address(address, requested_magnification), "coordinates": address}
+    address_raster = [{"address": coord_to_address(address, requested_magnification), "x_coord": (address[0]) * full_resolution_tile_size, "y_coord": (address[1]) * full_resolution_tile_size}
                       for address in itertools.product(range(1, tile_x_count-1), range(1, tile_y_count-1))]
     logger.info("Number of tiles in raster: %s", len(address_raster))
 
@@ -110,7 +110,6 @@ def generate_tiles(input_slide_image, requested_tile_size, requested_magnificati
     with ProcessPoolExecutor(num_cores) as executor:
         out = [executor.submit(get_tile_bytes, index, input_slide_image, full_resolution_tile_size, requested_tile_size ) for index in grouper(df.index, batch_size)]
         for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
-            # if counter % 10000 == 0: logger.info( "Proccessing tiles [%s,%s]", counter, len(df))
             for index, tile in future.result(): 
                 fp.write( tile )
                 
@@ -120,10 +119,11 @@ def generate_tiles(input_slide_image, requested_tile_size, requested_magnificati
                 counter+=1
     fp.close()
 
-    df.loc[:, 'tile_image_binary'] = output_binary_file
+    df.loc[:, 'full_resolution_tile_size'] = full_resolution_tile_size
+    df.loc[:, 'tile_image_binary']  = output_binary_file
     df.loc[:, 'tile_image_length']  = 3 * requested_tile_size ** 2
     df.loc[:, 'tile_image_size_xy'] = requested_tile_size
-    df.loc[:, 'tile_image_mode'] = 'RGB'
+    df.loc[:, 'tile_image_mode']    = 'RGB'
 
     logger.info (df)        
 
