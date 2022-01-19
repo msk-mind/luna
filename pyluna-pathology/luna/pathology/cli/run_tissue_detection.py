@@ -51,7 +51,7 @@ from skimage.color   import rgb2gray
 from skimage.filters import threshold_otsu
 import numpy as np
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from functools import partial
 
 from pathlib import Path
