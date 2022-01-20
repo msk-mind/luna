@@ -7,9 +7,9 @@ GROUP_NAME=$(USER)
 USER_ID=$(shell id -u)
 GROUP_ID=$(shell id -g)
 CURRENT_UID=$(USER):$(GID)
-HOST_IP=127.0.0.1
-HOST_PORT=8888
 DOCKER_PATH=$(shell which docker)
+
+export COMPOSE_PROJECT_NAME=$(USER_NAME)-luna-tutorial-
 
 .PHONY: all help build clean test run
 .DEFAULT_GOAL := help
@@ -46,27 +46,38 @@ help:
 
 
 clean:      ## cleanup luna_tutorial images and containers
-	docker rmi $$(docker images luna* -q)
-	docker rmi $$(docker container ls -f "name=luna*" -q)
+	-docker rmi $$(docker images luna* -q)
+	-docker rmi $$(docker container ls -f "name=luna*" -q)
 
 
 clean-image:  ## remove luna tutorial image
-	docker rmi -f $$(docker images luna* -q)
+	-docker rmi -f $$(docker images luna* -q)
 
 
 build:        ## build containers
 	mkdir -p vmount/logs vmount/db vmount/tmp
-	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) HOST_IP=$(HOST_IP) HOST_PORT=$(HOST_PORT) docker-compose --verbose build
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose build
 
 
-run:        ## launch containers. Default IP:PORT=127.0.0.1:8888. Optionally specify args HOST_IP=xxx.xxx.xxx.xxx HOST_PORT=xxxx.
-	mkdir -p vmount/logs vmount/db vmount/tmp
-	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) HOST_IP=$(HOST_IP) HOST_PORT=$(HOST_PORT) docker-compose --log-level INFO --verbose up -d
-
+run:        ## launch containers
+	./apply_ports.sh
+	mkdir -p vmount/logs vmount/db vmount/tmp vmount/assetstore
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d
+	@echo
+	@echo DSA is being set up with sample images, annotations and
+	@echo admin user (admin/password). It will take a couple minutes to become available at
+	@echo "$$(hostname):$$(cat .dsa_port)"
+	@echo
+	@echo To access the tutorial, copy-paste this URL in your browser.
+	@echo Then get token by running the command \"tail vmount/logs/tutorial.log\"
+	@echo and enter the token into the browser page.
+	@echo "$$(hostname):$$(cat .jupyter_port)"
+	@echo
 
 stop:       ## terminate containers but keep volumes
-	docker-compose down
-
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose down
+	rm -f .dsa_port
+	rm -f .jupyter_port
 
 exec:       ## launches terminal prompt inside luna_tutorial container
 	docker exec -it luna_tutorial_luna_tutorial_1 /bin/bash
