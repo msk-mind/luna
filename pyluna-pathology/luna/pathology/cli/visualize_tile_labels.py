@@ -97,6 +97,7 @@ def visualize_tile_labels_with_datastore(app_config: str, datastore_id: str, met
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         # properties = create_tile_thumbnail_image(slide_path, label_path, output_dir, method_data)
+        properties = {}
 
         # push results to DSA
         if method_data.get("dsa_config", None):
