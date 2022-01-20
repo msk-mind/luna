@@ -64,11 +64,13 @@ run:        ## launch containers
 	mkdir -p vmount/logs vmount/db vmount/tmp vmount/assetstore
 	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d
 	@echo
-	@echo DSA will take a few minutes to become available at,
+	@echo DSA is being set up with sample images, annotations and
+	@echo admin user (admin/password). It will take a couple minutes to become available at
 	@echo "$$(hostname):$$(cat .dsa_port)"
 	@echo
 	@echo To access the tutorial, copy-paste this URL in your browser.
-	@echo Then get token by running the command \"tail vmount/logs/tutorial.log\" and enter the token into the browser page.
+	@echo Then get token by running the command \"tail vmount/logs/tutorial.log\"
+	@echo and enter the token into the browser page.
 	@echo "$$(hostname):$$(cat .jupyter_port)"
 	@echo
 

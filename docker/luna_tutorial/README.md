@@ -21,8 +21,6 @@ exec                 launches terminal prompt inside luna_tutorial container
 
 ```
 
-In order to run this tutorial, first build the docker-compose images using `make build` and then lauch the containers using `make run`. Once the containers are launched, copy-paste the URL from the `make run` command into a browser and enter the token from `vmount/logs/tutorial.log`.  
-
 You may then step through the notebooks in jupyterlab. Note that the url by default is set to localhost. If you need to run the tutorial from a remote system, you may specify the host IP and port of the remote system as arguments to the Makefile. 
 
 **NOTE:** The tutorial image must be built from scratch by each user who wants to run the tutorial because the image is designed to mimic the host system user in the container in order to make it easy for the host system and container users to CRUD data in a shared volume mount (called vmount) from either the host system or the container. If an image built by one user is reused by another user, the other user may not be able to update or delete data generated from within the container without root permissions on the host system.  
