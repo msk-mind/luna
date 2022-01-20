@@ -24,21 +24,26 @@ _params_ = [('input_slide_image', str), ('input_slide_tiles', str), ('plot_label
 @click.option('-pl', '--plot_labels', required=False,
               help='labels_to_plot')
 @click.option('-rmg', '--requested_magnification', required=False,
-              help="SMagnificiation scale at which to generate thumbnail/png images")
+              help="Magnificiation scale at which to generate thumbnail/png images (recommended <= 1)")
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """ Run a model with a specific pre-transform for all tiles in a slide (tile_images)
+    """ Generate nice tile markup images with continuous or discrete tile scores
 
     \b
     Inputs:
-        input_slide_image: path to slide tiles (.svs)
+        input_slide_image: path to slide image (.svs)
+        input_slide_tiles: path to tile images (.tiles.csv)
     \b
     Outputs:
-        slide_tiles
+        markups: markup images
     \b
     Example:
-        infer_tiles tiles/slide-100012/tiles
+        visualize_tiles_png 10001.svs 10001/tiles/10001.tiles.csv
+            -o 10001/markups
+            -pl Tumor,Stroma,TILs,otsu_score
+            -rmg 0.5
+
     """
     cli_runner ( cli_kwargs, _params_, visualize_tiles)
 
@@ -53,12 +58,14 @@ from PIL import Image
 import numpy as np
 
 def visualize_tiles(input_slide_image, input_slide_tiles, requested_magnification, plot_labels, output_dir):
-    """Generate tile addresses, scores and optionally annotation labels using models stored in torch.hub format
+    """Generate nice tile markup images with continuous or discrete tile scores
 
     Args:
-        input_slide_image: slide image (.svs)
+        input_slide_image (str): path to slide image (.svs)
+        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
+        requested_magnification (float): Magnification scale at which to perform computation
+        plot_labels (List[str]): labels to plot
         output_dir (str): output/working directory
-        num_cores (int): how many cores to use for dataloading
 
     Returns:
         dict: metadata about function call
@@ -110,7 +117,7 @@ def visualize_tiling_scores(df:pd.DataFrame, thumbnail_img:np.ndarray, scale_fac
 
     assert isinstance(thumbnail_img, np.ndarray)
 
-    for _, row in df.iterrows():
+    for _, row in tqdm(df.iterrows()):
 
         if 'regional_label' in row and pd.isna(row.regional_label): continue
 
@@ -120,6 +127,7 @@ def visualize_tiling_scores(df:pd.DataFrame, thumbnail_img:np.ndarray, scale_fac
         
         # set color based on intensity of value instead of black border (1)
         score = row[score_type_to_visualize]
+
         thumbnail_img[rr, cc] = get_tile_color(score)
     
     return thumbnail_img

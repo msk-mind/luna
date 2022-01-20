@@ -12,7 +12,7 @@ from luna.common.utils import cli_runner
 import pandas as pd
 from tqdm import tqdm
 
-_params_ = [('input_slide_image', str), ('output_dir', str), ('requested_tile_size', int), ('batch_size', int), ('requested_magnification', float), ('num_cores', int)]
+_params_ = [('input_slide_image', str), ('output_dir', str), ('tile_size', int), ('batch_size', int), ('requested_magnification', float), ('num_cores', int)]
 
 @click.command()
 @click.argument('input_slide_image', nargs=1)
@@ -20,7 +20,7 @@ _params_ = [('input_slide_image', str), ('output_dir', str), ('requested_tile_si
               help='path to output directory to save results')
 @click.option('-nc', '--num_cores', required=False,
               help="Number of cores to use", default=4)  
-@click.option('-rts', '--requested_tile_size', required=False,
+@click.option('-rts', '--tile_size', required=False,
               help="Number of cores to use")
 @click.option('-rmg', '--requested_magnification', required=False,
               help="Number of cores to use")
@@ -55,18 +55,26 @@ def grouper(iterable, n, fillvalue=None):
     return [[entry for entry in iterable if entry is not None]
             for iterable in itertools.zip_longest(*args, fillvalue=fillvalue)]
 
-def get_tile_bytes(indices, input_slide_image, full_resolution_tile_size, requested_tile_size ):
+def get_tile_bytes(indices, input_slide_image, full_resolution_tile_size, tile_size ):
     slide = openslide.OpenSlide(str(input_slide_image))
     full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
-    return [(index, full_generator.get_tile(full_level, address_to_coord(index)).resize((requested_tile_size,requested_tile_size)).tobytes()) for index in indices]
+    return [(index, full_generator.get_tile(full_level, address_to_coord(index)).resize((tile_size,tile_size)).tobytes()) for index in indices]
 
-def generate_tiles(input_slide_image, requested_tile_size, requested_magnification, output_dir, num_cores, batch_size):
-    """Generate tile addresses, scores and optionally annotation labels using models stored in torch.hub format
+def generate_tiles(input_slide_image, tile_size, requested_magnification, output_dir, num_cores, batch_size):
+    """Rasterize a slide into smaller tiles
+    
+    Tiles are saved in the whole-slide tiles binary format (tiles.pil), and the corresponding manifest/header file (tiles.csv) is also generated
+
+    Neccessary data for the manifest file are: 
+    address, x_coord, y_coord, full_resolution_tile_size, tile_image_binary, tile_image_length, tile_image_size_xy, and tile_image_size_mode
 
     Args:
-        input_slide_image: slide image (.svs)
+        input_slide_image (str): path to slide image (.svs)
+        tile_size (int): size of tiles to use (at the requested magnification)
+        num_cores (int): Number of cores to use for CPU parallelization
+        requested_magnification (float): Magnification scale at which to perform computation
         output_dir (str): output/working directory
-        num_cores (int): how many cores to use for dataloading
+        batch_size (int): size in batch dimension to chuck jobs
 
     Returns:
         dict: metadata about function call
@@ -81,9 +89,9 @@ def generate_tiles(input_slide_image, requested_tile_size, requested_magnificati
     if not to_mag_scale_factor % 1 == 0: 
         raise ValueError("You chose a combination of requested tile sizes and magnification that resulted in non-integer tile sizes at different scales")
 
-    full_resolution_tile_size = requested_tile_size * to_mag_scale_factor
+    full_resolution_tile_size = tile_size * to_mag_scale_factor
     logger.info("Normalized magnification scale factor for %sx is %s", requested_magnification, to_mag_scale_factor)
-    logger.info("Requested tile size=%s, tile size at full magnficiation=%s", requested_tile_size, full_resolution_tile_size)
+    logger.info("Requested tile size=%s, tile size at full magnficiation=%s", tile_size, full_resolution_tile_size)
 
     # get DeepZoomGenerator, level
     full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
@@ -108,7 +116,7 @@ def generate_tiles(input_slide_image, requested_tile_size, requested_magnificati
     counter = 0
     logger.info(f"Now generating tiles with num_cores={num_cores} and batch_size={batch_size}!")
     with ProcessPoolExecutor(num_cores) as executor:
-        out = [executor.submit(get_tile_bytes, index, input_slide_image, full_resolution_tile_size, requested_tile_size ) for index in grouper(df.index, batch_size)]
+        out = [executor.submit(get_tile_bytes, index, input_slide_image, full_resolution_tile_size, tile_size ) for index in grouper(df.index, batch_size)]
         for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
             for index, tile in future.result(): 
                 fp.write( tile )
@@ -121,8 +129,8 @@ def generate_tiles(input_slide_image, requested_tile_size, requested_magnificati
 
     df.loc[:, 'full_resolution_tile_size'] = full_resolution_tile_size
     df.loc[:, 'tile_image_binary']  = output_binary_file
-    df.loc[:, 'tile_image_length']  = 3 * requested_tile_size ** 2
-    df.loc[:, 'tile_image_size_xy'] = requested_tile_size
+    df.loc[:, 'tile_image_length']  = 3 * tile_size ** 2
+    df.loc[:, 'tile_image_size_xy'] = tile_size
     df.loc[:, 'tile_image_mode']    = 'RGB'
 
     logger.info (df)        

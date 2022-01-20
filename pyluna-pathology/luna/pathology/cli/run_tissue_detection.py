@@ -89,12 +89,15 @@ def compute_stain_score(row, vectors, channel, stain_threshold):
 
 
 def detect_tissue(input_slide_image, input_slide_tiles, requested_magnification, filter_query, output_dir, num_cores):
-    """Generate tile addresses, scores and optionally annotation labels using models stored in torch.hub format
+    """Run simple/deterministic tissue detection algorithms based on a filter query, to reduce tiles to those (likely) to contain actual tissue
 
     Args:
-        input_slide_image: slide image (.svs)
+        input_slide_image (str): path to slide image (.svs)
+        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
+        requested_magnification (float): Magnification scale at which to perform computation
+        filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
         output_dir (str): output/working directory
-        num_cores (int): how many cores to use for dataloading
+        num_cores (int): Number of cores to use for CPU parallelization
 
     Returns:
         dict: metadata about function call

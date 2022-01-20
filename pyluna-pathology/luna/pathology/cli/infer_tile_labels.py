@@ -41,7 +41,7 @@ def cli(**cli_kwargs):
 
     \b
     Inputs:
-        input_slide_tiles: path to tile images (.tiles.pil)
+        input_slide_tiles: path to tile images (.tiles.csv)
     \b
     Outputs:
         tile_scores
@@ -70,16 +70,18 @@ class TileClassifierGithub(BaseTorchTileClassifier):
         return self.model(input_tiles)
 
 def infer_tile_labels(input_slide_tiles, output_dir, repo_name, transform_name, model_name, weight_tag, num_cores, batch_size):
-    """Generate tile addresses, scores and optionally annotation labels using models stored in torch.hub format
+    """Run inference using a model and transform definition (either local or using torch.hub)
+
+    Decorates existing slide_tiles with additional columns corresponding to class prediction/scores from the model
 
     Args:
-        input_slide_tiles (str): path to a slide-tile directory (contains .tiles.pil)
+        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
         output_dir (str): output/working directory
         repo_name (str): repository root name like (namespace/repo) at github.com to serve torch.hub models
         transform_name (str): torch hub transform name (a function at the repo repo_name)
         model_name (str): torch hub model name (a nn.Module at the repo repo_name)
         weight_tag (str): what weight tag to use
-        num_cores (int): how many cores to use for dataloading
+        num_cores (int): Number of cores to use for CPU parallelization 
         batch_size (int): size in batch dimension to chuck inference (8-256 recommended, depending on memory usage)
 
     Returns:

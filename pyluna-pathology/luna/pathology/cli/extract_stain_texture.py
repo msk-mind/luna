@@ -71,7 +71,7 @@ def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_fact
         output_dir (str): output/working directory
         stain_sample_factor (float): downsample factor to use for stain vector estimation
         stain_channel (int): which channel of the deconvovled image to use for texture analysis
-        tile_size (int): size of tiles to use (500-1000 recommended)
+        tile_size (int): size of tiles to use (at the requested magnification) (500-1000 recommended)
         glcm_feature (str): name of GLCM feature to enable
 
     Returns:
