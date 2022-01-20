@@ -24,7 +24,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ${PWD}/vmount/assetstore:/assetstore 
+      - ${PWD}/vmount/assetstore:/home/${USER_NAME}/vmount/assetstore
       - ${PWD}/vmount:/home/${USER_NAME}/vmount
     depends_on:
       - mongodb
