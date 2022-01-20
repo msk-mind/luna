@@ -39,10 +39,7 @@ def cli(**cli_kwargs):
     \b
     Example:
         extract_stain_texture ./slides/10001.svs ./masks/10001/tumor_mask.tif
-            -tx 500
-            -sc 0
-            -sf 10
-            -glcm ClusterTendency
+            -tx 500 -sc 0 -sf 10 -glcm ClusterTendency
             -o ./stain_features/10001/
     """
     cli_runner( cli_kwargs, _params_, extract_stain_texture)
