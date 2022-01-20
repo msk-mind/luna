@@ -3,21 +3,31 @@
 from   luna.common.config import ConfigSet
 import luna.common.constants as const
 
-from typing import Tuple, List
+from typing import Union, Tuple, List
 import xml.etree.ElementTree as et
 import numpy as np
 import cv2
 
 import radiomics
 import SimpleITK as sitk
+import re
 
 import openslide
-import tifffile
 
 import logging
 
-from matplotlib import pyplot as plt
 from PIL import Image
+
+from openslide.deepzoom import DeepZoomGenerator
+import seaborn as sns
+
+from skimage.draw import rectangle_perimeter
+from tqdm import tqdm
+import pandas as pd
+
+palette = sns.color_palette("viridis",as_cmap=True)
+categorial = sns.color_palette("Set1", 8)
+categorical_colors = {}
 
 logger = logging.getLogger(__name__)
 
@@ -265,3 +275,188 @@ def extract_patch_texture_features(image_patch, mask_patch, stain_vectors,
         stainomics_valid   = stainomics_nonzero[~np.isnan(stainomics_nonzero)]
 
         return stainomics_valid
+
+
+def get_tile_bytes(indices, input_slide_image, full_resolution_tile_size, tile_size ):
+    slide = openslide.OpenSlide(str(input_slide_image))
+    full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
+    return [(index, full_generator.get_tile(full_level, address_to_coord(index)).resize((tile_size,tile_size)).tobytes()) for index in indices]
+
+def read_tile_bytes(row):
+    with open(row.tile_image_binary, "rb") as fp:
+        fp.seek(int(row.tile_image_offset))
+        img = Image.frombytes(
+            row.tile_image_mode,
+            (int(row.tile_image_size_xy), int(row.tile_image_size_xy)),
+            fp.read(int(row.tile_image_length)),
+        )    
+    return row.name, img
+
+# USED -> utils
+def coord_to_address(s:Tuple[int, int], magnification:int)->str:
+    """converts coordinate to address
+
+    Args:
+        s (tuple[int, int]): coordinate consisting of an (x, y) tuple
+        magnification (int): magnification factor
+
+    Returns:
+        str: a string consisting of an x_y_z address
+    """
+
+    x = s[0]
+    y = s[1]
+    return f"x{x}_y{y}_z{magnification}"
+
+# USED -> utils
+def address_to_coord(s:str) -> Tuple[int, int]:
+    """converts address into coordinates
+    
+    Args:
+        s (str): a string consisting of an x_y_z address 
+
+    Returns:
+        Tuple[int, int]: a tuple consisting of an x, y pair 
+    """
+    s = str(s)
+    p = re.compile('x(\d+)_y(\d+)_z(\d+)', re.IGNORECASE)
+    m = p.match(s)
+    x = int(m.group(1))
+    y = int(m.group(2))
+    return (x,y)
+
+def get_downscaled_thumbnail(slide:openslide.OpenSlide, scale_factor:int)-> np.ndarray:
+    """get downscaled thumbnail
+
+    yields a thumbnail image of a whole slide rescaled by a specified scale factor
+
+    Args:
+        slide (openslide.OpenSlide): slide object
+        scale_factor (int): integer scaling factor to resize the whole slide by
+    
+    Returns:    
+        np.ndarray: downsized whole slie thumbnail 
+    """
+    new_width  = slide.dimensions[0] // scale_factor
+    new_height = slide.dimensions[1] // scale_factor
+    img = slide.get_thumbnail((new_width, new_height))
+    return np.array(img)
+
+
+def get_full_resolution_generator(slide: openslide.OpenSlide, tile_size:int) -> Tuple[DeepZoomGenerator, int]:
+    """Return DeepZoomGenerator and generator level
+
+    Args:
+        slide (openslide.OpenSlide): slide object
+        tile_size (int): width and height of a single tile for the DeepZoomGenerator
+    
+    Returns:
+        Tuple[DeepZoomGenerator, int] 
+    """
+    assert isinstance(slide, openslide.OpenSlide) or isinstance(slide, openslide.ImageSlide)
+    generator = DeepZoomGenerator(slide, overlap=0, tile_size=tile_size, limit_bounds=False)
+    generator_level = generator.level_count - 1
+    assert generator.level_dimensions[generator_level] == slide.dimensions
+    return generator, generator_level
+
+
+# USED -> utils
+def get_scale_factor_at_magnfication(slide: openslide.OpenSlide,
+        requested_magnification: int) -> int:
+    """get scale factor at magnification
+
+    Return a scale factor if slide scanned magnification and
+    requested magnification are different.
+
+    Args:
+        slide (openslide.OpenSlide): slide object
+        requested_magnification (int): requested magnification
+    
+    Returns:
+        int: scale factor required to achieve requested magnification
+    """
+    
+    # First convert to float to handle true integers encoded as string floats (e.g. '20.000')
+    mag_value = float(slide.properties['aperio.AppMag'])
+
+    # Then convert to integer
+    scanned_magnfication = int (mag_value)
+
+    # Make sure we don't have non-integer magnifications
+    assert int (mag_value) == mag_value
+
+    # Verify magnification valid
+    scale_factor = 1
+    if scanned_magnfication != requested_magnification:
+        if scanned_magnfication < requested_magnification:
+            raise ValueError(f'Expected magnification <={scanned_magnfication} but got {requested_magnification}')
+        elif (scanned_magnfication % requested_magnification) == 0:
+            scale_factor = scanned_magnfication // requested_magnification
+        else:
+            raise ValueError(f'Expected magnification {requested_magnification} to be an divisor multiple of {scanned_magnfication}')
+    return scale_factor
+
+def visualize_tiling_scores(df:pd.DataFrame, thumbnail_img:np.ndarray, scale_factor:float,
+        score_type_to_visualize:str) -> np.ndarray:
+    """visualize tile scores
+    
+    draws colored boxes around tiles to indicate the value of the score 
+
+    Args:
+        df (pd.DataFrame): input dataframe
+        thumbnail_img (np.ndarray): input tile 
+        tile_size (int): tile width/length
+        score_type_to_visualize (str): column name from data frame
+    
+    Returns:
+        np.ndarray: new thumbnail image with boxes around tiles passing indicating the
+        value of the score
+    """
+
+    assert isinstance(thumbnail_img, np.ndarray)
+
+    for _, row in tqdm(df.iterrows(), total=len(df)):
+
+        if 'regional_label' in row and pd.isna(row.regional_label): continue
+
+        start = (row.y_coord / scale_factor, row.x_coord / scale_factor)  # flip because OpenSlide uses (column, row), but skimage, uses (row, column)
+
+        rr, cc = rectangle_perimeter(start=start, extent=(row.full_resolution_tile_size/ scale_factor, row.full_resolution_tile_size/ scale_factor), shape=thumbnail_img.shape)
+        
+        # set color based on intensity of value instead of black border (1)
+        score = row[score_type_to_visualize]
+
+        thumbnail_img[rr, cc] = get_tile_color(score)
+    
+    return thumbnail_img
+
+def get_tile_color(score:Union[str, float]) -> Union[float, None]:
+    """get tile color
+
+    uses deafult color palette to return color of tile based on score
+
+    Args:
+        score (Union[str, float]): a value between [0,1] such as the 
+            Otsu threshold, puple score, a model output, etc. 
+    Returns:
+        Union[float, None]: returns the color is the input is of valid type
+            else None
+
+    """
+    # categorical
+    if isinstance(score, str):
+        if score in categorical_colors:
+            return categorical_colors[score]
+        else:
+            tile_color =  255 * np.array (categorial[len(categorical_colors.keys())])
+            categorical_colors[score] = tile_color
+            return tile_color
+
+    # float, expected to be value from [0,1]
+    elif isinstance(score, float) and score <= 1.0 and score >= 0.0:
+        tile_color = [int(255*i) for i in palette(score)[:3]]
+        return tile_color
+
+    else:
+        print("Invalid Score Type")
+        return None

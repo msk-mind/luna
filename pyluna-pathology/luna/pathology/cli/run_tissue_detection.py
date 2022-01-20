@@ -9,11 +9,6 @@ logger = logging.getLogger('detect_tissue')
 
 from luna.common.utils import cli_runner
 
-import pandas as pd
-from tqdm import tqdm
-
-import openslide
-
 _params_ = [('input_slide_image', str), ('input_slide_tiles', str), ('requested_magnification', float), ('filter_query', str), ('output_dir', str), ('num_cores', int)]
 
 @click.command()
@@ -34,39 +29,36 @@ def cli(**cli_kwargs):
 
     \b
     Inputs:
-        input_slide_image: path to slide tiles (.svs)
+        input_slide_image: path to slide image (.svs)
+        input_slide_tiles: path to tile images (.tiles.csv)
     \b
     Outputs:
         slide_tiles
     \b
     Example:
-        infer_tiles tiles/slide-100012/tiles
+        run_tissue_detection 10001.svs 10001/tiles
+            -rmg 0.5 -nc 8
+            -rq 'otsu_score > 0.1 or stain0_score > 0.1'
+            -o 10001/filtered_tiles
     """
     cli_runner( cli_kwargs, _params_, detect_tissue)
 
-from luna.pathology.common.preprocess import get_downscaled_thumbnail, get_scale_factor_at_magnfication
-from luna.pathology.common.utils import get_stain_vectors_macenko, pull_stain_channel
+
+import pandas as pd
+from tqdm import tqdm
+
+import openslide
+from luna.pathology.common.utils import get_downscaled_thumbnail, get_scale_factor_at_magnfication, get_stain_vectors_macenko, pull_stain_channel, read_tile_bytes
 
 from skimage.color   import rgb2gray
 from skimage.filters import threshold_otsu
 import numpy as np
 
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 from pathlib import Path
 from PIL import Image, ImageEnhance
-
-def read_tile_bytes(row):
-    with open(row.tile_image_binary, "rb") as fp:
-                fp.seek(int(row.tile_image_offset))
-                img = Image.frombytes(
-                    row.tile_image_mode,
-                    (int(row.tile_image_size_xy), int(row.tile_image_size_xy)),
-                    fp.read(int(row.tile_image_length)),
-                )    
-    return row.name, img
-
 def compute_otsu_score(row, otsu_threshold):
     _, tile = read_tile_bytes(row)
     tile  = np.array(tile)
@@ -86,7 +78,6 @@ def compute_stain_score(row, vectors, channel, stain_threshold):
     stain = pull_stain_channel(tile, vectors=vectors, channel=channel)
     score = np.mean (stain > stain_threshold)
     return score
-
 
 def detect_tissue(input_slide_image, input_slide_tiles, requested_magnification, filter_query, output_dir, num_cores):
     """Run simple/deterministic tissue detection algorithms based on a filter query, to reduce tiles to those (likely) to contain actual tissue

@@ -48,8 +48,7 @@ def cli(**cli_kwargs):
     cli_runner( cli_kwargs, _params_, extract_stain_texture)
 
 import openslide
-from luna.pathology.common.preprocess import get_downscaled_thumbnail, get_full_resolution_generator
-from luna.pathology.common.utils import get_stain_vectors_macenko, extract_patch_texture_features
+from luna.pathology.common.utils import get_stain_vectors_macenko, extract_patch_texture_features, get_downscaled_thumbnail, get_full_resolution_generator
 import itertools
 import numpy as np
 from tqdm import tqdm

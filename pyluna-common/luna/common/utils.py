@@ -5,6 +5,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 from typing import Callable, List
+import itertools
+
 
 # Distinct types that are actually the same (effectively)
 TYPE_ALIASES = {
@@ -130,6 +132,25 @@ def replace_token(token, token_replacement, value):
         return new_value
 
     return value
+
+
+
+def grouper(iterable, n):
+    """ Turn an iterable into an iterable of iterables
+
+    'None' should not be a member of the input iterable as it is removed to handle the fillvalues
+    
+    Args:
+        iterable (iterable): an iterable
+        n (int): sie of chunks
+        fillvalue
+    
+    Returns:
+        iterable[iterable]
+    """
+    args = [iter(iterable)] * n
+    return [[entry for entry in iterable if entry is not None]
+            for iterable in itertools.zip_longest(*args, fillvalue=None)]
 
 
 def get_method_data(cohort_id, method_id):

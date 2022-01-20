@@ -9,13 +9,6 @@ logger = logging.getLogger('infer_tile_labels')
 
 from luna.common.utils import cli_runner
 
-import torch
-from torch.utils.data import DataLoader
-from luna.pathology.common.ml import BaseTorchTileDataset, BaseTorchTileClassifier
-
-import pandas as pd
-from tqdm import tqdm
-
 _params_ = [('input_slide_tiles', str), ('output_dir', str), ('repo_name', str), ('transform_name', str), ('model_name', str), ('weight_tag', str), ('num_cores', int), ('batch_size', int)]
 
 @click.command()
@@ -55,6 +48,13 @@ def cli(**cli_kwargs):
             -o tiles/slide-100012/scores
     """
     cli_runner( cli_kwargs, _params_, infer_tile_labels)
+
+import torch
+from torch.utils.data import DataLoader
+from luna.pathology.common.ml import BaseTorchTileDataset, BaseTorchTileClassifier
+
+import pandas as pd
+from tqdm import tqdm
 
 # We are acting a bit like a consumer of the base classes here-
 class TileDatasetGithub(BaseTorchTileDataset):
