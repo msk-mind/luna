@@ -11,8 +11,6 @@ from luna.common.custom_logger   import init_logger
 from luna.common.DataStore       import DataStore_v2
 from luna.common.config          import ConfigSet
 
-from luna.pathology.common.preprocess import create_tile_thumbnail_image
-
 
 @click.command()
 @click.option('-a', '--app_config', required=True,
@@ -98,7 +96,7 @@ def visualize_tile_labels_with_datastore(app_config: str, datastore_id: str, met
         output_dir = os.path.join(method_data.get("root_path"), datastore_id, method_id, "TileScores", "data")
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
-        properties = create_tile_thumbnail_image(slide_path, label_path, output_dir, method_data)
+        # properties = create_tile_thumbnail_image(slide_path, label_path, output_dir, method_data)
 
         # push results to DSA
         if method_data.get("dsa_config", None):
