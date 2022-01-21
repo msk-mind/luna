@@ -63,7 +63,7 @@ def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_fact
     Save a feature csv file at the output directory.
 
     Args:
-        input_slide_image (str): path to slide image (.svs)
+        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         output_dir (str): output/working directory
         stain_sample_factor (float): downsample factor to use for stain vector estimation
         stain_channel (int): which channel of the deconvovled image to use for texture analysis

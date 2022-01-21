@@ -29,8 +29,8 @@ def cli(**cli_kwargs):
 
     \b
     Inputs:
-        input_slide_image: path to slide image (.svs)
-        input_slide_tiles: path to tile images (.tiles.csv)
+        input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        input_slide_tiles: slide tiles (manifest tile files, .tiles.csv)
     \b
     Outputs:
         markups: markup images
@@ -55,7 +55,7 @@ def visualize_tiles(input_slide_image, input_slide_tiles, requested_magnificatio
     """Generate nice tile markup images with continuous or discrete tile scores
 
     Args:
-        input_slide_image (str): path to slide image (.svs)
+        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
         requested_magnification (float): Magnification scale at which to perform computation
         plot_labels (List[str]): labels to plot

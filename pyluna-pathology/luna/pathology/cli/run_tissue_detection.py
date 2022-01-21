@@ -29,8 +29,8 @@ def cli(**cli_kwargs):
 
     \b
     Inputs:
-        input_slide_image: path to slide image (.svs)
-        input_slide_tiles: path to tile images (.tiles.csv)
+        input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        input_slide_tiles: slide tiles (manifest tile files, .tiles.csv)
     \b
     Outputs:
         slide_tiles
@@ -83,7 +83,7 @@ def detect_tissue(input_slide_image, input_slide_tiles, requested_magnification,
     """Run simple/deterministic tissue detection algorithms based on a filter query, to reduce tiles to those (likely) to contain actual tissue
 
     Args:
-        input_slide_image (str): path to slide image (.svs)
+        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
         requested_magnification (float): Magnification scale at which to perform computation
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
@@ -170,7 +170,7 @@ def detect_tissue(input_slide_image, input_slide_tiles, requested_magnification,
     logger.info (df)
 
     slide_name = Path(input_slide_image).stem
-    output_header_file = f"{output_dir}/{slide_name}-otsu_detections={threshold}.tiles.pil"
+    output_header_file = f"{output_dir}/{slide_name}-filtered.tiles.csv"
 
     df.to_csv(output_header_file)
 

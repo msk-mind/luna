@@ -31,12 +31,11 @@ def cli(**cli_kwargs):
     Tiles are saved in the whole-slide tiles binary format (tiles.pil), and the corresponding manifest/header file (tiles.csv) is also generated
 
     Neccessary data for the manifest file are: 
-    address, x_coord, y_coord, full_resolution_tile_size, tile_image_binary, tile_image_length, tile_image_size_xy, and tile_image_size_mode
+    address, x_coord, y_coord, full_resolution_tile_size, tile_image_binary, tile_image_length, tile_image_size_xy, and tile_image_mode
 
     \b
     Inputs:
-        input_slide_image: slide image (.svs)
-    \b
+        input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
     Outputs:
         slide_tiles
     \b
@@ -63,10 +62,10 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
     Tiles are saved in the whole-slide tiles binary format (tiles.pil), and the corresponding manifest/header file (tiles.csv) is also generated
 
     Neccessary data for the manifest file are: 
-    address, x_coord, y_coord, full_resolution_tile_size, tile_image_binary, tile_image_length, tile_image_size_xy, and tile_image_size_mode
+    address, x_coord, y_coord, full_resolution_tile_size, tile_image_binary, tile_image_length, tile_image_size_xy, and tile_image_mode
 
     Args:
-        input_slide_image (str): path to slide image (.svs)
+        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         tile_size (int): size of tiles to use (at the requested magnification)
         num_cores (int): Number of cores to use for CPU parallelization
         requested_magnification (float): Magnification scale at which to perform computation
