@@ -25,7 +25,7 @@ def cli(**cli_kwargs):
 
     \b
     Inputs:
-        input_slide_image: slide image (.svs)
+        input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         input_slide_roi: roi containing vector shapes (*.annotations, *.json)
     \b
     Outputs:
@@ -51,8 +51,8 @@ def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_nam
     Take into account positive and negative spaces.  Essentially rasterizes a polygon file.
 
     Args:
-        input_slide_image (str): path to slide image (.svs)
-        input_slide_roi (str): path to a halo or other polygonal annotation file
+        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        input_slide_roi (str): path to a halo or other polygonal annotation file (.xml, .geojson)
         output_dir (str): output/working directory
         annotation_name (str): name of annotation layer to use
 

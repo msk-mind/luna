@@ -39,17 +39,13 @@ def cli(**cli_kwargs):
     \b
     Example:
         extract_stain_texture ./slides/10001.svs ./masks/10001/tumor_mask.tif
-            -tx 500
-            -sc 0
-            -sf 10
-            -glcm ClusterTendency
+            -tx 500 -sc 0 -sf 10 -glcm ClusterTendency
             -o ./stain_features/10001/
     """
     cli_runner( cli_kwargs, _params_, extract_stain_texture)
 
 import openslide
-from luna.pathology.common.preprocess import get_downscaled_thumbnail, get_full_resolution_generator
-from luna.pathology.common.utils import get_stain_vectors_macenko, extract_patch_texture_features
+from luna.pathology.common.utils import get_stain_vectors_macenko, extract_patch_texture_features, get_downscaled_thumbnail, get_full_resolution_generator
 import itertools
 import numpy as np
 from tqdm import tqdm
@@ -67,11 +63,11 @@ def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_fact
     Save a feature csv file at the output directory.
 
     Args:
-        input_slide_image (str): path to slide image (.svs)
+        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         output_dir (str): output/working directory
         stain_sample_factor (float): downsample factor to use for stain vector estimation
         stain_channel (int): which channel of the deconvovled image to use for texture analysis
-        tile_size (int): size of tiles to use (500-1000 recommended)
+        tile_size (int): size of tiles to use (at the requested magnification) (500-1000 recommended)
         glcm_feature (str): name of GLCM feature to enable
 
     Returns:

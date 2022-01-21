@@ -10,7 +10,6 @@ from luna.common.DataStore       import DataStore_v2
 from luna.common.config          import ConfigSet
 
 # From pathology.common
-from luna.pathology.common.preprocess import pretile_scoring
 
 @click.command()
 @click.option('-a', '--app_config', required=True,
@@ -91,8 +90,8 @@ def generate_tile_labels_with_datastore(app_config: str, datastore_id: str, meth
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         logger.info(f"Writing to output dir: {output_dir}")
-        properties = pretile_scoring(image_path, output_dir, method_data.get("annotation_table_path"), method_data, image_id)
-
+        # properties = pretile_scoring(image_path, output_dir, method_data.get("annotation_table_path"), method_data, image_id)
+        properties = {}
     except Exception as e:
         logger.exception (f"{e}, stopping job execution...")
         raise e
