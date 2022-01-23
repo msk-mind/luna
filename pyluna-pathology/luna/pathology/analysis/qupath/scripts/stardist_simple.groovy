@@ -1,12 +1,15 @@
 import qupath.ext.stardist.StarDist2D
+import org.slf4j.LoggerFactory;
+
+def logger = LoggerFactory.getLogger("stardist_simple");
 
 setImageType('BRIGHTFIELD_H_DAB');
-
 def imageData = getCurrentImageData()
+def server = getCurrentImageData().getServer()
 
 def stains = imageData.getColorDeconvolutionStains()
 
-println (stains)
+logger.info ("Stains=${stains}")
 
 // Specify the model file (you will need to change this!)
 def pathModel = '/models/stardist/dsb2018_heavy_augment.pb'
@@ -18,15 +21,13 @@ var stardist = StarDist2D.builder(pathModel)
          )
         .pixelSize(0.5)
         .includeProbability(true)
-        .threshold(0.5)
+        .threshold(0.25)
+        .measureShape()
+        .cellExpansion(8)
+        .measureIntensity()
         .build()
 
-
-def server = getCurrentImageData().getServer()
-
 // get dimensions of slide
-minX = 0
-minY = 0
 maxX = server.getWidth()
 maxY = server.getHeight()
 
@@ -43,44 +44,24 @@ if (pathObjects.isEmpty()) {
     return
 }
 
-// Write the region of the image corresponding to the currently-selected object
-def requestROI_pre = RegionRequest.createInstance(server.getPath(), 1.0, roi)
-writeImageRegion(server, requestROI_pre, '/output_dir/original.tif')
-
-println("Running!")
-
+logger.info("Running detection...")
 stardist.detectObjects(imageData, pathObjects)
 
-imageData = getCurrentImageData()
+logger.info("Filtering detections Nucleus: Area µm^2 <= 10 or >= 200 ...")
+def toDelete_small = getDetectionObjects().findAll {measurement(it, "Nucleus: Area µm^2") <= 10}
+removeObjects(toDelete_small, true)
 
-def cellLabelServer = new LabeledImageServer.Builder(imageData)
-    .backgroundLabel(0, ColorTools.WHITE) // Specify background label (usually 0 or 255)
-    .useCells()
-    .useUniqueLabels()
-    .downsample(1.0)    // Choose server resolution; this should match the resolution at which tiles are exported    
-    .multichannelOutput(false) // If true, each label refers to the channel of a multichannel binary image (required for multiclass probability)
-    .build()
+def toDelete_large = getDetectionObjects().findAll {measurement(it, "Nucleus: Area µm^2") >= 200}
+removeObjects(toDelete_large, true)
 
-// write cell object geojsson (with tissue-type labels)
-println("started writing cell object geojson")
-boolean detection_pretty_print = true
-def detections = getDetectionObjects()
-def detection_gson = GsonTools.getInstance(detection_pretty_print)
-new File('/output_dir/object_detection_results.geojson').withWriter('UTF-8') {
-    detection_gson.toJson(detections, it)
+logger.info("Started writing cell object data...")
+saveDetectionMeasurements('/output_dir/cell_detections.tsv')
+
+logger.info("Started writing cell object geojson...")
+def detection_objects = getDetectionObjects()
+def detection_geojson = GsonTools.getInstance(true)
+new File('/output_dir/cell_detections.geojson').withWriter('UTF-8') {
+    detection_geojson.toJson(detection_objects, it)
 }
 
-// def viewer = getCurrentImageData()
-// writeRenderedImage(viewer, '/output_dir/cell_detections.tif')
-writeImageRegion(cellLabelServer, requestROI_pre, '/output_dir/cell_markup.tif')
-
-// def requestROI_post = RegionRequest.createInstance(server.getPath(), 1.0, roi)
-// writeImageRegion(server, requestROI_post, '/output_dir/cell_detections.tif')
-saveDetectionMeasurements('/output_dir/cell_detections.csv')
-
-def annotations = getAnnotationObjects()
-
-// 'FEATURE_COLLECTION' is standard GeoJSON format for multiple objects
-exportObjectsToGeoJson(annotations, '/output_dir/cell_detections.geojson', "FEATURE_COLLECTION")
-
-println ("Done")
+logger.info ("Done")
