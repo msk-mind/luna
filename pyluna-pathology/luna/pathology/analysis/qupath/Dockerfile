@@ -17,8 +17,10 @@ RUN git clone https://github.com/qupath/qupath-extension-stardist \
     && cp /qupath-extension-stardist/build/libs/qupath-extension-stardist-0.3.0.jar /qupath/build/dist/QuPath/lib/app/
 
 # Update Qupath.cfg
-RUN sed -i '10 a app.classpath=$APPDIR/qupath-extension-stardist-0.3.0.jar' /qupath/build/dist/QuPath/lib/app/QuPath.cfg &&  \
-    sed -i '$ a java-options=-Djava.awt.headless=true' /qupath/build/dist/QuPath/lib/app/QuPath.cfg
+RUN sed -i '/Application/ a app.classpath=$APPDIR/qupath-extension-stardist-0.3.0.jar' /qupath/build/dist/QuPath/lib/app/QuPath.cfg &&  \
+    sed -i '/JavaOptions/ a java-options=-Djava.awt.headless=true' /qupath/build/dist/QuPath/lib/app/QuPath.cfg
+
+RUN cat /qupath/build/dist/QuPath/lib/app/QuPath.cfg
 
 # Checkout models
 RUN git clone https://github.com/qupath/models

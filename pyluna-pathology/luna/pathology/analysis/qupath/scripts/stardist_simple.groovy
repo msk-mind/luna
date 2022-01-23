@@ -33,7 +33,7 @@ maxY = server.getHeight()
 
 // create rectangle roi (over entire area of image) for detections to be run over
 def plane = ImagePlane.getPlane(0, 0)
-def roi = ROIs.createRectangleROI(maxX * .35, maxY * .25, maxX * 0.2, maxY * 0.2, plane)
+def roi = ROIs.createRectangleROI(maxX * .1, maxY * .1, maxX * 0.8, maxY * 0.8, plane)
 def annotationROI = PathObjects.createAnnotationObject(roi)
 addObject(annotationROI)
 selectAnnotations();
