@@ -18,11 +18,11 @@ _params_ = [('input_slide_image', str), ('output_dir', str), ('tile_size', int),
 @click.option('-nc', '--num_cores', required=False,
               help="Number of cores to use", default=4)  
 @click.option('-rts', '--tile_size', required=False,
-              help="Number of cores to use")
+              help="Size of tiles")
 @click.option('-rmg', '--requested_magnification', required=False,
-              help="Number of cores to use")
+              help="Magnification at which to generate tiles")
 @click.option('-bx', '--batch_size', required=False,
-              help="batch size used for inference speedup", default=64)    
+              help="Batch size used for inference speedup", default=64)    
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):

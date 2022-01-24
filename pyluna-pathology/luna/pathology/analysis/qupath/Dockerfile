@@ -25,4 +25,5 @@ RUN cat /qupath/build/dist/QuPath/lib/app/QuPath.cfg
 # Checkout models
 RUN git clone https://github.com/qupath/models
 
+# Copy scripts
 COPY scripts /scripts/

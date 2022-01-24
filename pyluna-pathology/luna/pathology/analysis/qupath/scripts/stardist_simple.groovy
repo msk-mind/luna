@@ -1,9 +1,15 @@
 import qupath.ext.stardist.StarDist2D
-import org.slf4j.LoggerFactory;
+import org.slf4j.LoggerFactory
 
 def logger = LoggerFactory.getLogger("stardist_simple");
 
-setImageType('BRIGHTFIELD_H_DAB');
+def opts = args.collectEntries{it.split('=') as List}
+logger.info ("opts=${opts}")
+
+def cellSize  = Float.valueOf(opts.cellSize)
+def imageType = String.valueOf(opts.imageType)
+
+setImageType(imageType);
 def imageData = getCurrentImageData()
 def server = getCurrentImageData().getServer()
 
@@ -23,7 +29,7 @@ var stardist = StarDist2D.builder(pathModel)
         .includeProbability(true)
         .threshold(0.25)
         .measureShape()
-        .cellExpansion(8)
+        .cellExpansion(cellSize)
         .measureIntensity()
         .build()
 
@@ -33,7 +39,16 @@ maxY = server.getHeight()
 
 // create rectangle roi (over entire area of image) for detections to be run over
 def plane = ImagePlane.getPlane(0, 0)
-def roi = ROIs.createRectangleROI(maxX * .1, maxY * .1, maxX * 0.8, maxY * 0.8, plane)
+
+def roi
+
+if (opts.patchOverride) {
+    logger.info("Applying patch override to small center region!")
+    roi = ROIs.createRectangleROI(maxX * .45, maxY * .45, maxX * 0.1, maxY * 0.1, plane)
+} else {
+    roi = ROIs.createRectangleROI(maxX * .1, maxY * .1, maxX * 0.8, maxY * 0.8, plane)
+}
+
 def annotationROI = PathObjects.createAnnotationObject(roi)
 addObject(annotationROI)
 selectAnnotations();

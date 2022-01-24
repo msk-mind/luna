@@ -1,0 +1,140 @@
+# General imports
+import os, json, logging, yaml, sys
+import click
+
+from luna.common.custom_logger   import init_logger
+
+init_logger()
+logger = logging.getLogger('run_k_function')
+
+from luna.common.utils import cli_runner
+
+_params_ = [('input_cell_objects', str), ('tile_size', int), ('intensity_label', str), ('distance_scale', float),  ('radius', float), ('tile_stride', int), ('num_cores', int), ('output_dir', str)]
+
+@click.command()
+@click.argument('input_cell_objects', nargs=1)
+@click.option('-o', '--output_dir', required=False,
+              help='path to output directory to save results')
+@click.option('-il', '--intensity_label', required=False,
+              help="Intensity values to use")
+@click.option('-ds', '--distance_scale', required=False,
+              help="idk-function distance scale")
+@click.option('-r', '--radius', required=False,
+              help="ik-function radius")
+@click.option('-rts', '--tile_size', required=False,
+              help="Tile size")
+@click.option('-rtd', '--tile_stride', required=False,
+              help="Tile stride")
+@click.option('-nc', '--num_cores', required=False,
+              help="Number of cores to use", default=4)  
+@click.option('-m', '--method_param_path', required=False,
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
+def cli(**cli_kwargs):
+    """Run k function
+
+    \b
+    Inputs:
+        input_cell_objects: cell objects (.csv)
+    \b
+    Outputs:
+        slide_tiles
+    \b
+    Example:
+        run_k_function 10001/cells/objects.csv
+            -rts 300 -rtd 300 -nc 32 -r 160 -ds 20
+            -o 10001/spatial_features/
+    """
+    cli_runner( cli_kwargs, _params_, run_k_function)
+
+from pathlib import Path
+import pandas as pd
+from luna.pathology.spatial.stats import Kfunction
+import numpy as np
+
+from luna.pathology.common.utils import coord_to_address
+from concurrent.futures import ProcessPoolExecutor
+
+from tqdm.contrib.itertools import product
+
+def run_k_function(input_cell_objects, tile_size, intensity_label, tile_stride, distance_scale, radius, num_cores, output_dir):
+    """Run stardist using qupath CLI
+
+    Args:
+        input_cell_objects (str): path to cell objects (.csv)
+        output_dir (str): output/working directory
+        tile_size (int): size of tiles to use (at the requested magnification)
+        tile_stride (int): spacing between tiles
+        distance_scale (float): scale at which to consider k-function
+        num_cores (int): Number of cores to use for CPU parallelization
+        intensity_label (str): Columns of cell object to use for intensity calculations
+
+    Returns:
+        dict: metadata about function call
+    """
+    df = pd.read_csv(input_cell_objects)
+
+    l_address = []
+    l_k_function = []
+    l_x_coord = []
+    l_y_coord = []
+
+    df_features = df.describe().drop(columns=['Class', 'x_coord', 'y_coord'])
+
+    coords = product(range(int(df['x_coord'].min()), int(df['x_coord'].max()), tile_stride), range(int(df['y_coord'].min()), int(df['y_coord'].max()), tile_stride))
+    
+    logger.info("Submitting tasks...")
+    with ProcessPoolExecutor(num_cores) as executor:
+        for x, y in coords:
+            df_tile = df.query(f'x_coord >= {x} and x_coord <= {x+tile_size} and y_coord >={y} and y_coord <= {y+tile_size}')
+
+            if len(df_tile) < 3: continue
+
+            out = executor.submit(Kfunction, 
+                df_tile[['x_coord', 'y_coord']], 
+                df_tile[['x_coord', 'y_coord']], 
+                intensity=np.array(df_tile[intensity_label]),
+                radius=radius, distance_scale=distance_scale, count=False, distance=True)
+
+            l_address.append(coord_to_address((x,y), 0))
+            l_k_function.append(out)
+            l_x_coord.append(x)
+            l_y_coord.append(y)
+        
+    df = pd.DataFrame({'address': l_address, 'x_coord':l_x_coord, 'y_coord':l_y_coord, 'results': l_k_function})
+    df.loc[:, 'full_resolution_tile_size'] = tile_size
+
+    logger.info("Waiting for all tasks to complete...")
+
+    df['ik_function']       = df['results'].apply(lambda x: x.result()['intensity'])
+    df['idk_function']      = df['results'].apply(lambda x: x.result()['distance'])
+    df['ik_function_norm']  = df['ik_function']  / df['ik_function'].max()
+    df['idk_function_norm'] = df['idk_function'] / df['idk_function'].max()
+
+    df = df.drop(columns=['results']).dropna()
+
+    df_features = df_features.join(df.describe()[['ik_function', 'idk_function']])
+
+    logger.info("Generated cell data:")
+    logger.info (df)
+
+    logger.info("Generated feature data:")
+    logger.info (df_features)
+    
+    output_tile_header = os.path.join(output_dir, Path(input_cell_objects).stem + '_kfunction_supertiles.csv')
+    df.to_csv(output_tile_header)
+
+    output_feature_file = os.path.join(output_dir, Path(input_cell_objects).stem + '_cell_stats.csv')
+    df_features.to_csv(output_feature_file)
+
+    properties = {
+        'slide_tiles': output_tile_header,
+        'feature_csv': output_feature_file
+    }
+
+    return properties
+
+
+
+
+if __name__ == "__main__":
+    cli()
