@@ -99,12 +99,12 @@ def run_k_function(input_cell_objects, tile_size, intensity_label, tile_stride, 
             l_k_function.append(out)
             l_x_coord.append(x)
             l_y_coord.append(y)
+        logger.info("Waiting for all tasks to complete...")
         
-    df = pd.DataFrame({'address': l_address, 'x_coord':l_x_coord, 'y_coord':l_y_coord, 'results': l_k_function})
+    df = pd.DataFrame({'address': l_address, 'x_coord':l_x_coord, 'y_coord':l_y_coord, 'results': l_k_function}).set_index('address')
     df.loc[:, 'full_resolution_tile_size'] = tile_size
 
-    logger.info("Waiting for all tasks to complete...")
-
+    
     df['ik_function']       = df['results'].apply(lambda x: x.result()['intensity'])
     df['idk_function']      = df['results'].apply(lambda x: x.result()['distance'])
     df['ik_function_norm']  = df['ik_function']  / df['ik_function'].max()
