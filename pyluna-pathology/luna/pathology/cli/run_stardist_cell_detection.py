@@ -63,10 +63,10 @@ def run_stardist_cell_detection(input_slide_image, cell_expansion_size, image_ty
     slide_name = Path(input_slide_image).stem
 
     logger.info("Launching docker container:")
-    logger.info(f"volumes={input_slide_image}:'/inputs/{slide_filename}', {output_dir}:'/output_dir'")
-    logger.info(f"nano_cpus={int(num_cores * 1e9)}")
-    logger.info(f"image='qupath'")
-    logger.info(f"command=QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy")
+    logger.info(f"\tvolumes={input_slide_image}:'/inputs/{slide_filename}', {output_dir}:'/output_dir'")
+    logger.info(f"\tnano_cpus={int(num_cores * 1e9)}")
+    logger.info(f"\timage='qupath'")
+    logger.info(f"\tcommand=QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy")
 
     client = docker.from_env()
     container = client.containers.run(

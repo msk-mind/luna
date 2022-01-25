@@ -5,11 +5,11 @@ import click
 from luna.common.custom_logger   import init_logger
 
 init_logger()
-logger = logging.getLogger('run_k_function')
+logger = logging.getLogger('extract_kfunction')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_cell_objects', str), ('tile_size', int), ('intensity_label', str), ('distance_scale', float),  ('radius', float), ('tile_stride', int), ('num_cores', int), ('output_dir', str)]
+_params_ = [('input_cell_objects', str), ('tile_size', int), ('intensity_label', str), ('radius', float), ('tile_stride', int), ('num_cores', int), ('output_dir', str)]
 
 @click.command()
 @click.argument('input_cell_objects', nargs=1)
@@ -17,8 +17,6 @@ _params_ = [('input_cell_objects', str), ('tile_size', int), ('intensity_label',
               help='path to output directory to save results')
 @click.option('-il', '--intensity_label', required=False,
               help="Intensity values to use")
-@click.option('-ds', '--distance_scale', required=False,
-              help="idk-function distance scale")
 @click.option('-r', '--radius', required=False,
               help="ik-function radius")
 @click.option('-rts', '--tile_size', required=False,
@@ -40,11 +38,11 @@ def cli(**cli_kwargs):
         slide_tiles
     \b
     Example:
-        run_k_function 10001/cells/objects.csv
+        extract_kfunction 10001/cells/objects.csv
             -rts 300 -rtd 300 -nc 32 -r 160 -ds 20
             -o 10001/spatial_features/
     """
-    cli_runner( cli_kwargs, _params_, run_k_function)
+    cli_runner( cli_kwargs, _params_, extract_kfunction)
 
 from pathlib import Path
 import pandas as pd
@@ -56,7 +54,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 from tqdm.contrib.itertools import product
 
-def run_k_function(input_cell_objects, tile_size, intensity_label, tile_stride, distance_scale, radius, num_cores, output_dir):
+def extract_kfunction(input_cell_objects, tile_size, intensity_label, tile_stride, radius, num_cores, output_dir):
     """Run stardist using qupath CLI
 
     Args:
@@ -93,7 +91,7 @@ def run_k_function(input_cell_objects, tile_size, intensity_label, tile_stride, 
                 df_tile[['x_coord', 'y_coord']], 
                 df_tile[['x_coord', 'y_coord']], 
                 intensity=np.array(df_tile[intensity_label]),
-                radius=radius, distance_scale=distance_scale, count=False, distance=True)
+                radius=radius, count=True)
 
             l_address.append(coord_to_address((x,y), 0))
             l_k_function.append(out)
@@ -103,12 +101,9 @@ def run_k_function(input_cell_objects, tile_size, intensity_label, tile_stride, 
         
     df = pd.DataFrame({'address': l_address, 'x_coord':l_x_coord, 'y_coord':l_y_coord, 'results': l_k_function}).set_index('address')
     df.loc[:, 'full_resolution_tile_size'] = tile_size
-
     
     df['ik_function']       = df['results'].apply(lambda x: x.result()['intensity'])
-    df['idk_function']      = df['results'].apply(lambda x: x.result()['distance'])
     df['ik_function_norm']  = df['ik_function']  / df['ik_function'].max()
-    df['idk_function_norm'] = df['idk_function'] / df['idk_function'].max()
 
     df = df.drop(columns=['results']).dropna()
 

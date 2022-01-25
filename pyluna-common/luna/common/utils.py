@@ -4,6 +4,8 @@ import os, json, yaml
 import logging
 logger = logging.getLogger(__name__)
 
+
+from luna.common.CodeTimer import CodeTimer
 from typing import Callable, List
 import itertools
 
@@ -320,8 +322,10 @@ def cli_runner(cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable
     # Nice little log break
     print("\n" + "-"*35 + f' Running {cli_function.__name__} ' + "-" *35 + "\n")
 
-    result = cli_function(**kwargs)
+    with CodeTimer(logger, name='transform'):
+        result = cli_function(**kwargs)
 
+    
     kwargs.update(result)
 
     with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:

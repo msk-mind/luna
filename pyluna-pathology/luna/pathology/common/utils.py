@@ -282,6 +282,11 @@ def get_tile_bytes(indices, input_slide_image, full_resolution_tile_size, tile_s
     full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
     return [(index, full_generator.get_tile(full_level, address_to_coord(index)).resize((tile_size,tile_size)).tobytes()) for index in indices]
 
+def get_tile_array(indices, input_slide_image, full_resolution_tile_size, tile_size ):
+    slide = openslide.OpenSlide(str(input_slide_image))
+    full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
+    return [(index, np.array(full_generator.get_tile(full_level, address_to_coord(index)).resize((tile_size,tile_size)))) for index in indices]
+
 def read_tile_bytes(row):
     with open(row.tile_image_binary, "rb") as fp:
         fp.seek(int(row.tile_image_offset))
