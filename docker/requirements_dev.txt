@@ -45,7 +45,7 @@ geojson
 orjson
 torch
 torchmetrics
-sklearn
+scikit-learn
 staintools
 pytest
 pytest-cov
