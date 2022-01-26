@@ -292,17 +292,20 @@ def get_tile_arrays(indices: List[int], input_slide_image: str, full_resolution_
     """
     slide = openslide.OpenSlide(str(input_slide_image))
     full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
-    return [(index, np.array(full_generator.get_tile(full_level, address_to_coord(index)).resize((tile_size,tile_size)))) for index in indices]
+    return [(index, np.array(full_generator.get_tile(full_level, address_to_coord(index)).resize((tile_size,tile_size))))
+            for index in indices]
 
-def read_tile_bytes(row):
-    with open(row.tile_image_binary, "rb") as fp:
-        fp.seek(int(row.tile_image_offset))
-        img = Image.frombytes(
-            row.tile_image_mode,
-            (int(row.tile_image_size_xy), int(row.tile_image_size_xy)),
-            fp.read(int(row.tile_image_length)),
-        )    
-    return row.name, img
+def get_tile(row: pd.DataFrame) -> np.ndarray:
+    """
+    Returns a tile image as a numpy array.
+
+    Args:
+        row (pd.DataFrame): row with address and tile_image_file columns
+    """
+    import h5py
+    with h5py.File(row.tile_image_file, 'r') as hf:
+        tile = np.array(hf[row.address])
+    return tile
 
 # USED -> utils
 def coord_to_address(s:Tuple[int, int], magnification:int)->str:

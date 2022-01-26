@@ -28,10 +28,11 @@ _params_ = [('input_slide_image', str), ('output_dir', str), ('tile_size', int),
 def cli(**cli_kwargs):
     """Rasterize a slide into smaller tiles
     
-    Tiles are saved in the whole-slide tiles binary format (tiles.pil), and the corresponding manifest/header file (tiles.csv) is also generated
+    Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
+    and the corresponding manifest/header file (tiles.csv) is also generated
 
-    Neccessary data for the manifest file are: 
-    address, x_coord, y_coord, full_resolution_tile_size, tile_image_binary, tile_image_length, tile_image_size_xy, and tile_image_mode
+    Necessary data for the manifest file are:
+    address, tile_image_file
 
     \b
     Inputs:
@@ -59,10 +60,11 @@ from luna.common.utils import grouper
 def generate_tiles(input_slide_image, tile_size, requested_magnification, output_dir, num_cores, batch_size):
     """Rasterize a slide into smaller tiles
     
-    Tiles are saved in the whole-slide tiles binary format (tiles.pil), and the corresponding manifest/header file (tiles.csv) is also generated
+    Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
+    and the corresponding manifest/header file (tiles.csv) is also generated
 
-    Neccessary data for the manifest file are: 
-    address, x_coord, y_coord, full_resolution_tile_size, tile_image_binary, tile_image_length, tile_image_size_xy, and tile_image_mode
+    Necessary data for the manifest file are:
+    address, tile_image_file
 
     Args:
         input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
@@ -106,48 +108,39 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
 
     df = pd.DataFrame(address_raster).set_index("address")
 
-    output_binary_file = f"{output_dir}/{slide_name}.tiles.pil"
-    output_parquet_file = f"{output_dir}/{slide_name}.tiles.parquet"
     output_hdf_file = f"{output_dir}/{slide_name}.tiles.h5"
     output_header_file = f"{output_dir}/{slide_name}.tiles.csv"
 
     logger.info(f"Now generating tiles with num_cores={num_cores} and batch_size={batch_size}!")
 
-    # TODO - see how they write hdf5
-    # https://github.com/msk-mind/CLAM/blob/b9ee7e5aa7ac8c91783c375bd1437ebef5bf75e6/wsi_core/wsi_utils.py#L54
-    # key - coords
-    address_tile = []
+    address_tiles = []
     with ProcessPoolExecutor(num_cores) as executor:
         out = [executor.submit(get_tile_arrays, index, input_slide_image, full_resolution_tile_size, tile_size )
                for index in grouper(df.index, batch_size)]
         for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
             for index, tile in future.result():
-                # pyarrow doesn't support multi-dim arrays
-                #address_tile.append ((index, tile.tolist()))
-                address_tile.append({index:tile})
-    print(len(address_tile))
+                address_tiles.append({index:tile})
+
+    # save address:tile arrays key:value pair in hdf5
+    if os.path.exists(output_hdf_file):
+        logger.warning(f"{output_hdf_file} already exists, deleting the file..")
+        os.remove(output_hdf_file)
+
     import h5py
-    hfile = h5py.File(output_hdf_file, mode='a')
-    for at in address_tile:
-        for key, val in at.items():
-            hfile.create_dataset(key, data=val)
-    hfile.close()
+    with h5py.File(output_hdf_file, 'a') as hfile:
+        for address_tile in address_tiles:
+            for key, val in address_tile.items():
+                hfile.create_dataset(key, data=val)
 
-    res = pd.DataFrame(address_tile, columns=['address', 'image'])#.set_index('address')
-    """df.loc[:, 'full_resolution_tile_size'] = full_resolution_tile_size
-    df.loc[:, 'tile_image_binary']  = output_binary_file
-    df.loc[:, 'tile_image_length']  = 3 * tile_size ** 2
-    df.loc[:, 'tile_image_size_xy'] = tile_size
-    df.loc[:, 'tile_image_mode']    = 'RGB'"""
+    df = pd.DataFrame({'address':[list(address.keys())[0] for address in address_tiles]})
+    df['tile_image_file'] = output_hdf_file
 
-    logger.info (res)
-    #res.to_parquet(output_parquet_file)
-    #res.to_hdf(output_hdf_file, key='df', format='table', data_columns=res.columns)
-    #df.to_csv(output_header_file)
+    logger.info(df)
+    df.to_csv(output_header_file, index=False)
 
     properties = {
-        "slide_tiles": output_header_file,
-        "total_tiles": len(df),
+        "slide_tiles": output_hdf_file,
+        "total_tiles": len(address_tiles),
     }
 
     return properties

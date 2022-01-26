@@ -67,3 +67,13 @@ def test_convert_xml_to_mask():
    roi = convert_xml_to_mask(xml_data_path, shape=(20,50), annotation_name="Tumor")
    assert list(np.bincount(roi.flatten())) == [929,  71]
    assert list(roi[5,:7]) == [False, False,  True,  True, True,  True, False]
+
+def test_get_tile():
+    import pandas as pd
+    df = pd.DataFrame({'address':['x4_y6_z20.0'],
+                       'tile_image_file':'pyluna-pathology/tests/luna/pathology/common/testdata/123.tiles.h5'})
+
+    tile_arr = get_tile(df.loc[0])
+    assert np.ndarray == type(tile_arr)
+    assert (256, 256, 3) == tile_arr.shape
+
