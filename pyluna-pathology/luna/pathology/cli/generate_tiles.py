@@ -32,7 +32,7 @@ def cli(**cli_kwargs):
     and the corresponding manifest/header file (tiles.csv) is also generated
 
     Necessary data for the manifest file are:
-    address, tile_image_file
+    address, tile_image_file, full_resolution_tile_size, tile_image_size_xy
 
     \b
     Inputs:
@@ -65,7 +65,7 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
     and the corresponding manifest/header file (tiles.csv) is also generated
 
     Necessary data for the manifest file are:
-    address, tile_image_file
+    address, tile_image_file, full_resolution_tile_size, tile_image_size_xy
 
     Args:
         input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
@@ -130,6 +130,8 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
 
     df = pd.DataFrame({'address': address})
     df['tile_image_file'] = output_hdf_file
+    df['full_resolution_tile_size'] = full_resolution_tile_size
+    df['tile_image_size_xy'] = tile_size
 
     logger.info(df)
     df.to_csv(output_header_file, index=False)
