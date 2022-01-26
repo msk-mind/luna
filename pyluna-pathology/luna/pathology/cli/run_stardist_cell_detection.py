@@ -26,7 +26,11 @@ _params_ = [('input_slide_image', str), ('cell_expansion_size', float), ('image_
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """Run stardist using qupath CLI
+    """Run stardist using qupath CLI within a docker container
+    
+    Note: containers are spawned with a root process, and will not exit if the CLI tool is aborted.
+    
+    TODO: Improve handling of containers, move to singularity, and/or ensure graceful exits
 
     \b
     Inputs:
@@ -37,7 +41,7 @@ def cli(**cli_kwargs):
     \b
     Example:
         run_stardist_cell_detection 10001.svs
-            -nc 8
+            -cs 8 -it -it BRIGHTFIELD_H_DAB -nc 8
             -o 10001/cells
     """
     cli_runner( cli_kwargs, _params_, run_stardist_cell_detection)
@@ -52,7 +56,7 @@ def run_stardist_cell_detection(input_slide_image, cell_expansion_size, image_ty
         input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         cell_expansion_size (float): size in pixels to expand cell cytoplasm
         num_cores (int): Number of cores to use for CPU parallelization
-        image_type (str): qupath image type (BRIGHTFIELD)
+        image_type (str): qupath image type (BRIGHTFIELD_H_DAB)
         output_dir (str): output/working directory
         debug_opts (str): debug options passed as arguments to groovy script
 
@@ -91,7 +95,7 @@ def run_stardist_cell_detection(input_slide_image, cell_expansion_size, image_ty
     df.to_csv(output_header_file)
 
     logger.info("Generated cell data:")
-    print(df)
+    logger.info(df)
 
     properties = {
         "cell_objects": output_header_file,

@@ -20,15 +20,17 @@ _params_ = [('input_cell_objects', str), ('tile_size', int), ('intensity_label',
 @click.option('-r', '--radius', required=False,
               help="ik-function radius")
 @click.option('-rts', '--tile_size', required=False,
-              help="Tile size")
+              help="Tile size in μm, window dimensions")
 @click.option('-rtd', '--tile_stride', required=False,
-              help="Tile stride")
+              help="Tile stride in μm, how far the next tile/window is from the last")
 @click.option('-nc', '--num_cores', required=False,
               help="Number of cores to use", default=4)  
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """Run k function
+    """Run k function using a sliding window approach, where the k-function is computed locally in a smaller window, and aggregated across the entire slide.
+    
+    Additionally runs the IK function, which is a special version of the normal K function, senstive to the intensity of staining withink the K-function radius.
 
     \b
     Inputs:
@@ -39,7 +41,7 @@ def cli(**cli_kwargs):
     \b
     Example:
         extract_kfunction 10001/cells/objects.csv
-            -rts 300 -rtd 300 -nc 32 -r 160 -ds 20
+            -rts 300 -rtd 300 -nc 32 -r 160 -il 'DAB: Cytoplasm: Mean'
             -o 10001/spatial_features/
     """
     cli_runner( cli_kwargs, _params_, extract_kfunction)
