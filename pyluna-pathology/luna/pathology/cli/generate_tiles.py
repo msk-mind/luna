@@ -54,7 +54,7 @@ from pathlib import Path
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from luna.pathology.common.utils import get_tile_bytes, get_scale_factor_at_magnfication, get_full_resolution_generator, coord_to_address
+from luna.pathology.common.utils import get_tile_arrays, get_scale_factor_at_magnfication, get_full_resolution_generator, coord_to_address
 from luna.common.utils import grouper
 def generate_tiles(input_slide_image, tile_size, requested_magnification, output_dir, num_cores, batch_size):
     """Rasterize a slide into smaller tiles
@@ -107,36 +107,43 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
     df = pd.DataFrame(address_raster).set_index("address")
 
     output_binary_file = f"{output_dir}/{slide_name}.tiles.pil"
+    output_parquet_file = f"{output_dir}/{slide_name}.tiles.parquet"
+    output_hdf_file = f"{output_dir}/{slide_name}.tiles.h5"
     output_header_file = f"{output_dir}/{slide_name}.tiles.csv"
 
-    fp = open(output_binary_file, 'wb')
-    offset = 0
-    counter = 0
     logger.info(f"Now generating tiles with num_cores={num_cores} and batch_size={batch_size}!")
 
-    address_offset = []
+    # TODO - see how they write hdf5
+    # https://github.com/msk-mind/CLAM/blob/b9ee7e5aa7ac8c91783c375bd1437ebef5bf75e6/wsi_core/wsi_utils.py#L54
+    # key - coords
+    address_tile = []
     with ProcessPoolExecutor(num_cores) as executor:
-        out = [executor.submit(get_tile_bytes, index, input_slide_image, full_resolution_tile_size, tile_size ) for index in grouper(df.index, batch_size)]
+        out = [executor.submit(get_tile_arrays, index, input_slide_image, full_resolution_tile_size, tile_size )
+               for index in grouper(df.index, batch_size)]
         for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
-            for index, tile in future.result(): 
-                fp.write( tile )
-                
-                address_offset.append ((index, int(offset)))
-                offset += len(tile)
-                counter+=1
-    fp.close()
+            for index, tile in future.result():
+                # pyarrow doesn't support multi-dim arrays
+                #address_tile.append ((index, tile.tolist()))
+                address_tile.append({index:tile})
+    print(len(address_tile))
+    import h5py
+    hfile = h5py.File(output_hdf_file, mode='a')
+    for at in address_tile:
+        for key, val in at.items():
+            hfile.create_dataset(key, data=val)
+    hfile.close()
 
-    df = df.join(pd.DataFrame(address_offset, columns=['address', 'tile_image_offset']).set_index('address'))
-
-    df.loc[:, 'full_resolution_tile_size'] = full_resolution_tile_size
+    res = pd.DataFrame(address_tile, columns=['address', 'image'])#.set_index('address')
+    """df.loc[:, 'full_resolution_tile_size'] = full_resolution_tile_size
     df.loc[:, 'tile_image_binary']  = output_binary_file
     df.loc[:, 'tile_image_length']  = 3 * tile_size ** 2
     df.loc[:, 'tile_image_size_xy'] = tile_size
-    df.loc[:, 'tile_image_mode']    = 'RGB'
+    df.loc[:, 'tile_image_mode']    = 'RGB'"""
 
-    logger.info (df)        
-
-    df.to_csv(output_header_file)
+    logger.info (res)
+    #res.to_parquet(output_parquet_file)
+    #res.to_hdf(output_hdf_file, key='df', format='table', data_columns=res.columns)
+    #df.to_csv(output_header_file)
 
     properties = {
         "slide_tiles": output_header_file,
