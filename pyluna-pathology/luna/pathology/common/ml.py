@@ -6,7 +6,8 @@ from collections import Counter, defaultdict
 from typing import Dict, Optional, Union, Tuple, List
 
 from PIL import Image
-from sklearn.model_selection._split import _BaseKFold, _RepeatedSplits
+# from sklearn.model_selection._split import _BaseKFold, _RepeatedSplits
+from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.utils.validation import check_random_state
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
@@ -254,7 +255,6 @@ class TorchTileClassifierTrainer(object):
         Returns:
             Dict: A dictionary of metrics used for monitoring and model evaluation 
         """
-        print("starting validation")
 
         num_batches = len(dataloader)
         self.network.eval()
@@ -282,111 +282,12 @@ class TorchTileClassifierTrainer(object):
 
         return val_metrics
 
-
-class StratifiedGroupKFold(_BaseKFold):
-    """Stratified K-Folds iterator variant with non-overlapping groups.
-    See https://github.com/scikit-learn/scikit-learn/issues/13621 for a
-    full discussion on group stratified cross validation.
-
-    This cross-validation object is a variation of StratifiedKFold that returns
-    stratified folds with non-overlapping groups. The folds are made by
-    preserving the percentage of samples for each class.
-
-    The same group will not appear in two different folds (the number of
-    distinct groups has to be at least equal to the number of folds).
-
-    The difference between GroupKFold and StratifiedGroupKFold is that
-    the former attempts to create balanced folds such that the number of
-    distinct groups is approximately the same in each fold, whereas
-    StratifiedGroupKFold attempts to create folds which preserve the
-    percentage of samples for each class.
-    """
-
-    def __init__(self, n_splits:int=5, shuffle:bool=False, random_state:Union[int, None]=None):
-        """Initilize a StratifiedGroupKFold iterator 
-        
-        Args:
-            n_splits (int): Number of folds, must be at least 2. default=5.
-            shuffle (bool): Whether to shuffle each class's samples before splitting into batches.
-                Note that the samples within each split will not be shuffled. default=False
-            random_state (Union[int, None]): when `shuffle` is true, `random_state` affects the ordering of the
-                indices, which controls the randomness of each fold for each class.
-                otherwise, leave `random_state` as `none`.
-                pass an int for reproducible output across multiple function calls. default=None
-        """
-        super().__init__(
-                n_splits=n_splits, shuffle=shuffle, random_state=random_state
-        )
-
-    def _iter_test_indices(self, X:pd.DataFrame, y:pd.DataFrame, groups:pd.DataFrame) -> List:
-        """Computes test indicies based on group-K-fold cross validation. 
-        Implementation based on this kaggle kernel:
-        https://www.kaggle.com/jakubwasikowski/stratified-group-k-fold-cross-validation
-
-        Args:
-            X (pd.DataFrame): A non-hierarchical/non-multi-indexed/flat dataframe
-            y (pd.DataFrame): The target classes for each sample to balance across
-                training and validation splits. Should be a single-column. 
-            groups (pd.DataFrame): the group used to stratify the data (ie patient ids).
-                 Should be a single-column 
-        Returns:    
-            List: A list of indicies used for each of the k-folds of cross validation 
-        """
-        
-        labels_num = np.max(y) + 1
-        y_counts_per_group = defaultdict(lambda: np.zeros(labels_num))
-        y_distr = Counter()
-        for label, group in zip(y, groups):
-            y_counts_per_group[group][label] += 1
-            y_distr[label] += 1
-
-        y_counts_per_fold = defaultdict(lambda: np.zeros(labels_num))
-        groups_per_fold = defaultdict(set)
-
-        groups_and_y_counts = list(y_counts_per_group.items())
-        rng = check_random_state(self.random_state)
-        if self.shuffle:
-            rng.shuffle(groups_and_y_counts)
-
-        for group, y_counts in sorted(
-            groups_and_y_counts, key=lambda x: -np.std(x[1])
-        ):
-            best_fold = None
-            min_eval = None
-            for i in range(self.n_splits):
-                y_counts_per_fold[i] += y_counts
-                std_per_label = []
-                for label in range(labels_num):
-                    std_per_label.append(
-                        np.std(
-                            [
-                                y_counts_per_fold[j][label] / y_distr[label]
-                                for j in range(self.n_splits)
-                            ]
-                        )
-                    )
-                y_counts_per_fold[i] -= y_counts
-                fold_eval = np.mean(std_per_label)
-                if min_eval is None or fold_eval < min_eval:
-                    min_eval = fold_eval
-                    best_fold = i
-            y_counts_per_fold[best_fold] += y_counts
-            groups_per_fold[best_fold].add(group)
-
-        for i in range(self.n_splits):
-            test_indices = [
-                idx
-                for idx, group in enumerate(groups)
-                if group in groups_per_fold[i]
-            ]
-            yield test_indices
-
-
 def get_group_stratified_sampler(
     df_nh: pd.DataFrame,
-    classes: pd.DataFrame,
-    groups: pd.DataFrame,
-    split: float = 0.2,
+    label_col: str,
+    group_col: str,
+    num_splits: int= 5,
+    random_seed: int = 42,
 ) -> Tuple[List, List]:
     """Generates sampler indicies for torch DataLoader object that are
     stratified by a given group set (ie a column in a dataframe
@@ -395,23 +296,17 @@ def get_group_stratified_sampler(
 
     Args:
         df_nh (pd.DataFrame): A non-hierarchical/non-multi-indexed/flat dataframe
-        classes (pd.DataFrame): The target classes for each sample to balance across
-            training and validation splits. Should be a single-column. 
-        groups (pd.DataFrame): the group used to stratify the data (ie patient ids). Should be a single-column 
-        split (Float): (Optional) the train/val split. must yield a rational number when divided
-        by zero in order to ensure proper balancing and stratification. Default=0.2
+        label_col (str): The column name for the classes to balance across training and validation splits. 
+        group_col (str): The column name used to stratify the data (ie patient ids). 
+        num_splits (int): (Optional) The number of folds, must at least be 2.
     Returns:
         Tuple(List, List): a tuple of indices that coorespond to training and validation samplers
     """
-    #
-    K = 1 / split
-    if K % 1 != 0:
-        print(K)
-        raise ValueError("Invalid test/train ratio")
-    else:
-        K = int(K)
+    
 
-    cv = StratifiedGroupKFold(n_splits=K)
+    cv = StratifiedGroupKFold(n_splits=num_splits, random_state=random_seed)
+    classes = df_nh[label_col]
+    groups = df_nh[group_col]
     for fold_idx, (train_indices, val_indices) in enumerate(
         cv.split(df_nh, classes, groups)
     ):
