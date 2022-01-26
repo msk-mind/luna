@@ -83,8 +83,6 @@ def visualize_tiles(input_slide_image, input_slide_tiles, requested_magnificatio
     # Get tiles
     df = pd.read_csv(input_slide_tiles).set_index('address')
 
-    print (df)
-
     # only visualize tile scores that were able to be computed
     all_score_types = set(plot_labels)
     score_types_to_visualize = set(list(df.columns)).intersection(all_score_types)
