@@ -82,7 +82,7 @@ class BaseTorchTileDataset(Dataset):
             return self.preprocess(img), torch.tensor(row[self.label_cols]).squeeze()
 
         if len(self.label_cols):                 
-            return row.name, self.preprocess(img), torch.tensor(row[self.label_cols]).to_list()
+            return row.name, self.preprocess(img), torch.tensor(row[self.label_cols].to_list())
         else:
             return row.name, self.preprocess(img)
        
