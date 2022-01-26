@@ -32,6 +32,8 @@ def cli(**cli_kwargs):
     
     Additionally runs the IK function, which is a special version of the normal K function, senstive to the intensity of staining withink the K-function radius.
 
+    Generates "super tiles" with the windowed statistics for downstream processing.
+
     \b
     Inputs:
         input_cell_objects: cell objects (.csv)
@@ -57,7 +59,7 @@ from concurrent.futures import ProcessPoolExecutor
 from tqdm.contrib.itertools import product
 
 def extract_kfunction(input_cell_objects, tile_size, intensity_label, tile_stride, radius, num_cores, output_dir):
-    """Run stardist using qupath CLI
+    """Run k function using a sliding window approach, where the k-function is computed locally in a smaller window, and aggregated across the entire slide.
 
     Args:
         input_cell_objects (str): path to cell objects (.csv)
@@ -78,7 +80,7 @@ def extract_kfunction(input_cell_objects, tile_size, intensity_label, tile_strid
     l_x_coord = []
     l_y_coord = []
 
-    df_features = df.describe().drop(columns=['Class', 'x_coord', 'y_coord'])
+    feature_name = f"ikfunction_r{radius}_stain{intensity_label.replace(' ','_').replace(':','')}"
 
     coords = product(range(int(df['x_coord'].min()), int(df['x_coord'].max()), tile_stride), range(int(df['y_coord'].min()), int(df['y_coord'].max()), tile_stride))
     
@@ -101,31 +103,22 @@ def extract_kfunction(input_cell_objects, tile_size, intensity_label, tile_strid
             l_y_coord.append(y)
         logger.info("Waiting for all tasks to complete...")
         
-    df = pd.DataFrame({'address': l_address, 'x_coord':l_x_coord, 'y_coord':l_y_coord, 'results': l_k_function}).set_index('address')
-    df.loc[:, 'full_resolution_tile_size'] = tile_size
+    df_stats = pd.DataFrame({'address': l_address, 'x_coord':l_x_coord, 'y_coord':l_y_coord, 'results': l_k_function}).set_index('address')
+    df_stats.loc[:, 'full_resolution_tile_size'] = tile_size
     
-    df['ik_function']       = df['results'].apply(lambda x: x.result()['intensity'])
-    df['ik_function_norm']  = df['ik_function']  / df['ik_function'].max()
+    df_stats[feature_name]            = df_stats['results'].apply(lambda x: x.result()['intensity'])
+    df_stats[feature_name + '_norm']  = df_stats[feature_name]  / df_stats[feature_name].max()
 
-    df = df.drop(columns=['results']).dropna()
+    df_stats = df_stats.drop(columns=['results']).dropna()
 
-    df_features = df_features.join(df.describe()[['ik_function', 'idk_function']])
-
-    logger.info("Generated cell data:")
-    logger.info (df)
-
-    logger.info("Generated feature data:")
-    logger.info (df_features)
+    logger.info("Generated k-function feature data:")
+    logger.info (df_stats)
     
     output_tile_header = os.path.join(output_dir, Path(input_cell_objects).stem + '_kfunction_supertiles.csv')
-    df.to_csv(output_tile_header)
-
-    output_feature_file = os.path.join(output_dir, Path(input_cell_objects).stem + '_cell_stats.csv')
-    df_features.to_csv(output_feature_file)
+    df_stats.to_csv(output_tile_header)
 
     properties = {
         'slide_tiles': output_tile_header,
-        'feature_csv': output_feature_file
     }
 
     return properties
