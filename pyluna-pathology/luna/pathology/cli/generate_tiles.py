@@ -52,6 +52,7 @@ from tqdm import tqdm
 import openslide
 import itertools
 from pathlib import Path
+import h5py
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
@@ -112,27 +113,22 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
     output_header_file = f"{output_dir}/{slide_name}.tiles.csv"
 
     logger.info(f"Now generating tiles with num_cores={num_cores} and batch_size={batch_size}!")
+    if os.path.exists(output_hdf_file):
+        logger.warning(f"{output_hdf_file} already exists, deleting the file..")
+        os.remove(output_hdf_file)
 
-    address_tiles = []
+    # save address:tile arrays key:value pair in hdf5
+    address = []
+    hfile = h5py.File(output_hdf_file, 'a')
     with ProcessPoolExecutor(num_cores) as executor:
         out = [executor.submit(get_tile_arrays, index, input_slide_image, full_resolution_tile_size, tile_size )
                for index in grouper(df.index, batch_size)]
         for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
             for index, tile in future.result():
-                address_tiles.append({index:tile})
+                hfile.create_dataset(index, data=tile)
+                address.append(index)
 
-    # save address:tile arrays key:value pair in hdf5
-    if os.path.exists(output_hdf_file):
-        logger.warning(f"{output_hdf_file} already exists, deleting the file..")
-        os.remove(output_hdf_file)
-
-    import h5py
-    with h5py.File(output_hdf_file, 'a') as hfile:
-        for address_tile in address_tiles:
-            for key, val in address_tile.items():
-                hfile.create_dataset(key, data=val)
-
-    df = pd.DataFrame({'address':[list(address.keys())[0] for address in address_tiles]})
+    df = pd.DataFrame({'address': address})
     df['tile_image_file'] = output_hdf_file
 
     logger.info(df)
@@ -140,7 +136,7 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
 
     properties = {
         "slide_tiles": output_hdf_file,
-        "total_tiles": len(address_tiles),
+        "total_tiles": len(df),
     }
 
     return properties

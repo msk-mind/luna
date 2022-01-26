@@ -11,6 +11,7 @@ import cv2
 import radiomics
 import SimpleITK as sitk
 import re
+import h5py
 
 import openslide
 
@@ -302,7 +303,6 @@ def get_tile(row: pd.DataFrame) -> np.ndarray:
     Args:
         row (pd.DataFrame): row with address and tile_image_file columns
     """
-    import h5py
     with h5py.File(row.tile_image_file, 'r') as hf:
         tile = np.array(hf[row.address])
     return tile
