@@ -9,7 +9,7 @@ logger = logging.getLogger('slide_etl')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_slide_folder', str), ('comment', str), ('slide_store_root', str), ('project_name', str), ('output_dir', str)]
+_params_ = [('input_slide_folder', str), ('comment', str), ('dry_run', bool), ('num_cores', int), ('slide_store_root', str), ('project_name', str), ('output_dir', str)]
 
 VALID_SLIDE_EXTENSIONS = ['.svs', '.scn', '.tif']
 
@@ -23,6 +23,10 @@ VALID_SLIDE_EXTENSIONS = ['.svs', '.scn', '.tif']
               help='project name to which slides are assigned or associated')
 @click.option('-c', '--comment', required=False,
               help='description/comments on the dataset (NB. wrap in quotes)')
+@click.option('-nc', '--num_cores', required=False,
+              help='Number of cores to use', default=4)
+@click.option('--dry-run', is_flag=True,
+              help="Only print data, no data is copied or generated on disk.")
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
@@ -45,11 +49,15 @@ def cli(**cli_kwargs):
 
 from pathlib import Path
 import pandas as pd
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from tqdm import tqdm
 from urllib.parse import urlparse
 import shutil
-def slide_etl(input_slide_folder, project_name, slide_store_root, comment, output_dir):
+
+import dask
+from distributed import Client
+
+def slide_etl(input_slide_folder, project_name, num_cores, dry_run, slide_store_root, comment, output_dir):
     """ CLI tool method
 
     Args:
@@ -79,15 +87,24 @@ def slide_etl(input_slide_folder, project_name, slide_store_root, comment, outpu
             slide_paths.append(file)
 
 
-    with ProcessPoolExecutor(4) as executor:
-        df = pd.DataFrame(tqdm(executor.map(sp.run, slide_paths[:16]), total=len(slide_paths))).set_index('slide_id')
+    with Client(host='pllimsksparky3', n_workers=((num_cores + 3) // 4), threads_per_worker=4) as client:
+        logger.info (client.dashboard_link)
+        df = pd.DataFrame(client.gather(client.map(sp.run, slide_paths[:100])), dtype=object).set_index('slide_id')
+
+    df = df[df.index.notnull()]
 
     df.loc[:, 'project_name'] = project_name
     df.loc[:, 'comment'] = comment
 
-    output_table = os.path.join(output_dir, "slide_ingest.csv")
+    print (df.dtypes)
+    print (df.infer_objects().dtypes)
 
-    df.to_csv(output_table)
+    if dry_run:
+        return {}
+
+    output_table = os.path.join(output_dir, "slide_ingest.parquet")
+
+    df.to_parquet(output_table)
 
     properties = {
         'slide_table': output_table
@@ -118,24 +135,32 @@ class SlideProcessor:
         Returns:
             dict: slide metadata
         """
-        slide =  openslide.OpenSlide(path)
+        try:
+            slide =  openslide.OpenSlide(path)
+        except:
+            print ("Couldn't read slide: ", path)
+            return {'slide_id':np.nan}
+        else:
 
-        input_slide_path  = Path(path)
-        output_slide_path = os.path.join(self.slide_store_path, input_slide_path.name)
-        
-        kv = dict(slide.properties)
+            input_slide_path  = Path(path)
+            output_slide_path = os.path.join(self.slide_store_path, input_slide_path.name)
+            
+            kv = dict(slide.properties)
 
-        kv['slide_id']   = input_slide_path.stem
-        kv['slide_uuid'] = ''#generate_uuid(path, ['WSI'])
+            kv['slide_id']   = str(input_slide_path.stem)
+            kv['slide_uuid'] = ''#generate_uuid(path, ['WSI'])
 
-        os.path.join(self.slide_store_path, )
+            os.path.join(self.slide_store_path, )
 
-        shutil.copyfile(input_slide_path, output_slide_path)
+            # shutil.copyfile(input_slide_path, output_slide_path)
 
-        kv['slide_path'] = output_slide_path
+            kv['slide_path'] = output_slide_path
 
+            slide.close()
 
-        return kv
+            del slide
+
+            return kv
 
     def estimate_stain(self, slide):
 
@@ -152,11 +177,9 @@ if __name__ == "__main__":
     cli()
 
 
+# self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
 
-
-self._client = Minio(params['MINIO_URI'], access_key=params['MINIO_USER'], secret_key=params['MINIO_PASSWORD'], secure=False)
-
-if self.params.get('OBJECT_STORE_ENABLED',  False):
-if not self._client.bucket_exists(self._bucket_id):
-self._client.make_bucket(self._bucket_id)
-future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
+# if self.params.get('OBJECT_STORE_ENABLED',  False):
+# if not self._client.bucket_exists(self._bucket_id):
+# self._client.make_bucket(self._bucket_id)
+# future = executor.submit(self._client.fput_object, object_bucket, f"{object_folder}/{p.name}", p, part_size=250000000)
