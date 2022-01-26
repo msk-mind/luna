@@ -320,9 +320,9 @@ def cli_runner(cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable
     os.makedirs(output_dir, exist_ok=True)
 
     # Nice little log break
-    print("\n" + "-"*35 + f' Running {cli_function.__name__} ' + "-" *35 + "\n")
+    print("\n" + "-"*35 + f' Running transform::{cli_function.__name__} ' + "-" *35 + "\n")
 
-    with CodeTimer(logger, name='transform'):
+    with CodeTimer(logger, name=f'transform::{cli_function.__name__}'):
         result = cli_function(**kwargs)
 
     
