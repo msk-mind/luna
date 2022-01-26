@@ -1,5 +1,5 @@
 # General imports
-import os, json, logging, yaml
+import os, json, logging, yaml, sys
 import click
 
 from luna.common.custom_logger   import init_logger
@@ -8,13 +8,6 @@ init_logger()
 logger = logging.getLogger('infer_tile_labels')
 
 from luna.common.utils import cli_runner
-
-import torch
-from torch.utils.data import DataLoader
-from luna.pathology.common.ml import BaseTorchTileDataset, BaseTorchTileClassifier
-
-import pandas as pd
-from tqdm import tqdm
 
 _params_ = [('input_slide_tiles', str), ('output_dir', str), ('repo_name', str), ('transform_name', str), ('model_name', str), ('weight_tag', str), ('num_cores', int), ('batch_size', int)]
 
@@ -41,7 +34,7 @@ def cli(**cli_kwargs):
 
     \b
     Inputs:
-        input_slide_tiles: path to tile images (.tiles.pil)
+        input_slide_tiles: path to tile images (.tiles.csv)
     \b
     Outputs:
         tile_scores
@@ -55,6 +48,13 @@ def cli(**cli_kwargs):
             -o tiles/slide-100012/scores
     """
     cli_runner( cli_kwargs, _params_, infer_tile_labels)
+
+import torch
+from torch.utils.data import DataLoader
+from luna.pathology.common.ml import BaseTorchTileDataset, BaseTorchTileClassifier
+
+import pandas as pd
+from tqdm import tqdm
 
 # We are acting a bit like a consumer of the base classes here-
 class TileDatasetGithub(BaseTorchTileDataset):
@@ -70,16 +70,18 @@ class TileClassifierGithub(BaseTorchTileClassifier):
         return self.model(input_tiles)
 
 def infer_tile_labels(input_slide_tiles, output_dir, repo_name, transform_name, model_name, weight_tag, num_cores, batch_size):
-    """Generate tile addresses, scores and optionally annotation labels using models stored in torch.hub format
+    """Run inference using a model and transform definition (either local or using torch.hub)
+
+    Decorates existing slide_tiles with additional columns corresponding to class prediction/scores from the model
 
     Args:
-        input_slide_tiles (str): path to a slide-tile directory (contains .tiles.pil)
+        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
         output_dir (str): output/working directory
         repo_name (str): repository root name like (namespace/repo) at github.com to serve torch.hub models
         transform_name (str): torch hub transform name (a function at the repo repo_name)
         model_name (str): torch hub model name (a nn.Module at the repo repo_name)
         weight_tag (str): what weight tag to use
-        num_cores (int): how many cores to use for dataloading
+        num_cores (int): Number of cores to use for CPU parallelization 
         batch_size (int): size in batch dimension to chuck inference (8-256 recommended, depending on memory usage)
 
     Returns:
@@ -96,7 +98,7 @@ def infer_tile_labels(input_slide_tiles, output_dir, repo_name, transform_name, 
 
     # Generate aggregate dataframe
     with torch.no_grad():
-        df_scores = pd.concat([tile_classifier(index, data) for index, data in tqdm(tile_loader)])
+        df_scores = pd.concat([tile_classifier(index, data) for index, data in tqdm(tile_loader, file=sys.stdout)])
         
     if hasattr(tile_classifier.model, 'class_labels'):
         logger.info(f"Mapping column labels -> {tile_classifier.model.class_labels}")
@@ -111,7 +113,7 @@ def infer_tile_labels(input_slide_tiles, output_dir, repo_name, transform_name, 
 
     # Save our properties and params
     properties = {
-        "tile_scores": output_file,
+        "slide_tiles": output_file,
         "total_tiles": len(df_output),
         "available_labels": list(df_output.columns),
     }
