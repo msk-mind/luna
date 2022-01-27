@@ -25,7 +25,9 @@ RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
 RUN curl -LJ https://github.com/krallin/tini/releases/download/v0.19.0/tini -o /usr/bin/tini && \
     chmod +x /usr/bin/tini
 
-RUN python -m pip install --pre --no-cache-dir \
+RUN python -m pip install --no-cache-dir --user --upgrade pip && \
+    python -m pip cache purge && \
+    python -m pip install --pre --no-cache-dir \
     packaging \
     histomicsui \
     large_image[sources] \
