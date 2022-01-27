@@ -18,7 +18,7 @@ VALID_SLIDE_EXTENSIONS = ['.svs', '.scn', '.tif']
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-s', '--slide_store_root', required=False,
-              help='Where to store all slides in URL format (use file:/path/folder for local, s3:/bucket/folder for s3)')
+              help='Where to store all slides in URL format (use file:///path/folder for local, s3://www.host:9000/ for s3)')
 @click.option('-p', '--project_name', required=False,
               help='project name to which slides are assigned or associated')
 @click.option('-c', '--comment', required=False,
@@ -47,14 +47,16 @@ def cli(**cli_kwargs):
     cli_runner( cli_kwargs, _params_, slide_etl)
 
 
+def rebase_schema_numeric(df):
+    for col in df.columns:
+        df[col] = df[col].astype(float, errors='ignore')
+        df[col] = df[col].astype(int,   errors='ignore')
+
 from pathlib import Path
 import pandas as pd
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-from tqdm import tqdm
 from urllib.parse import urlparse
 import shutil
 
-import dask
 from distributed import Client
 
 def slide_etl(input_slide_folder, project_name, num_cores, dry_run, slide_store_root, comment, output_dir):
@@ -70,12 +72,17 @@ def slide_etl(input_slide_folder, project_name, num_cores, dry_run, slide_store_
 
     url_result = urlparse(slide_store_root)
 
-    if not url_result.scheme in ['file']:
+    if not url_result.scheme in ['file', 's3']:
         raise RuntimeError("Unsupported slide store schemes, please try s3:// or file://")
-        
-    if url_result.scheme == 'file':
-        sp = SlideProcessor(slide_store_path = os.path.join (url_result.path, "pathology", project_name, 'slides'))
+    
+    relative_path = os.path.join("pathology", project_name, 'slides')
 
+    if url_result.scheme == 'file':
+        adapter = FileWriteAdatper(store_path=os.path.join(url_result.path, relative_path))
+
+    if url_result.scheme == 's3':
+        adapter = MinioWriteAdatper(store_hostname=url_result.hostname, store_port=url_result.port, bucket='pathology', prefix=os.path.join(project_name, 'slides'))
+        
     slide_paths = []
 
     for path, _, files in os.walk(input_slide_folder):
@@ -86,25 +93,29 @@ def slide_etl(input_slide_folder, project_name, num_cores, dry_run, slide_store_
 
             slide_paths.append(file)
 
+    sp = SlideProcessor(data_store_adapter=adapter)
 
-    with Client(host='pllimsksparky3', n_workers=((num_cores + 3) // 4), threads_per_worker=4) as client:
+    with Client(host=os.environ['HOSTNAME'], n_workers=((num_cores + 3) // 4), threads_per_worker=4) as client:
         logger.info (client.dashboard_link)
-        df = pd.DataFrame(client.gather(client.map(sp.run, slide_paths[:100])), dtype=object).set_index('slide_id')
+        df = pd.DataFrame(client.gather(client.map(sp.run, slide_paths[:]))).set_index('slide_id')
 
     df = df[df.index.notnull()]
+
+    rebase_schema_numeric(df)
 
     df.loc[:, 'project_name'] = project_name
     df.loc[:, 'comment'] = comment
 
-    print (df.dtypes)
-    print (df.infer_objects().dtypes)
+    print (df)
 
     if dry_run:
         return {}
 
     output_table = os.path.join(output_dir, "slide_ingest.parquet")
-
     df.to_parquet(output_table)
+
+    output_table = os.path.join(output_dir, "slide_ingest.csv")
+    df.to_csv(output_table)
 
     properties = {
         'slide_table': output_table
@@ -118,13 +129,70 @@ from luna.pathology.common.utils import get_downscaled_thumbnail, get_scale_fact
 from luna.common.utils import generate_uuid
 import numpy as np
 
+class FileWriteAdatper:
+    def __init__(self, store_path):
+        self.store_path = store_path
+        print("Writing to: " + self.store_path)
+
+        os.makedirs(self.store_path, exist_ok=True)
+
+        self.base_url = f'file://{Path(store_path)}'
+        print("Base URL: " + self.base_url)
+
+    def write(self, input_data):
+        input_data  = Path(input_data)
+        filename = input_data.name
+
+        shutil.copy(input_data, self.store_path)
+
+        output_data_url = os.path.join(self.base_url, filename)
+
+        return {'data_url': output_data_url}
+
+from minio import Minio
+class MinioWriteAdatper:
+    def __init__(self, store_hostname, store_port, bucket, prefix):
+        self.store_hostname = store_hostname
+        self.store_port = store_port
+        self.bucket = bucket
+        self.prefix = prefix
+
+        print (self.store_hostname, self.store_port, self.bucket, self.prefix )
+
+        client = Minio(f'{self.store_hostname}:{self.store_port}', access_key=os.environ['MINIO_USER'], secret_key=os.environ['MINIO_PASSWORD'], secure=True)
+
+        if not client.bucket_exists(self.bucket):
+            client.make_bucket(self.bucket)
+       
+
+    def write(self, input_data):
+
+        input_data  = Path(input_data)
+        filename = input_data.name
+
+        client = Minio(f'{self.store_hostname}:{self.store_port}', access_key=os.environ['MINIO_USER'], secret_key=os.environ['MINIO_PASSWORD'], secure=True)
+        client.fput_object(self.bucket, f"{self.prefix}/{filename}", input_data, part_size=250000000)
+
+        output_data_url = os.path.join(f"s3://{self.store_hostname}:{self.store_port}", self.bucket, f"{self.prefix}/{filename}")
+
+        return {'data_url': output_data_url}
+
+class ReadAdapter:
+    def __init__(self): pass
+
+    def stat(self, url):
+        url_result = urlparse(url)
+
+        if not url_result.scheme in ['file', 's3']:
+            raise RuntimeWarning("Unsupported slide store schemes, please try s3:// or file://, skipping...")
+
+        if url_result.scheme == 'file':
+            print (os.stat(url_result.path))
+    
+
 class SlideProcessor:
-    def __init__(self, slide_store_path):
-        self.slide_store_path = slide_store_path
-
-        os.makedirs(slide_store_path, exist_ok=True)
-
-        logger.info ("Writing slides to : " + slide_store_path)
+    def __init__(self, data_store_adapter):
+        self.data_store_adapter = data_store_adapter
 
     def run(self, path):
         """Extract openslide properties
@@ -137,30 +205,28 @@ class SlideProcessor:
         """
         try:
             slide =  openslide.OpenSlide(path)
+
         except:
-            print ("Couldn't read slide: ", path)
+            print ("Couldn't process slide: ", path)
             return {'slide_id':np.nan}
+        
         else:
 
             input_slide_path  = Path(path)
-            output_slide_path = os.path.join(self.slide_store_path, input_slide_path.name)
             
             kv = dict(slide.properties)
 
             kv['slide_id']   = str(input_slide_path.stem)
             kv['slide_uuid'] = ''#generate_uuid(path, ['WSI'])
 
-            os.path.join(self.slide_store_path, )
+            write_kv = self.data_store_adapter.write(path)
 
-            # shutil.copyfile(input_slide_path, output_slide_path)
-
-            kv['slide_path'] = output_slide_path
+            kv.update(write_kv)
 
             slide.close()
 
-            del slide
-
             return kv
+
 
     def estimate_stain(self, slide):
 
