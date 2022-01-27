@@ -64,15 +64,19 @@ run:        ## launch containers
 	mkdir -p vmount/logs vmount/db vmount/tmp vmount/assetstore
 	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d
 	@echo
-	@echo DSA is being set up with sample images, annotations and
-	@echo admin user (admin/password). It will take a couple minutes to become available at
+	@echo "DSA is being set up with sample images, annotations and"
+	@echo "admin user (admin/password). It will take a couple minutes to become available at,"
+	@echo
 	@echo "$$(hostname):$$(cat .dsa_port)"
 	@echo
-	@echo To access the tutorial, copy-paste this URL in your browser.
-	@echo Then get token by running the command \"tail vmount/logs/tutorial.log\"
-	@echo and enter the token into the browser page.
+	@echo "To access the tutorial, copy-paste this URL below in your browser."
+	@echo
 	@echo "$$(hostname):$$(cat .jupyter_port)"
 	@echo
+	@echo "Then copy-paste the token below into your browser page."
+	@echo
+	@sleep 1
+	@cat vmount/logs/tutorial.log | grep "token=" | tail -1
 
 stop:       ## terminate containers but keep volumes
 	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose down
