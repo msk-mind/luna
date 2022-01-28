@@ -1,4 +1,5 @@
 # General imports
+from distutils.log import debug
 import os, json, logging, yaml
 import click
 
@@ -83,12 +84,6 @@ def slide_etl(input_slide_folder, project_name, num_cores, dry_run, debug_limit,
     Returns:
         dict: metadata about function call
     """
-    if debug_limit > 0: dry_run = True
-
-    if dry_run: logger.info ("Note, this is a dry run!!!")
-
-    write_adapter = IOAdapter(dry_run=dry_run).writer(store_url, bucket='pathology')
-        
     slide_paths = []
 
     for path, _, files in os.walk(input_slide_folder):
@@ -99,11 +94,22 @@ def slide_etl(input_slide_folder, project_name, num_cores, dry_run, debug_limit,
 
             slide_paths.append(file)
 
+
+    if debug_limit > 0: 
+        slide_paths = slide_paths[:debug_limit]
+        dry_run = True
+
+    if dry_run: logger.info ("Note, this is a dry run!!!")
+
+    logger.info(slide_paths)
+
+    write_adapter = IOAdapter(dry_run=dry_run).writer(store_url, bucket='pathology')
+
     sp = SlideProcessor(writer=write_adapter, project=project_name)
 
     with Client(host=os.environ['HOSTNAME'], n_workers=((num_cores + 1) // 2), threads_per_worker=2) as client:
         logger.info ("Dashboard: "+ client.dashboard_link)
-        df = pd.DataFrame(x.result() for x in tqdm(as_completed(client.map(sp.run, slide_paths[:debug_limit])), smoothing=0.01, total=len(slide_paths))).set_index('slide_id')
+        df = pd.DataFrame([x.result() for x in tqdm(as_completed(client.map(sp.run, slide_paths)), smoothing=0.01, total=len(slide_paths))]).set_index('slide_id')
 
     df = df[df.index.notnull()]
 
@@ -113,11 +119,12 @@ def slide_etl(input_slide_folder, project_name, num_cores, dry_run, debug_limit,
     df.loc[:, 'comment'] = comment
     df.loc[:, 'ingestion_date'] = datetime.today()
 
+    logger.info(df)
+
     if dry_run:
-        print (df)
         return {}
 
-    output_table = os.path.join(output_dir, "slide_ingest.parquet")
+    output_table = os.path.join(output_dir, f"slide_ingest_{project_name}.parquet")
     df.to_parquet(output_table)
 
     properties = {
