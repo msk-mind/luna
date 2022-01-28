@@ -119,7 +119,7 @@ def compute_w_loader(file_path, output_path, model,
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """An example showing how Luna tile images can be used with CLAM model.
+    """An example showing how Luna tile images can be used with CLAM.
     Extract 1024-dimensional feature vector from each tile, using a pre-trained ResNet50.
 
     Note:
@@ -133,7 +133,7 @@ def cli(**cli_kwargs):
     Example:
         !python3 -m luna.pathology.examples.extract_feature_vectors \
             --csv_path dataset.csv \
-            --feat_dir /path/to/output \
+            --output_dir /path/to/output \
     """
     cli_runner(cli_kwargs, _params_, extract_feature_vectors)
 
