@@ -47,6 +47,20 @@ def generate_uuid(path, prefix):
     return "-".join(prefix)
 
 
+def rebase_schema_numeric(df):
+    """
+    Tries to convert all columns in a dataframe to numeric types, if possible, with integer types taking precident
+
+    Note: this is an in-place operation
+    
+    Args:
+        df (pd.DataFrame): dataframe to convert columns
+    """
+    for col in df.columns:
+        df[col] = df[col].astype(float, errors='ignore')
+        df[col] = df[col].astype(int,   errors='ignore')
+
+
 def generate_uuid_binary(content, prefix):
     """
     Returns hash of the binary, preceded by the prefix.
