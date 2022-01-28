@@ -150,11 +150,9 @@ class SlideProcessor:
         """
         try:
             slide =  openslide.OpenSlide(path)
-
         except:
             print ("Couldn't process slide: ", path)
             return {'slide_id':np.nan}
-        
         else:
 
             input_slide_path  = Path(path)
