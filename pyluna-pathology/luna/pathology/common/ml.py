@@ -14,6 +14,8 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchmetrics import MetricCollection
 
+from luna.pathology.common.utils import get_tile
+
 class BaseTorchTileDataset(Dataset):
     """Base class for a tile dataset
     
@@ -56,7 +58,7 @@ class BaseTorchTileDataset(Dataset):
     def __getitem__(self, idx: int):
         """Tile accessor
         
-        Loads a tile image from the tile manifest.  Returns a batch of the indicies of the input dataframe, the tile data always. 
+        Loads a tile image from the tile manifest.  Returns a batch of the indices of the input dataframe, the tile data always.
         If label columns where specified, the 3rd position of the tuple is a tensor of the label data. If Ray is being used for 
         model training, then only the image data and the label is returned. 
 
@@ -68,13 +70,7 @@ class BaseTorchTileDataset(Dataset):
         """ 
             
         row = self.tile_manifest.iloc[idx]
-        with open(row.tile_image_binary, "rb") as fp:
-            fp.seek(int(row.tile_image_offset))
-            img = Image.frombytes(
-                row.tile_image_mode,
-                (int(row.tile_image_size_xy), int(row.tile_image_size_xy)),
-                fp.read(int(row.tile_image_length)),
-            )   
+        img = Image.fromarray(get_tile(row))
 
         if self.using_ray:
             if not(len(self.label_cols)):
