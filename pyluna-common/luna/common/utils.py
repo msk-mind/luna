@@ -5,6 +5,7 @@ from filehash import FileHash
 from importlib import import_module
 from io import BytesIO
 from typing import Callable, List, _GenericAlias
+from luna.common.CodeTimer import CodeTimer
 import itertools
 
 logger = logging.getLogger(__name__)
@@ -321,10 +322,12 @@ def cli_runner(cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable
     os.makedirs(output_dir, exist_ok=True)
 
     # Nice little log break
-    print("\n" + "-"*35 + f' Running {cli_function.__name__} ' + "-" *35 + "\n")
+    print("\n" + "-"*35 + f' Running transform::{cli_function.__name__} ' + "-" *35 + "\n")
 
-    result = cli_function(**kwargs)
+    with CodeTimer(logger, name=f'transform::{cli_function.__name__}'):
+        result = cli_function(**kwargs)
 
+    
     kwargs.update(result)
 
     with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
