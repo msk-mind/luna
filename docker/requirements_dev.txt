@@ -44,12 +44,15 @@ ijson
 geojson
 orjson
 torch
+torchmetrics
+scikit-learn
 staintools
 pytest
 pytest-cov
 pytest-mock
 pytest-runner
 testfixtures
+ray
 requests-mock
 mock
 wheel>=0.22

@@ -1,13 +1,14 @@
-from filehash import FileHash
-from io import BytesIO
 import os, json, yaml
 import logging
-logger = logging.getLogger(__name__)
 
-
+from filehash import FileHash
+from importlib import import_module
+from io import BytesIO
+from typing import Callable, List, _GenericAlias
 from luna.common.CodeTimer import CodeTimer
-from typing import Callable, List
 import itertools
+
+logger = logging.getLogger(__name__)
 
 
 # Distinct types that are actually the same (effectively)
@@ -203,7 +204,7 @@ def validate_params(given_params: dict, params_list: List[tuple]):
     d_params = {}
     for name, dtype in params_list:
         if given_params.get(name, None) == None: 
-            raise RuntimeError(f"Param {name} of type {type} was never set, but required by transform, please check your input variables.")
+            raise RuntimeError(f"Param {name} of type {dtype} was never set, but required by transform, please check your input variables.")
         try:
             if 'List' in str(dtype):
                 if type (given_params[name])==list:
@@ -222,6 +223,8 @@ def validate_params(given_params: dict, params_list: List[tuple]):
                     d_params[name] = json.loads(given_params[name])
             elif type(dtype)==type:
                 d_params[name] = dtype(given_params[name])
+            elif type(dtype) == _GenericAlias: # check for parameterized generics like List[str]
+                d_params[name] = given_params[name]
             else:
                 raise RuntimeError(f"Type {type(dtype)} invalid!")
 
@@ -308,9 +311,8 @@ def cli_runner(cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable
         if cli_kwargs[key] is None: del cli_kwargs[key]
 
     # Override with CLI arguments
-    kwargs.update(cli_kwargs) # 
-    
-    # Validate them
+    kwargs.update(cli_kwargs)
+
     kwargs = validate_params(kwargs, cli_params)
 
     # Expand implied inputs
@@ -333,3 +335,16 @@ def cli_runner(cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable
         # json.dump(kwargs, fp, indent=4, sort_keys=True)
     
     logger.info("Done.")
+
+
+def load_func(dotpath : str):
+    """load function in module from a parsed yaml string
+
+    Args:
+        dotpath (str): module/function name written as a string (ie torchvision.models.resnet34)
+    Returns: 
+        The inferred module itself, not the string representation
+    """
+    module_, func = dotpath.rsplit(".", maxsplit=1)
+    m = import_module(module_)
+    return getattr(m, func)
