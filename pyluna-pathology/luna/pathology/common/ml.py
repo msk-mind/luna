@@ -303,7 +303,7 @@ def get_group_stratified_sampler(
     """
     
 
-    cv = StratifiedGroupKFold(n_splits=num_splits, random_state=random_seed)
+    cv = StratifiedGroupKFold(n_splits=num_splits, random_state=random_seed, shuffle=True)
     classes = df_nh[label_col]
     groups = df_nh[group_col]
     for fold_idx, (train_indices, val_indices) in enumerate(

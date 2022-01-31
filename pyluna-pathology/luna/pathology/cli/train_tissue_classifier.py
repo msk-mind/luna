@@ -48,10 +48,10 @@ _params_ = [
     ("label_col", str),
     ("stratify_col", str),
     ("num_splits", int),
-    ("num_epochs", Union[int, Callable]),
-    ("batch_size", Union[int, Callable]),
-    ("learning_rate", Union[float, Callable]),
-    ("network", Union[nn.Module, Callable]),
+    ("num_epochs", list),
+    ("batch_size", list),
+    ("learning_rate", list),
+    ("network", str), # string, but parsed as an object 
     ("use_gpu", bool),
     ("num_cpus_per_worker", int),
     ("num_gpus_per_worker", int),
@@ -339,9 +339,9 @@ def train_model(
         tile_dataset_fpath (str): filepath to input dataframe that contains a row for each tile
              and the cooresponding tissue type
         label_set (dict): dictionary that maps tissue types to numerical values
-        label_col (str): name of the column in the input_slide_tile_df that contains the labels (tissue type) 
+        label_col (str): name of the column in the tile_dataset_fpath that contains the labels (tissue type) 
             for each tile
-        stratify_col (str): columnn in the input_slide_tile_df used to stratify the train/test splits, 
+        stratify_col (str): columnn in the tile_dataset_fpath used to stratify the train/test splits, 
             such as the patient id or slide id
         num_epochs (Union[int, Callable]): number of epochs to train the model for. Can be either an integer value
             or a Ray.tune distribution (eg ray.tune.choice([10, 15])). In the YAML config, this must be specified
@@ -391,7 +391,7 @@ def train_model(
     logger.info(
         f"Instantiating Ray Trainer with: num_cpus_per_worker={num_cpus_per_worker}, num_gpus_per_worker={num_gpus_per_worker}"
     )
-    print(output_dir)
+
     trainer = Trainer(
         backend="torch",
         num_workers=num_workers,
@@ -403,20 +403,15 @@ def train_model(
         },
     )
 
-    # these parameters can be either integer/float values, or ray.tune distributions
-    if type(batch_size) == dict:
-        bx_search_type = load_func(batch_size["type"])
-        bx_search_space = batch_size["space"]
-        batch_size = bx_search_type(bx_search_space)
-    if type(num_epochs) == dict:
-        ne_search_type = load_func(num_epochs["type"])
-        ne_search_space = num_epochs["space"]
-        num_epochs = ne_search_type(ne_search_space)
-    if type(learning_rate) == dict:
-        lr_search_type = load_func(learning_rate["type"])
-        lr_search_space = learning_rate["space"]
-        learning_rate = lr_search_type(lr_search_space)
+    batch_size = ray.tune.choice(batch_size)
 
+    num_epochs = ray.tune.choice(batch_size)
+
+    if len(learning_rate) == 2:
+        learning_rate = ray.tune.loguniform(learning_rate[0], learning_rate[1])
+    else:
+        learning_rate = ray.tune.choice(learning_rate)
+ 
     network = load_func(network)
 
     logger.info(f"Trainer logs will be logged in: {output_dir}")
@@ -428,7 +423,7 @@ def train_model(
         "batch_size": batch_size,
         "num_epochs": num_epochs,
         "num_cpus_per_worker": num_cpus_per_worker,
-        "input_slide_tile_df": input_slide_tile_df,
+        "tile_dataset_fpath": tile_dataset_fpath,
         "label_set": label_set,
         "label_col": label_col,
         "stratify_col": stratify_col,
@@ -476,7 +471,6 @@ def train_model(
 
 if __name__ == "__main__":
 
-    # main()
     cli()
 
     pass
