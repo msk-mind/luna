@@ -8,6 +8,9 @@ from typing import Callable, List, _GenericAlias
 from luna.common.CodeTimer import CodeTimer
 import itertools
 
+import pandas as pd
+from pathlib import Path
+
 logger = logging.getLogger(__name__)
 
 
@@ -15,7 +18,6 @@ logger = logging.getLogger(__name__)
 TYPE_ALIASES = {
     'itk_geometry': 'itk_volume'
 }
-
 
 def to_sql_field(s):
     filter1 = s.replace(".","_").replace(" ","_")
@@ -45,9 +47,25 @@ def generate_uuid(path, prefix):
     """
     posix_file_path = path.split(':')[-1]
 
-    rec_hash = FileHash('sha256').hash_file(posix_file_path)
+    rec_hash = FileHash('sha256', chunk_size=65536).hash_file(posix_file_path)
     prefix.append(rec_hash)
     return "-".join(prefix)
+
+
+def rebase_schema_numeric(df):
+    """
+    Tries to convert all columns in a dataframe to numeric types, if possible, with integer types taking precident
+
+    Note: this is an in-place operation
+    
+    Args:
+        df (pd.DataFrame): dataframe to convert columns
+    """
+    for col in df.columns:
+        if df[col].dtype != object: continue
+
+        df[col] = df[col].astype(float, errors='ignore')
+        df[col] = df[col].astype(int,   errors='ignore')
 
 
 def generate_uuid_binary(content, prefix):
@@ -336,6 +354,54 @@ def cli_runner(cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable
     
     logger.info("Done.")
 
+def apply_csv_filter(input_paths, subset_csv=None):
+    """ Filteres a list of input_paths based on include/exclude logic given for either the full path, filename, or filestem
+
+    If using "include" logic, only matching entries with include=True are kept.  
+    If using "exclude" logic, only matching entries with exclude=True are removed.
+
+    The origional list is returned if the given subset_csv is None or empty
+
+    Args:
+        input_paths (list[str]): list of input paths to filter
+        subset_csv (str): path to a csv with subset/filter information/flags
+    Returns
+        list[str]: filtered list
+    Raises:
+        RuntimeError: If the given subset_csv is invalid
+    """
+
+    if not len(subset_csv) > 0 or subset_csv is None: 
+        return input_paths
+    if not os.path.exists(subset_csv): 
+        return input_paths
+
+
+    try:
+        subset_df     = pd.read_csv(subset_csv, dtype={0: str})
+
+        match_type   = subset_df.columns[0]
+        filter_logic = subset_df.columns[1]
+
+        if not match_type   in ['path', 'filename', 'stem']: raise RuntimeError("Invalid match type column")
+        if not filter_logic in ['include', 'exclude']:       raise RuntimeError("Invalid match type column")
+    except: 
+        raise RuntimeError("Invalid subset .csv passed, must be a 2-column csv with headers = [ (path|filename|stem), (include|exclude) ]")
+
+    if not len(subset_df) > 0: return input_paths
+
+    logger.info(f"Applying csv filter, match_type={match_type}, filter_logic={filter_logic}")
+    
+    input_path_df = pd.DataFrame( {'path':path, 'filename':Path(path).name, 'stem':Path(path).stem} for path in input_paths).astype(str)
+
+    df_matches = input_path_df.set_index(match_type).join(subset_df.set_index(match_type))
+
+    if filter_logic=="include":
+        out =  df_matches.loc[(df_matches['include'] == True)]
+    if filter_logic=="exclude":
+        out =  df_matches.loc[~(df_matches['exclude'] == True)]
+    
+    return list(out.reset_index()['path'])
 
 def load_func(dotpath : str):
     """load function in module from a parsed yaml string
