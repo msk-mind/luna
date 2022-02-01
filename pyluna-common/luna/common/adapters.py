@@ -5,7 +5,7 @@ from functools import partial
 
 import shutil
 from minio import Minio
-from minio.error import NoSuchKey
+# from minio.error import NoSuchKey
 import calendar
 from datetime import datetime
 
@@ -13,7 +13,7 @@ from datetime import datetime
 def get_object_stats(client, bucket, key):
     try:
         stat_object = client.stat_object(bucket, key)
-    except NoSuchKey:
+    except:
         return -1, -1
     return stat_object.size, calendar.timegm(stat_object.last_modified)
 
