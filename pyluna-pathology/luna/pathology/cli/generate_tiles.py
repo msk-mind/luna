@@ -128,7 +128,7 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
                 hfile.create_dataset(index, data=tile)
                 address.append(index)
 
-    df = pd.DataFrame({'address': address})
+    df = pd.DataFrame({'address': address}).set_index('address')
     df['tile_image_file'] = output_hdf_file
     df['full_resolution_tile_size'] = full_resolution_tile_size
     df['tile_image_size_xy'] = tile_size

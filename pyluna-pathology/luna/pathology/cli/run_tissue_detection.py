@@ -49,7 +49,7 @@ from tqdm import tqdm
 
 import openslide
 from luna.pathology.common.utils import get_downscaled_thumbnail, get_scale_factor_at_magnfication, \
-    get_stain_vectors_macenko, pull_stain_channel, get_tile
+    get_stain_vectors_macenko, pull_stain_channel, get_tile_array
 
 from skimage.color   import rgb2gray
 from skimage.filters import threshold_otsu
@@ -69,7 +69,7 @@ def compute_otsu_score(row: pd.DataFrame, otsu_threshold: float) -> float:
         row (pd.DataFrame): row with address and tile_image_file columns
         otsu_threshold (float): otsu threshold value
     """
-    tile = get_tile(row)
+    tile = get_tile_array(row)
     score = np.mean(rgb2gray(tile) < otsu_threshold)
     return score
 
@@ -80,7 +80,7 @@ def compute_purple_score(row: pd.DataFrame) -> float:
     Args:
         row (pd.DataFrame): row with address and tile_image_file columns
     """
-    tile = get_tile(row)
+    tile = get_tile_array(row)
     r, g, b = tile[..., 0], tile[..., 1], tile[..., 2]
     score = np.mean((r > (g + 10)) & (b > (g + 10)))
     return score
@@ -95,7 +95,7 @@ def compute_stain_score(row: pd.DataFrame, vectors, channel, stain_threshold:flo
         channel (int): stain channel
         stain_threshold (float): stain threshold value
     """
-    tile = get_tile(row)
+    tile = get_tile_array(row)
     tile = np.array(Image.fromarray(tile).resize((10, 10), Image.NEAREST))
     stain = pull_stain_channel(tile, vectors=vectors, channel=channel)
     score = np.mean (stain > stain_threshold)
@@ -169,7 +169,7 @@ def detect_tissue(input_slide_image, input_slide_tiles, requested_magnification,
     Image.fromarray(stain0_mask).save(output_dir + '/stain0_mask.png')
     Image.fromarray(stain1_mask).save(output_dir + '/stain1_mask.png')
 
-    df = pd.read_csv(input_slide_tiles)
+    df = pd.read_csv(input_slide_tiles).set_index('address')
 
     # Be smart about computation time
     with ThreadPoolExecutor(num_cores) as p:

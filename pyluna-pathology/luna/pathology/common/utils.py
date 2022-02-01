@@ -296,7 +296,7 @@ def get_tile_arrays(indices: List[int], input_slide_image: str, full_resolution_
     return [(index, np.array(full_generator.get_tile(full_level, address_to_coord(index)).resize((tile_size,tile_size))))
             for index in indices]
 
-def get_tile(row: pd.DataFrame) -> np.ndarray:
+def get_tile_array(row: pd.DataFrame) -> np.ndarray:
     """
     Returns a tile image as a numpy array.
 
@@ -304,7 +304,7 @@ def get_tile(row: pd.DataFrame) -> np.ndarray:
         row (pd.DataFrame): row with address and tile_image_file columns
     """
     with h5py.File(row.tile_image_file, 'r') as hf:
-        tile = np.array(hf[row.address])
+        tile = np.array(hf[row.name])
     return tile
 
 # USED -> utils

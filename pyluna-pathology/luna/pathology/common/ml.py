@@ -14,7 +14,7 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchmetrics import MetricCollection
 
-from luna.pathology.common.utils import get_tile
+from luna.pathology.common.utils import get_tile_array
 
 class BaseTorchTileDataset(Dataset):
     """Base class for a tile dataset
@@ -70,7 +70,7 @@ class BaseTorchTileDataset(Dataset):
         """ 
             
         row = self.tile_manifest.iloc[idx]
-        img = Image.fromarray(get_tile(row))
+        img = Image.fromarray(get_tile_array(row))
 
         if self.using_ray:
             if not(len(self.label_cols)):
