@@ -41,16 +41,18 @@ def cli(**cli_kwargs):
     \b
     Inputs:
         input_slide_folder: a slide image folder to walk over to find slide images
+    
     \b
     Outputs:
         slide_table: a dataset representing the slide ingestion job
+    
     \b
     Example:
-        slide_etl /source/pathology/images \
-            --project_name PATH-123-45 \
-            --comment "H&E needle core biospies" \
-            --store_url s3://localhost:9000/ \
-            --num_cores 8 \
+        slide_etl /source/pathology/images 
+            --project_name PATH-123-45 
+            --comment "H&E needle core biospies" 
+            --store_url s3://localhost:9000/ 
+            --num_cores 8 
             -o /data/PATH-123-45/table
     """
     cli_runner( cli_kwargs, _params_, slide_etl)
