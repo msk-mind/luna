@@ -7,6 +7,9 @@ logger = logging.getLogger(__name__)
 from typing import Callable, List
 import itertools
 
+import pandas as pd
+from pathlib import Path
+
 
 # Distinct types that are actually the same (effectively)
 TYPE_ALIASES = {
@@ -344,3 +347,54 @@ def cli_runner(cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable
         # json.dump(kwargs, fp, indent=4, sort_keys=True)
     
     logger.info("Done.")
+
+
+
+def apply_csv_filter(input_paths, subset_csv=None):
+    """ Filteres a list of input_paths based on include/exclude logic given for either the full path, filename, or filestem
+
+    If using "include" logic, only matching entries with include=True are kept.  
+    If using "exclude" logic, only matching entries with exclude=True are removed.
+
+    The origional list is returned if the given subset_csv is None or empty
+
+    Args:
+        input_paths (list[str]): list of input paths to filter
+        subset_csv (str): path to a csv with subset/filter information/flags
+    Returns
+        list[str]: filtered list
+    Raises:
+        RuntimeError: If the given subset_csv is invalid
+    """
+
+    if not len(subset_csv) > 0 or subset_csv is None: 
+        return input_paths
+    if not os.path.exists(subset_csv): 
+        return input_paths
+
+
+    try:
+        subset_df     = pd.read_csv(subset_csv, dtype={0: str})
+
+        match_type   = subset_df.columns[0]
+        filter_logic = subset_df.columns[1]
+
+        if not match_type   in ['path', 'filename', 'stem']: raise RuntimeError("Invalid match type column")
+        if not filter_logic in ['include', 'exclude']:       raise RuntimeError("Invalid match type column")
+    except: 
+        raise RuntimeError("Invalid subset .csv passed, must be a 2-column csv with headers = [ (path|filename|stem), (include|exclude) ]")
+
+    if not len(subset_df) > 0: return input_paths
+
+    logger.info(f"Applying csv filter, match_type={match_type}, filter_logic={filter_logic}")
+    
+    input_path_df = pd.DataFrame( {'path':path, 'filename':Path(path).name, 'stem':Path(path).stem} for path in input_paths).astype(str)
+
+    df_matches = input_path_df.set_index(match_type).join(subset_df.set_index(match_type))
+
+    if filter_logic=="include":
+        out =  df_matches.loc[(df_matches['include'] == True)]
+    if filter_logic=="exclude":
+        out =  df_matches.loc[~(df_matches['exclude'] == True)]
+    
+    return list(out.reset_index()['path'])

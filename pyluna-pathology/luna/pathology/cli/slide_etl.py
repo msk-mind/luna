@@ -9,7 +9,7 @@ logger = logging.getLogger('slide_etl')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_slide_folder', str), ('comment', str), ('no_write', bool), ('debug_limit', int), ('num_cores', int), ('store_url', str), ('project_name', str), ('output_dir', str)]
+_params_ = [('input_slide_folder', str), ('comment', str), ('no_write', bool), ('subset_csv', str), ('debug_limit', int), ('num_cores', int), ('store_url', str), ('project_name', str), ('output_dir', str)]
 
 VALID_SLIDE_EXTENSIONS = ['.svs', '.scn', '.tif']
 
@@ -23,6 +23,8 @@ VALID_SLIDE_EXTENSIONS = ['.svs', '.scn', '.tif']
               help='project name to which slides are assigned or associated')
 @click.option('-c', '--comment', required=False,
               help='description/comments on the dataset (wrap in quotes)')
+@click.option('-sc', '--subset-csv', required=False, default='',
+              help='path to a csv file with [string, include] schema to subset ingest data')
 @click.option('-dl', '--debug-limit', required=False, default=-1,
               help='limit number of slides process, for debugging, no_write is automatically enabled')
 @click.option('-nc', '--num_cores', required=False,
@@ -53,23 +55,19 @@ def cli(**cli_kwargs):
     """
     cli_runner( cli_kwargs, _params_, slide_etl)
 
+import openslide
 
 from pathlib import Path
-import pandas as pd
 from tqdm import tqdm
+import pandas as pd
+import numpy as np
+from datetime import datetime
 
 from dask.distributed import Client, as_completed
 from luna.common.adapters import IOAdapter
-from luna.common.utils import rebase_schema_numeric
+from luna.common.utils import rebase_schema_numeric, apply_csv_filter, generate_uuid
 
-
-import openslide
-from luna.common.utils import generate_uuid
-import numpy as np
-
-from datetime import datetime
-
-def slide_etl(input_slide_folder, project_name, num_cores, no_write, debug_limit, store_url, comment, output_dir):
+def slide_etl(input_slide_folder, project_name, subset_csv, num_cores, no_write, debug_limit, store_url, comment, output_dir):
     """ Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
     
     Saves parquet table
@@ -97,9 +95,11 @@ def slide_etl(input_slide_folder, project_name, num_cores, no_write, debug_limit
 
             slide_paths.append(file)
 
+    slide_paths = apply_csv_filter(slide_paths, subset_csv)
 
     if debug_limit > 0: 
         slide_paths = slide_paths[:debug_limit]
+
 
     if no_write: logger.info ("Note, this is a dry run!!!")
 
