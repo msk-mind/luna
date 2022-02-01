@@ -403,7 +403,7 @@ def apply_csv_filter(input_paths, subset_csv=None):
     
     return list(out.reset_index()['path'])
 
-  def load_func(dotpath : str):
+def load_func(dotpath : str):
     """load function in module from a parsed yaml string
 
     Args:
