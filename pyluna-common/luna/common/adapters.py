@@ -89,7 +89,9 @@ class FileWriteAdatper(WriteAdapter):
         
         output_size, output_mtime  = get_file_stats  (output_data)
 
-        return {'data_url': output_data_url, 'size': output_size, 'ingest_time': datetime.fromtimestamp(output_mtime)}
+        if not output_size> 0: return {'readable': False}
+
+        return {'readable': True, 'data_url': output_data_url, 'size': output_size, 'ingest_time': datetime.fromtimestamp(output_mtime)}
         
 class MinioWriteAdatper(WriteAdapter):
     def __init__(self, store_url, bucket, no_write=False):
@@ -155,7 +157,9 @@ class MinioWriteAdatper(WriteAdapter):
         
         object_size, object_mtime = get_object_stats(client, self.bucket, f"{prefix_path}/{filename}")
 
-        return {'data_url': output_data_url, 'size': object_size, 'ingest_time': datetime.fromtimestamp(object_mtime)}
+        if not object_size > 0: return {'readable': False}
+
+        return {'readable': True, 'data_url': output_data_url, 'size': object_size, 'ingest_time': datetime.fromtimestamp(object_mtime)}
     
 
 class IOAdapter:

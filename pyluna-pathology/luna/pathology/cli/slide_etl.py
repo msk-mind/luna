@@ -34,6 +34,8 @@ VALID_SLIDE_EXTENSIONS = ['.svs', '.scn', '.tif']
 def cli(**cli_kwargs):
     """ Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
 
+    Output schema follows [ slide_id (str), slide_uuid (str), readable (bool), comment, project, ingest_time (UTC), generation_date (UTC), <store data | data_url >, <openslide data>, <stain data> ]
+
     \b
     Inputs:
         input_slide_folder: a slide image folder to walk over to find slide images
@@ -68,7 +70,9 @@ import numpy as np
 from datetime import datetime
 
 def slide_etl(input_slide_folder, project_name, num_cores, no_write, debug_limit, store_url, comment, output_dir):
-    """ CLI tool method
+    """ Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
+    
+    Saves parquet table
 
     Args:
         input_slide_folder (str): path to parent directory containing slide images
