@@ -9,7 +9,7 @@ from torch import nn
 import numpy as np
 
 # we are using sample PIL data
-test_data = 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/test/slides/123/test_generate_tile_ov_labels/TileImages/data/address.slice.csv'
+test_data = 'pyluna-pathology/tests/luna/pathology/common/testdata/123.tiles.otsu.csv'
 
 # We need to impliment these
 def test_ds_not_implimented():
@@ -51,14 +51,14 @@ def test_wrong_args_ds():
 def test_init_ds_no_labels():
     tile_dataset = TileDataset(tile_path=test_data)
     assert len(tile_dataset[0]) == 2
-    assert tile_dataset[0][0] == 'x1_y1_z20'
-    assert tile_dataset[0][1].shape == torch.Size([49152])
+    assert tile_dataset[0][0] == 'x1_y1_z20.0'
+    assert tile_dataset[0][1].shape == torch.Size([196608])
 
 def test_init_ds_with_labels():
     tile_dataset = TileDataset(tile_path=test_data, label_cols=['otsu_score'])
     assert len(tile_dataset[0]) == 3
-    assert tile_dataset[0][0] == 'x1_y1_z20'
-    assert tile_dataset[0][1].shape == torch.Size([49152])
+    assert tile_dataset[0][0] == 'x1_y1_z20.0'
+    assert tile_dataset[0][1].shape == torch.Size([196608])
     assert tile_dataset[0][2].shape == torch.Size([1])
 
 

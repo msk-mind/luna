@@ -13,6 +13,13 @@ sphinx:
 formats:
    - pdf
 
+# https://docs.readthedocs.io/en/stable/config-file/v2.html#build-apt-packages
+build:
+  apt_packages:
+     - libblas-dev
+     - liblapack-dev
+     - gfortran
+
 # Optionally set the version of Python and requirements required to build your docs
 python:
    version: "3.7"
