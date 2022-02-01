@@ -21,11 +21,16 @@ def test_slide_etl(tmp_path):
             '--comment', 'Test ingestion',
             ])
 
-    # No longer error gracefully -- can update tests with proper data and they'll work
     assert result.exit_code ==0
 
     df = pd.read_parquet(os.path.join(table_location, f"slide_ingest_TEST-00-000.parquet"))
 
+    print (df)
+
     assert df.loc['123', 'size'] ==1938955
     assert df.loc['123', 'aperio.AppMag'] == 20
     assert df.loc['123', 'data_url'] == "file://" + os.path.join(store_location, 'pathology/TEST-00-000/slides/123.svs')
+
+    assert os.path.exists(os.path.join(store_location, 'pathology/TEST-00-000/slides/123.svs'))
+
+    assert len(os.listdir(os.path.join(store_location, 'pathology/TEST-00-000/slides/')))==1

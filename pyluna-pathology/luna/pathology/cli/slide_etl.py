@@ -1,5 +1,4 @@
 # General imports
-from distutils.log import debug
 import os, json, logging, yaml
 import click
 
@@ -10,7 +9,7 @@ logger = logging.getLogger('slide_etl')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_slide_folder', str), ('comment', str), ('dry_run', bool), ('debug_limit', int), ('num_cores', int), ('store_url', str), ('project_name', str), ('output_dir', str)]
+_params_ = [('input_slide_folder', str), ('comment', str), ('no_write', bool), ('debug_limit', int), ('num_cores', int), ('store_url', str), ('project_name', str), ('output_dir', str)]
 
 VALID_SLIDE_EXTENSIONS = ['.svs', '.scn', '.tif']
 
@@ -25,11 +24,11 @@ VALID_SLIDE_EXTENSIONS = ['.svs', '.scn', '.tif']
 @click.option('-c', '--comment', required=False,
               help='description/comments on the dataset (wrap in quotes)')
 @click.option('-dl', '--debug-limit', required=False, default=-1,
-              help='limit number of slides process, for debugging, dry_run is automatically enabled')
+              help='limit number of slides process, for debugging, no_write is automatically enabled')
 @click.option('-nc', '--num_cores', required=False,
               help='Number of cores to use', default=4)
-@click.option('--dry-run', is_flag=True,
-              help="Only print data, no data is copied or generated on disk.")
+@click.option('--no-write', is_flag=True,
+              help="Disables write adapters")
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
@@ -68,7 +67,7 @@ import numpy as np
 
 from datetime import datetime
 
-def slide_etl(input_slide_folder, project_name, num_cores, dry_run, debug_limit, store_url, comment, output_dir):
+def slide_etl(input_slide_folder, project_name, num_cores, no_write, debug_limit, store_url, comment, output_dir):
     """ CLI tool method
 
     Args:
@@ -76,8 +75,8 @@ def slide_etl(input_slide_folder, project_name, num_cores, dry_run, debug_limit,
         project_name (str): project name underwhich the slides should reside
         comment (str): comment and description of dataset
         num_cores (int): number of cores (interfaced to dask)
-        debug_limit (int): cap number fo slides to process below this number (for debugging, testing, dry_run is automatically enabled)
-        dry_run (bool): don't actually generate or copy any data on disk, print outputs
+        debug_limit (int): cap number fo slides to process below this number (for debugging, testing, no_write is automatically enabled)
+        no_write (bool): don't actually generate or copy any data on disk, print outputs
         output_dir (str): path to output table
 
 
@@ -97,13 +96,12 @@ def slide_etl(input_slide_folder, project_name, num_cores, dry_run, debug_limit,
 
     if debug_limit > 0: 
         slide_paths = slide_paths[:debug_limit]
-        dry_run = True
 
-    if dry_run: logger.info ("Note, this is a dry run!!!")
+    if no_write: logger.info ("Note, this is a dry run!!!")
 
-    logger.info(slide_paths)
+    logger.info(f"Going to ingest {len(slide_paths)} slides!")
 
-    write_adapter = IOAdapter(dry_run=dry_run).writer(store_url, bucket='pathology')
+    write_adapter = IOAdapter(no_write=no_write).writer(store_url, bucket='pathology')
 
     sp = SlideProcessor(writer=write_adapter, project=project_name)
 
@@ -117,12 +115,9 @@ def slide_etl(input_slide_folder, project_name, num_cores, dry_run, debug_limit,
 
     df.loc[:, 'project_name'] = project_name
     df.loc[:, 'comment'] = comment
-    df.loc[:, 'ingestion_date'] = datetime.today()
+    df.loc[:, 'generation_time'] = datetime.today()
 
     logger.info(df)
-
-    if dry_run:
-        return {}
 
     output_table = os.path.join(output_dir, f"slide_ingest_{project_name}.parquet")
     df.to_parquet(output_table)
@@ -139,6 +134,44 @@ class SlideProcessor:
         self.writer  = writer
         self.project = project
 
+    def check_slide(self, path) -> dict:
+        try:
+            openslide.OpenSlide(path)
+            return {'slide_id':str(Path(path).stem), 'valid_slide': True} 
+        except:
+            logger.warning (f"Couldn't open slide: {path}")
+            return {'slide_id':np.nan, 'valid_slide': False} 
+
+    def generate_properties(self, path) -> dict:
+        try:
+            slide =  openslide.OpenSlide(path)            
+            kv = dict(slide.properties)
+            kv['slide_uuid'] = generate_uuid(path, ['WSI'])
+            return kv
+        except:
+            logger.warning (f"Couldn't process slide: {path}")
+            return {}            
+
+    def estimate_stain_type(self, path) -> dict:
+        from luna.pathology.common.utils import get_downscaled_thumbnail, get_scale_factor_at_magnfication, get_stain_vectors_macenko, pull_stain_channel, read_tile_bytes
+
+        try:
+            slide =  openslide.OpenSlide(path)           
+            to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_magnification=1)
+            sample_arr    = get_downscaled_thumbnail(slide, to_mag_scale_factor)
+            stain_vectors = get_stain_vectors_macenko(sample_arr)
+            return {
+                'channel0_R': stain_vectors[0, 0],
+                'channel0_G': stain_vectors[0, 1],
+                'channel0_B': stain_vectors[0, 2],
+                'channel1_R': stain_vectors[1, 0],
+                'channel1_G': stain_vectors[1, 1],
+                'channel1_B': stain_vectors[1, 2],
+            }
+        except:
+            logger.warning (f"Couldn't process slide: {path}")
+            return {}
+
     def run(self, path):
         """Extract openslide properties and write slide to storage location
 
@@ -148,41 +181,22 @@ class SlideProcessor:
         Returns:
             dict: slide metadata
         """
-        try:
-            slide =  openslide.OpenSlide(path)
-        except:
-            print ("Couldn't process slide: ", path)
-            return {'slide_id':np.nan}
-        else:
 
-            input_slide_path  = Path(path)
-            
-            kv = dict(slide.properties)
+        kv = {}
 
-            kv['slide_id']   = str(input_slide_path.stem)
-            kv['slide_uuid'] = generate_uuid(path, ['WSI'])
+        kv.update ( self.check_slide(path) )
 
-            write_kv = self.writer.write(path, f'{self.project}/slides')
+        if not kv['valid_slide']: return kv
 
-            kv.update(write_kv)
+        kv.update ( self.generate_properties(path) )
+        kv.update ( self.estimate_stain_type(path) )
+        kv.update ( self.writer.write(path, f'{self.project}/slides') )
 
-            slide.close()
-
-            return kv
+        return kv
 
     # Eventually it might be nice to automatically detect the stain type (at least H&E vs. DAB vs. Other)
     # def estimate_stain(self, slide):
-    #     from luna.pathology.common.utils import get_downscaled_thumbnail, get_scale_factor_at_magnfication, get_stain_vectors_macenko, pull_stain_channel, read_tile_bytes
 
-    #     to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_magnification=1)
-    #     sample_arr    = get_downscaled_thumbnail(slide, to_mag_scale_factor)
-    #     stain_vectors = get_stain_vectors_macenko(sample_arr)
-
-
-    #     if stain_vectors[1, 0] < 0.5 * stain_vectors[1, 1]:
-    #         return 'H&E'
-    #     else:
-    #         return 'Other'
 
 if __name__ == "__main__":
     cli()

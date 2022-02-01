@@ -13,7 +13,6 @@ TYPE_ALIASES = {
     'itk_geometry': 'itk_volume'
 }
 
-
 def to_sql_field(s):
     filter1 = s.replace(".","_").replace(" ","_")
     filter2 = ''.join(e for e in filter1 if e.isalnum() or e=='_')
@@ -42,7 +41,7 @@ def generate_uuid(path, prefix):
     """
     posix_file_path = path.split(':')[-1]
 
-    rec_hash = FileHash('sha256').hash_file(posix_file_path)
+    rec_hash = FileHash('sha256', chunk_size=65536).hash_file(posix_file_path)
     prefix.append(rec_hash)
     return "-".join(prefix)
 
@@ -57,6 +56,8 @@ def rebase_schema_numeric(df):
         df (pd.DataFrame): dataframe to convert columns
     """
     for col in df.columns:
+        if df[col].dtype != object: continue
+
         df[col] = df[col].astype(float, errors='ignore')
         df[col] = df[col].astype(int,   errors='ignore')
 
