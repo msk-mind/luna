@@ -75,7 +75,7 @@ jobs:
     steps:
       - checkout
       - run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-      - run: docker build -t $DOCKER_ORG/luna-dev:latest ./docker/
+      - run: docker build -t $DOCKER_ORG/luna-dev:latest -f docker/Dockerfile .
       - run: docker push $DOCKER_ORG/luna-dev:latest
 
 workflows:

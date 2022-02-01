@@ -11,7 +11,7 @@ from luna.common.utils import cli_runner
 
 from typing import List
 
-_params_ = [('input_slide_image', str), ('input_slide_tiles', str), ('plot_labels', List[str]), ('requested_magnification', float), ('output_dir', str)]
+_params_ = [('input_slide_image', str), ('input_slide_tiles', str), ('mpp_units', bool), ('plot_labels', List[str]), ('requested_magnification', float), ('output_dir', str)]
 
 @click.command()
 @click.argument('input_slide_image', nargs=1)
@@ -19,9 +19,11 @@ _params_ = [('input_slide_image', str), ('input_slide_tiles', str), ('plot_label
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-pl', '--plot_labels', required=False,
-              help='labels_to_plot')
+              help='Label names (as column labels) to plot')
 @click.option('-rmg', '--requested_magnification', required=False,
               help="Magnificiation scale at which to generate thumbnail/png images (recommended <= 1)")
+@click.option('--mpp-units', is_flag=True,
+              help="Set this flag if input coordinates are in µm, not pixels")
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
@@ -51,7 +53,7 @@ import pandas as pd
 
 from pathlib import Path
 from PIL import Image
-def visualize_tiles(input_slide_image, input_slide_tiles, requested_magnification, plot_labels, output_dir):
+def visualize_tiles(input_slide_image, input_slide_tiles, requested_magnification, mpp_units, plot_labels, output_dir):
     """Generate nice tile markup images with continuous or discrete tile scores
 
     Args:
@@ -60,16 +62,23 @@ def visualize_tiles(input_slide_image, input_slide_tiles, requested_magnificatio
         requested_magnification (float): Magnification scale at which to perform computation
         plot_labels (List[str]): labels to plot
         output_dir (str): output/working directory
+        mpp_units (bool): if true, additional rescaling is applied to match micro-meter and pixel coordinate systems
 
     Returns:
         dict: metadata about function call
     """
     slide = openslide.OpenSlide(input_slide_image)
- 
+
+    
     to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)
 
     # Create thumbnail image for scoring
     sample_arr = get_downscaled_thumbnail(slide, to_mag_scale_factor)
+
+    # See if we need to adjust scale_factor to account for different units
+    if mpp_units: 
+        unit_sf = float(slide.properties['openslide.mpp-x'])
+        to_mag_scale_factor *= unit_sf
 
     # Get tiles
     df = pd.read_csv(input_slide_tiles).set_index('address')

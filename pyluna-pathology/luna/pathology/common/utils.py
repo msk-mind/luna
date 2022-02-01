@@ -11,6 +11,7 @@ import cv2
 import radiomics
 import SimpleITK as sitk
 import re
+import h5py
 
 import openslide
 
@@ -277,20 +278,34 @@ def extract_patch_texture_features(image_patch, mask_patch, stain_vectors,
         return stainomics_valid
 
 
-def get_tile_bytes(indices, input_slide_image, full_resolution_tile_size, tile_size ):
+def get_tile_arrays(indices: List[int], input_slide_image: str, full_resolution_tile_size: int, tile_size: int) -> np.ndarray:
+    """
+    Get tile arrays for the tile indices
+
+    Args:
+        indices (List[int]): list of integers to return as tiles
+        input_slide_image (str): path to WSI
+        full_resolution_tile_size (int): tile_size * to_mag_scale_factor
+        tile_size (int): width, height of generated tile
+
+    Returns:
+        a list of tuples (index, tile array) for given indices
+    """
     slide = openslide.OpenSlide(str(input_slide_image))
     full_generator, full_level = get_full_resolution_generator(slide, tile_size=full_resolution_tile_size)
-    return [(index, full_generator.get_tile(full_level, address_to_coord(index)).resize((tile_size,tile_size)).tobytes()) for index in indices]
+    return [(index, np.array(full_generator.get_tile(full_level, address_to_coord(index)).resize((tile_size,tile_size))))
+            for index in indices]
 
-def read_tile_bytes(row):
-    with open(row.tile_image_binary, "rb") as fp:
-        fp.seek(int(row.tile_image_offset))
-        img = Image.frombytes(
-            row.tile_image_mode,
-            (int(row.tile_image_size_xy), int(row.tile_image_size_xy)),
-            fp.read(int(row.tile_image_length)),
-        )    
-    return row.name, img
+def get_tile_array(row: pd.DataFrame) -> np.ndarray:
+    """
+    Returns a tile image as a numpy array.
+
+    Args:
+        row (pd.DataFrame): row with address and tile_image_file columns
+    """
+    with h5py.File(row.tile_image_file, 'r') as hf:
+        tile = np.array(hf[row.name])
+    return tile
 
 # USED -> utils
 def coord_to_address(s:Tuple[int, int], magnification:int)->str:

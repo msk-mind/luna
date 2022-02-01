@@ -18,20 +18,21 @@ _params_ = [('input_slide_image', str), ('output_dir', str), ('tile_size', int),
 @click.option('-nc', '--num_cores', required=False,
               help="Number of cores to use", default=4)  
 @click.option('-rts', '--tile_size', required=False,
-              help="Number of cores to use")
+              help="Size of tiles")
 @click.option('-rmg', '--requested_magnification', required=False,
-              help="Number of cores to use")
+              help="Magnification at which to generate tiles")
 @click.option('-bx', '--batch_size', required=False,
-              help="batch size used for inference speedup", default=64)    
+              help="Batch size used for inference speedup", default=64)    
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
     """Rasterize a slide into smaller tiles
     
-    Tiles are saved in the whole-slide tiles binary format (tiles.pil), and the corresponding manifest/header file (tiles.csv) is also generated
+    Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
+    and the corresponding manifest/header file (tiles.csv) is also generated
 
-    Neccessary data for the manifest file are: 
-    address, x_coord, y_coord, full_resolution_tile_size, tile_image_binary, tile_image_length, tile_image_size_xy, and tile_image_mode
+    Necessary data for the manifest file are:
+    address, tile_image_file, full_resolution_tile_size, tile_image_size_xy
 
     \b
     Inputs:
@@ -51,18 +52,20 @@ from tqdm import tqdm
 import openslide
 import itertools
 from pathlib import Path
+import h5py
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from luna.pathology.common.utils import get_tile_bytes, get_scale_factor_at_magnfication, get_full_resolution_generator, coord_to_address
+from luna.pathology.common.utils import get_tile_arrays, get_scale_factor_at_magnfication, get_full_resolution_generator, coord_to_address
 from luna.common.utils import grouper
 def generate_tiles(input_slide_image, tile_size, requested_magnification, output_dir, num_cores, batch_size):
     """Rasterize a slide into smaller tiles
     
-    Tiles are saved in the whole-slide tiles binary format (tiles.pil), and the corresponding manifest/header file (tiles.csv) is also generated
+    Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
+    and the corresponding manifest/header file (tiles.csv) is also generated
 
-    Neccessary data for the manifest file are: 
-    address, x_coord, y_coord, full_resolution_tile_size, tile_image_binary, tile_image_length, tile_image_size_xy, and tile_image_mode
+    Necessary data for the manifest file are:
+    address, tile_image_file, full_resolution_tile_size, tile_image_size_xy
 
     Args:
         input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
@@ -106,40 +109,35 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
 
     df = pd.DataFrame(address_raster).set_index("address")
 
-    output_binary_file = f"{output_dir}/{slide_name}.tiles.pil"
+    output_hdf_file = f"{output_dir}/{slide_name}.tiles.h5"
     output_header_file = f"{output_dir}/{slide_name}.tiles.csv"
 
-    fp = open(output_binary_file, 'wb')
-    offset = 0
-    counter = 0
     logger.info(f"Now generating tiles with num_cores={num_cores} and batch_size={batch_size}!")
+    if os.path.exists(output_hdf_file):
+        logger.warning(f"{output_hdf_file} already exists, deleting the file..")
+        os.remove(output_hdf_file)
 
-    address_offset = []
+    # save address:tile arrays key:value pair in hdf5
+    address = []
+    hfile = h5py.File(output_hdf_file, 'a')
     with ProcessPoolExecutor(num_cores) as executor:
-        out = [executor.submit(get_tile_bytes, index, input_slide_image, full_resolution_tile_size, tile_size ) for index in grouper(df.index, batch_size)]
+        out = [executor.submit(get_tile_arrays, index, input_slide_image, full_resolution_tile_size, tile_size )
+               for index in grouper(df.index, batch_size)]
         for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
-            for index, tile in future.result(): 
-                fp.write( tile )
-                
-                address_offset.append ((index, int(offset)))
-                offset += len(tile)
-                counter+=1
-    fp.close()
+            for index, tile in future.result():
+                hfile.create_dataset(index, data=tile)
+                address.append(index)
 
-    df = df.join(pd.DataFrame(address_offset, columns=['address', 'tile_image_offset']).set_index('address'))
+    df = pd.DataFrame({'address': address}).set_index('address')
+    df['tile_image_file'] = output_hdf_file
+    df['full_resolution_tile_size'] = full_resolution_tile_size
+    df['tile_image_size_xy'] = tile_size
 
-    df.loc[:, 'full_resolution_tile_size'] = full_resolution_tile_size
-    df.loc[:, 'tile_image_binary']  = output_binary_file
-    df.loc[:, 'tile_image_length']  = 3 * tile_size ** 2
-    df.loc[:, 'tile_image_size_xy'] = tile_size
-    df.loc[:, 'tile_image_mode']    = 'RGB'
-
-    logger.info (df)        
-
-    df.to_csv(output_header_file)
+    logger.info(df)
+    df.to_csv(output_header_file, index=False)
 
     properties = {
-        "slide_tiles": output_header_file,
+        "slide_tiles": output_hdf_file,
         "total_tiles": len(df),
     }
 
