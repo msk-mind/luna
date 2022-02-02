@@ -86,6 +86,7 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
     to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)
 
     if not to_mag_scale_factor % 1 == 0: 
+        logger.error(f"Bad magnficiation scale factor = {to_mag_scale_factor}")
         raise ValueError("You chose a combination of requested tile sizes and magnification that resulted in non-integer tile sizes at different scales")
 
     full_resolution_tile_size = tile_size * to_mag_scale_factor
