@@ -11,7 +11,7 @@ def test_cli(tmp_path):
     runner = CliRunner()
     result = runner.invoke(cli, [
         'pyluna-pathology/tests/luna/pathology/cli/testdata/data/123.svs',
-        '-o', 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/',
+        '-o', tmp_path,
         '-rts', 256,
         '-rmg', 10,
         '-nc', 1,
