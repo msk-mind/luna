@@ -4,6 +4,8 @@ from click.testing import CliRunner
 import pandas as pd
 from luna.pathology.cli.generate_tiles import cli
 
+from luna.pathology.schemas import SlideTiles
+
 
 def test_cli(tmp_path):
     runner = CliRunner()
@@ -19,8 +21,4 @@ def test_cli(tmp_path):
     assert os.path.exists(f"{tmp_path}/123.tiles.csv")
     assert os.path.exists(f"{tmp_path}/123.tiles.h5")
 
-    df = pd.read_csv(f"{tmp_path}/123.tiles.csv")
-
-    REQ_COLUMNS = set(['address', 'tile_size', 'tile_units', 'x_coord', 'y_coord'])
-
-    assert set(df.columns).intersection(REQ_COLUMNS) == REQ_COLUMNS
+    assert SlideTiles.check(f"{tmp_path}/123.tiles.csv")
