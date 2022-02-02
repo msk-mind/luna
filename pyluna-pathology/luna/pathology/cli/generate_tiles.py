@@ -132,12 +132,13 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
     df['tile_image_file'] = output_hdf_file
     df['full_resolution_tile_size'] = full_resolution_tile_size
     df['tile_image_size_xy'] = tile_size
+    df['tile_units'] = 'px' # tile coordiates correspond to pixels at max resolution
 
     logger.info(df)
-    df.to_csv(output_header_file, index=False)
+    df.to_csv(output_header_file)
 
     properties = {
-        "slide_tiles": output_hdf_file,
+        "slide_tiles": output_header_file, # "Tiles" are the metadata that describe them
         "total_tiles": len(df),
     }
 
