@@ -128,8 +128,7 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
 
     df = pd.DataFrame(address_raster).set_index('address')
     df['tile_image_file'] = output_hdf_file
-    df['full_resolution_tile_size'] = full_resolution_tile_size
-    df['tile_image_size_xy'] = tile_size
+    df['tile_size'] = full_resolution_tile_size
     df['tile_units'] = 'px' # tile coordiates correspond to pixels at max resolution
 
     logger.info(df)

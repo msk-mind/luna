@@ -21,6 +21,6 @@ def test_cli(tmp_path):
 
     df = pd.read_csv(f"{tmp_path}/123.tiles.csv")
 
-    REQ_COLUMNS = set(['address', 'full_resolution_tile_size', 'x_coord', 'y_coord'])
+    REQ_COLUMNS = set(['address', 'tile_size', 'tile_units', 'x_coord', 'y_coord'])
 
     assert set(df.columns).intersection(REQ_COLUMNS) == REQ_COLUMNS
