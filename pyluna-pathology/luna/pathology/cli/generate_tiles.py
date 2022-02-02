@@ -110,7 +110,7 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
 
     df = pd.DataFrame(address_raster).set_index("address")
 
-    output_hdf_file = f"{output_dir}/{slide_name}.tiles.h5"
+    output_hdf_file    = f"{output_dir}/{slide_name}.tiles.h5"
     output_header_file = f"{output_dir}/{slide_name}.tiles.csv"
 
     logger.info(f"Now generating tiles with num_cores={num_cores} and batch_size={batch_size}!")
@@ -126,11 +126,10 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
         for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
             for index, tile in future.result():
                 hfile.create_dataset(index, data=tile)
-
-    df = pd.DataFrame(address_raster).set_index('address')
+    
     df['tile_image_file'] = output_hdf_file
-    df['tile_size'] = full_resolution_tile_size
-    df['tile_units'] = 'px' # tile coordiates correspond to pixels at max resolution
+    df['tile_size']       = full_resolution_tile_size
+    df['tile_units']      = 'px' # tile coordiates correspond to pixels at max resolution
 
     logger.info(df)
     df.to_csv(output_header_file)
