@@ -4,7 +4,7 @@ import logging
 from filehash import FileHash
 from importlib import import_module
 from io import BytesIO
-from typing import Callable, List, _GenericAlias
+from typing import Callable, List
 from luna.common.CodeTimer import CodeTimer
 import itertools
 

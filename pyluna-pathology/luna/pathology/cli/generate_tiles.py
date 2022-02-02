@@ -118,7 +118,6 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
         os.remove(output_hdf_file)
 
     # save address:tile arrays key:value pair in hdf5
-    address = []
     hfile = h5py.File(output_hdf_file, 'a')
     with ProcessPoolExecutor(num_cores) as executor:
         out = [executor.submit(get_tile_arrays, index, input_slide_image, full_resolution_tile_size, tile_size )
@@ -126,9 +125,8 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
         for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
             for index, tile in future.result():
                 hfile.create_dataset(index, data=tile)
-                address.append(index)
 
-    df = pd.DataFrame({'address': address}).set_index('address')
+    df = pd.DataFrame(address_raster).set_index('address')
     df['tile_image_file'] = output_hdf_file
     df['full_resolution_tile_size'] = full_resolution_tile_size
     df['tile_image_size_xy'] = tile_size
