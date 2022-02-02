@@ -9,7 +9,7 @@ from torch import nn
 import numpy as np
 
 # we are using sample PIL data
-test_data = 'pyluna-pathology/tests/luna/pathology/common/testdata/123.tiles.csv'
+test_data = 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/123.tiles.csv'
 
 # We need to impliment these
 def test_ds_not_implimented():
