@@ -58,6 +58,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from luna.pathology.common.utils import get_tile_arrays, get_scale_factor_at_magnfication, get_full_resolution_generator, coord_to_address
 from luna.common.utils import grouper
+
 def generate_tiles(input_slide_image, tile_size, requested_magnification, output_dir, num_cores, batch_size):
     """Rasterize a slide into smaller tiles
     
@@ -126,6 +127,8 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
         for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
             for index, tile in future.result():
                 hfile.create_dataset(index, data=tile)
+
+    hfile.close()
     
     df['tile_image_file'] = output_hdf_file
     df['tile_size']       = full_resolution_tile_size
