@@ -436,7 +436,7 @@ def visualize_tiling_scores(df:pd.DataFrame, thumbnail_img:np.ndarray, scale_fac
 
         start = (row.y_coord / scale_factor, row.x_coord / scale_factor)  # flip because OpenSlide uses (column, row), but skimage, uses (row, column)
 
-        rr, cc = rectangle_perimeter(start=start, extent=(rowtile_size/ scale_factor, rowtile_size/ scale_factor), shape=thumbnail_img.shape)
+        rr, cc = rectangle_perimeter(start=start, extent=(row.tile_size/ scale_factor, row.tile_size/ scale_factor), shape=thumbnail_img.shape)
         
         # set color based on intensity of value instead of black border (1)
         score = row[score_type_to_visualize]
