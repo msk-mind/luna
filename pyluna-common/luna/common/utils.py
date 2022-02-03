@@ -344,7 +344,6 @@ def cli_runner(cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable
 
     with CodeTimer(logger, name=f'transform::{cli_function.__name__}'):
         result = cli_function(**kwargs)
-
     
     kwargs.update(result)
 
