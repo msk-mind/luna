@@ -15,7 +15,7 @@ def get_object_stats(client, bucket, key):
         stat_object = client.stat_object(bucket, key)
     except:
         return -1, -1
-    return stat_object.size, calendar.timegm(stat_object.last_modified)
+    return stat_object.size, calendar.timegm(stat_object.last_modified.timetuple())
 
 def get_file_stats(path):
     try:
@@ -149,7 +149,6 @@ class MinioWriteAdatper(WriteAdapter):
 
         object_size, object_mtime = get_object_stats(client, self.bucket, f"{prefix_path}/{filename}")
         input_size,  input_mtime  = get_file_stats  (input_data)
-
         needs_write = ( object_size != input_size or (input_mtime - 60) > object_mtime ) # 60 second grace period
 
         if (not self.no_write) and needs_write: 
