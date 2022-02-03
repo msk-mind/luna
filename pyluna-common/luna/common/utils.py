@@ -4,7 +4,7 @@ import logging
 from filehash import FileHash
 from importlib import import_module
 from io import BytesIO
-from typing import Callable, List, _GenericAlias
+from typing import Callable, List
 from luna.common.CodeTimer import CodeTimer
 import itertools
 
@@ -344,7 +344,6 @@ def cli_runner(cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable
 
     with CodeTimer(logger, name=f'transform::{cli_function.__name__}'):
         result = cli_function(**kwargs)
-
     
     kwargs.update(result)
 

@@ -58,6 +58,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from luna.pathology.common.utils import get_tile_arrays, get_scale_factor_at_magnfication, get_full_resolution_generator, coord_to_address
 from luna.common.utils import grouper
+
 def generate_tiles(input_slide_image, tile_size, requested_magnification, output_dir, num_cores, batch_size):
     """Rasterize a slide into smaller tiles
     
@@ -86,6 +87,7 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
     to_mag_scale_factor         = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)
 
     if not to_mag_scale_factor % 1 == 0: 
+        logger.error(f"Bad magnficiation scale factor = {to_mag_scale_factor}")
         raise ValueError("You chose a combination of requested tile sizes and magnification that resulted in non-integer tile sizes at different scales")
 
     full_resolution_tile_size = tile_size * to_mag_scale_factor
@@ -109,7 +111,7 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
 
     df = pd.DataFrame(address_raster).set_index("address")
 
-    output_hdf_file = f"{output_dir}/{slide_name}.tiles.h5"
+    output_hdf_file    = f"{output_dir}/{slide_name}.tiles.h5"
     output_header_file = f"{output_dir}/{slide_name}.tiles.csv"
 
     logger.info(f"Now generating tiles with num_cores={num_cores} and batch_size={batch_size}!")
@@ -118,7 +120,6 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
         os.remove(output_hdf_file)
 
     # save address:tile arrays key:value pair in hdf5
-    address = []
     hfile = h5py.File(output_hdf_file, 'a')
     with ProcessPoolExecutor(num_cores) as executor:
         out = [executor.submit(get_tile_arrays, index, input_slide_image, full_resolution_tile_size, tile_size )
@@ -126,18 +127,18 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
         for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
             for index, tile in future.result():
                 hfile.create_dataset(index, data=tile)
-                address.append(index)
 
-    df = pd.DataFrame({'address': address}).set_index('address')
+    hfile.close()
+    
     df['tile_image_file'] = output_hdf_file
-    df['full_resolution_tile_size'] = full_resolution_tile_size
-    df['tile_image_size_xy'] = tile_size
+    df['tile_size']       = full_resolution_tile_size
+    df['tile_units']      = 'px' # tile coordiates correspond to pixels at max resolution
 
     logger.info(df)
-    df.to_csv(output_header_file, index=False)
+    df.to_csv(output_header_file)
 
     properties = {
-        "slide_tiles": output_hdf_file,
+        "slide_tiles": output_header_file, # "Tiles" are the metadata that describe them
         "total_tiles": len(df),
     }
 

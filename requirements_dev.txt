@@ -9,6 +9,7 @@
 
 dask
 distributed
+bokeh>=2.1.1
 click
 decorator>=4.3,<5.0  # force constrain versions to avoid incompatibility with networkx requirements
 filehash

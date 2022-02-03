@@ -68,6 +68,7 @@ from datetime import datetime
 from dask.distributed import Client, as_completed
 from luna.common.adapters import IOAdapter
 from luna.common.utils import rebase_schema_numeric, apply_csv_filter, generate_uuid
+from luna.pathology.common.utils import get_downscaled_thumbnail, get_scale_factor_at_magnfication, get_stain_vectors_macenko
 
 def slide_etl(input_slide_folder, project_name, subset_csv, num_cores, no_write, debug_limit, store_url, comment, output_dir):
     """ Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
@@ -127,6 +128,7 @@ def slide_etl(input_slide_folder, project_name, subset_csv, num_cores, no_write,
 
     output_table = os.path.join(output_dir, f"slide_ingest_{project_name}.parquet")
     df.to_parquet(output_table)
+    logger.info(f"Saved table at {output_table}")
 
     properties = {
         'slide_table': output_table
@@ -154,13 +156,11 @@ class SlideProcessor:
             kv = dict(slide.properties)
             kv['slide_uuid'] = generate_uuid(path, ['WSI'])
             return kv
-        except:
-            logger.warning (f"Couldn't process slide: {path}")
+        except Exception as err:
+            logger.warning (f"Couldn't process slide: {path} - {err}")
             return {}            
 
     def estimate_stain_type(self, path) -> dict:
-        from luna.pathology.common.utils import get_downscaled_thumbnail, get_scale_factor_at_magnfication, get_stain_vectors_macenko, pull_stain_channel, read_tile_bytes
-
         try:
             slide =  openslide.OpenSlide(path)           
             to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_magnification=1)
@@ -174,8 +174,8 @@ class SlideProcessor:
                 'channel1_G': stain_vectors[1, 1],
                 'channel1_B': stain_vectors[1, 2],
             }
-        except:
-            logger.warning (f"Couldn't process slide: {path}")
+        except Exception as err:
+            logger.warning (f"Couldn't get stain vectors: {path} - {err}")
             return {}
 
     def run(self, path):
