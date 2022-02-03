@@ -51,7 +51,7 @@ def extract_tile_statistics(input_slide_tiles, output_dir):
         dict: metadata about function call
     """
 
-    df = pd.read_csv(input_slide_tiles).set_index('address').drop(columns=['x_coord', 'y_coord', 'full_resolution_tile_size'])
+    df = pd.read_csv(input_slide_tiles).set_index('address').drop(columns=['x_coord', 'y_coord', 'tile_size'])
     print (df.columns)
 
     dict_feature_data = {}

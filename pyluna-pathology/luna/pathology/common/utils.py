@@ -397,8 +397,9 @@ def get_scale_factor_at_magnfication(slide: openslide.OpenSlide,
     # Then convert to integer
     scanned_magnfication = int (mag_value)
 
-    # Make sure we don't have non-integer magnifications
-    assert int (mag_value) == mag_value
+    # # Make sure we don't have non-integer magnifications
+    if not int (mag_value) == mag_value:
+        raise RuntimeError("Can't handle slides scanned at non-integer magnficiations! (yet)")
 
     # Verify magnification valid
     scale_factor = 1
@@ -408,7 +409,9 @@ def get_scale_factor_at_magnfication(slide: openslide.OpenSlide,
         elif (scanned_magnfication % requested_magnification) == 0:
             scale_factor = scanned_magnfication // requested_magnification
         else:
-            raise ValueError(f'Expected magnification {requested_magnification} to be an divisor multiple of {scanned_magnfication}')
+            logger.warning("Scale factor is not an integer, be careful!")
+            scale_factor = scanned_magnfication / requested_magnification
+            
     return scale_factor
 
 def visualize_tiling_scores(df:pd.DataFrame, thumbnail_img:np.ndarray, scale_factor:float,
@@ -436,7 +439,7 @@ def visualize_tiling_scores(df:pd.DataFrame, thumbnail_img:np.ndarray, scale_fac
 
         start = (row.y_coord / scale_factor, row.x_coord / scale_factor)  # flip because OpenSlide uses (column, row), but skimage, uses (row, column)
 
-        rr, cc = rectangle_perimeter(start=start, extent=(row.full_resolution_tile_size/ scale_factor, row.full_resolution_tile_size/ scale_factor), shape=thumbnail_img.shape)
+        rr, cc = rectangle_perimeter(start=start, extent=(row.tile_size/ scale_factor, row.tile_size/ scale_factor), shape=thumbnail_img.shape)
         
         # set color based on intensity of value instead of black border (1)
         score = row[score_type_to_visualize]
