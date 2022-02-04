@@ -1,6 +1,5 @@
 # General imports
 import os, json, logging, yaml, sys
-from numpy import isin
 import click
 
 from luna.common.custom_logger   import init_logger
