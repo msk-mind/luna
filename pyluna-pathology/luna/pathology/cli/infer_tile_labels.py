@@ -81,6 +81,8 @@ def infer_tile_labels(input_slide_tiles, output_dir, hub_repo_or_dir, model_name
     else:
         source = 'github'
 
+    logger.info(f"Source={source}")
+
     clf = torch.hub.load(hub_repo_or_dir, model_name, source=source, **kwargs)
 
     if not (isinstance(clf, nn.Module) or isinstance(clf, TorchTransformModel)):
