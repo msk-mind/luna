@@ -7,7 +7,7 @@ from typing import Dict, Optional, Union, Tuple, List
 
 from PIL import Image
 # from sklearn.model_selection._split import _BaseKFold, _RepeatedSplits
-from sklearn.model_selection import StratifiedGroupKFold
+#from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.utils.validation import check_random_state
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
@@ -15,6 +15,66 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torchmetrics import MetricCollection
 
 from luna.pathology.common.utils import get_tile_array
+
+class TorchTransformModel: pass
+
+class HD5FDataset(Dataset):
+    """ General dataset that uses a HDF5 manifest convention
+
+    Will send the tensors to gpu if available, on the device specified by CUDA_VISIBLE_DEVICES="1"
+    """ 
+    
+    def __init__(self, hd5f_manifest, preprocess=nn.Identity(), label_cols=[], using_ray=False):
+        """Initialize HD5FDataset
+        
+        Args:
+            hd5f_manifest (pd.DataFrame): Dataframe of H5 data
+            preprocess (transform): Function to apply to every bit of data
+            label_cols (list[str]): (Optional) label columns to return as tensors, e.g. for training
+            using_ray (bool): (Optional) Perform distributed dataloading with Ray for training 
+        """
+
+        self.hd5f_manifest = hd5f_manifest
+        self.label_cols = label_cols
+        self.using_ray = using_ray
+        self.preprocess = preprocess
+
+
+    def __len__(self):
+        return len(self.hd5f_manifest)
+
+    def set_preprocess(self, preprocess):
+        preprocess=preprocess
+    
+    def __repr__(self):
+        return f"HD5FDataset with {len(self.hd5f_manifest)} tiles, indexed by {self.hd5f_manifest.index.names}, returning label columns: {self.label_cols}"
+    
+    def __getitem__(self, idx: int):
+        """Tile accessor
+        
+        Loads a tile image from the tile manifest.  Returns a batch of the indices of the input dataframe, the tile data always.
+        If label columns where specified, the 3rd position of the tuple is a tensor of the label data. If Ray is being used for 
+        model training, then only the image data and the label is returned. 
+
+        Args:
+            idx (int): Integer index 
+
+        Returns:
+            (optional str, torch.tensor, optional torch.tensor): tuple of the tile index and corresponding tile as a torch tensor, and metadata labels if specified
+        """ 
+            
+        row = self.hd5f_manifest.iloc[idx]
+        img = get_tile_array(row)
+
+        if self.using_ray and not(len(self.label_cols)):
+            raise ValueError("If using Ray for training, you must provide a label column")
+        if len(self.label_cols):                 
+            return self.preprocess(img), torch.tensor(row[self.label_cols]).squeeze()
+        else:
+            return self.preprocess(img), row.name
+
+
+
 
 class BaseTorchTileDataset(Dataset):
     """Base class for a tile dataset

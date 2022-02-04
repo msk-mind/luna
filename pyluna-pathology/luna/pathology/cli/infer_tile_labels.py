@@ -1,5 +1,6 @@
 # General imports
 import os, json, logging, yaml, sys
+from numpy import isin
 import click
 
 from luna.common.custom_logger   import init_logger
@@ -9,13 +10,13 @@ logger = logging.getLogger('infer_tile_labels')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_slide_tiles', str), ('output_dir', str), ('repo_name', str), ('transform_name', str), ('model_name', str), ('weight_tag', str), ('num_cores', int), ('batch_size', int)]
+_params_ = [('input_slide_tiles', str), ('output_dir', str), ('hub_repo_or_dir', str), ('model_name', str), ('num_cores', int), ('batch_size', int)]
 
 @click.command()
 @click.argument('input_slide_tiles', nargs=1)
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
-@click.option('-rn', '--repo_name', required=False,
+@click.option('-rn', '--hub_repo_or_dir', required=False,
               help="repository name to pull model and weight from, e.g. msk-mind/luna-ml")
 @click.option('-tn', '--transform_name', required=False,
               help="torch hub transform name")   
@@ -50,26 +51,13 @@ def cli(**cli_kwargs):
     cli_runner( cli_kwargs, _params_, infer_tile_labels)
 
 import torch
+from torch import nn
 from torch.utils.data import DataLoader
-from luna.pathology.common.ml import BaseTorchTileDataset, BaseTorchTileClassifier
+from luna.pathology.common.ml import HD5FDataset, TorchTransformModel
 
 import pandas as pd
 from tqdm import tqdm
-
-# We are acting a bit like a consumer of the base classes here-
-class TileDatasetGithub(BaseTorchTileDataset):
-    def setup(self, repo_name, transform_name):
-        self.transform = torch.hub.load(repo_name, transform_name)
-    def preprocess(self, input_tile):
-        return self.transform(input_tile)
-    
-class TileClassifierGithub(BaseTorchTileClassifier):
-    def setup(self, repo_name, model_name, weight_tag):
-        self.model = torch.hub.load(repo_name, model_name, weight_tag=weight_tag)
-    def predict(self, input_tiles):
-        return self.model(input_tiles)
-
-def infer_tile_labels(input_slide_tiles, output_dir, repo_name, transform_name, model_name, weight_tag, num_cores, batch_size):
+def infer_tile_labels(input_slide_tiles, output_dir, hub_repo_or_dir, model_name, num_cores, batch_size):
     """Run inference using a model and transform definition (either local or using torch.hub)
 
     Decorates existing slide_tiles with additional columns corresponding to class prediction/scores from the model
@@ -88,23 +76,41 @@ def infer_tile_labels(input_slide_tiles, output_dir, repo_name, transform_name, 
         dict: metadata about function call
     """
     # Get our model and transforms and construct the Tile Dataset and Classifier
-    logger.info(f"Loading model and transform: repo_name={repo_name}, transform_name={transform_name}, model_name={model_name}")
-    logger.info(f"Using weights weight_tag={weight_tag}")
 
-    tile_dataset     = TileDatasetGithub(tile_path=input_slide_tiles, repo_name=repo_name, transform_name=transform_name)
-    tile_classifier  = TileClassifierGithub(repo_name=repo_name, model_name=model_name, weight_tag=weight_tag)
+    if os.path.exists(hub_repo_or_dir):
+        source = 'local'
+    else:
+        source = 'github'
 
-    tile_loader = DataLoader(tile_dataset, num_workers=num_cores, batch_size=batch_size, pin_memory=True)
+    clf = torch.hub.load(hub_repo_or_dir, model_name, source=source)
+
+    if not (isinstance(clf, nn.Module) or isinstance(clf, TorchTransformModel)):
+        raise RuntimeError("Not a valid model!")
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    logger.info(f"Using device={device}")
+
+    if isinstance(clf, TorchTransformModel):
+        preprocess = clf.get_preprocess()
+        transform  = clf.transform
+        clf.model.to(device)
+    else:
+        preprocess = nn.Identity()
+        transform = clf.to(device)
+
+    df     = pd.read_csv(input_slide_tiles).set_index('address')
+    ds     = HD5FDataset(df, preprocess=preprocess)
+    loader = DataLoader(ds, num_workers=num_cores, batch_size=batch_size, pin_memory=True)
 
     # Generate aggregate dataframe
     with torch.no_grad():
-        df_scores = pd.concat([tile_classifier(index, data) for index, data in tqdm(tile_loader, file=sys.stdout)])
+        df_scores = pd.concat([pd.DataFrame(transform(data.to(device)), index=index) for data, index in tqdm(loader, file=sys.stdout)])
         
-    if hasattr(tile_classifier.model, 'class_labels'):
-        logger.info(f"Mapping column labels -> {tile_classifier.model.class_labels}")
-        df_scores = df_scores.rename(columns=tile_classifier.model.class_labels)
+    if hasattr(clf, 'class_labels'):
+        logger.info(f"Mapping column labels -> {clf.class_labels}")
+        df_scores = df_scores.rename(columns=clf.class_labels)
 
-    df_output = tile_dataset.tile_manifest.join(df_scores)    
+    df_output = df.join(df_scores)    
 
     logger.info(df_output)
 
