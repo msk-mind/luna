@@ -1,14 +1,10 @@
 import torch
 from torch import nn
-from  torchvision import transforms
 
 from luna.pathology.common.ml import TorchTransformModel
 
 class MyModel(TorchTransformModel):
-    preprocess = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.ConvertImageDtype(torch.float)
-    ])
+    preprocess = nn.Identity()
 
     def __init__(self, n_channels):
         self.model = nn.Sequential(
@@ -20,6 +16,7 @@ class MyModel(TorchTransformModel):
         return self.preprocess
 
     def transform(self, X):
+        X = X.permute(0, 3, 1, 2).float()
         out = self.model(X).view(X.shape[0], -1)
         return out.cpu().numpy()
 
