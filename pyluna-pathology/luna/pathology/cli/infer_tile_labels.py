@@ -10,7 +10,7 @@ logger = logging.getLogger('infer_tile_labels')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_slide_tiles', str), ('output_dir', str), ('hub_repo_or_dir', str), ('model_name', str), ('num_cores', int), ('batch_size', int)]
+_params_ = [('input_slide_tiles', str), ('output_dir', str), ('hub_repo_or_dir', str), ('model_name', str), ('kwargs', json), ('num_cores', int), ('batch_size', int)]
 
 @click.command()
 @click.argument('input_slide_tiles', nargs=1)
@@ -22,8 +22,8 @@ _params_ = [('input_slide_tiles', str), ('output_dir', str), ('hub_repo_or_dir',
               help="torch hub transform name")   
 @click.option('-mn', '--model_name', required=False,
               help="torch hub model name")    
-@click.option('-wt', '--weight_tag', required=False,
-              help="weight tag filename")  
+@click.option('-kw', '--kwargs', required=False,
+              help="additional keywords to pass to model initialization", default='{}')  
 @click.option('-nc', '--num_cores', required=False,
               help="Number of cores to use", default=4)  
 @click.option('-bx', '--batch_size', required=False,
@@ -57,7 +57,7 @@ from luna.pathology.common.ml import HD5FDataset, TorchTransformModel
 
 import pandas as pd
 from tqdm import tqdm
-def infer_tile_labels(input_slide_tiles, output_dir, hub_repo_or_dir, model_name, num_cores, batch_size):
+def infer_tile_labels(input_slide_tiles, output_dir, hub_repo_or_dir, model_name, num_cores, batch_size, kwargs):
     """Run inference using a model and transform definition (either local or using torch.hub)
 
     Decorates existing slide_tiles with additional columns corresponding to class prediction/scores from the model
@@ -82,7 +82,7 @@ def infer_tile_labels(input_slide_tiles, output_dir, hub_repo_or_dir, model_name
     else:
         source = 'github'
 
-    clf = torch.hub.load(hub_repo_or_dir, model_name, source=source)
+    clf = torch.hub.load(hub_repo_or_dir, model_name, source=source, **kwargs)
 
     if not (isinstance(clf, nn.Module) or isinstance(clf, TorchTransformModel)):
         raise RuntimeError("Not a valid model!")

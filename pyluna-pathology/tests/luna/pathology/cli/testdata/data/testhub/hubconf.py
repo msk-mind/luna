@@ -10,10 +10,11 @@ class MyModel(TorchTransformModel):
         transforms.ConvertImageDtype(torch.float)
     ])
 
-    model = nn.Sequential(
-        nn.Conv2d(3, 8, kernel_size=3),
-        nn.AdaptiveAvgPool2d((1,1))
-    )
+    def __init__(self, n_channels):
+        self.model = nn.Sequential(
+            nn.Conv2d(3, n_channels, kernel_size=3),
+            nn.AdaptiveAvgPool2d((1,1))
+        )
 
     def get_preprocess(self):
         return self.preprocess
@@ -22,4 +23,4 @@ class MyModel(TorchTransformModel):
         out = self.model(X).view(X.shape[0], -1)
         return out.cpu().numpy()
 
-def testmodel(): return MyModel()
+def testmodel(n_channels=8): return MyModel(n_channels)

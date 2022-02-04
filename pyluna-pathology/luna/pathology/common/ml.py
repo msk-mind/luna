@@ -7,7 +7,7 @@ from typing import Dict, Optional, Union, Tuple, List
 
 from PIL import Image
 # from sklearn.model_selection._split import _BaseKFold, _RepeatedSplits
-#from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.utils.validation import check_random_state
 from torch import nn
 from torch.utils.data import Dataset, DataLoader

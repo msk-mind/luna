@@ -246,8 +246,8 @@ def validate_params(given_params: dict, params_list: List[tuple]):
             else:
                 raise RuntimeError(f"Type {type(dtype)} invalid!")
 
-        except ValueError:
-            raise RuntimeError(f"Param {name} could not be cast to {dtype}")
+        except ValueError as exc:
+            raise RuntimeError(f"Param {name} could not be cast to {dtype} - {exc}")
 
         except RuntimeError as e:
             raise e
