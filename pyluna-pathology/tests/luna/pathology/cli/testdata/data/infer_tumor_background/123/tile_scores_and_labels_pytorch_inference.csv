@@ -1,0 +1,13 @@
+address,x_coord,y_coord,tile_image_file,tile_size,tile_units,Background,Tumor
+x1_y1_z10.0,512.0,512.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.67729187,-0.9070499
+x1_y2_z10.0,512.0,1024.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.6319428,-0.84757584
+x1_y3_z10.0,512.0,1536.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.61218035,-0.82392985
+x1_y4_z10.0,512.0,2048.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.5603356,-0.7596926
+x2_y1_z10.0,1024.0,512.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.38840988,-0.5942302
+x2_y2_z10.0,1024.0,1024.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.36021793,-0.56911147
+x2_y3_z10.0,1024.0,1536.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.35513628,-0.56647706
+x2_y4_z10.0,1024.0,2048.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.4442727,-0.62332517
+x3_y1_z10.0,1536.0,512.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.6586894,-0.8959336
+x3_y2_z10.0,1536.0,1024.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.5618485,-0.7990217
+x3_y3_z10.0,1536.0,1536.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.6383263,-0.86979014
+x3_y4_z10.0,1536.0,2048.0,pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.h5,512.0,px,0.5518583,-0.750212

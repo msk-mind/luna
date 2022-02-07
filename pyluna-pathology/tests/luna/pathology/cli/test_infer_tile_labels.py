@@ -19,7 +19,12 @@ def test_cli(tmp_path):
     assert result.exit_code == 0
     assert SlideTiles.check(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
 
-    assert pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv").shape == (12, 14)
+    # Default to 2 channels..
+    df = pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
+    assert df.shape == (12, 8)
+
+    assert set(['Background', 'Tumor']).intersection(set(df.columns)) == set(['Background', 'Tumor'])
+    
 
 def test_cli_kwargs(tmp_path):
 
@@ -36,7 +41,8 @@ def test_cli_kwargs(tmp_path):
     assert result.exit_code == 0
     assert SlideTiles.check(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
 
-    assert pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv").shape == (12, 16)
+    df = pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
+    assert df.shape == (12, 16) # 8 more
 
 def test_cli_resnet(tmp_path):
 

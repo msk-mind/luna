@@ -12,11 +12,14 @@ class MyCustomModel(TorchTransformModel):
             nn.AdaptiveAvgPool2d((1,1))
         )
 
+        if n_channels == 2:
+            self.class_labels = {0:'Background', 1:'Tumor'}
+
     def get_preprocess(self):
         return self.preprocess
 
     def transform(self, X):
-        X = X.permute(0, 3, 1, 2).float()
+        X = X.permute(0, 3, 1, 2).float() / 255
         out = self.model(X).view(X.shape[0], -1)
         return out
 
@@ -32,10 +35,10 @@ class Resnet(TorchTransformModel):
         return self.preprocess
 
     def transform(self, X):
-        X = X.permute(0, 3, 1, 2).float()
+        X = X.permute(0, 3, 1, 2).float() / 255
         out = self.model(X).view(X.shape[0], -1)
         return out
 
 
-def test_custom_model(n_channels=8): return MyCustomModel(n_channels)
+def test_custom_model(n_channels=2): return MyCustomModel(n_channels)
 def test_resnet(**kwargs): return Resnet(**kwargs)
