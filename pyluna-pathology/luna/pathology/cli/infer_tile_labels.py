@@ -98,9 +98,6 @@ def infer_tile_labels(input_slide_tiles, output_dir, hub_repo_or_dir, model_name
         preprocess = clf.get_preprocess()
         transform  = clf.transform
         clf.model.to(device)
-    else: # In this case, we are just worthin with a pure torch.nn module
-        preprocess = nn.Identity()
-        transform = clf.to(device)
 
     df     = pd.read_csv(input_slide_tiles).set_index('address')
     ds     = HD5FDataset(df, preprocess=preprocess)

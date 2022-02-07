@@ -17,3 +17,5 @@ class CodeTimer:
     def __exit__(self, exc_type, exc_value, traceback):
         self.took = (timeit.default_timer() - self.start)
         self.logger.info('Code block' + self.name + ' took: ' + str(self.took) + 's')
+        if exc_type is not None:
+            self.logger.exception("Exception raised during code execution:")

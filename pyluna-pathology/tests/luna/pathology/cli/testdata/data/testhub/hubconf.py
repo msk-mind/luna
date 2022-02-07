@@ -3,7 +3,7 @@ from torch import nn
 
 from luna.pathology.common.ml import TorchTransformModel
 
-class MyModel(TorchTransformModel):
+class MyCustomModel(TorchTransformModel):
     preprocess = nn.Identity()
 
     def __init__(self, n_channels):
@@ -20,4 +20,22 @@ class MyModel(TorchTransformModel):
         out = self.model(X).view(X.shape[0], -1)
         return out
 
-def testmodel(n_channels=8): return MyModel(n_channels)
+class Resnet(TorchTransformModel):
+    preprocess = nn.Identity()
+
+    def __init__(self, depth, pretrained):
+        # del kwargs['depth']
+        self.model =  torch.hub.load('pytorch/vision:v0.10.0', f'resnet{depth}', pretrained=pretrained)
+
+
+    def get_preprocess(self):
+        return self.preprocess
+
+    def transform(self, X):
+        X = X.permute(0, 3, 1, 2).float()
+        out = self.model(X).view(X.shape[0], -1)
+        return out
+
+
+def test_custom_model(n_channels=8): return MyCustomModel(n_channels)
+def test_resnet(**kwargs): return Resnet(**kwargs)

@@ -7,6 +7,7 @@ class SlideTiles:
     REQ_COLUMNS = set(['address', 'tile_size', 'tile_units', 'x_coord', 'y_coord'])
     @classmethod
     def check(self, slide_tiles):
+        """Returns True if the given path is readable as "SlideTiles <slide_tiles>", else, reaises SchemaMismatchError"""
         df = pd.read_csv(slide_tiles)
 
         if not set(df.columns).intersection(self.REQ_COLUMNS) == self.REQ_COLUMNS:
