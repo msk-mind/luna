@@ -342,7 +342,8 @@ def cli_runner(cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable
     # Nice little log break
     print("\n" + "-"*35 + f' Running transform::{cli_function.__name__} ' + "-" *35 + "\n")
 
-    result = cli_function(**kwargs)
+    with CodeTimer(logger, f'Run transform::{cli_function.__name__}'):
+        result = cli_function(**kwargs)
     
     kwargs.update(result)
 

@@ -2,12 +2,14 @@ import pandas as pd
 import numpy as np
 import torch
 
+import warnings
+
 from collections import Counter, defaultdict
 from typing import Dict, Optional, Union, Tuple, List
 
 from PIL import Image
 # from sklearn.model_selection._split import _BaseKFold, _RepeatedSplits
-from sklearn.model_selection import StratifiedGroupKFold
+# from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.utils.validation import check_random_state
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
@@ -21,7 +23,7 @@ class TorchTransformModel: pass
 class HD5FDataset(Dataset):
     """ General dataset that uses a HDF5 manifest convention
 
-    Will send the tensors to gpu if available, on the device specified by CUDA_VISIBLE_DEVICES="1"
+    Applies preprocessing steps per instance, returning aggregate batches of data. Useful for training and inference.
     """ 
     
     def __init__(self, hd5f_manifest, preprocess=nn.Identity(), label_cols=[], using_ray=False):
@@ -60,7 +62,7 @@ class HD5FDataset(Dataset):
             idx (int): Integer index 
 
         Returns:
-            (optional str, torch.tensor, optional torch.tensor): tuple of the tile index and corresponding tile as a torch tensor, and metadata labels if specified
+            (optional str, torch.tensor, optional torch.tensor): tuple of the tile index and corresponding tile as a torch tensor, and metadata labels if specified, else the index
         """ 
             
         row = self.hd5f_manifest.iloc[idx]
@@ -74,6 +76,17 @@ class HD5FDataset(Dataset):
             return self.preprocess(img), row.name
 
 
+def post_transform_to_2d(input: torch.Tensor) -> np.array:
+    """ Convert input to a 2D numpy array on CPU
+    
+    Args:
+        input (torch.tensor): tensor input of shape [B, *] where B is the batch dimension
+    """
+    if not len(input.shape)==1: 
+        warnings.warn(f'Reshaping model output (was {input.shape}) to 2D')
+        return input.view(input.shape[0], -1).cpu().numpy()
+    else:
+        return input.cpu().numpy()
 
 
 class BaseTorchTileDataset(Dataset):

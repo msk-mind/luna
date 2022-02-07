@@ -49,10 +49,13 @@ def cli(**cli_kwargs):
     """
     cli_runner( cli_kwargs, _params_, infer_tile_labels)
 
+
+
+
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from luna.pathology.common.ml import HD5FDataset, TorchTransformModel
+from luna.pathology.common.ml import HD5FDataset, TorchTransformModel, post_transform_to_2d
 
 import pandas as pd
 from tqdm import tqdm
@@ -81,21 +84,21 @@ def infer_tile_labels(input_slide_tiles, output_dir, hub_repo_or_dir, model_name
     else:
         source = 'github'
 
-    logger.info(f"Source={source}")
+    logger.info(f"Torch hub source = {source} @ {hub_repo_or_dir}")
 
     clf = torch.hub.load(hub_repo_or_dir, model_name, source=source, **kwargs)
-
+    
     if not (isinstance(clf, nn.Module) or isinstance(clf, TorchTransformModel)):
         raise RuntimeError("Not a valid model!")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    logger.info(f"Using device={device}")
+    logger.info(f"Using device = {device}")
 
-    if isinstance(clf, TorchTransformModel):
+    if isinstance(clf, TorchTransformModel): # This class packages preprocesing, the model, and optionally class_labels all together
         preprocess = clf.get_preprocess()
         transform  = clf.transform
         clf.model.to(device)
-    else:
+    else: # In this case, we are just worthin with a pure torch.nn module
         preprocess = nn.Identity()
         transform = clf.to(device)
 
@@ -105,7 +108,7 @@ def infer_tile_labels(input_slide_tiles, output_dir, hub_repo_or_dir, model_name
 
     # Generate aggregate dataframe
     with torch.no_grad():
-        df_scores = pd.concat([pd.DataFrame(transform(data.to(device)), index=index) for data, index in tqdm(loader, file=sys.stdout)])
+        df_scores = pd.concat([pd.DataFrame(post_transform_to_2d(transform(data.to(device))), index=index) for data, index in tqdm(loader, file=sys.stdout)])
         
     if hasattr(clf, 'class_labels'):
         logger.info(f"Mapping column labels -> {clf.class_labels}")

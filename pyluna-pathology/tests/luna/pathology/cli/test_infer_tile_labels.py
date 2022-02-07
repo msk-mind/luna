@@ -15,7 +15,6 @@ def test_cli(tmp_path):
             '-mn', 'testmodel',
             ])
 
-    # No longer error gracefully -- can update tests with proper data and they'll work
     assert result.exit_code == 0
 
     assert pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv").shape == (12, 14)
@@ -32,7 +31,6 @@ def test_cli_kwargs(tmp_path):
             '-kw', '{"n_channels":10}'
             ])
 
-    # No longer error gracefully -- can update tests with proper data and they'll work
     assert result.exit_code == 0
 
     assert pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv").shape == (12, 16)

@@ -18,6 +18,6 @@ class MyModel(TorchTransformModel):
     def transform(self, X):
         X = X.permute(0, 3, 1, 2).float()
         out = self.model(X).view(X.shape[0], -1)
-        return out.cpu().numpy()
+        return out
 
 def testmodel(n_channels=8): return MyModel(n_channels)

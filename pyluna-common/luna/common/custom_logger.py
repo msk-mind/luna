@@ -16,7 +16,6 @@ class MultilineFormatter(logging.Formatter):
         record.message = output
         return output
 
-
 def init_logger(filename='data-processing.log'):
     # Logging configuration
     if os.environ['LUNA_HOME']:
