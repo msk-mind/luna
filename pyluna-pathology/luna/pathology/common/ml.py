@@ -9,7 +9,7 @@ from typing import Dict, Optional, Union, Tuple, List
 
 from PIL import Image
 # from sklearn.model_selection._split import _BaseKFold, _RepeatedSplits
-from sklearn.model_selection import StratifiedGroupKFold
+#from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.utils.validation import check_random_state
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
@@ -82,7 +82,7 @@ def post_transform_to_2d(input: torch.Tensor) -> np.array:
     Args:
         input (torch.tensor): tensor input of shape [B, *] where B is the batch dimension
     """
-    if not len(input.shape)==1: 
+    if not len(input.shape)==2: 
         warnings.warn(f'Reshaping model output (was {input.shape}) to 2D')
         return input.view(input.shape[0], -1).cpu().numpy()
     else:
