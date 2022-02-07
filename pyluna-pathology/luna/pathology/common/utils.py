@@ -415,7 +415,7 @@ def get_scale_factor_at_magnfication(slide: openslide.OpenSlide,
     return scale_factor
 
 def visualize_tiling_scores(df:pd.DataFrame, thumbnail_img:np.ndarray, scale_factor:float,
-        score_type_to_visualize:str) -> np.ndarray:
+        score_type_to_visualize:str, normalize=True) -> np.ndarray:
     """visualize tile scores
     
     draws colored boxes around tiles to indicate the value of the score 
@@ -432,6 +432,9 @@ def visualize_tiling_scores(df:pd.DataFrame, thumbnail_img:np.ndarray, scale_fac
     """
 
     assert isinstance(thumbnail_img, np.ndarray)
+
+    if normalize:
+        df[score_type_to_visualize] = (df[score_type_to_visualize] - np.min(df[score_type_to_visualize]))/np.ptp(df[score_type_to_visualize])
 
     for _, row in tqdm(df.iterrows(), total=len(df)):
 

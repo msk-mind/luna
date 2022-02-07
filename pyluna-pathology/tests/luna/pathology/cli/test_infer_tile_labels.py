@@ -2,19 +2,64 @@ from click.testing import CliRunner
 
 from luna.pathology.cli.infer_tile_labels import cli
 
+import pandas as pd
+from luna.pathology.schemas import SlideTiles
 
 def test_cli(tmp_path):
 
     runner = CliRunner()
 
     result = runner.invoke(cli, [
-            'pyluna-pathology/tests/luna/pathology/cli/testdata/data/test/slides/123/test_generate_tile_ov_labels/TileImages/data/',
+            'pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/',
             '-o', tmp_path,
-            '-rn', 'msk-mind/luna-ml',
-            '-tn', 'tissue_tile_net_transform',
-            '-mn', 'tissue_tile_net_model_5_class',
-            '-wt', 'main:tissue_net_2021-01-19_21.05.24-e17.pth',
+            '-rn', 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/testhub',
+            '-mn', 'test_custom_model',
             ])
 
-    # No longer error gracefully -- can update tests with proper data and they'll work
-    assert result.exit_code == 1
+    assert result.exit_code == 0
+    assert SlideTiles.check(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
+
+    # Default to 2 channels..
+    df = pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
+    assert df.shape == (12, 8)
+
+    assert set(['Background', 'Tumor']).intersection(set(df.columns)) == set(['Background', 'Tumor'])
+    
+
+def test_cli_kwargs(tmp_path):
+
+    runner = CliRunner()
+
+    result = runner.invoke(cli, [
+            'pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/',
+            '-o', tmp_path,
+            '-rn', 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/testhub',
+            '-mn', 'test_custom_model',
+            '-kw', '{"n_channels":10}'
+            ])
+
+    assert result.exit_code == 0
+    assert SlideTiles.check(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
+
+    df = pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
+    assert df.shape == (12, 16) # 8 more
+
+def test_cli_resnet(tmp_path):
+
+    runner = CliRunner()
+
+    result = runner.invoke(cli, [
+            'pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/',
+            '-o', tmp_path,
+            '-rn', 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/testhub',
+            '-mn', 'test_resnet',
+            '-kw', '{"depth": 18, "pretrained":true}'
+            ])
+
+    assert result.exit_code == 0
+    assert SlideTiles.check(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
+
+    assert pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv").shape == (12, 1006)
+
+
+

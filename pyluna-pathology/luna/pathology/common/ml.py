@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import torch
 
+import warnings
+
 from collections import Counter, defaultdict
 from typing import Dict, Optional, Union, Tuple, List
 
@@ -15,6 +17,98 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torchmetrics import MetricCollection
 
 from luna.pathology.common.utils import get_tile_array
+
+class TorchTransformModel: 
+    def get_preprocess(self, **kwargs):
+        """The transform model's preprocessing code
+
+        Args:
+            kwargs: Keyword arguements passed onto the subclass method
+        """
+        raise NotImplementedError("get_preprocess() has not been implimented in the subclass!")
+
+    def transform(self, X: torch.Tensor):
+        """Main transformer method, X -> X'
+
+        Args:
+            X (torch.Tensor): input tensor
+
+        Returns:
+            torch.tensor: Output tile as preprocessed tensor
+        """ 
+        raise NotImplementedError("transform() has not been implimented in the subclass!")    
+    
+    
+    pass
+
+class HD5FDataset(Dataset):
+    """ General dataset that uses a HDF5 manifest convention
+
+    Applies preprocessing steps per instance, returning aggregate batches of data. Useful for training and inference.
+    """ 
+    
+    def __init__(self, hd5f_manifest, preprocess=nn.Identity(), label_cols=[], using_ray=False):
+        """Initialize HD5FDataset
+        
+        Args:
+            hd5f_manifest (pd.DataFrame): Dataframe of H5 data
+            preprocess (transform): Function to apply to every bit of data
+            label_cols (list[str]): (Optional) label columns to return as tensors, e.g. for training
+            using_ray (bool): (Optional) Perform distributed dataloading with Ray for training 
+        """
+
+        self.hd5f_manifest = hd5f_manifest
+        self.label_cols = label_cols
+        self.using_ray = using_ray
+        self.preprocess = preprocess
+
+
+    def __len__(self):
+        return len(self.hd5f_manifest)
+
+    def set_preprocess(self, preprocess):
+        preprocess=preprocess
+    
+    def __repr__(self):
+        return f"HD5FDataset with {len(self.hd5f_manifest)} tiles, indexed by {self.hd5f_manifest.index.names}, returning label columns: {self.label_cols}"
+    
+    def __getitem__(self, idx: int):
+        """Tile accessor
+        
+        Loads a tile image from the tile manifest.  Returns a batch of the indices of the input dataframe, the tile data always.
+        If label columns where specified, the 3rd position of the tuple is a tensor of the label data. If Ray is being used for 
+        model training, then only the image data and the label is returned. 
+
+        Args:
+            idx (int): Integer index 
+
+        Returns:
+            (optional str, torch.tensor, optional torch.tensor): tuple of the tile index and corresponding tile as a torch tensor, and metadata labels if specified, else the index
+        """ 
+            
+        row = self.hd5f_manifest.iloc[idx]
+        img = get_tile_array(row)
+
+        if self.using_ray and not(len(self.label_cols)):
+            raise ValueError("If using Ray for training, you must provide a label column")
+        if len(self.label_cols):                 
+            return self.preprocess(img), torch.tensor(row[self.label_cols]).squeeze()
+        else:
+            return self.preprocess(img), row.name
+
+
+def post_transform_to_2d(input: torch.Tensor) -> np.array:
+    """ Convert input to a 2D numpy array on CPU
+    
+    Args:
+        input (torch.tensor): tensor input of shape [B, *] where B is the batch dimension
+    """
+    if not len(input.shape)==2: 
+        warnings.warn(f'Reshaping model output (was {input.shape}) to 2D')
+        return input.view(input.shape[0], -1).cpu().numpy()
+    else:
+        return input.cpu().numpy()
+
 
 class BaseTorchTileDataset(Dataset):
     """Base class for a tile dataset

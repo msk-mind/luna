@@ -1,0 +1,17 @@
+available_labels:
+- x_coord
+- y_coord
+- tile_image_file
+- tile_size
+- tile_units
+- Background
+- Tumor
+batch_size: 64
+hub_repo_or_dir: pyluna-pathology/tests/luna/pathology/cli/testdata/data/testhub
+input_slide_tiles: pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.csv
+kwargs: {}
+model_name: test_custom_model
+num_cores: 4
+output_dir: pyluna-pathology/tests/luna/pathology/cli/testdata/data/infer_tumor_background/123/
+slide_tiles: pyluna-pathology/tests/luna/pathology/cli/testdata/data/infer_tumor_background/123/tile_scores_and_labels_pytorch_inference.csv
+total_tiles: 12
