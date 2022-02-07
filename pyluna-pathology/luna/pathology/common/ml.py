@@ -18,7 +18,28 @@ from torchmetrics import MetricCollection
 
 from luna.pathology.common.utils import get_tile_array
 
-class TorchTransformModel: pass
+class TorchTransformModel: 
+    def get_preprocess(self, **kwargs):
+        """The transform model's preprocessing code
+
+        Args:
+            kwargs: Keyword arguements passed onto the subclass method
+        """
+        raise NotImplementedError("get_preprocess() has not been implimented in the subclass!")
+
+    def transform(self, X: torch.Tensor):
+        """Main transformer method, X -> X'
+
+        Args:
+            X (torch.Tensor): input tensor
+
+        Returns:
+            torch.tensor: Output tile as preprocessed tensor
+        """ 
+        raise NotImplementedError("transform() has not been implimented in the subclass!")    
+    
+    
+    pass
 
 class HD5FDataset(Dataset):
     """ General dataset that uses a HDF5 manifest convention
