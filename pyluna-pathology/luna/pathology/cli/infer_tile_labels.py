@@ -86,18 +86,18 @@ def infer_tile_labels(input_slide_tiles, output_dir, hub_repo_or_dir, model_name
 
     logger.info(f"Torch hub source = {source} @ {hub_repo_or_dir}")
 
-    clf = torch.hub.load(hub_repo_or_dir, model_name, source=source, **kwargs)
+    ttm = torch.hub.load(hub_repo_or_dir, model_name, source=source, **kwargs)
     
-    if not (isinstance(clf, nn.Module) or isinstance(clf, TorchTransformModel)):
+    if not isinstance(ttm, TorchTransformModel):
         raise RuntimeError("Not a valid model!")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logger.info(f"Using device = {device}")
 
-    if isinstance(clf, TorchTransformModel): # This class packages preprocesing, the model, and optionally class_labels all together
-        preprocess = clf.get_preprocess()
-        transform  = clf.transform
-        clf.model.to(device)
+    if isinstance(ttm, TorchTransformModel): # This class packages preprocesing, the model, and optionally class_labels all together
+        preprocess = ttm.get_preprocess()
+        transform  = ttm.transform
+        ttm.model.to(device)
 
     df     = pd.read_csv(input_slide_tiles).set_index('address')
     ds     = HD5FDataset(df, preprocess=preprocess)
@@ -107,9 +107,9 @@ def infer_tile_labels(input_slide_tiles, output_dir, hub_repo_or_dir, model_name
     with torch.no_grad():
         df_scores = pd.concat([pd.DataFrame(post_transform_to_2d(transform(data.to(device))), index=index) for data, index in tqdm(loader, file=sys.stdout)])
         
-    if hasattr(clf, 'class_labels'):
-        logger.info(f"Mapping column labels -> {clf.class_labels}")
-        df_scores = df_scores.rename(columns=clf.class_labels)
+    if hasattr(ttm, 'class_labels'):
+        logger.info(f"Mapping column labels -> {ttm.class_labels}")
+        df_scores = df_scores.rename(columns=ttm.class_labels)
 
     df_output = df.join(df_scores)    
 
