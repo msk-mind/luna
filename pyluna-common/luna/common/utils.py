@@ -208,7 +208,8 @@ def get_absolute_path(module_path, relative_path):
 def validate_params(given_params: dict, params_list: List[tuple]):
     """Ensure that a dictonary of params or keyword arguments is correct given a parameter list
 
-    Checks that neccessary parameters exist, and that their type can be casted corretly. There's special logic for list, json, and dictonary types
+    Checks that neccessary parameters exist, and that their type can be casted corretly. There's special logic for list and dictonary types. 
+    JSON arguments are parsed as dict types. 
 
     Args:
         given_params (dict): keyword arguments to check types
@@ -218,7 +219,6 @@ def validate_params(given_params: dict, params_list: List[tuple]):
         dict: Validated and casted keyword argument dictonary
     """
     logger = logging.getLogger(__name__)
-
     d_params = {}
     for name, dtype in params_list:
         if given_params.get(name, None) == None: 
@@ -228,21 +228,14 @@ def validate_params(given_params: dict, params_list: List[tuple]):
                 if type (given_params[name])==list:
                     d_params[name] = given_params[name]
                 else:
-                    d_params[name] = [dtype.__args__[0](s) for s in given_params[name].split(',')]
+                    d_params[name] = [dtype.__args__[0](s) for s in given_params[name].split(',')]     
             elif dtype==dict:
-                if type (given_params[name])==dict:
-                    d_params[name] = given_params[name]
-                else:
-                    d_params[name] = {s.split('=')[0] : s.split('=')[1] for s in given_params[name].split(',')}
-            elif dtype==json:
                 if type (given_params[name])==dict:
                     d_params[name] = given_params[name]
                 else:
                     d_params[name] = json.loads(given_params[name])
             elif type(dtype)==type:
                 d_params[name] = dtype(given_params[name])
-            elif type(dtype) == _GenericAlias: # check for parameterized generics like List[str]
-                d_params[name] = given_params[name]
             else:
                 raise RuntimeError(f"Type {type(dtype)} invalid!")
 
