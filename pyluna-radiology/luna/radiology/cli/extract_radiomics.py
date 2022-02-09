@@ -9,7 +9,7 @@ logger = logging.getLogger('extract_radiomics')
 from luna.common.utils import cli_runner
 
 from typing import List
-_params_ = [('input_itk_volume', str), ('input_itk_labels', str), ('lesion_indicies', List[int]), ('output_dir', str), ('pyradiomics_config', json), ('check_geometry_strict', bool), ('enable_all_filters', bool)]
+_params_ = [('input_itk_volume', str), ('input_itk_labels', str), ('lesion_indicies', List[int]), ('output_dir', str), ('pyradiomics_config', dict), ('check_geometry_strict', bool), ('enable_all_filters', bool)]
 
 @click.command()
 @click.argument('input_itk_volume', nargs=1)

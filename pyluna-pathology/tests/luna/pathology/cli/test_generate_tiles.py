@@ -6,7 +6,6 @@ from luna.pathology.cli.generate_tiles import cli
 
 from luna.pathology.schemas import SlideTiles
 
-tmp_path = './'
 
 def test_cli(tmp_path):
     runner = CliRunner()
