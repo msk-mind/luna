@@ -29,7 +29,10 @@ Create your branch with the naming convention `IssueNumber-Description` (e.g. 12
 ### Development guide
 1. Use Google docstring format to clearly document all classes, methods, variables.
   In PyCharm, you can change the settting in `Settings > Tools > Python Integrated Tools > Docstring format`
-2. Setup pre-commit Python linter for uniform code styles.
+2. Setup pre-commit Python linter for uniform code styles. In the cloned repo, run
+   `pre-commit install`. When you attempt to make a commit, `black` will reformat your
+   code and `flake8` will check for PEP8 compliance. Once these tests pass, you can
+   re-add and commit properly formatted files. 
 3. Follow clean code principles
 4. Add new dependencies to `requirements_dev.txt`, and `setup.cfg` in the appropriate packages.
 The circleci tests depend on the docker image defined in `docker/Dockerfile`. To update the docker, you need to trigger the docker workflow in circleci.
