@@ -74,11 +74,14 @@ pytest -s path/to/test_file.py::test_method
 
 Once you are done (see [development guide](#development-guide)) with the changes in your branch, create a PR to merge your branch into the default **dev** branch.
 
-1. Luna uses semantic release for version management. PR title must start with one of these types specified in the [commit guidelines](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#-git-commit-guidelines).
-Additionally, provide the Luna subpackage and a brief description of the PR in the title.
+1. Luna uses semantic release for version management. The PR title must start with one of these types specified in the [commit guidelines](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#-git-commit-guidelines).
+Additionally, provide Luna subpackage and a brief description of the PR in the title.
 For example, `perf: pathology – improve inference speed`
-2. Ensure all checks pass in the PR
-3. Add at least one person from the core development as a reviewer.
+2. Add a description of the changes - list of changes, screenshots of functional tests, and any notes.
+   This summary will help the reviewer engage in a more meaningful conversation with the author.
+3. Link the PR to an issue with `Connect issue`.
+4. Ensure all checks pass.
+5. Add at least one person from the core development team as a reviewer.
 
 ### Reviewing PR
 
