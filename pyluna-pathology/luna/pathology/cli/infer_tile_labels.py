@@ -9,7 +9,7 @@ logger = logging.getLogger('infer_tile_labels')
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_slide_tiles', str), ('output_dir', str), ('hub_repo_or_dir', str), ('model_name', str), ('kwargs', json), ('num_cores', int), ('batch_size', int)]
+_params_ = [('input_slide_tiles', str), ('output_dir', str), ('hub_repo_or_dir', str), ('model_name', str), ('kwargs', dict), ('num_cores', int), ('batch_size', int)]
 
 @click.command()
 @click.argument('input_slide_tiles', nargs=1)
@@ -22,7 +22,7 @@ _params_ = [('input_slide_tiles', str), ('output_dir', str), ('hub_repo_or_dir',
 @click.option('-mn', '--model_name', required=False,
               help="torch hub model name")    
 @click.option('-kw', '--kwargs', required=False,
-              help="additional keywords to pass to model initialization", default='{}')  
+              help="additional keywords to pass to model initialization", default={})  
 @click.option('-nc', '--num_cores', required=False,
               help="Number of cores to use", default=4)  
 @click.option('-bx', '--batch_size', required=False,
