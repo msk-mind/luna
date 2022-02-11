@@ -16,16 +16,15 @@ _params_ = [('input_dsa_endpoint', str), ('collection_name', str), ('annotation_
 @click.option('-o', '--output_dir', required=False,
               help='path to output directory to save results')
 @click.option('-c', '--collection-name', required=False,
-              help='path to output directory to save results')
+              help='name of the collection to pull data from in DSA')
 @click.option('-a', '--annotation-name', required=False,
-              help='path to output directory to save results')
+              help='name of the annotations to pull from DSA (same annotation name for all slides)')
 @click.option('-u', '--username', required=False,
-              help='path to output directory to save results')
+              help='DSA username, can be inferred from DSA_USERNAME')
+@click.option('-p', '--password', required=False,
+              help='DSA password, should be inferred from DSA_PASSWORD')
 @click.option('-nc', '--num_cores', required=False,
               help='Number of cores to use', default=4)
-@click.option('-p', '--password', required=False,
-              help='path to output directory to save results')
-
 ### Additional options
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
@@ -34,15 +33,18 @@ def cli(**cli_kwargs):
 
     \b
     Inputs:
-        input: input data
+        input_dsa_endpoint: Path to the DSA endpoint like http://localhost:8080/dsa/api/v1
     \b
     Outputs:
-        output data
+        slide_annotation_dataset
     \b
     Example:
-        CLI_TOOL ./slides/10001.svs ./halo/10001.job18484.annotations
-            -an Tumor
-            -o ./masks/10001/
+        export DSA_USERNAME=username
+        export DSA_PASSWORD=password
+        dsa_annotation_etl http://localhost:8080/dsa/api/v1 
+            --collection-name tcga-data
+            --annotation-name TumorVsOther
+            -o /data/annotations/
     """
     cli_runner( cli_kwargs, _params_, dsa_annotation_etl)
 
@@ -55,7 +57,7 @@ from tqdm import tqdm
 
 ### Transform imports 
 def dsa_annotation_etl(input_dsa_endpoint, username, password, collection_name, annotation_name, num_cores, output_dir):
-    """ CLI tool method
+    """ Take
 
     Args:
         input_dsa_endpoint (str): path to input data
@@ -104,10 +106,12 @@ def dsa_annotation_etl(input_dsa_endpoint, username, password, collection_name, 
 
     logger.info(f"""Created {len(df_annotation_data.query("type=='geojson'"))} geojsons, {len(df_annotation_data.query("type=='point'"))} points, and {len(df_annotation_data.query("type=='polyline'"))} polygons""")
 
-    df_annotation_data.to_csv(f"{output_dir}/annotation_data.csv")
+    slide_annotation_dataset_path = f"{output_dir}/slide_annotation_dataset_{collection_name}_{annotation_name}.csv"
+    
+    df_annotation_data.to_csv(slide_annotation_dataset_path)
 
     properties = {
-        "slide_geojson_dataset": df_annotation_data
+        "slide_annotation_dataset": slide_annotation_dataset_path
     }
 
     return properties
