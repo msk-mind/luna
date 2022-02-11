@@ -67,15 +67,21 @@ def dsa_annotation_etl(input_dsa_endpoint, username, password, collection_name, 
     """
     girder = girder_client.GirderClient(apiUrl=input_dsa_endpoint)
 
-    girder.authenticate(username, password)
-    
+    # Initial connnection
     try:
-        df_collections = pd.DataFrame(girder.listCollection()).set_index('_id')
+        girder.authenticate(username, password)
         logger.info(f"Connected to DSA @ {input_dsa_endpoint}")
     except Exception as exc:
-        logger.error("Couldn't connect to DSA: {exc}")
+        logger.error(f"Couldn't authenticate DSA: {exc}")
+        raise RuntimeError("Connection to DSA endpoint failed.")
 
-    logger.info(f"Found collections {df_collections.to_string(max_colwidth=100)}")
+    try:
+        df_collections = pd.DataFrame(girder.listCollection()).set_index('_id')
+        logger.info(f"Found collections {df_collections.to_string(max_colwidth=100)}")
+    except Exception as exc:
+        logger.error(f"Couldn't retrieve data from DSA: {exc}")
+        raise RuntimeError("Connection to DSA endpoint failed.")
+
 
     # First, look for a collection callled our collection name
     df_collections = df_collections.query( f"name=='{collection_name}'" )
