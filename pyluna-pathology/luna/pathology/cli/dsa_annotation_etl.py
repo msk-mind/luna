@@ -102,10 +102,12 @@ def dsa_annotation_etl(input_dsa_endpoint, username, password, collection_name, 
     print (set(df_annotation_data.columns))
     print (df_annotation_data)
 
+    logger.info(f"""Created {len(df_annotation_data.query("type=='geojson'"))} geojsons, {len(df_annotation_data.query("type=='point'"))} points, and {len(df_annotation_data.query("type=='polyline'"))} polygons""")
+
     df_annotation_data.to_csv(f"{output_dir}/annotation_data.csv")
 
     properties = {
-
+        "slide_geojson_dataset": df_annotation_data
     }
 
     return properties
@@ -117,6 +119,7 @@ from geojson import Feature, Point, Polygon, FeatureCollection
 from copy import deepcopy
 import histomicstk
 import histomicstk.annotations_and_masks.annotation_and_mask_utils
+from shapely.geometry import shape
 class DsaAnnotationProcessor:
     def __init__(self, girder, annotation_name, output_dir):
         self.girder  = girder
@@ -128,6 +131,8 @@ class DsaAnnotationProcessor:
         features = []
         df[properties] = df[properties].fillna('None')
             
+        logger.info(f"About to turn {len(df)} geometric annotations into a geojson!")
+
         for _, row in df.iterrows():
             x, y = deepcopy(row[x_col]), deepcopy(row[y_col])
             if row[shape_type_col] == 'polyline':
@@ -137,11 +142,13 @@ class DsaAnnotationProcessor:
             elif row[shape_type_col] == 'point':
                 geometry = Point((x[0], y[0]))
                                             
+            logger.info(f"\tCreated geometry {str(shape(geometry)):.40s}...")
             feature = Feature(geometry=geometry, properties={prop:row[prop] for prop in properties})
             features.append(feature)
                         
         feature_collection = FeatureCollection(features)
-        print ("Checking geojson, errors with geojson FeatureCollection:", feature_collection.errors())
+        logger.info (f"Checking geojson, errors with geojson FeatureCollection: {feature_collection.errors()}")
+
         return feature_collection
 
     def build_proxy_repr_dsa(self, row):
@@ -150,12 +157,20 @@ class DsaAnnotationProcessor:
         itemId   = row.slide_item_id
         slide_id = row.slide_id
 
-        df = pd.DataFrame(self.girder.get( f"annotation?itemId={itemId}" )).set_index('_id')
-        q_annotation_result = df.join(df['annotation'].apply(pd.Series)).query( f"name=='{self.annotation_name}'")
+        logger.info(f"Trying to process annotation for slide_id={slide_id}, item_id={itemId}")
+
+        q_annotation_result = pd.DataFrame(self.girder.get( f"annotation?itemId={itemId}" )).set_index('_id')
+        q_annotation_result = q_annotation_result.join(q_annotation_result['annotation'].apply(pd.Series))
+
+        logger.info(f"Found {len(q_annotation_result)} total annotations: {set(q_annotation_result['name'])}")
+
+        q_annotation_result = q_annotation_result.query( f"name=='{self.annotation_name}'")
         
         if not len(q_annotation_result)==1:
             logger.info(f"No matching annotation '{self.annotation_name}' in slide {slide_id}")
             return None
+
+        logger.info(f"Found an annotation called {self.annotation_name}!!!!")
         
         annotation_id = q_annotation_result.reset_index()['_id'].item()
 
