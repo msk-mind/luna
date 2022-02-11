@@ -222,6 +222,7 @@ def validate_params(given_params: dict, params_list: List[tuple]):
     d_params = {}
     for name, dtype in params_list:
         if given_params.get(name, None) == None: 
+            logger.error(f"Expected a param called '{name}' of type {dtype} for this transform")
             raise RuntimeError(f"Param {name} of type {dtype} was never set, but required by transform, please check your input variables.")
         try:
             if 'List' in str(dtype):
