@@ -15,7 +15,7 @@ def test_otsu(tmp_path):
         '-fq', 'otsu_score > 0.5'])
 
     assert result.exit_code == 0
-    assert os.path.exists(f"{tmp_path}/123-filtered-otsu_score>0.5.tiles.csv")
+    assert os.path.exists(f"{tmp_path}/123-filtered.tiles.csv")
     assert os.path.exists(f"{tmp_path}/metadata.yml")
 
 def test_stain(tmp_path):
@@ -29,5 +29,5 @@ def test_stain(tmp_path):
         '-fq', 'stain0_score > 0.05'])
 
     assert result.exit_code == 0
-    assert os.path.exists(f"{tmp_path}/123-filtered-stain0_score>0.05.tiles.csv")
+    assert os.path.exists(f"{tmp_path}/123-filtered.tiles.csv")
     assert os.path.exists(f"{tmp_path}/metadata.yml")

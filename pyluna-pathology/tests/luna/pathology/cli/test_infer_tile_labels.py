@@ -10,7 +10,7 @@ def test_cli(tmp_path):
     runner = CliRunner()
 
     result = runner.invoke(cli, [
-            'pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/',
+            'pyluna-pathology/tests/luna/pathology/cli/testdata/data/save_tiles/123/',
             '-o', tmp_path,
             '-rn', 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/testhub',
             '-mn', 'test_custom_model',
@@ -21,7 +21,7 @@ def test_cli(tmp_path):
 
     # Default to 2 channels..
     df = pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
-    assert df.shape == (12, 8)
+    assert df.shape == (12, 9)
 
     assert set(['Background', 'Tumor']).intersection(set(df.columns)) == set(['Background', 'Tumor'])
     
@@ -31,7 +31,7 @@ def test_cli_kwargs(tmp_path):
     runner = CliRunner()
 
     result = runner.invoke(cli, [
-            'pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/',
+            'pyluna-pathology/tests/luna/pathology/cli/testdata/data/save_tiles/123/',
             '-o', tmp_path,
             '-rn', 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/testhub',
             '-mn', 'test_custom_model',
@@ -42,14 +42,14 @@ def test_cli_kwargs(tmp_path):
     assert SlideTiles.check(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
 
     df = pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
-    assert df.shape == (12, 16) # 8 more
+    assert df.shape == (12, 17) # 8 more
 
 def test_cli_resnet(tmp_path):
 
     runner = CliRunner()
 
     result = runner.invoke(cli, [
-            'pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/',
+            'pyluna-pathology/tests/luna/pathology/cli/testdata/data/save_tiles/123/',
             '-o', tmp_path,
             '-rn', 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/testhub',
             '-mn', 'test_resnet',
@@ -59,7 +59,7 @@ def test_cli_resnet(tmp_path):
     assert result.exit_code == 0
     assert SlideTiles.check(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
 
-    assert pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv").shape == (12, 1006)
+    assert pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv").shape == (12, 1007)
 
 
 

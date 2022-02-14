@@ -74,7 +74,8 @@ def convert_tiles_to_mask(input_slide_image:str, input_slide_tiles:str, label_co
     # check if tile_col is a valid argument
     logger.info(f"Reading SlideTiles")
     print(label_cols)
-    tile_df = pd.read_csv(f"{input_slide_tiles}")
+    tile_df = pd.read_csv(input_slide_tiles).set_index('address')
+
     if not set(label_cols).issubset(tile_df.columns):
         raise ValueError(f"Invalid label_cols={label_cols}, verify input dataframe")
         
@@ -85,18 +86,15 @@ def convert_tiles_to_mask(input_slide_image:str, input_slide_tiles:str, label_co
     mask_values = {k: v+1 for v, k in enumerate(label_cols)}
     logger.info(f"Mapping label column to mask values: {mask_values}")
 
-    for _, row in tile_df.iterrows():
-        address = row['address']
-        
-        tile_size = int(row['tile_size'])
-        x, y, z = address.split('_')
-        x = int(x.strip('x')) - 1
-        y = int(y.strip('y')) - 1   
+    for address, row in tile_df.iterrows():        
+        x, y, extent = int (row.x_coord), int (row.y_coord), int (row.xy_extent)
         
         value = mask_values[row['mask']]
     
         # permuted rows and columns due to differences in indexing between openslide and skimage/numpy
-        mask_arr[y*tile_size:y*tile_size+tile_size, x*tile_size:x*tile_size+tile_size] = value 
+        mask_arr[y:y+extent, x:x+extent] = value 
+
+        logger.info (f"{address}, {row['mask']}, {value}")
 
     slide_mask = f"{output_dir}/tile_mask.tif"
     logger.info(f"Saving output mask to {slide_mask}")

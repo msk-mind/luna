@@ -49,9 +49,9 @@ from tqdm import tqdm
 
 import openslide
 from luna.pathology.common.utils import get_downscaled_thumbnail, get_scale_factor_at_magnfication, \
-    get_stain_vectors_macenko, pull_stain_channel, get_tile_array
+    get_stain_vectors_macenko, pull_stain_channel, get_tile_array, get_tile_from_slide
 
-from skimage.color   import rgb2gray
+from skimage.color   import rgb2gray, rgba2rgb
 from skimage.filters import threshold_otsu
 import numpy as np
 
@@ -61,7 +61,9 @@ from functools import partial
 from pathlib import Path
 from PIL import Image, ImageEnhance
 
-def compute_otsu_score(row: pd.DataFrame, otsu_threshold: float) -> float:
+
+
+def compute_otsu_score(iterrow: tuple, slide, otsu_threshold: float) -> float:
     """
     Return otsu score for the tile.
 
@@ -69,23 +71,30 @@ def compute_otsu_score(row: pd.DataFrame, otsu_threshold: float) -> float:
         row (pd.DataFrame): row with address and tile_image_file columns
         otsu_threshold (float): otsu threshold value
     """
-    tile = get_tile_array(row)
+    index, row = iterrow
+
+    tile = get_tile_from_slide(row, slide, size=(10, 10))
+
     score = np.mean(rgb2gray(tile) < otsu_threshold)
+
     return score
 
-def compute_purple_score(row: pd.DataFrame) -> float:
+def compute_purple_score(iterrow: tuple, slide) -> float:
     """
     Return purple score for the tile.
 
     Args:
         row (pd.DataFrame): row with address and tile_image_file columns
     """
-    tile = get_tile_array(row)
+    index, row = iterrow
+
+    tile = get_tile_from_slide(row, slide, size=(10, 10))
+
     r, g, b = tile[..., 0], tile[..., 1], tile[..., 2]
     score = np.mean((r > (g + 10)) & (b > (g + 10)))
     return score
 
-def compute_stain_score(row: pd.DataFrame, vectors, channel, stain_threshold:float) -> float:
+def compute_stain_score(iterrow: pd.DataFrame, slide, vectors, channel, stain_threshold:float) -> float:
     """
     Returns stain score for the tile
 
@@ -95,8 +104,10 @@ def compute_stain_score(row: pd.DataFrame, vectors, channel, stain_threshold:flo
         channel (int): stain channel
         stain_threshold (float): stain threshold value
     """
-    tile = get_tile_array(row)
-    tile = np.array(Image.fromarray(tile).resize((10, 10), Image.NEAREST))
+    index, row = iterrow
+
+    tile = get_tile_from_slide(row, slide, size=(10, 10))
+
     stain = pull_stain_channel(tile, vectors=vectors, channel=channel)
     score = np.mean (stain > stain_threshold)
     return score
@@ -116,13 +127,18 @@ def detect_tissue(input_slide_image, input_slide_tiles, requested_magnification,
         dict: metadata about function call
     """
     slide = openslide.OpenSlide(input_slide_image)
+    slide_id = Path(input_slide_image).stem
+    df = pd.read_csv(input_slide_tiles).set_index('address')
 
     logger.info (f"Slide dimensions {slide.dimensions}")
 
     to_mag_scale_factor = get_scale_factor_at_magnfication (slide, requested_magnification=requested_magnification)
 
+    logger.info (f"Thumbnail scale factor: {to_mag_scale_factor}")
+
     # Origonal thumbnail
     sample_arr = get_downscaled_thumbnail(slide, to_mag_scale_factor)
+    logger.info (f"Sample array size: {sample_arr.shape}")
     Image.fromarray(sample_arr).save(output_dir + '/sample_arr.png')
 
     # Enhance to drive stain apart from shadows
@@ -169,30 +185,27 @@ def detect_tissue(input_slide_image, input_slide_tiles, requested_magnification,
     Image.fromarray(stain0_mask).save(output_dir + '/stain0_mask.png')
     Image.fromarray(stain1_mask).save(output_dir + '/stain1_mask.png')
 
-    df = pd.read_csv(input_slide_tiles).set_index('address')
-
     # Be smart about computation time
     with ThreadPoolExecutor(num_cores) as p:
         if 'otsu_score' in filter_query:
             logger.info(f"Starting otsu thresholding, threshold={threshold}")
-            df['otsu_score']   = list (tqdm(p.map(partial(compute_otsu_score, otsu_threshold=threshold), [row for _, row in df.iterrows()]), total=len(df)))
+            df['otsu_score']   = list(tqdm(p.map(partial(compute_otsu_score, slide=slide, otsu_threshold=threshold), df.iterrows()), total=len(df)))
         if 'purple_score' in filter_query:
             logger.info(f"Starting purple scoring")
-            df['purple_score'] = list (tqdm(p.map(partial(compute_purple_score), [row for _, row in df.iterrows()]), total=len(df)))
+            df['purple_score'] = list(tqdm(p.map(partial(compute_purple_score, slide=slide), df.iterrows()), total=len(df)))
         if 'stain0_score' in filter_query:
             logger.info(f"Starting stain thresholding, channel=0, threshold={threshold_stain0}")
-            df['stain0_score'] = list (tqdm(p.map(partial(compute_stain_score, vectors=stain_vectors, channel=0, stain_threshold=threshold_stain0), [row for _, row in df.iterrows()]), total=len(df)))
+            df['stain0_score'] = list(tqdm(p.map(partial(compute_stain_score, slide=slide, vectors=stain_vectors, channel=0, stain_threshold=threshold_stain0), df.iterrows()), total=len(df)))
         if 'stain1_score' in filter_query:
             logger.info(f"Starting stain thresholding, channel=1, threshold={threshold_stain1}")
-            df['stain1_score'] = list (tqdm(p.map(partial(compute_stain_score, vectors=stain_vectors, channel=1, stain_threshold=threshold_stain1), [row for _, row in df.iterrows()]), total=len(df)))
+            df['stain1_score'] = list(tqdm(p.map(partial(compute_stain_score, slide=slide, vectors=stain_vectors, channel=1, stain_threshold=threshold_stain0), df.iterrows()), total=len(df)))
         
     logger.info (f"Filtering based on query: {filter_query}")
     df = df.query(filter_query)
 
     logger.info (df)
 
-    slide_name = Path(input_slide_image).stem
-    output_header_file = f"{output_dir}/{slide_name}-filtered-{filter_query.replace(' ','')}.tiles.csv"
+    output_header_file = f"{output_dir}/{slide_id}-filtered.tiles.csv"
 
     df.to_csv(output_header_file)
 
