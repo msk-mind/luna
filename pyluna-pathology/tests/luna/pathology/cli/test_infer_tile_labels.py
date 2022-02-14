@@ -12,8 +12,7 @@ def test_cli(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "pyluna-pathology/tests/luna/pathology/cli/testdata/data"
-            "/generate_tiles/123/",
+            "pyluna-pathology/tests/luna/pathology/cli/testdata/data/save_tiles/123/",
             "-o",
             tmp_path,
             "-rn",
@@ -30,7 +29,7 @@ def test_cli(tmp_path):
 
     # Default to 2 channels..
     df = pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
-    assert df.shape == (12, 8)
+    assert df.shape == (12, 9)
 
     assert set(["Background", "Tumor"]).intersection(set(df.columns)) == set(
         ["Background", "Tumor"]
@@ -43,8 +42,7 @@ def test_cli_kwargs(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "pyluna-pathology/tests/luna/pathology/cli/testdata/data"
-            "/generate_tiles/123/",
+            "pyluna-pathology/tests/luna/pathology/cli/testdata/data/save_tiles/123/",
             "-o",
             tmp_path,
             "-rn",
@@ -62,7 +60,8 @@ def test_cli_kwargs(tmp_path):
     )
 
     df = pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
-    assert df.shape == (12, 16)  # 8 more
+
+    assert df.shape == (12, 17)  # 8 more
 
 
 def test_cli_resnet(tmp_path):
@@ -71,8 +70,7 @@ def test_cli_resnet(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "pyluna-pathology/tests/luna/pathology/cli/testdata/data"
-            "/generate_tiles/123/",
+            "pyluna-pathology/tests/luna/pathology/cli/testdata/data/save_tiles/123/",
             "-o",
             tmp_path,
             "-rn",
@@ -85,10 +83,12 @@ def test_cli_resnet(tmp_path):
     )
 
     assert result.exit_code == 0
-    assert SlideTiles.check(
-        f"{tmp_path}" f"/tile_scores_and_labels_pytorch_inference.csv"
-    )
+    assert SlideTiles.check(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
 
     assert pd.read_csv(
         f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv"
-    ).shape == (12, 1006)
+    ).shape == (12, 1007)
+
+    assert pd.read_csv(
+        f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv"
+    ).shape == (12, 1007)

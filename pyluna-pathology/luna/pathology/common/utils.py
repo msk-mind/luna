@@ -26,6 +26,9 @@ from skimage.draw import rectangle_perimeter
 from tqdm import tqdm
 import pandas as pd
 
+from skimage.color   import rgb2gray, rgba2rgb
+
+
 palette = sns.color_palette("viridis",as_cmap=True)
 categorial = sns.color_palette("Set1", 8)
 categorical_colors = {}
@@ -278,6 +281,14 @@ def extract_patch_texture_features(image_patch, mask_patch, stain_vectors,
         return stainomics_valid
 
 
+def get_tile_from_slide(tile_row, slide, size=None):
+    x, y, extent = int (tile_row.x_coord), int (tile_row.y_coord), int (tile_row.xy_extent)
+    if size is None:
+        size = (tile_row.tile_size, tile_row.tile_size)
+    tile = np.array(slide.read_region((x, y), 0, (extent, extent)).resize(size, Image.NEAREST))[:, :, :3]
+    return tile
+
+
 def get_tile_arrays(indices: List[int], input_slide_image: str, full_resolution_tile_size: int, tile_size: int) -> np.ndarray:
     """
     Get tile arrays for the tile indices
@@ -303,7 +314,7 @@ def get_tile_array(row: pd.DataFrame) -> np.ndarray:
     Args:
         row (pd.DataFrame): row with address and tile_image_file columns
     """
-    with h5py.File(row.tile_image_file, 'r') as hf:
+    with h5py.File(row.tile_store, 'r') as hf:
         tile = np.array(hf[row.name])
     return tile
 
@@ -442,7 +453,7 @@ def visualize_tiling_scores(df:pd.DataFrame, thumbnail_img:np.ndarray, scale_fac
 
         start = (row.y_coord / scale_factor, row.x_coord / scale_factor)  # flip because OpenSlide uses (column, row), but skimage, uses (row, column)
 
-        rr, cc = rectangle_perimeter(start=start, extent=(row.tile_size/ scale_factor, row.tile_size/ scale_factor), shape=thumbnail_img.shape)
+        rr, cc = rectangle_perimeter(start=start, extent=(row.xy_extent/ scale_factor, row.xy_extent/ scale_factor), shape=thumbnail_img.shape)
         
         # set color based on intensity of value instead of black border (1)
         score = row[score_type_to_visualize]
