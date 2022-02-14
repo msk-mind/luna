@@ -71,7 +71,7 @@ def test_convert_xml_to_mask():
 def test_get_tile_array():
     import pandas as pd
     df = pd.DataFrame({'address':['x4_y6_z20.0'],
-                       'tile_image_file':'pyluna-pathology/tests/luna/pathology/common/testdata/123.tiles.h5'}) \
+                       'tile_store':'pyluna-pathology/tests/luna/pathology/common/testdata/123.tiles.h5'}) \
         .set_index('address')
 
     tile_arr = get_tile_array(df.loc['x4_y6_z20.0'])

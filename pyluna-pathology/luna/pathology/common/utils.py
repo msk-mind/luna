@@ -289,7 +289,6 @@ def get_tile_from_slide(tile_row, slide, size=None):
     return tile
 
 
-
 def get_tile_arrays(indices: List[int], input_slide_image: str, full_resolution_tile_size: int, tile_size: int) -> np.ndarray:
     """
     Get tile arrays for the tile indices
