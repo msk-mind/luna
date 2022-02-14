@@ -23,24 +23,25 @@ _params_ = [('input_slide_image', str), ('input_slide_tiles', str), ('output_dir
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """Rasterize a slide into smaller tiles
+    """Saves tiles to disk
     
     Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
     and the corresponding manifest/header file (tiles.csv) is also generated
 
-    Necessary data for the manifest file are:
-    address, tile_image_file, full_resolution_tile_size, tile_image_size_xy
+    Adds tile_store to manifest for use in HDF5 Image loader
 
     \b
     Inputs:
         input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        input_slide_tiles: path to tile images (.tiles.csv)
+
     Outputs:
         slide_tiles
     \b
     Example:
-        save_tiles 10001.svs
-            -nc 8 -rts 244 -rmg 10 -bx 200
-            -o 10001/tiles
+        save_tiles 10001.svs 10001/tiles
+            -nc 8 -bx 200
+            -o 10001/tile_data
     """
     cli_runner( cli_kwargs, _params_, save_tiles)
 
@@ -58,31 +59,25 @@ from luna.common.utils import grouper
 
 def get_tile_array(iterrows: pd.DataFrame, input_slide_image):
     """
-    Returns stain score for the tile
+    Returns address, tile for a list of tile rows (batched)
 
     Args:
-        row (pd.DataFrame): row with address and tile_image_file columns
-        vectors (np.ndarray): stain vectors
-        channel (int): stain channel
-        stain_threshold (float): stain threshold value
+        iterrows (list[pd.Series]): list of rows with tile metadata
+        input_slide_image: path to openslide compatible image
+
     """
     slide = openslide.OpenSlide(str(input_slide_image))
     return [(index, get_tile_from_slide(row, slide)) for index, row in iterrows]
 
 def save_tiles(input_slide_image, input_slide_tiles, output_dir, num_cores, batch_size):
-    """Rasterize a slide into smaller tiles
+    """Saves tiles to disk
     
     Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
     and the corresponding manifest/header file (tiles.csv) is also generated
 
-    Necessary data for the manifest file are:
-    address, tile_image_file, full_resolution_tile_size, tile_image_size_xy
-
     Args:
         input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        tile_size (int): size of tiles to use (at the requested magnification)
-        num_cores (int): Number of cores to use for CPU parallelization
-        requested_magnification (float): Magnification scale at which to perform computation
+        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
         output_dir (str): output/working directory
         batch_size (int): size in batch dimension to chuck jobs
 

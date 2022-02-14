@@ -68,7 +68,8 @@ def compute_otsu_score(iterrow: tuple, slide, otsu_threshold: float) -> float:
     Return otsu score for the tile.
 
     Args:
-        row (pd.DataFrame): row with address and tile_image_file columns
+        iterrow (pd.Series): row with tile metadata
+        slide (str): path to slide
         otsu_threshold (float): otsu threshold value
     """
     index, row = iterrow
@@ -84,7 +85,8 @@ def compute_purple_score(iterrow: tuple, slide) -> float:
     Return purple score for the tile.
 
     Args:
-        row (pd.DataFrame): row with address and tile_image_file columns
+        iterrow (pd.Series): row with tile metadata
+        slide (str): path to slide
     """
     index, row = iterrow
 
@@ -99,7 +101,8 @@ def compute_stain_score(iterrow: pd.DataFrame, slide, vectors, channel, stain_th
     Returns stain score for the tile
 
     Args:
-        row (pd.DataFrame): row with address and tile_image_file columns
+        iterrow (pd.Series): row with tile metadata
+        slide (str): path to slide
         vectors (np.ndarray): stain vectors
         channel (int): stain channel
         stain_threshold (float): stain threshold value

@@ -30,7 +30,7 @@ _params_ = [('input_slide_tiles', str), ('output_dir', str), ('hub_repo_or_dir',
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """ Run a model with a specific pre-transform for all tiles in a slide (tile_images)
+    """ Run a model with a specific pre-transform for all tiles in a slide (tile_images), requires tiles to be saved (save_tiles) first
 
     \b
     Inputs:

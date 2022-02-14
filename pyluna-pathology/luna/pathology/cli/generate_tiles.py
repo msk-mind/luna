@@ -22,14 +22,11 @@ _params_ = [('input_slide_image', str), ('output_dir', str), ('tile_size', int),
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
 def cli(**cli_kwargs):
-    """Rasterize a slide into smaller tiles
-    
-    Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
-    and the corresponding manifest/header file (tiles.csv) is also generated
+    """Rasterize a slide into smaller tiles, saving tile metadata as rows in a csv file
 
     Necessary data for the manifest file are:
-    address, tile_image_file, full_resolution_tile_size, tile_image_size_xy
-
+    address, x_coord, y_coord, xy_extent, tile_size, tile_units
+    
     \b
     Inputs:
         input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
@@ -38,7 +35,7 @@ def cli(**cli_kwargs):
     \b
     Example:
         generate_tiles 10001.svs
-            -nc 8 -rts 244 -rmg 10 -bx 200
+            -rts 244 -rmg 10
             -o 10001/tiles
     """
     cli_runner( cli_kwargs, _params_, generate_tiles)
