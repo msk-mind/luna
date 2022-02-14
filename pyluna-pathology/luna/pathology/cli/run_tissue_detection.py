@@ -49,9 +49,9 @@ from tqdm import tqdm
 
 import openslide
 from luna.pathology.common.utils import get_downscaled_thumbnail, get_scale_factor_at_magnfication, \
-    get_stain_vectors_macenko, pull_stain_channel, get_tile_array, get_tile_from_slide
+    get_stain_vectors_macenko, pull_stain_channel, get_tile_from_slide
 
-from skimage.color   import rgb2gray, rgba2rgb
+from skimage.color   import rgb2gray
 from skimage.filters import threshold_otsu
 import numpy as np
 

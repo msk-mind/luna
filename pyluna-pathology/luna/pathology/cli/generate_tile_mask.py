@@ -1,21 +1,14 @@
 # General imports
 import os, json, logging, yaml
 from typing import List 
-
 import click
-import numpy as np 
-import openslide
-import pandas as pd 
-from PIL import Image
-import tifffile 
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
-from luna.pathology.schemas import SlideTiles
 
-
-logger = logging.getLogger("convert_tiles_to_mask") 
 init_logger()
+logger = logging.getLogger("convert_tiles_to_mask") 
+
+from luna.common.utils import cli_runner
 
 _params_ = [('input_slide_image', str), ('input_slide_tiles', str), ('output_dir', str), ('label_cols', List[str])]
 
@@ -46,6 +39,12 @@ def cli(**cli_kwargs):
     """
     cli_runner( cli_kwargs, _params_, convert_tiles_to_mask)
 
+import numpy as np 
+import openslide
+import pandas as pd 
+import tifffile 
+
+from luna.pathology.schemas import SlideTiles
 
 def convert_tiles_to_mask(input_slide_image:str, input_slide_tiles:str, label_cols:List[str], output_dir:str):
     """ Converts cateogrial tile labels to a slide image mask. This mask can be used for feature extraction and spatial analysis. 

@@ -53,7 +53,6 @@ def cli(**cli_kwargs):
 
 
 import torch
-from torch import nn
 from torch.utils.data import DataLoader
 from luna.pathology.common.ml import HD5FDataset, TorchTransformModel, post_transform_to_2d
 
