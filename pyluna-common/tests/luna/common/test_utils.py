@@ -209,6 +209,8 @@ def test_cli_runner_reruns(tmp_path):
     _params_ = [("input_text_file", str), ("output_dir", str), ("message", str)]
     cli_runner(cli_kwargs, _params_, simple_transform)
 
+    print(os.listdir(tmp_path))
+
     cli_kwargs_rerun = {
         "method_param_path": str(tmp_path) + "/metadata.yml",
         "output_dir": str(tmp_path) + "rerun",

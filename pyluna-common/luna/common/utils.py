@@ -341,8 +341,8 @@ def cli_runner(
     """
     logger.info(f"Running {cli_function} with {cli_kwargs}")
     kwargs = {}
-    if "output_dir" not in cli_kwargs.keys():
-        raise RuntimeError("CLI Runners assume an output directory")
+    # if "output_dir" not in cli_kwargs.keys():
+    #    raise RuntimeError("CLI Runners assume an output directory")
 
     # Get params from param file
     if cli_kwargs.get("method_param_path"):
@@ -359,11 +359,12 @@ def cli_runner(
 
     kwargs = validate_params(kwargs, cli_params)
 
+    if "output_dir" in kwargs:
+        output_dir = kwargs["output_dir"]
+        os.makedirs(output_dir, exist_ok=True)
+
     # Expand implied inputs
     kwargs = expand_inputs(kwargs)
-
-    output_dir = kwargs["output_dir"]
-    os.makedirs(output_dir, exist_ok=True)
 
     # Nice little log break
     print(
@@ -379,9 +380,10 @@ def cli_runner(
 
     kwargs.update(result)
 
-    with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
-        yaml.dump(kwargs, fp)
-        # json.dump(kwargs, fp, indent=4, sort_keys=True)
+    if "output_dir" in kwargs:
+        with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
+            yaml.dump(kwargs, fp)
+            # json.dump(kwargs, fp, indent=4, sort_keys=True)
 
     logger.info("Done.")
 

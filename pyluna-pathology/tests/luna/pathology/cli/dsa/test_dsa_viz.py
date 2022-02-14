@@ -2,10 +2,7 @@ from click.testing import CliRunner
 import os
 from pathlib import Path
 
-from girder_client import GirderClient
-
 from luna.pathology.cli.dsa.dsa_viz import cli
-from luna.pathology.cli.dsa.dsa_upload import cli as upload
 
 
 def verify_cleanup(output_file):
@@ -152,59 +149,3 @@ def test_qupath_polygon():
         "/Qupath_Pixel_Classifier_Polygons_123.json"
     )
     verify_cleanup(output_file)
-
-
-def test_upload(monkeypatch):
-    def mock_get(*args, **kwargs):
-
-        if args[1] == "/system/check":
-            return {}
-
-        if args[1] == "/collection?text=test_collection":
-            return [
-                {"name": "test_collection", "_id": "uuid", "_modelType": "collection"}
-            ]
-
-        if args[1] == "/item?text=123":
-            return [
-                {
-                    "annotation": {"name": "123.svs"},
-                    "_id": "uuid",
-                    "_modelType": "annotation",
-                }
-            ]
-
-        pass
-
-    def mock_put(*args, **kwargs):
-
-        if args == "/annotation?itemId=None":
-            return {}
-
-        pass
-
-    def mock_auth(*args, **kwargs):
-
-        if args[1] == "myuser" and args[2] == "mypassword":
-            return 0  # success
-        else:
-            return 1  # Access Error
-
-    monkeypatch.setattr(GirderClient, "get", mock_get)
-    monkeypatch.setattr(GirderClient, "authenticate", mock_auth)
-    monkeypatch.setattr(GirderClient, "put", mock_put)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        upload,
-        [
-            "-c",
-            "pyluna-pathology/tests/luna/pathology/cli/dsa/testdata/"
-            + "dsa_config.yml",
-            "-d",
-            "pyluna-pathology/tests/luna/pathology/cli/dsa/testdata"
-            "/bitmask_polygon_upload.yml",
-        ],
-    )
-
-    assert result.exit_code == 0
