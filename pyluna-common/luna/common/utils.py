@@ -443,9 +443,9 @@ def apply_csv_filter(input_paths, subset_csv=None):
     )
 
     if filter_logic == "include":
-        out = df_matches.loc[(df_matches["include"] is True)]
+        out = df_matches.loc[(df_matches["include"] == 1)]
     if filter_logic == "exclude":
-        out = df_matches.loc[~(df_matches["exclude"] is True)]
+        out = df_matches.loc[df_matches["exclude"] == 1]
 
     return list(out.reset_index()["path"])
 
