@@ -13,13 +13,10 @@ def test_cli(tmp_path):
         'pyluna-pathology/tests/luna/pathology/cli/testdata/data/123.svs',
         '-o', tmp_path,
         '-rts', 256,
-        '-rmg', 10,
-        '-nc', 1,
-        '-bx', 1])
+        '-rmg', 10])
 
     assert result.exit_code == 0
     assert os.path.exists(f"{tmp_path}/123.tiles.csv")
-    assert os.path.exists(f"{tmp_path}/123.tiles.h5")
 
     assert SlideTiles.check(f"{tmp_path}/123.tiles.csv")
 
@@ -31,8 +28,6 @@ def test_cli_bad_mag(tmp_path):
         'pyluna-pathology/tests/luna/pathology/cli/testdata/data/123.svs',
         '-o', tmp_path,
         '-rts', 256,
-        '-rmg', 3,
-        '-nc', 1,
-        '-bx', 1])
+        '-rmg', 3])
 
     assert result.exit_code == 1

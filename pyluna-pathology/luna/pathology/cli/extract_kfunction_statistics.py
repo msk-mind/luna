@@ -104,8 +104,10 @@ def extract_kfunction(input_cell_objects, tile_size, intensity_label, tile_strid
         logger.info("Waiting for all tasks to complete...")
         
     df_stats = pd.DataFrame({'address': l_address, 'x_coord':l_x_coord, 'y_coord':l_y_coord, 'results': l_k_function}).set_index('address')
-    df_stats.loc[:, 'tile_size'] = tile_size
-    
+    df_stats.loc[:, 'xy_extent']  = tile_size 
+    df_stats.loc[:, 'tile_size']  = tile_size # Same, 1 to 1
+    df_stats.loc[:, 'tile_units'] = 'um' # Same, 1 to 1
+
     df_stats[feature_name]            = df_stats['results'].apply(lambda x: x.result()['intensity'])
     df_stats[feature_name + '_norm']  = df_stats[feature_name]  / df_stats[feature_name].max()
 
