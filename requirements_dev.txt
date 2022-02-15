@@ -72,5 +72,3 @@ dicom2nifti
 h5py
 spams
 docker
-histomicstk
-
