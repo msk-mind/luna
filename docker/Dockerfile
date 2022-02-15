@@ -8,5 +8,5 @@ ADD requirements_dev.txt .
 # spams install error with 1.22.x
 RUN pip --no-cache-dir install --upgrade pip && \
     pip --no-cache-dir install numpy==1.21.2 && \
-    pip --no-cache-dir install -r requirements_dev.txt
+    pip --no-cache-dir install -r requirements_dev.txt --use-deprecated=legacy-resolver
 

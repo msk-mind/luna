@@ -73,5 +73,4 @@ h5py
 spams
 docker
 histomicstk
-girder-slicer-cli-web==1.2.5 # Prevent dependency checking
 
