@@ -10,7 +10,7 @@ RUN pip --no-cache-dir install --upgrade pip && \
     pip --no-cache-dir install numpy==1.21.2 && \
     pip --no-cache-dir install -r requirements_dev.txt
    
-RUN pip --no-cache-dir install histomicstk
+RUN pip --no-cache-dir install histomicstk --find-links https://girder.github.io/large_image_wheels
 
    
 
