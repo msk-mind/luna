@@ -2,7 +2,7 @@ from click.testing import CliRunner
 import os
 from pathlib import Path
 
-from luna.pathology.cli.dsa.dsa_viz import cli
+from luna.pathology.cli.dsa_viz import cli
 
 
 def verify_cleanup(output_file):
@@ -19,14 +19,14 @@ def test_stardist_polygon():
         [
             "stardist-polygon",
             "-m",
-            "pyluna-pathology/tests/luna/pathology/cli/dsa/testdata"
+            "pyluna-pathology/tests/luna/pathology/cli/testdata"
             "/stardist_polygon.yml",
         ],
     )
 
     assert result.exit_code == 0
     output_file = (
-        "pyluna-pathology/tests/luna/pathology/cli/dsa/testouts"
+        "pyluna-pathology/tests/luna/pathology/cli/testouts"
         "/StarDist_Segmentations_with_Lymphocyte_Classifications_123.json"
     )
     verify_cleanup(output_file)
@@ -39,15 +39,14 @@ def test_stardist_cell():
         [
             "stardist-cell",
             "-m",
-            "pyluna-pathology/tests/luna/pathology/cli/dsa/testdata"
-            "/stardist_cell.yml",
+            "pyluna-pathology/tests/luna/pathology/cli/testdata" "/stardist_cell.yml",
         ],
     )
 
     assert result.exit_code == 0
 
     output_file = (
-        "pyluna-pathology/tests/luna/pathology/cli/dsa/testouts"
+        "pyluna-pathology/tests/luna/pathology/cli/testouts"
         "/Points_of_Classsified_StarDist_Cells_123.json"
     )
     verify_cleanup(output_file)
@@ -60,7 +59,7 @@ def test_regional_polygon():
         [
             "regional-polygon",
             "-m",
-            "pyluna-pathology/tests/luna/pathology/cli/dsa/testdata"
+            "pyluna-pathology/tests/luna/pathology/cli/testdata"
             "/regional_polygon.yml",
         ],
     )
@@ -68,7 +67,7 @@ def test_regional_polygon():
     assert result.exit_code == 0
 
     output_file = (
-        "pyluna-pathology/tests/luna/pathology/cli/dsa/testouts"
+        "pyluna-pathology/tests/luna/pathology/cli/testouts"
         "/Slideviewer_Regional_Annotations_123.json"
     )
     verify_cleanup(output_file)
@@ -81,8 +80,7 @@ def test_bitmask_polygon_invalid():
         [
             "bitmask-polygon",
             "-m",
-            "pyluna-pathology/tests/luna/pathology/cli/dsa/testdata"
-            "/bitmask_polygon.yml",
+            "pyluna-pathology/tests/luna/pathology/cli/testdata" "/bitmask_polygon.yml",
             "-i",
             {"Tumor": "non/existing/path/to/png.png"},
         ],
@@ -98,7 +96,7 @@ def test_bitmask_polygon():
         [
             "bitmask-polygon",
             "-m",
-            "pyluna-pathology/tests/luna/pathology/cli/dsa/testdata"
+            "pyluna-pathology/tests/luna/pathology/cli/testdata"
             "/bitmask_polygon.yml",
         ],
     )
@@ -106,7 +104,7 @@ def test_bitmask_polygon():
     assert result.exit_code == 0
 
     output_file = (
-        "pyluna-pathology/tests/luna/pathology/cli/dsa/testouts"
+        "pyluna-pathology/tests/luna/pathology/cli/testouts"
         "/Full_Res_Tile-Based_Pixel_Classifier_Inference_123.json"
     )
     verify_cleanup(output_file)
@@ -120,15 +118,13 @@ def test_heatmap():
         [
             "heatmap",
             "-m",
-            "pyluna-pathology/tests/luna/pathology/cli/dsa/testdata"
-            "/heatmap_config.yml",
+            "pyluna-pathology/tests/luna/pathology/cli/testdata" "/heatmap_config.yml",
         ],
     )
 
     assert result.exit_code == 0
     output_file = (
-        "pyluna-pathology/tests/luna/pathology/cli/dsa/testouts"
-        "/otsu_score_test_123.json"
+        "pyluna-pathology/tests/luna/pathology/cli/testouts" "/otsu_score_test_123.json"
     )
     verify_cleanup(output_file)
 
@@ -140,14 +136,13 @@ def test_qupath_polygon():
         [
             "qupath-polygon",
             "-m",
-            "pyluna-pathology/tests/luna/pathology/cli/dsa/testdata"
-            "/qupath_polygon.yml",
+            "pyluna-pathology/tests/luna/pathology/cli/testdata" "/qupath_polygon.yml",
         ],
     )
 
     assert result.exit_code == 0
     output_file = (
-        "pyluna-pathology/tests/luna/pathology/cli/dsa/testouts"
+        "pyluna-pathology/tests/luna/pathology/cli/testouts"
         "/Qupath_Pixel_Classifier_Polygons_123.json"
     )
     verify_cleanup(output_file)

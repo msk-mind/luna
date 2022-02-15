@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 # Distinct types that are actually the same (effectively)
 TYPE_ALIASES = {"itk_geometry": "itk_volume"}
 
+# Sensitive cli inputs
+MASK_KEYS = ["username", "user", "password", "pw"]
+
 
 def to_sql_field(s):
     filter1 = s.replace(".", "_").replace(" ", "_")
@@ -379,6 +382,10 @@ def cli_runner(
         result = cli_function(**kwargs)
 
     kwargs.update(result)
+
+    # filter out kwargs with sensitive data
+    for key in MASK_KEYS:
+        kwargs.pop(key, None)
 
     if "output_dir" in kwargs:
         with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:

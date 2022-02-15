@@ -154,7 +154,7 @@ def test_expand_inputs_implicit_but_missing():
 
 
 def test_cli_runner(tmp_path):
-    def simple_transform(input_text_file, message, output_dir):
+    def simple_transform(input_text_file, message, output_dir, username):
         with open(input_text_file, "r") as fp:
             old_message = fp.read()
 
@@ -172,9 +172,15 @@ def test_cli_runner(tmp_path):
         "input_text_file": "pyluna-common/tests/luna/common/testdata/simple_output_directory/result.txt",
         "output_dir": tmp_path,
         "message": "Hello to you too!",
+        "username": "my-user",
     }
 
-    _params_ = [("input_text_file", str), ("output_dir", str), ("message", str)]
+    _params_ = [
+        ("input_text_file", str),
+        ("output_dir", str),
+        ("message", str),
+        ("username", str),
+    ]
     cli_runner(cli_kwargs, _params_, simple_transform)
 
     assert os.path.exists(str(tmp_path) + "/metadata.yml")
@@ -208,8 +214,6 @@ def test_cli_runner_reruns(tmp_path):
 
     _params_ = [("input_text_file", str), ("output_dir", str), ("message", str)]
     cli_runner(cli_kwargs, _params_, simple_transform)
-
-    print(os.listdir(tmp_path))
 
     cli_kwargs_rerun = {
         "method_param_path": str(tmp_path) + "/metadata.yml",

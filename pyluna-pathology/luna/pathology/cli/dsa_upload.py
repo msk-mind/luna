@@ -1,6 +1,5 @@
 import click
 import json
-import os
 import logging
 
 import girder_client
@@ -38,6 +37,18 @@ logger = logging.getLogger("dsa_upload")
     required=False,
 )
 @click.option(
+    "-u",
+    "--username",
+    required=False,
+    help="DSA username, can be inferred from DSA_USERNAME",
+)
+@click.option(
+    "-p",
+    "--password",
+    required=False,
+    help="DSA password, should be inferred from DSA_PASSWORD",
+)
+@click.option(
     "-m",
     "--method_param_path",
     required=False,
@@ -60,12 +71,19 @@ def cli(**cli_kwargs):
         ("collection_name", str),
         ("image_filename", str),
         ("dsa_endpoint", str),
+        ("username", str),
+        ("password", str),
     ]
     cli_runner(cli_kwargs, params, upload_annotation_to_dsa)
 
 
 def upload_annotation_to_dsa(
-    annotation_filepath, image_filename, collection_name, dsa_endpoint
+    annotation_filepath,
+    image_filename,
+    collection_name,
+    dsa_endpoint,
+    username,
+    password,
 ):
     """Upload annotation to DSA
 
@@ -80,19 +98,13 @@ def upload_annotation_to_dsa(
     Returns:
         dict: item_uuid. None if item doesn't exist
     """
-    if os.environ["DSA_USERNAME"] is None or os.environ["DSA_PASSWORD"] is None:
-        raise RuntimeError(
-            "Please set DSA_USERNAME, DSA_PASSWORD environment " "variable"
-        )
     try:
         gc = girder_client.GirderClient(apiUrl=dsa_endpoint)
-        gc.authenticate(os.environ["DSA_USERNAME"], os.environ["DSA_PASSWORD"])
+        gc.authenticate(username, password)
 
         # check DSA connection
         system_check(gc)
-    except KeyError as exc:
-        logger.error(exc)
-        raise KeyError("Set DSA_USERNAME, DSA_PASSWORD environment" " variables")
+
     except Exception as exc:
         logger.error(exc)
         raise RuntimeError("Error connecting to DSA API")
@@ -111,4 +123,4 @@ def upload_annotation_to_dsa(
 
 
 if __name__ == "__main__":
-    cli()
+    cli(auto_envvar_prefix="DSA")

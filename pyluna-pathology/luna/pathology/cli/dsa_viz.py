@@ -16,7 +16,6 @@ from luna.pathology.cli.dsa.utils import (
     vectorize_np_array_bitmask_by_pixel_value,
 )
 from luna.common.utils import cli_runner
-from luna.common.CodeTimer import CodeTimer
 from luna.common.custom_logger import init_logger
 
 init_logger()
@@ -185,44 +184,43 @@ def stardist_polygon_main(
     Returns:
         dict: annotation file path
     """
-    with CodeTimer(logger, f"Building annotation for image: {image_filename}"):
-        # TODO: find better fix
-        # can't handle NaNs for vectors, do this to replace all NaNs
-        # for now: https://stackoverflow.com/questions/17140886/how-to-search
-        # -and-replace-text-in-a-file
-        with open(input, "r") as input_file:
-            filedata = input_file.read()
-        newdata = filedata.replace("NaN", "-1")
+    # TODO: find better fix
+    # can't handle NaNs for vectors, do this to replace all NaNs
+    # for now: https://stackoverflow.com/questions/17140886/how-to-search
+    # -and-replace-text-in-a-file
+    with open(input, "r") as input_file:
+        filedata = input_file.read()
+    newdata = filedata.replace("NaN", "-1")
 
-        elements = []
-        for cell in ijson.items(newdata, "item"):
-            label_name = cell["properties"]["classification"]["name"]
-            coord_list = list(cell["geometry"]["coordinates"][0])
+    elements = []
+    for cell in ijson.items(newdata, "item"):
+        label_name = cell["properties"]["classification"]["name"]
+        coord_list = list(cell["geometry"]["coordinates"][0])
 
-            # uneven nested list when iterative parsing of json --> make sure
-            # to get the list of coords
-            # this can come as mixed types as well, so type checking needed
-            while (
-                isinstance(coord_list, list)
-                and isinstance(coord_list[0], list)
-                and not isinstance(coord_list[0][0], (int, float, Decimal))
-            ):
-                coord_list = coord_list[0]
+        # uneven nested list when iterative parsing of json --> make sure
+        # to get the list of coords
+        # this can come as mixed types as well, so type checking needed
+        while (
+            isinstance(coord_list, list)
+            and isinstance(coord_list[0], list)
+            and not isinstance(coord_list[0][0], (int, float, Decimal))
+        ):
+            coord_list = coord_list[0]
 
-            coords = [[float(coord[0]), float(coord[1]), 0] for coord in coord_list]
-            element = copy.deepcopy(base_dsa_polygon_element)
+        coords = [[float(coord[0]), float(coord[1]), 0] for coord in coord_list]
+        element = copy.deepcopy(base_dsa_polygon_element)
 
-            element["label"]["value"] = label_name
-            element["fillColor"] = fill_colors
-            element["lineColor"] = line_colors
-            element["points"] = coords
+        element["label"]["value"] = label_name
+        element["fillColor"] = fill_colors
+        element["lineColor"] = line_colors
+        element["points"] = coords
 
-            elements.append(element)
+        elements.append(element)
 
-        annotatation_filepath = save_dsa_annotation(
-            base_dsa_annotation, elements, annotation_name, output_dir, image_filename
-        )
-        return {"dsa_annotaiton": annotatation_filepath}
+    annotatation_filepath = save_dsa_annotation(
+        base_dsa_annotation, elements, annotation_name, output_dir, image_filename
+    )
+    return {"dsa_annotaiton": annotatation_filepath}
 
 
 @click.option(
@@ -306,50 +304,49 @@ def stardist_cell_main(
     Returns:
         dict: annotation file path
     """
-    with CodeTimer(logger, f"Building annotation for image: {image_filename}"):
-        # qupath_stardist_cell_tsv can be quite large to load all columns
-        # into memory (contains many feature columns),
-        # so only load baisc columns that are needed for now
-        cols_to_load = [
-            "Name",
-            "Class",
-            "ROI",
-            "Centroid X µm",
-            "Centroid Y µm",
-            "Parent",
-        ]
-        df = pd.read_csv(input, sep="\t", usecols=cols_to_load)
+    # qupath_stardist_cell_tsv can be quite large to load all columns
+    # into memory (contains many feature columns),
+    # so only load baisc columns that are needed for now
+    cols_to_load = [
+        "Name",
+        "Class",
+        "ROI",
+        "Centroid X µm",
+        "Centroid Y µm",
+        "Parent",
+    ]
+    df = pd.read_csv(input, sep="\t", usecols=cols_to_load)
 
-        # do some preprocessing on the tsv -- e.g. stardist sometimes finds
-        # cells in glass
-        df = df[df["Parent"] != "Glass"]
-        # populate json elements
-        elements = []
-        for idx, row in df.iterrows():
-            elements_entry = copy.deepcopy(base_dsa_point_element)
+    # do some preprocessing on the tsv -- e.g. stardist sometimes finds
+    # cells in glass
+    df = df[df["Parent"] != "Glass"]
+    # populate json elements
+    elements = []
+    for idx, row in df.iterrows():
+        elements_entry = copy.deepcopy(base_dsa_point_element)
 
-            # x,y coordinates from stardist are in microns so divide by
-            # QUPATH_MAG_FACTOR = 0.5011 (exact 20x mag factor used by qupath
-            # specifically)
-            x = row["Centroid X µm"] / QUPATH_MAG_FACTOR
-            y = row["Centroid Y µm"] / QUPATH_MAG_FACTOR
+        # x,y coordinates from stardist are in microns so divide by
+        # QUPATH_MAG_FACTOR = 0.5011 (exact 20x mag factor used by qupath
+        # specifically)
+        x = row["Centroid X µm"] / QUPATH_MAG_FACTOR
+        y = row["Centroid Y µm"] / QUPATH_MAG_FACTOR
 
-            # Get cell label and add to element
-            label_name = row["Class"]
-            elements_entry["label"]["value"] = label_name
-            elements_entry["fillColor"] = fill_colors
-            elements_entry["lineColor"] = line_colors
+        # Get cell label and add to element
+        label_name = row["Class"]
+        elements_entry["label"]["value"] = label_name
+        elements_entry["fillColor"] = fill_colors
+        elements_entry["lineColor"] = line_colors
 
-            # add centroid coordinate of cell to element
-            center = [x, y, 0]
-            elements_entry["center"] = center
+        # add centroid coordinate of cell to element
+        center = [x, y, 0]
+        elements_entry["center"] = center
 
-            elements.append(elements_entry)
+        elements.append(elements_entry)
 
-        annotatation_filepath = save_dsa_annotation(
-            base_dsa_annotation, elements, annotation_name, output_dir, image_filename
-        )
-        return {"dsa_annotation": annotatation_filepath}
+    annotatation_filepath = save_dsa_annotation(
+        base_dsa_annotation, elements, annotation_name, output_dir, image_filename
+    )
+    return {"dsa_annotation": annotatation_filepath}
 
 
 @click.option(
@@ -428,36 +425,35 @@ def regional_polygon_main(
     Returns:
         dict: annotation file path
     """
-    with CodeTimer(logger, f"Building annotation for image: {image_filename}"):
-        with open(input) as regional_file:
-            regional_annotation = geojson.loads(geojson.load(regional_file))
+    with open(input) as regional_file:
+        regional_annotation = geojson.loads(geojson.load(regional_file))
 
-        elements = []
-        for annot in regional_annotation["features"]:
+    elements = []
+    for annot in regional_annotation["features"]:
 
-            # get label name and add to element
-            element = copy.deepcopy(base_dsa_polygon_element)
-            label_name = annot.properties["label_name"]
-            element["label"]["value"] = label_name
-            element["fillColor"] = fill_colors
-            element["lineColor"] = line_colors
+        # get label name and add to element
+        element = copy.deepcopy(base_dsa_polygon_element)
+        label_name = annot.properties["label_name"]
+        element["label"]["value"] = label_name
+        element["fillColor"] = fill_colors
+        element["lineColor"] = line_colors
 
-            # add coordinates
-            coords = annot["geometry"]["coordinates"]
-            # if coordinates have extra nesting, set coordinates to 2d array.
-            coords_arr = np.array(coords)
-            if coords_arr.ndim == 3 and coords_arr.shape[0] == 1:
-                coords = np.squeeze(coords_arr).tolist()
+        # add coordinates
+        coords = annot["geometry"]["coordinates"]
+        # if coordinates have extra nesting, set coordinates to 2d array.
+        coords_arr = np.array(coords)
+        if coords_arr.ndim == 3 and coords_arr.shape[0] == 1:
+            coords = np.squeeze(coords_arr).tolist()
 
-            for c in coords:
-                c.append(0)
-            element["points"] = coords
-            elements.append(element)
+        for c in coords:
+            c.append(0)
+        element["points"] = coords
+        elements.append(element)
 
-        annotatation_filepath = save_dsa_annotation(
-            base_dsa_annotation, elements, annotation_name, output_dir, image_filename
-        )
-        return {"dsa_annotation": annotatation_filepath}
+    annotatation_filepath = save_dsa_annotation(
+        base_dsa_annotation, elements, annotation_name, output_dir, image_filename
+    )
+    return {"dsa_annotation": annotatation_filepath}
 
 
 @click.option(
@@ -551,52 +547,49 @@ def qupath_polygon_main(
     Returns:
         dict: annotation file path
     """
-    with CodeTimer(logger, f"Building annotation for image: {image_filename}"):
-        with open(input) as regional_file:
-            pixel_clf_polygons = geojson.load(regional_file)
+    with open(input) as regional_file:
+        pixel_clf_polygons = geojson.load(regional_file)
 
-        elements = []
-        for polygon in pixel_clf_polygons:
+    elements = []
+    for polygon in pixel_clf_polygons:
 
-            props = polygon.properties
-            if "classification" not in props:
-                continue
+        props = polygon.properties
+        if "classification" not in props:
+            continue
 
-            label_name = polygon.properties["classification"]["name"]
-            if label_name in classes_to_include:
+        label_name = polygon.properties["classification"]["name"]
+        if label_name in classes_to_include:
 
-                element = copy.deepcopy(base_dsa_polygon_element)
-                element["label"]["value"] = label_name
-                element["fillColor"] = fill_colors
-                element["lineColor"] = line_colors
+            element = copy.deepcopy(base_dsa_polygon_element)
+            element["label"]["value"] = label_name
+            element["fillColor"] = fill_colors
+            element["lineColor"] = line_colors
 
-                coords = polygon["geometry"]["coordinates"]
+            coords = polygon["geometry"]["coordinates"]
 
-                # uneven nesting of connected components
-                for coord in coords:
-                    if isinstance(coord[0], list) and isinstance(
-                        coord[0][0], (int, float)
-                    ):
-                        for c in coord:
+            # uneven nesting of connected components
+            for coord in coords:
+                if isinstance(coord[0], list) and isinstance(coord[0][0], (int, float)):
+                    for c in coord:
+                        c.append(0)
+                    element["points"] = coord
+                    elements.append(element)
+                else:
+                    for i in range(len(coord)):
+                        connected_component_coords = coord[i]
+                        connected_component_element = copy.deepcopy(element)
+                        for c in connected_component_coords:
                             c.append(0)
-                        element["points"] = coord
-                        elements.append(element)
-                    else:
-                        for i in range(len(coord)):
-                            connected_component_coords = coord[i]
-                            connected_component_element = copy.deepcopy(element)
-                            for c in connected_component_coords:
-                                c.append(0)
 
-                            connected_component_element[
-                                "points"
-                            ] = connected_component_coords
-                            elements.append(connected_component_element)
+                        connected_component_element[
+                            "points"
+                        ] = connected_component_coords
+                        elements.append(connected_component_element)
 
-        annotatation_filepath = save_dsa_annotation(
-            base_dsa_annotation, elements, annotation_name, output_dir, image_filename
-        )
-        return {"dsa_annotation": annotatation_filepath}
+    annotatation_filepath = save_dsa_annotation(
+        base_dsa_annotation, elements, annotation_name, output_dir, image_filename
+    )
+    return {"dsa_annotation": annotatation_filepath}
 
 
 @click.option(
@@ -676,31 +669,30 @@ def bitmask_polygon_main(
     if not check_filepaths_valid(input.values()):
         raise ValueError("No valid PNG masks found. Exiting..")
 
-    with CodeTimer(logger, f"Building annotation for image: {image_filename}"):
-        elements = []
-        for bitmask_label, bitmask_filepath in input.items():
-            Image.MAX_IMAGE_PIXELS = 5000000000
-            annotation = Image.open(bitmask_filepath)
-            bitmask_np = np.array(annotation)
-            simplified_contours = vectorize_np_array_bitmask_by_pixel_value(bitmask_np)
+    elements = []
+    for bitmask_label, bitmask_filepath in input.items():
+        Image.MAX_IMAGE_PIXELS = 5000000000
+        annotation = Image.open(bitmask_filepath)
+        bitmask_np = np.array(annotation)
+        simplified_contours = vectorize_np_array_bitmask_by_pixel_value(bitmask_np)
 
-            for n, contour in enumerate(simplified_contours):
-                element = copy.deepcopy(base_dsa_polygon_element)
-                label_name = bitmask_label
-                element["label"]["value"] = label_name
-                element["fillColor"] = fill_colors
-                element["lineColor"] = line_colors
+        for n, contour in enumerate(simplified_contours):
+            element = copy.deepcopy(base_dsa_polygon_element)
+            label_name = bitmask_label
+            element["label"]["value"] = label_name
+            element["fillColor"] = fill_colors
+            element["lineColor"] = line_colors
 
-                coords = contour.tolist()
-                for c in coords:
-                    c.append(0)
-                element["points"] = coords
-                elements.append(element)
+            coords = contour.tolist()
+            for c in coords:
+                c.append(0)
+            element["points"] = coords
+            elements.append(element)
 
-        annotatation_filepath = save_dsa_annotation(
-            base_dsa_annotation, elements, annotation_name, output_dir, image_filename
-        )
-        return {"dsa_annotation": annotatation_filepath}
+    annotatation_filepath = save_dsa_annotation(
+        base_dsa_annotation, elements, annotation_name, output_dir, image_filename
+    )
+    return {"dsa_annotation": annotatation_filepath}
 
 
 @click.option(
@@ -784,45 +776,44 @@ def heatmap_main(
     Returns:
         string: annotation file path. None if error in writing the file.
     """
-    with CodeTimer(logger, f"Building annotation for image: {image_filename}"):
-        df = pd.read_csv(input)
-        scaled_tile_size = int(tile_size * int(scale_factor if scale_factor else 1))
+    df = pd.read_csv(input)
+    scaled_tile_size = int(tile_size * int(scale_factor if scale_factor else 1))
 
-        elements = []
-        for _, row in df.iterrows():
-            element = copy.deepcopy(base_dsa_polygon_element)
-            label_value = row[column]
-            element["label"]["value"] = str(label_value)
+    elements = []
+    for _, row in df.iterrows():
+        element = copy.deepcopy(base_dsa_polygon_element)
+        label_value = row[column]
+        element["label"]["value"] = str(label_value)
 
-            # get label specific color and add to elements
-            line_colors, fill_colors = get_continuous_color(label_value)
-            element["fillColor"] = fill_colors
-            element["lineColor"] = line_colors
+        # get label specific color and add to elements
+        line_colors, fill_colors = get_continuous_color(label_value)
+        element["fillColor"] = fill_colors
+        element["lineColor"] = line_colors
 
-            # convert coordinate string to tuple using eval
-            x, y = eval(row["coordinates"])
+        # convert coordinate string to tuple using eval
+        x, y = eval(row["coordinates"])
 
-            pixel_x = x * scaled_tile_size
-            pixel_y = y * scaled_tile_size
+        pixel_x = x * scaled_tile_size
+        pixel_y = y * scaled_tile_size
 
-            coords = [
-                [pixel_x, pixel_y],
-                [pixel_x + scaled_tile_size, pixel_y],
-                [pixel_x + scaled_tile_size, pixel_y + scaled_tile_size],
-                [pixel_x, pixel_y + scaled_tile_size],
-                [pixel_x, pixel_y],
-            ]
-            for c in coords:
-                c.append(0)
-            element["points"] = coords
-            elements.append(element)
+        coords = [
+            [pixel_x, pixel_y],
+            [pixel_x + scaled_tile_size, pixel_y],
+            [pixel_x + scaled_tile_size, pixel_y + scaled_tile_size],
+            [pixel_x, pixel_y + scaled_tile_size],
+            [pixel_x, pixel_y],
+        ]
+        for c in coords:
+            c.append(0)
+        element["points"] = coords
+        elements.append(element)
 
-        annotation_name = column + "_" + annotation_name
+    annotation_name = column + "_" + annotation_name
 
-        annotatation_filepath = save_dsa_annotation(
-            base_dsa_annotation, elements, annotation_name, output_dir, image_filename
-        )
-        return {"dsa_annotation": annotatation_filepath}
+    annotatation_filepath = save_dsa_annotation(
+        base_dsa_annotation, elements, annotation_name, output_dir, image_filename
+    )
+    return {"dsa_annotation": annotatation_filepath}
 
 
 if __name__ == "__main__":
