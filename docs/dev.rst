@@ -33,14 +33,12 @@ Download the dependencies with::
 
 For development and testing purposes, add the subpackages to your `PYTHONPATH`::
 
-    export PYTHONPATH=.:src:pyluna-common:pyluna-radiology:pyluna-pathology
+    export PYTHONPATH=.:pyluna-core:pyluna-common:pyluna-radiology:pyluna-pathology
 
-OR use ``set_local.sh`` to setup your python paths and ``LUNA_HOME`` config. 
+OR use``setup_local.sh`` to setup your python paths and ``LUNA_HOME`` config::
 
-To run tests, specify the subpackage you want to test. For example, this command
-will run all tests under ``pyluna-common``::
-    
-    pytest pyluna-common
+    source setup_local.sh
+
 
 Development with Docker
 -----------------------
@@ -77,11 +75,7 @@ In order to generate the documentation::
     # clean _build directory 
     make clean
 
-
-Contributing
-============
-
-If you're interested in contributing to Luna 
+.. mdinclude:: ../CONTRIBUTING.md
 
 Technical Architecture
 ======================
