@@ -1,0 +1,167 @@
+# General imports
+import os
+import logging
+from typing import List
+import click
+import pandas as pd
+import tifffile
+
+from skimage import measure
+
+from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
+
+init_logger()
+logger = logging.getLogger("extract_shape_features")
+
+_params_ = [("input_slide_mask", str), ("output_dir", str), ("label_cols", List[str])]
+
+
+@click.command()
+@click.argument("input_slide_mask", nargs=1)
+@click.option(
+    "-o",
+    "--output_dir",
+    required=False,
+    help="path to output directory to save results",
+)
+@click.option(
+    "-lc",
+    "--label_cols",
+    required=False,
+    help="columns whose values are used to generate the mask",
+)
+@click.option(
+    "-m",
+    "--method_param_path",
+    required=False,
+    help="path to a metadata json/yaml file with method parameters to reproduce results",
+)
+def cli(**cli_kwargs):
+    """Extracts shape features from a slide and a slide mask
+
+    \b
+    Inputs:
+        input: input data
+    \b
+    Outputs:
+        output data
+    \b
+    Example:
+        extract_shape_features ./slides/10001.svs ./10001/label_mask.tif
+            -o ./shape_features.csv
+
+    """
+    cli_runner(cli_kwargs, _params_, extract_shape_features)
+
+
+def extract_shape_features(
+    input_slide_mask: str, label_cols: List[str], output_dir: str
+):
+    """Extracts shape and spatial features (HIF features) from a tile mask
+
+     Args:
+        input_slide_mask (str): path to slide mask (*.tif)
+        label_cols (List[str]): list of labels that coorespond to those in input_slide_tiles
+        output_dir (str): output/working directory
+
+    Returns:
+        dict: output .tif path and the mask size
+    """
+    # List of features to extract.
+    # Default behavior of regionprops_table only generates label and bbox features.
+    properties = [
+        "area",
+        "bbox",
+        "bbox_area",
+        "centroid",
+        "convex_area",
+        "convex_image",
+        "coords",
+        "eccentricity",
+        "equivalent_diameter",
+        "euler_number",
+        "extent",
+        "filled_area",
+        "filled_image",
+        "image",
+        "inertia_tensor",
+        "inertia_tensor_eigvals",
+        "label",
+        "local_centroid",
+        "major_axis_length",
+        "minor_axis_length",
+        "moments",
+        "moments_central",
+        "moments_hu",
+        "moments_normalized",
+        "orientation",
+        "perimeter",
+        "slice",
+        "solidity",
+    ]
+
+    mask = tifffile.imread(input_slide_mask)
+    logger.info(f"Mask shape={mask.shape}")
+
+    mask_values = {k: v + 1 for v, k in enumerate(label_cols)}
+    logger.info(f"Mapping mask values to labels: {mask_values}")
+    label_mapper = {v: k for k, v in mask_values.items()}
+
+    logger.info("Extracting whole slide features")
+    # gathering whole slide features, one vector per label
+    whole_slide_features = measure.regionprops_table(
+        label_image=mask, properties=properties
+    )
+    whole_slide_features_df = pd.DataFrame.from_dict(whole_slide_features)
+
+    # add column with label name
+    whole_slide_features_df["label_name"] = "whole_" + whole_slide_features_df[
+        "label"
+    ].map(label_mapper)
+    logger.info(
+        f"Extracted whole slide features for {len(whole_slide_features_df)} labels"
+    )
+    # print(whole_slide_features_df)
+
+    logger.info("Extracting regional features based on connectivity")
+    mask_label = measure.label(mask, connectivity=2)
+    # pass intensity image to propogate label type
+    properties.extend(
+        [
+            "min_intensity",
+            "max_intensity",
+        ]
+    )
+    regional_features = measure.regionprops_table(
+        label_image=mask_label, intensity_image=mask, properties=properties
+    )
+    regional_features_df = pd.DataFrame.from_dict(regional_features)
+
+    # verify intensity matches label value
+    assert regional_features["min_intensity"] == regional_features["max_intensity"]
+    # add column with label name
+    regional_features_df["label_name"] = regional_features_df["min_intensity"].map(
+        label_mapper
+    )
+    regional_features_df = regional_features_df.drop(
+        columns=["max_intensity", "min_intensity"]
+    )
+
+    logger.info(f"Extracted regional features for {len(regional_features_df)} regions")
+    # print(regional_features_df)
+
+    result_df = pd.concat([whole_slide_features_df, regional_features_df])
+
+    output_fpath = os.path.join(output_dir, "shape_features.csv")
+    result_df.to_csv(output_fpath)
+
+    properties = {"shape_features": output_fpath, "num_shapes": len(result_df)}
+
+    logger.info(properties)
+    return properties
+
+
+#
+if __name__ == "__main__":
+    cli()
