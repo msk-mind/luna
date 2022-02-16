@@ -38,17 +38,25 @@ _params_ = [("input_slide_mask", str), ("output_dir", str), ("label_cols", List[
     help="path to a metadata json/yaml file with method parameters to reproduce results",
 )
 def cli(**cli_kwargs):
-    """Extracts shape features from a slide and a slide mask
+    """Extracts shape and spatial features (HIF features) from a slide mask. 
+    This CLI extracts two sets of features. The first set are 'whole slide features', where 
+    the entire mask label is considred as a single region and features are extracted. These features
+    are useful for determining things like total area of x tissue. The seconds set of features 
+    are 'regional features', where each label is split up according to their connectivity and features
+    are extracted from these smaller regions. These features are useful for determining things like
+    solidity of the top ten largest regions of tissue y. Pixel intensity values from the WSI
+    are unused. 
 
     \b
     Inputs:
-        input: input data
+        input_slide_mask: an input slide mask (*.tif)
     \b
     Outputs:
-        output data
+        shape features for each region
     \b
     Example:
-        extract_shape_features ./slides/10001.svs ./10001/label_mask.tif
+        extract_shape_features ./10001/label_mask.tif
+            -lc Background,Tumor
             -o ./shape_features.csv
 
     """
@@ -58,7 +66,7 @@ def cli(**cli_kwargs):
 def extract_shape_features(
     input_slide_mask: str, label_cols: List[str], output_dir: str
 ):
-    """Extracts shape and spatial features (HIF features) from a tile mask
+    """Extracts shape and spatial features (HIF features) from a slide mask
 
      Args:
         input_slide_mask (str): path to slide mask (*.tif)
@@ -66,10 +74,11 @@ def extract_shape_features(
         output_dir (str): output/working directory
 
     Returns:
-        dict: output .tif path and the mask size
+        dict: output .tif path and the number of shapes for which features were generated 
     """
     # List of features to extract.
     # Default behavior of regionprops_table only generates label and bbox features.
+    # Not all of these features may be relevant 
     properties = [
         "area",
         "bbox",
@@ -122,7 +131,6 @@ def extract_shape_features(
     logger.info(
         f"Extracted whole slide features for {len(whole_slide_features_df)} labels"
     )
-    # print(whole_slide_features_df)
 
     logger.info("Extracting regional features based on connectivity")
     mask_label = measure.label(mask, connectivity=2)
@@ -149,7 +157,6 @@ def extract_shape_features(
     )
 
     logger.info(f"Extracted regional features for {len(regional_features_df)} regions")
-    # print(regional_features_df)
 
     result_df = pd.concat([whole_slide_features_df, regional_features_df])
 
@@ -162,6 +169,5 @@ def extract_shape_features(
     return properties
 
 
-#
 if __name__ == "__main__":
     cli()
