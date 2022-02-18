@@ -41,11 +41,16 @@ def cli(**cli_kwargs):
     """Extracts shape and spatial features (HIF features) from a slide mask. 
     This CLI extracts two sets of features. The first set are 'whole slide features', where 
     the entire mask label is considred as a single region and features are extracted. These features
-    are useful for determining things like total area of x tissue. The seconds set of features 
-    are 'regional features', where each label is split up according to their connectivity and features
-    are extracted from these smaller regions. These features are useful for determining things like
-    solidity of the top ten largest regions of tissue y. Pixel intensity values from the WSI
-    are unused. 
+    are useful for determining things like total area of x tissue. 
+    
+    The second set of features are 'regional features', where each label is split up according to 
+    their connectivity and features are extracted from these smaller regions. 
+    These features are useful for determining things like solidity of the top ten largest
+    regions of tissue y. Pixel intensity values from the WSI are unused. In order to generate 
+    connected regions, skimage generates a mask itself where different values coorespond
+    to different regions, which removes the tissue type information from the original mask.
+    So, the original mask is passed as an intensity image to ensure that each region can be 
+    associated with a tissue type.  
 
     \b
     Inputs:
@@ -146,8 +151,6 @@ def extract_shape_features(
     )
     regional_features_df = pd.DataFrame.from_dict(regional_features)
 
-    # verify intensity matches label value
-    assert regional_features["min_intensity"] == regional_features["max_intensity"]
     # add column with label name
     regional_features_df["label_name"] = regional_features_df["min_intensity"].map(
         label_mapper
