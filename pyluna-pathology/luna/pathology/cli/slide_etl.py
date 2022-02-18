@@ -21,6 +21,9 @@ from luna.pathology.common.utils import (
 from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner
 
+import pyarrow.parquet as pq
+from pyarrow import Table
+
 init_logger()
 logger = logging.getLogger("slide_etl")
 
@@ -198,7 +201,10 @@ def slide_etl(
     logger.info(df)
 
     output_table = os.path.join(output_dir, f"slide_ingest_{project_name}.parquet")
-    df.to_parquet(output_table)
+
+
+    pq.write_table( Table.from_pandas(df.drop(columns=['ingest_time', 'generation_time'])), output_table ) # Time columns causing issues in dremio
+
     logger.info(f"Saved table at {output_table}")
 
     properties = {"slide_table": output_table}
