@@ -1,0 +1,10 @@
+input_slide_image: pyluna-pathology/tests/luna/pathology/cli/testdata/data/123.svs
+input_slide_tiles: pyluna-pathology/tests/luna/pathology/cli/testdata/data/infer_tumor_background/123/tile_scores_and_labels_pytorch_inference.csv
+label_cols:
+- Background
+- Tumor
+mask_size:
+- 2967
+- 2220
+output_dir: ./pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tile_mask/
+slide_mask: ./pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tile_mask//tile_mask.tif
