@@ -1,0 +1,9 @@
+input:
+  Tumor: pyluna-pathology/tests/luna/pathology/cli/testdata/Tumor.png
+image_filename: 123.svs
+annotation_name: Full Res Tile-Based Pixel Classifier Inference
+output_dir: pyluna-pathology/tests/luna/pathology/cli/testouts
+line_colors:
+  Tumor: rgb(0,255,0)
+fill_colors:
+  Tumor: rgba(0,255,0,100)

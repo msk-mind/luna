@@ -1,7 +1,8 @@
-import json, orjson
+import json
+import orjson
 import requests
-import re
 import time
+import logging
 
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -49,24 +50,23 @@ def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
 
 
 def get_annotation_uuid(gc, item_id, annotation_name):
-        df_annotation_data = pd.DataFrame(gc.get( f"annotation?itemId={item_id}" )).set_index('_id')
-        df_annotation_data = df_annotation_data.join(df_annotation_data['annotation'].apply(pd.Series))
+    df_annotation_data = pd.DataFrame(gc.get( f"annotation?itemId={item_id}" )).set_index('_id')
+    df_annotation_data = df_annotation_data.join(df_annotation_data['annotation'].apply(pd.Series))
 
-        # See how many there are, and look for our annotation_name
-        logger.info(f"Found {len(df_annotation_data)} total annotations: {set(df_annotation_data['name'])}")
+    # See how many there are, and look for our annotation_name
+    logger.info(f"Found {len(df_annotation_data)} total annotations: {set(df_annotation_data['name'])}")
 
-        df_annotation_data = df_annotation_data.query( f"name=='{annotation_name}'")
-        
-        if len(df_annotation_data)==0:
-            logger.info(f"No matching annotation '{annotation_name}'")
-            return None
+    df_annotation_data = df_annotation_data.query( f"name=='{annotation_name}'")
+    
+    if len(df_annotation_data)==0:
+        logger.info(f"No matching annotation '{annotation_name}'")
+        return None
 
-        logger.info(f"Found an annotation called {annotation_name}!!!!") # Found it!
-        
-        annotation_id = df_annotation_data.reset_index()['_id'].item() # This is the annotation UUID
-        
-        return annotation_id
-
+    logger.info(f"Found an annotation called {annotation_name}!!!!") # Found it!
+    
+    annotation_id = df_annotation_data.reset_index()['_id'].item() # This is the annotation UUID
+    
+    return annotation_id
 
 
 
@@ -90,9 +90,9 @@ def get_item_uuid(image_name: str, collection_name: str, gc) -> Optional[str]:
 
     try:
         uuid_response = gc.get(f"/item?text={image_id}")
-        
+
     except requests.exceptions.HTTPError as err:
-        print(
+        logger.error(
             f"Error in item get request: {err.response.status_code}, {err.response.text}"
         )
         return None
@@ -108,7 +108,7 @@ def get_item_uuid(image_name: str, collection_name: str, gc) -> Optional[str]:
                     dsa_uuid = uuid_response_dict["_id"]
                     print(f"Image file {image_name} found with id: {dsa_uuid}")
                     return dsa_uuid
-    print(f"Image file {image_name} not found")
+    logger.warning(f"Image file {image_name} not found")
     return None
 
 
@@ -120,7 +120,7 @@ def push_annotation_to_dsa_image(
     Args:
         item_uuid (str): DSA item uuid to be tied to the annotation
         dsa_annotation_json (Dict[str, any]): annotation JSON in DSA compatable format
-        uri (str): DSA host:port e.g. localhost:8080
+        uri (str): DSA scheme://host:port e.g. http://localhost:8080
         gc: girder client
 
     Returns:
@@ -129,7 +129,8 @@ def push_annotation_to_dsa_image(
     start = time.time()
 
     # always post a new annotation.
-    # updating or deleting an existing annotation for a large annotation document results in timeout.
+    # updating or deleting an existing annotation for a large annotation
+    # document results in timeout.
     try:
         gc.put(
             f"/annotation?itemID={item_uuid}",
@@ -137,15 +138,15 @@ def push_annotation_to_dsa_image(
         )
 
     except requests.exceptions.HTTPError as err:
-        print(
-            f"Error in annotation upload: {err.response.status_code}, {err.response.text}"
+        raise RuntimeError(
+            f"Error in annotation upload: {err.response.status_code}, "
+            + err.response.text
         )
-        return 1
 
-    print("Annotation successfully pushed to DSA.")
-    print("Time to push annotation", time.time() - start)
-    print(f"http://{uri}/histomics#?image={item_uuid}")
-    return 0
+    logger.info("Annotation successfully pushed to DSA.")
+    logger.info("Time to push annotation", time.time() - start)
+    logger.info(f"{uri}/histomics#?image={item_uuid}")
+    return item_uuid
 
 def dsa_authenticate(gc, usernamne, password):
     """ Authenticate girder client
@@ -180,11 +181,11 @@ def system_check(gc):
 
     except requests.exceptions.HTTPError as err:
 
-        print(f"Please check your host or credentials")
-        print(err)
+        logger.error("Please check your host or credentials")
+        logger.error(err)
         return 1
 
-    print("Successfully connected to DSA")
+    logger.info("Successfully connected to DSA")
 
     return 0
 
@@ -213,7 +214,7 @@ def get_collection_metadata(
         try:
             collection_response = gc.get(f"/collection/{collection_uuid}")
         except requests.exceptions.HTTPError as err:
-            print(
+            logger.error(
                 f"Error in collection get request: {err.response.status_code}, {err.response.text}"
             )
             return None
@@ -222,10 +223,10 @@ def get_collection_metadata(
         try:
             metadata_stylesheet = collection_response["meta"]["stylesheet"]
         except KeyError:
-            print(f"No stylesheet in collection: {collection_uuid}")
+            logger.error(f"No stylesheet in collection: {collection_uuid}")
             metadata_stylesheet = None
     else:
-        print(f"Invalid collection name: {collection_name}")
+        logger.warning(f"Invalid collection name: {collection_name}")
         return None
 
     return (collection_uuid, metadata_stylesheet)
@@ -318,8 +319,7 @@ def get_slide_annotation(
             try:
                 if (
                     annot_dict.get("annotation")
-                    and annot_dict.get("annotation").get("name")
-                    == annotation_name
+                    and annot_dict.get("annotation").get("name") == annotation_name
                 ):
                     annotation_id = annot_dict.get("_id")
                     break
@@ -327,21 +327,21 @@ def get_slide_annotation(
                 break
 
     except requests.exceptions.HTTPError as err:
-        print(
+        logger.error(
             f"Error in annotation get request: {err.response.status_code}, {err.response.text}"
         )
         return None
 
     if not annotation_id:
-        print(
-            f"Annotiaton not found for slide: {slide_id} and annotation name: {annotation_name}"
+        logger.warning(
+            f"Annotation not found for slide: {slide_id} and annotation name: {annotation_name}"
         )
         return None
 
     try:
         annotation_response = gc.get(f"/annotation/{annotation_id}")
     except requests.exceptions.HTTPError as err:
-        print(
+        logger.error(
             f"Error in annotation get request: {err.response.status_code}, {err.response.text}"
         )
         return None
@@ -350,7 +350,7 @@ def get_slide_annotation(
     try:
         annotation = annotation_response["annotation"]
     except KeyError:
-        print(f"No annotation found for slide {slide_id}")
+        logger.error(f"No annotation found for slide {slide_id}")
         return None
 
     # get additional slide-level metadata from response
@@ -359,12 +359,12 @@ def get_slide_annotation(
 
     creator_id = annotation_response["creatorId"]
     creator_updated_id = annotation_response["updatedId"]
-    annotation_name = annotation["name"]    
+    annotation_name = annotation["name"]
 
     try:
         creator_response = gc.get(f"/user/{creator_id}")
     except requests.exceptions.HTTPError as err:
-        print(
+        logger.error(
             f"Error in user get request: {err.response.status_code}, {err.response.text}"
         )
         return None
@@ -374,7 +374,7 @@ def get_slide_annotation(
     try:
         creator_updated_response = gc.get(f"/user/{creator_updated_id}")
     except requests.exceptions.HTTPError as err:
-        print(
+        logger.error(
             f"Error in user get request: {err.response.status_code}, {err.response.text}"
         )
         return None
