@@ -76,7 +76,7 @@ def rebase_schema_numeric(df):
             continue
 
         df[col] = df[col].astype(float, errors="ignore")
-        df[col] = df[col].astype(int, errors="ignore")
+#        df[col] = df[col].astype(int, errors="ignore") # This was converting small floats to integers...
 
 
 def generate_uuid_binary(content, prefix):

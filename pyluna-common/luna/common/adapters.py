@@ -27,17 +27,41 @@ def get_file_stats(path):
 class WriteAdapter:
     def __init__(self): pass
 
+class NoWriteAdapter(WriteAdapter):
+    def __init__(self):
+        self.base_url = "file://"
+        print("Configured NoWriteAdatper with base URL=" + self.base_url)
+
+    def write(self, input_data, prefix) -> dict:
+        """ Returns input_data as written data 
+        
+        Args:
+            input_data (str): path to input file
+            prefix (str): relative path prefix for destination, ignored
+        Returns:
+            dict: key-value pairs containing metadata about the write operation
+        """
+        input_path  = Path(input_data)
+        filename    = input_path.name
+
+        if not os.path.exists(input_path):
+            return {}
+        
+        output_data_url = f"{self.base_url}{input_path}"
+        
+        input_size,  input_mtime   = get_file_stats  (input_data)
+    
+        return {'readable': True, 'data_url': output_data_url, 'size': input_size, 'ingest_time': datetime.fromtimestamp(input_mtime)}
+
+
 class FileWriteAdatper(WriteAdapter):
-    def __init__(self, store_url, bucket, no_write=False):
+    def __init__(self, store_url, bucket):
         """ Return a WriteAdapter for a given file I/O scheme and URL
         
         Args:
             store_url (str): root URL for the storage location (e.g. s3://localhost:9000 or file:///data)
             bucket (str): the "bucket" or "parent folder" for the storage location
-            no_write (bool): don't actually copy any data
         """
-        self.no_write = no_write
-        
         url_result = urlparse(store_url)
         
         # All we need is the base path
@@ -54,9 +78,8 @@ class FileWriteAdatper(WriteAdapter):
     def write(self, input_data, prefix) -> dict:
         """ Perform write operation to a posix file system
         
-        Will not perform write if 
-        1. no_write was configured OR
-        2. the content length matches (full copy) and the input modification time is earlier than the ingest time (with a 1 min. grace period)
+        Will not perform write if :
+            the content length matches (full copy) and the input modification time is earlier than the ingest time (with a 1 min. grace period)
         
         Args:
             input_data (str): path to input file
@@ -84,7 +107,7 @@ class FileWriteAdatper(WriteAdapter):
 
         needs_write = ( output_size != input_size or (input_mtime - 60) > output_mtime ) # 60 second grace period
 
-        if (not self.no_write) and needs_write: 
+        if needs_write: 
             shutil.copy(input_data, output_data)
         
         output_size, output_mtime  = get_file_stats  (output_data)
@@ -94,15 +117,13 @@ class FileWriteAdatper(WriteAdapter):
         return {'readable': True, 'data_url': output_data_url, 'size': output_size, 'ingest_time': datetime.fromtimestamp(output_mtime)}
         
 class MinioWriteAdatper(WriteAdapter):
-    def __init__(self, store_url, bucket, no_write=False):
+    def __init__(self, store_url, bucket):
         """ Return a WriteAdapter for a given file I/O scheme and URL
         
         Args:
             store_url (str): root URL for the storage location (e.g. s3://localhost:9000 or file:///data)
             bucket (str): the "bucket" or "parent folder" for the storage location
-            no_write (bool): don't actually copy any data
         """       
-        self.no_write = no_write
 
         url_result = urlparse(store_url)
 
@@ -124,9 +145,8 @@ class MinioWriteAdatper(WriteAdapter):
     def write(self, input_data, prefix) -> dict:
         """ Perform write operation to a s3 file system
         
-        Will not perform write if 
-        1. no_write was configured OR
-        2. the content length matches (full copy) and the input modification time is earlier than the ingest time (with a 1 min. grace period)
+        Will not perform write if :
+            the content length matches (full copy) and the input modification time is earlier than the ingest time (with a 1 min. grace period)
 
         Args:
             input_data (str): path to input file
@@ -151,7 +171,7 @@ class MinioWriteAdatper(WriteAdapter):
         input_size,  input_mtime  = get_file_stats  (input_data)
         needs_write = ( object_size != input_size or (input_mtime - 60) > object_mtime ) # 60 second grace period
 
-        if (not self.no_write) and needs_write: 
+        if needs_write: 
             client.fput_object(self.bucket, f"{prefix_path}/{filename}", input_path, part_size=250000000)
         
         object_size, object_mtime = get_object_stats(client, self.bucket, f"{prefix_path}/{filename}")
@@ -184,11 +204,13 @@ class IOAdapter:
             WriteAdapter: object capable of writing to the location at store_url
             
         """
+        if self.no_write: return NoWriteAdapter()
+
         url_result = urlparse(store_url)
         
         if url_result.scheme == 'file':
-            return FileWriteAdatper(store_url=store_url, bucket=bucket, no_write=self.no_write)
+            return FileWriteAdatper(store_url=store_url, bucket=bucket)
         elif url_result.scheme == 's3':
-            return MinioWriteAdatper(store_url=store_url, bucket=bucket, no_write=self.no_write)
+            return MinioWriteAdatper(store_url=store_url, bucket=bucket)
         else:
             raise RuntimeError("Unsupported slide store schemes, please try s3:// or file://")
