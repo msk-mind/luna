@@ -107,9 +107,13 @@ def test_upload(monkeypatch):
         else:
             return 1 # Access Error 
 
+    def mock_list(*args, **kwargs):
+        return [{'name': 'test_collection', '_id': 'uuid', '_modelType':'collection'}]
+
     monkeypatch.setattr(GirderClient, "get", mock_get)
     monkeypatch.setattr(GirderClient, "authenticate", mock_auth)
     monkeypatch.setattr(GirderClient, "put", mock_put)
+    monkeypatch.setattr(GirderClient, "listCollection", mock_list)
 
     runner = CliRunner()
     result = runner.invoke(upload,

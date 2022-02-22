@@ -6,6 +6,15 @@ import time
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
+import logging
+import girder_client
+import pandas as pd
+
+import histomicstk
+import histomicstk.annotations_and_masks.annotation_and_mask_utils
+
+logger = logging.getLogger(__name__)
+
 
 def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
     """Returns the DSA collection uuid from the provided `collection_name`
@@ -18,30 +27,47 @@ def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
         string: DSA collection uuid. None if nothing matches the collection name or an
             error in the get request
     """
-
     try:
-        get_collection_id_response = gc.get(
-            f"/collection?text={collection_name}"
-        )
+        df_collections = pd.DataFrame(gc.listCollection()).set_index('_id')
+        logger.debug(f"Found collections {df_collections}")
     except requests.exceptions.HTTPError as err:
-        print(
-            f"Error in collection id get request: {err.response.status_code}, {err.response.text}"
-        )
-        return None
+        logger.error(f"Couldn't retrieve data from DSA: {err.response.status_code}, {err.response.text}")
+        raise RuntimeError("Connection to DSA endpoint failed.")
 
-    collection_id_dicts = get_collection_id_response
+    # Look for a collection callled our collection name
+    df_collections = df_collections.query( f"name=='{collection_name}'" )
 
-    for collection_id_dict in collection_id_dicts:
-        print("collection_id_dict", collection_id_dict)
-        if collection_id_dict["name"] == collection_name:
-            collection_id = collection_id_dict["_id"]
-            print(
-                f"Collection {collection_name} found with id: {collection_id}"
-            )
-            return collection_id
+    if len(df_collections)==0:
+        logger.error(f"No matching collection '{collection_name}'")
+        raise RuntimeError(f"No matching collection '{collection_name}'")
 
-    print(f"Collection {collection_name} not found")
-    return None
+    collection_uuid = df_collections.index.item()
+
+    logger.info(f"Found collection id={collection_uuid} for collection={collection_name}")
+
+    return collection_uuid
+
+
+def get_annotation_uuid(gc, item_id, annotation_name):
+        df_annotation_data = pd.DataFrame(gc.get( f"annotation?itemId={item_id}" )).set_index('_id')
+        df_annotation_data = df_annotation_data.join(df_annotation_data['annotation'].apply(pd.Series))
+
+        # See how many there are, and look for our annotation_name
+        logger.info(f"Found {len(df_annotation_data)} total annotations: {set(df_annotation_data['name'])}")
+
+        df_annotation_data = df_annotation_data.query( f"name=='{annotation_name}'")
+        
+        if len(df_annotation_data)==0:
+            logger.info(f"No matching annotation '{annotation_name}'")
+            return None
+
+        logger.info(f"Found an annotation called {annotation_name}!!!!") # Found it!
+        
+        annotation_id = df_annotation_data.reset_index()['_id'].item() # This is the annotation UUID
+        
+        return annotation_id
+
+
 
 
 def get_item_uuid(image_name: str, collection_name: str, gc) -> Optional[str]:
@@ -121,6 +147,24 @@ def push_annotation_to_dsa_image(
     print(f"http://{uri}/histomics#?image={item_uuid}")
     return 0
 
+def dsa_authenticate(gc, usernamne, password):
+    """ Authenticate girder client
+
+    Args:
+        gc: girder client
+        usernamne (str): DSA username
+        password (str): DSA password
+    """
+    # Initial connnection
+    try:
+        gc.authenticate(usernamne, password)
+        logger.info(f"Connected to DSA @ {gc.urlBase}")
+    except girder_client.AuthenticationError:
+        logger.exception("Couldn't authenticate DSA due to AuthenticationError")
+        raise RuntimeError("Connection to DSA endpoint failed.")
+    except Exception:
+        logger.exception("Couldn't authenticate DSA due to some other exception")
+        raise RuntimeError("Connection to DSA endpoint failed.")
 
 def system_check(gc):
     """Check DSA connection with the girder client
@@ -187,37 +231,56 @@ def get_collection_metadata(
     return (collection_uuid, metadata_stylesheet)
 
 
-def get_slides_from_collection(collection_uuid: str, gc) -> Optional[List[str]]:
-    """A helper function that retrieves all slide names from a provided collection via
-    accessing DSA resource tree
+def get_slide_df( gc, collection_uuid: str) -> pd.DataFrame:
+    """Return slide metadata (largeImage items) for a given colleciton as a dataframe
 
     Args:
-        collection_uuid (str): DSA collection uuid
         gc: girder client
+        collection_uuid (str): DSA collection uuid
     Returns:
-        List[str]: a list of all slide file names belonging to the collection
+        pd.DataFrame: slide metadata, with slide_id and slide_item_uuid as additional indicies
     """
 
-    # attempt get request for all resources in a collection
     try:
-        collection_response = gc.get(
-            f"/resource/{collection_uuid}/items?type=collection"
-        )
-    except requests.exceptions.HTTPError as err:
-        print(
-            f"Error in collection get request: {err.response.status_code}, {err.response.text}"
-        )
-        return None
+        resource_response = gc.listResource(f'resource/{collection_uuid}/items',{'type':'collection'})
+    except Exception:
+        logger.error(f"Couldn't retrieve resource data from DSA for {collection_uuid}, perhaps the collection UUID does not exist?")
+        raise RuntimeError("Retriving slide data from DSA failed.")
 
-    # getting slide filenames if 'largeImage' key in the collection response
+    df_slide_items = pd.DataFrame(resource_response).dropna(subset=['largeImage']) # Get largeImage types from collection items
+    
+    # Fill additional metadata based on convention (slide_id)
+    df_slide_items['slide_id'] =      df_slide_items['name'].apply(lambda x: Path(x).stem) # The stem
+    df_slide_items['slide_item_uuid'] = df_slide_items['_id']
 
-    slide_fnames = [
-        resource["name"]
-        for resource in collection_response
-        if "largeImage" in resource
-    ]
+    logger.info(f"Found {len(df_slide_items)} slides!")
 
-    return slide_fnames
+    return df_slide_items
+
+def get_annotation_df(gc, annotation_uuid):
+    """Return annotation metadata (regions) for a given annotation as a dataframe
+
+    Args:
+        gc: girder client
+        annotation_uuid (str): DSA annotation uuid
+    Returns:
+        pd.DataFrame: annotation/region metadata, with slide_item_uuid as additional indicies
+    """
+    # Here we get all the annotation data as a json document
+    annot = gc.get( f"annotation/{annotation_uuid}" )
+    df_summary, df_regions = histomicstk.annotations_and_masks.annotation_and_mask_utils.parse_slide_annotations_into_tables([annot])
+
+    # Lets process the coordiates a bit...
+    df_regions['x_coords'] = [ [int(x) for x in coords_x.split(',') ] for coords_x in df_regions['coords_x'] ]
+    df_regions['y_coords'] = [ [int(x) for x in coords_x.split(',') ] for coords_x in df_regions['coords_y'] ]
+    df_regions = df_regions.drop(columns=['coords_x', 'coords_y'])
+
+    # And join the summary data with the regional data
+    df_annotations = df_summary.set_index("annotation_girder_id").join(df_regions.set_index("annotation_girder_id")).reset_index()
+
+    df_annotations = df_annotations.rename(columns={'itemId':'slide_item_uuid'})
+
+    return df_annotations
 
 
 def get_slide_annotation(
