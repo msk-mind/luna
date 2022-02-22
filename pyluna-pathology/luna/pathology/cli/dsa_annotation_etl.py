@@ -72,6 +72,10 @@ def dsa_annotation_etl(input_dsa_endpoint, username, password, collection_name, 
 
     df_slide_items = get_slide_df(girder, collection_uuid)
 
+    if len(df_slide_items)==0:
+        logger.info ("No slides found, exitting!")
+        return {}
+
     # Initialize the DsaAnnotationProcessor
     dap = DsaAnnotationProcessor(girder, annotation_name, output_dir)
 
