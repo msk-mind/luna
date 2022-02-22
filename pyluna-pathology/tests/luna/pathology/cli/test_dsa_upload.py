@@ -9,12 +9,6 @@ def test_upload(monkeypatch):
 
         if args[1] == "/system/check":
             return {}
-
-        if args[1] == "/collection?text=test_collection":
-            return [
-                {"name": "test_collection", "_id": "uuid", "_modelType": "collection"}
-            ]
-
         if args[1] == "/item?text=123":
             return [
                 {
@@ -23,7 +17,16 @@ def test_upload(monkeypatch):
                     "_modelType": "annotation",
                 }
             ]
-        pass
+
+    def mock_listCollection(*args, **kwargs):
+        return [{"name": "test_collection", "_id": "uuid", "_modelType": "collection"}]
+
+    def mock_listResource(*args, **kwargs):
+       return [{
+               "annotation": {"name": "123.svs"},
+               "_id": "uuid",
+               "_modelType": "annotation",
+           }]
 
     def mock_put(*args, **kwargs):
 
@@ -41,6 +44,8 @@ def test_upload(monkeypatch):
     monkeypatch.setattr(GirderClient, "get", mock_get)
     monkeypatch.setattr(GirderClient, "authenticate", mock_auth)
     monkeypatch.setattr(GirderClient, "put", mock_put)
+    monkeypatch.setattr(GirderClient, "listResource", mock_listResource)
+    monkeypatch.setattr(GirderClient, "listCollection", mock_listCollection)
 
     runner = CliRunner()
     result = runner.invoke(
