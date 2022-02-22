@@ -209,8 +209,8 @@ class IOAdapter:
         url_result = urlparse(store_url)
         
         if url_result.scheme == 'file':
-            return FileWriteAdatper(store_url=store_url, bucket=bucket, no_write=self.no_write)
+            return FileWriteAdatper(store_url=store_url, bucket=bucket)
         elif url_result.scheme == 's3':
-            return MinioWriteAdatper(store_url=store_url, bucket=bucket, no_write=self.no_write)
+            return MinioWriteAdatper(store_url=store_url, bucket=bucket)
         else:
             raise RuntimeError("Unsupported slide store schemes, please try s3:// or file://")
