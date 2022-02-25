@@ -132,8 +132,8 @@ def push_annotation_to_dsa_image(
     # updating or deleting an existing annotation for a large annotation
     # document results in timeout.
     try:
-        gc.put(
-            f"/annotation?itemID={item_uuid}",
+        gc.post(
+            f"/annotation?itemId={item_uuid}",
             data=orjson.dumps(dsa_annotation_json).decode(),
         )
 
@@ -144,7 +144,7 @@ def push_annotation_to_dsa_image(
         )
 
     logger.info("Annotation successfully pushed to DSA.")
-    logger.info("Time to push annotation", time.time() - start)
+    logger.info(f"Time to push annotation {time.time() - start}")
     logger.info(f"{uri}/histomics#?image={item_uuid}")
     return item_uuid
 

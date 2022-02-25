@@ -1,6 +1,7 @@
 import click
 import json
 import logging
+import requests
 
 import girder_client
 
@@ -100,6 +101,11 @@ def upload_annotation_to_dsa(
     """
     try:
         gc = girder_client.GirderClient(apiUrl=dsa_endpoint)
+        # girder python client doesn't support turning off ssl verify.
+        # can be removed once we replace the self-signed cert
+        session = requests.Session()
+        session.verify = False
+        gc._session = session
         gc.authenticate(username, password)
 
         # check DSA connection
