@@ -1,0 +1,18 @@
+input: /path/to/your.bmp
+# image file name from DSA
+image_filename: 123.svs
+# path to write converted json annotations
+output_dir: /path/to/out
+# annotation name to be shown in DSA
+annotation_name: dcis_ic
+scale_factor: 2
+label:
+  1: invasive
+  2: dcis
+# line and fill colors in label:rgb/a format
+line_colors:
+  dcis: rgb(255,0,0)
+  invasive: rgb(0,255,0)
+fill_colors:
+  dcis: rgba(255,0,0,100)
+  invasive: rgba(0,255,0,100)
