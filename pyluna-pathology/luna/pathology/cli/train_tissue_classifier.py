@@ -1,22 +1,18 @@
-import os, json, logging, yaml, copy
+import os
+import logging
 import click
 
 from typing import Union, Callable, Dict
 
 import pandas as pd
 import pyarrow.parquet as pq
-import numpy as np
 import ray
 import ray.train as train
-import torch
 import torch.nn as nn
 import torch.optim as optim
-import torchvision.models
-import torchmetrics
 
 from ray import tune
 from ray.train import Trainer
-from ray.train.torch import TorchConfig
 
 from torchvision import transforms
 from torch.utils.data import DataLoader
@@ -30,7 +26,7 @@ from torchmetrics import (
 )
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner, validate_params, load_func
+from luna.common.utils import cli_runner, load_func
 from luna.pathology.common.ml import (
     BaseTorchTileDataset,
     BaseTorchClassifier,
@@ -40,6 +36,7 @@ from luna.pathology.common.ml import (
 
 init_logger()
 logger = logging.getLogger("train_tissue_classifier")
+
 
 _params_ = [
     ("tile_dataset_fpath", str),
@@ -51,7 +48,7 @@ _params_ = [
     ("num_epochs", list),
     ("batch_size", list),
     ("learning_rate", list),
-    ("network", str), # string, but parsed as an object 
+    ("network", str),  # string, but parsed as an object
     ("use_gpu", bool),
     ("num_cpus_per_worker", int),
     ("num_gpus_per_worker", int),
@@ -60,6 +57,7 @@ _params_ = [
     ("num_workers", int),
     ("num_samples", int),
 ]
+
 
 @click.command()
 @click.argument("tile_dataset_fpath", nargs=1)
@@ -331,7 +329,6 @@ def train_model(
     output_dir: str,
     num_samples: int,
     num_workers: int = 1,
-    
 ):
     """Trains a tissue classifier model based on tile dataset parquet table
 
@@ -339,27 +336,27 @@ def train_model(
         tile_dataset_fpath (str): filepath to input dataframe that contains a row for each tile
              and the cooresponding tissue type
         label_set (dict): dictionary that maps tissue types to numerical values
-        label_col (str): name of the column in the tile_dataset_fpath that contains the labels (tissue type) 
+        label_col (str): name of the column in the tile_dataset_fpath that contains the labels (tissue type)
             for each tile
-        stratify_col (str): columnn in the tile_dataset_fpath used to stratify the train/test splits, 
+        stratify_col (str): columnn in the tile_dataset_fpath used to stratify the train/test splits,
             such as the patient id or slide id
         num_epochs (Union[int, Callable]): number of epochs to train the model for. Can be either an integer value
             or a Ray.tune distribution (eg ray.tune.choice([10, 15])). In the YAML config, this must be specified
-            by setting the 'search type' and the 'search space'. 
+            by setting the 'search type' and the 'search space'.
         batch_size (Union[int, Callable]): batch size used in PyTorch dataloader. Can be either an integer value
             or a Ray.tune distribution (eg ray.tune.choice([32, 64])). In the YAML config, this must be specified
-            by setting the 'search type' and the 'search space'. 
+            by setting the 'search type' and the 'search space'.
         learning_rate (Union[float, Callable]): the learning rate used for the ADAM optimizer. an be either a float value
             or a Ray.tune distribution (eg ray.tune.loguniform([1.0e-4, 1.0e-1])). In the YAML config, this must be specified
-            by setting the 'search type' and the 'search space'. 
+            by setting the 'search type' and the 'search space'.
         network (nn.Module): The model architecture. Can either be defined in a seperate module, or be from torchvision.models
         use_gpu (bool): whether or not use use GPUs for model training. If set False, the num_gpu flag is ignored.
-        num_cpus_per_worker (int): the number of cpus available to each worker. by default the number of workers is set to 1, meaning 
-            only one trial can be run at a time. If num_workers is increased, num_cpus_per_worker must refer to the number of cpus that 
+        num_cpus_per_worker (int): the number of cpus available to each worker. by default the number of workers is set to 1, meaning
+            only one trial can be run at a time. If num_workers is increased, num_cpus_per_worker must refer to the number of cpus that
             can be used at the same time (ie if num_workers = 2 and num_cpus_per_worker=10, then 20 cores must be available), and must
             be less than or equal to num_cpus
-        num_gpus_per_worker (int): the number of GPUs available for each worker. By default the number of workers is set to 1, meaning 
-            only one trial can be run at a time. If num_workers is increased, num_gpus_per_worker must refer to the number of GPUs that 
+        num_gpus_per_worker (int): the number of GPUs available for each worker. By default the number of workers is set to 1, meaning
+            only one trial can be run at a time. If num_workers is increased, num_gpus_per_worker must refer to the number of GPUs that
             can be used at the same time (ie if num_workers = 2 and num_cpus_per_worker=1, then 2 GPUs must be available), and must
             be less than or equal to num_gpus
         num_gpus (int): total number of GPUs transparent to Ray
@@ -382,7 +379,12 @@ def train_model(
         f"Initilizing Ray Cluster, with: num_gpus={num_gpus}, num_workers={num_workers}"
     )
 
-    output = ray.init(num_cpus=num_cpus, num_gpus=num_gpus, dashboard_host="0.0.0.0", log_to_driver=True)
+    output = ray.init(
+        num_cpus=num_cpus,
+        num_gpus=num_gpus,
+        dashboard_host="0.0.0.0",
+        log_to_driver=True,
+    )
 
     logger.info(f"View Ray Dashboard to see worker logs: {output['webui_url']}")
     print("training model")
@@ -411,7 +413,7 @@ def train_model(
         learning_rate = ray.tune.loguniform(learning_rate[0], learning_rate[1])
     else:
         learning_rate = ray.tune.choice(learning_rate)
- 
+
     network = load_func(network)
 
     logger.info(f"Trainer logs will be logged in: {output_dir}")
@@ -432,7 +434,7 @@ def train_model(
     }
 
     trainable = trainer.to_tune_trainable(train_func)
-    
+
     cli_reporter = CustomReporter(max_report_frequency=180)
 
     # run distributed model training
@@ -461,7 +463,7 @@ def train_model(
     results = {
         "result_fpath": output_dir,  # path to result folder generated by Ray
         "num_trials": len(result_df),  # total number of trials run
-        "best_trial": best_trial, # df associated with bthe best trial
+        "best_trial": best_trial,  # df associated with bthe best trial
     }
 
     ray.shutdown()

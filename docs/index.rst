@@ -8,6 +8,8 @@ Luna
     :target: https://app.codecov.io/gh/msk-mind/luna
 .. image:: https://img.shields.io/github/license/msk-mind/luna
     :target: https://github.com/msk-mind/luna/blob/master/LICENSE
+.. image:: https://img.shields.io/badge/code%20style-black-black
+    :target: https://github.com/ambv/black
 
 Welcome
 =======
