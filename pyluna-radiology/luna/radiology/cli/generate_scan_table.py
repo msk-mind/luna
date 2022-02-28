@@ -47,8 +47,7 @@ def subset_bound(src_path: str, output_path: str, index: int):
         subset = data[:, :, index, :]
         # re-arrange the array
         subset = np.swapaxes(np.swapaxes(subset, 1, 2), 0, 1)
-        # save(subset, output_path)
-        save(np.flipud(subset), output_path)
+        save(subset, output_path, header)
         return output_path
 
     except Exception as err:
@@ -121,8 +120,7 @@ def dicom_to_nifti(row: pd.DataFrame, raw_data_path: str, output_dir: str, subse
                 scan_file = fn
                 break
         if not scan_file:
-            # use dicom2nifti to handle bound series
-            dicom2nifti.convert_directory(dicom_dir, scan_dir)
+            dicom2nifti.convert_directory(dicom_dir, scan_dir, reorient=False)
 
         print(os.listdir(scan_dir))
         for fn in os.listdir(scan_dir):
