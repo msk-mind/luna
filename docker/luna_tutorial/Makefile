@@ -65,7 +65,7 @@ run:        ## launch containers
 	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d
 	@echo
 	@echo DSA is being set up with sample images, annotations and
-	@echo admin user (admin/password). It will take a couple minutes to become available at
+	@echo admin user admin/password. It will take a couple minutes to become available at
 	@echo "$$(hostname):$$(cat .dsa_port)"
 	@echo
 	@echo To access the tutorial, copy-paste this URL in your browser.

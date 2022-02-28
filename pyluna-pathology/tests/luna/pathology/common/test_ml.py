@@ -9,7 +9,7 @@ from torch import nn
 import numpy as np
 
 # we are using sample PIL data
-test_data = 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/otsu_tiles/123/123-filtered-otsu_score>0.5.tiles.csv' 
+test_data = 'pyluna-pathology/tests/luna/pathology/cli/testdata/data/save_tiles/123/123.tiles.csv' 
 
 # We need to impliment these
 def test_ds_not_implimented():
@@ -53,9 +53,5 @@ def test_init_ds_no_labels():
     assert len(tile_dataset[0]) == 2
     assert tile_dataset[0][1].shape == torch.Size([196608])
 
-def test_init_ds_with_labels():
-    tile_dataset = TileDataset(tile_path=test_data, label_cols=['otsu_score'])
-    assert tile_dataset[0][1].shape == torch.Size([196608])
-    assert tile_dataset[0][2].shape == torch.Size([1])
 
 

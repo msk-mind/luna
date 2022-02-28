@@ -1,10 +1,9 @@
 import pandas as pd
 
-
 class SchemaMismatchError(Exception): pass
 
 class SlideTiles:
-    REQ_COLUMNS = set(['address', 'tile_size', 'tile_units', 'x_coord', 'y_coord'])
+    REQ_COLUMNS = set(['address', 'x_coord', 'y_coord', 'xy_extent', 'tile_size', 'tile_units'])
     @classmethod
     def check(self, slide_tiles):
         """Returns True if the given path is readable as "SlideTiles <slide_tiles>", else, reaises SchemaMismatchError"""
