@@ -13,8 +13,10 @@ line_colors:
   Tumor: rgb(0,255,0)
   Adipocytes: rgb(255,255,0)
   Necrosis: rgb(255,0,0)
+  Other: rgb(0,0,255)
 fill_colors:
   Stroma: rgba(0,191,255,100)
   Tumor: rgba(0,255,0,100)
   Adipocytes: rgba(255,255,0,100)
   Necrosis: rgba(255,0,0,100)
+  Other: rgba(0,0,255,100)

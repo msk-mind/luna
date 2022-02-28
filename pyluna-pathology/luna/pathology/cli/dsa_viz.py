@@ -211,8 +211,8 @@ def stardist_polygon_main(
         element = copy.deepcopy(base_dsa_polygon_element)
 
         element["label"]["value"] = label_name
-        element["fillColor"] = fill_colors
-        element["lineColor"] = line_colors
+        element["fillColor"] = fill_colors[label_name]
+        element["lineColor"] = line_colors[label_name]
         element["points"] = coords
 
         elements.append(element)
@@ -308,6 +308,7 @@ def stardist_cell_main(
     # into memory (contains many feature columns),
     # so only load baisc columns that are needed for now
     cols_to_load = [
+        "Image",
         "Name",
         "Class",
         "ROI",
@@ -315,7 +316,7 @@ def stardist_cell_main(
         "Centroid Y µm",
         "Parent",
     ]
-    df = pd.read_csv(input, sep="\t", usecols=cols_to_load)
+    df = pd.read_csv(input, sep="\t", usecols=cols_to_load, index_col=False)
 
     # do some preprocessing on the tsv -- e.g. stardist sometimes finds
     # cells in glass
@@ -334,8 +335,8 @@ def stardist_cell_main(
         # Get cell label and add to element
         label_name = row["Class"]
         elements_entry["label"]["value"] = label_name
-        elements_entry["fillColor"] = fill_colors
-        elements_entry["lineColor"] = line_colors
+        elements_entry["fillColor"] = fill_colors[label_name]
+        elements_entry["lineColor"] = line_colors[label_name]
 
         # add centroid coordinate of cell to element
         center = [x, y, 0]
@@ -435,8 +436,8 @@ def regional_polygon_main(
         element = copy.deepcopy(base_dsa_polygon_element)
         label_name = annot.properties["label_name"]
         element["label"]["value"] = label_name
-        element["fillColor"] = fill_colors
-        element["lineColor"] = line_colors
+        element["fillColor"] = fill_colors[label_name]
+        element["lineColor"] = line_colors[label_name]
 
         # add coordinates
         coords = annot["geometry"]["coordinates"]
@@ -562,8 +563,8 @@ def qupath_polygon_main(
 
             element = copy.deepcopy(base_dsa_polygon_element)
             element["label"]["value"] = label_name
-            element["fillColor"] = fill_colors
-            element["lineColor"] = line_colors
+            element["fillColor"] = fill_colors[label_name]
+            element["lineColor"] = line_colors[label_name]
 
             coords = polygon["geometry"]["coordinates"]
 
@@ -680,8 +681,8 @@ def bitmask_polygon_main(
             element = copy.deepcopy(base_dsa_polygon_element)
             label_name = bitmask_label
             element["label"]["value"] = label_name
-            element["fillColor"] = fill_colors
-            element["lineColor"] = line_colors
+            element["fillColor"] = fill_colors[label_name]
+            element["lineColor"] = line_colors[label_name]
 
             coords = contour.tolist()
             for c in coords:
@@ -730,6 +731,13 @@ def bitmask_polygon_main(
     "-fc",
     "--fill_colors",
     help="user-provided line color map with {feature name:rgba values}",
+    required=False,
+)
+@click.option(
+    "-sc",
+    "--scale_factor",
+    help="scale to match image DSA. (default 1)",
+    default=1,
     required=False,
 )
 @click.option(
@@ -809,6 +817,123 @@ def heatmap_main(
         elements.append(element)
 
     annotation_name = column + "_" + annotation_name
+
+    annotatation_filepath = save_dsa_annotation(
+        base_dsa_annotation, elements, annotation_name, output_dir, image_filename
+    )
+    return {"dsa_annotation": annotatation_filepath}
+
+
+@click.option("-l", "--label", help="map of {label_num:label_name}", required=False)
+@click.option("-i", "--input", help="path to bmp file", required=False)
+@click.option(
+    "-o",
+    "--output_dir",
+    help="directory to save the DSA compatible annotation json",
+    required=False,
+)
+@click.option(
+    "-f",
+    "--image_filename",
+    help="name of the image file in DSA e.g. 123.svs",
+    required=False,
+)
+@click.option(
+    "-a",
+    "--annotation_name",
+    help="name of the annotation to be displayed in DSA",
+    required=False,
+)
+@click.option(
+    "-lc",
+    "--line_colors",
+    help="user-provided line color map with {feature name:rgb values}",
+    required=False,
+)
+@click.option(
+    "-fc",
+    "--fill_colors",
+    help="user-provided line color map with {feature name:rgba values}",
+    required=False,
+)
+@click.option(
+    "-sc",
+    "--scale_factor",
+    help="scale to match image DSA. (default 1)",
+    required=False,
+)
+@click.option(
+    "-m",
+    "--method_param_path",
+    required=False,
+    help="path to a metadata json/yaml file with method parameters to "
+    "reproduce results",
+)
+@cli.command()
+def bmp_polygon(**cli_kwargs):
+    params = [
+        ("fill_colors", dict),
+        ("line_colors", dict),
+        ("annotation_name", str),
+        ("image_filename", str),
+        ("output_dir", str),
+        ("input", str),
+        ("label", dict),
+        ("scale_factor", int),
+    ]
+    cli_runner(cli_kwargs, params, bmp_polygon_main)
+
+
+def bmp_polygon_main(
+    label,
+    input,
+    output_dir,
+    image_filename,
+    annotation_name,
+    line_colors,
+    fill_colors,
+    scale_factor,
+):
+    """Build DSA annotation json from a BMP with multiple labels.
+
+    Vectorizes and simplifies contours per label.
+
+    Args:
+        input (string): path to bmp file
+        output_dir (string): directory to save the DSA compatible annotation
+        json
+        image_filename (string): name of the image file in DSA e.g. 123.svs
+        annotation_name (string): name of the annotation to be displayed in DSA
+        line_colors (map): line color map with {feature name:rgb
+        values}
+        fill_colors (map): fill color map with {feature name:rgba
+        values}
+        scale_factor (int, optional): scale to match image DSA. (default 1)
+
+    Returns:
+        dict: annotation file path
+    """
+    elements = []
+    Image.MAX_IMAGE_PIXELS = 5000000000
+    annotation = Image.open(input)
+    arr = np.array(annotation)
+
+    for label_num, label_name in label.items():
+        simplified_contours = vectorize_np_array_bitmask_by_pixel_value(
+            arr, label_num, scale_factor=scale_factor
+        )
+
+        for n, contour in enumerate(simplified_contours):
+            element = copy.deepcopy(base_dsa_polygon_element)
+            element["label"]["value"] = label_name
+            element["fillColor"] = fill_colors[label_name]
+            element["lineColor"] = line_colors[label_name]
+
+            coords = contour.tolist()
+            for c in coords:
+                c.append(0)
+            element["points"] = coords
+            elements.append(element)
 
     annotatation_filepath = save_dsa_annotation(
         base_dsa_annotation, elements, annotation_name, output_dir, image_filename
