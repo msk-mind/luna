@@ -50,20 +50,25 @@ def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
 
 
 def get_annotation_uuid(gc, item_id, annotation_name):
-    df_annotation_data = pd.DataFrame(gc.get( f"annotation?itemId={item_id}" )).set_index('_id')
+    df_annotation_data = pd.DataFrame(gc.get( f"annotation?itemId={item_id}" ))
+
+    if len(df_annotation_data)==0:
+        logger.warning(f"No matching annotation '{annotation_name}'")
+        return None
+
     df_annotation_data = df_annotation_data.join(df_annotation_data['annotation'].apply(pd.Series))
 
     # See how many there are, and look for our annotation_name
     logger.info(f"Found {len(df_annotation_data)} total annotations: {set(df_annotation_data['name'])}")
 
     df_annotation_data = df_annotation_data.query( f"name=='{annotation_name}'")
-    
+
     if len(df_annotation_data)==0:
-        logger.info(f"No matching annotation '{annotation_name}'")
-        return None
+        logger.warning(f"No matching annotation '{annotation_name}'")
+        return None                                                      
 
     logger.info(f"Found an annotation called {annotation_name}!!!!") # Found it!
-    
+   
     annotation_id = df_annotation_data.reset_index()['_id'].item() # This is the annotation UUID
     
     return annotation_id

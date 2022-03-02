@@ -287,14 +287,15 @@ def expand_inputs(given_params: dict):
         dict: Input- expanded keyword argument dictonary
     """
     d_params = {}
+    d_keys = {}
 
-    for key, value in given_params.items():
-        if "input_" in key:  # We want to treat input_ params a bit differently
+    for param, param_value in given_params.items():
+        if "input_" in param:  # We want to treat input_ params a bit differently
 
             # For some inputs, they may be defined as a directory, where metadata about them is at the provided directory path
-            expected_metadata = os.path.join(value, "metadata.yml")
+            expected_metadata = os.path.join(param_value, "metadata.yml")
             print(expected_metadata)
-            if os.path.isdir(value) and os.path.exists(
+            if os.path.isdir(param_value) and os.path.exists(
                 expected_metadata
             ):  # Check for this metadata file
                 # We supplied an inferred input from some previous output, so figure it out from the metadata of this output fold
@@ -303,7 +304,7 @@ def expand_inputs(given_params: dict):
                     metadata = yaml.safe_load(yaml_file)
 
                 # Output names/slots are same as input names/slots, just without input_ prefix
-                input_type = key.replace("input_", "")
+                input_type = param.replace("input_", "")
 
                 # Convert any known type aliases
                 input_type = TYPE_ALIASES.get(input_type, input_type)
@@ -314,22 +315,36 @@ def expand_inputs(given_params: dict):
                 # Tree output_directories should never be passed to functions which cannot accept them
                 if expanded_input is None:
                     raise RuntimeError(
-                        f"No matching output slot of type [{key.replace('input_', '')}] at given input directory"
+                        f"No matching output slot of type [{param.replace('input_', '')}] at given input directory"
                     )
 
-                logger.info(f"Expanded input {value} -> {expanded_input}")
+                logger.info(f"Expanded input {param_value} -> {expanded_input}")
+                d_params[param] = expanded_input
 
-                d_params[key] = expanded_input
+                # Query any keys:
+                segment_keys = metadata.get('segment_keys', {})
+                logger.info(f"Found segment keys: {segment_keys}")
+
+                for key in segment_keys.keys():
+                    if key in d_keys.keys() and not segment_keys[key] == d_keys[key]:
+                        raise RuntimeError(
+                            f"Key mismatch for '{key}', found {segment_keys[key]} and {d_keys[key]}, cannot resolve!!"
+                        )
+                
+                d_keys.update(segment_keys)
+
             else:
-                d_params[key] = value
+                d_params[param] = param_value
         else:
-            d_params[key] = value
+            d_params[param] = param_value
 
-    return d_params
+    return d_params, d_keys
 
+
+from functools import partial 
 
 def cli_runner(
-    cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable[..., dict]
+    cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable[..., dict], pass_keys: bool = False
 ):
     """For special input_* parameters, see if we should infer the input given an output/result directory
 
@@ -367,7 +382,7 @@ def cli_runner(
         os.makedirs(output_dir, exist_ok=True)
 
     # Expand implied inputs
-    kwargs = expand_inputs(kwargs)
+    kwargs, keys = expand_inputs(kwargs)
 
     # Nice little log break
     print(
@@ -378,7 +393,11 @@ def cli_runner(
         + "\n"
     )
 
+    
+
     with CodeTimer(logger, name=f"transform::{cli_function.__name__}"):
+        if pass_keys: cli_function = partial (cli_function, keys=keys)
+        
         result = cli_function(**kwargs)
 
     kwargs.update(result)
@@ -386,6 +405,10 @@ def cli_runner(
     # filter out kwargs with sensitive data
     for key in MASK_KEYS:
         kwargs.pop(key, None)
+    
+    # propagate keys
+    if kwargs.get('segment_keys', None):
+        kwargs['segment_keys'].update(keys)
 
     if "output_dir" in kwargs:
         with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:

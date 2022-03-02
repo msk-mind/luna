@@ -117,7 +117,7 @@ class FileWriteAdatper(WriteAdapter):
         return {'readable': True, 'data_url': output_data_url, 'size': output_size, 'ingest_time': datetime.fromtimestamp(output_mtime)}
         
 class MinioWriteAdatper(WriteAdapter):
-    def __init__(self, store_url, bucket):
+    def __init__(self, store_url, bucket, secure=False):
         """ Return a WriteAdapter for a given file I/O scheme and URL
         
         Args:
@@ -131,8 +131,9 @@ class MinioWriteAdatper(WriteAdapter):
         self.store_hostname = url_result.hostname
         self.store_port = url_result.port
         self.bucket = bucket
+        self.secure = secure
 
-        self.client_init = partial(Minio, f'{self.store_hostname}:{self.store_port}', access_key=os.environ['MINIO_USER'], secret_key=os.environ['MINIO_PASSWORD'], secure=True)
+        self.client_init = partial(Minio, f'{self.store_hostname}:{self.store_port}', access_key=os.environ['MINIO_USER'], secret_key=os.environ['MINIO_PASSWORD'], secure=secure)
 
         self.base_url = os.path.join(f"s3://{self.store_hostname}:{self.store_port}")
         print("Configured MinioAdatper with base URL=" + self.base_url)
@@ -212,5 +213,7 @@ class IOAdapter:
             return FileWriteAdatper(store_url=store_url, bucket=bucket)
         elif url_result.scheme == 's3':
             return MinioWriteAdatper(store_url=store_url, bucket=bucket)
+        elif url_result.scheme == 's3+https':
+            return MinioWriteAdatper(store_url=store_url, bucket=bucket, secure=True)
         else:
             raise RuntimeError("Unsupported slide store schemes, please try s3:// or file://")
