@@ -1,0 +1,6 @@
+{"type": "FeatureCollection", "features": 
+    [
+        {"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [[[512, 512], [512, 1333], [1333, 1333], [1333, 512], [512, 512]]]}, "properties": {"annotation_girder_id": "621e5f13150bd39c9d7ae052", "element_girder_id": "82ddcc2295f1e64eab0d1a88", "group": "Other", "label": "Other"}}, 
+        {"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [[[1512, 1512], [1512, 2333], [2333, 2333], [2333, 1512], [1512, 1512]]]}, "properties": {"annotation_girder_id": "621e5f13150bd39c9d7ae052", "element_girder_id": "5683f6988727dd383d1153ac", "group": "Other", "label": "Tumor"}}
+    ]
+}

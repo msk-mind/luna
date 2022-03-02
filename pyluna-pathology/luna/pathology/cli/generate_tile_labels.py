@@ -55,7 +55,13 @@ def generate_tile_labels(input_slide_annotation_dataset, input_slide_tiles, outp
 
     logger.info(f"slide_id={slide_id}")
 
-    df_annotation = pd.read_parquet(input_slide_annotation_dataset).loc[slide_id].query("type=='geojson'")
+    df_annotation = pd.read_parquet(input_slide_annotation_dataset)
+
+    if not slide_id in df_annotation.index: raise RuntimeError("No matching annotations found for slide!")
+
+    df_annotation = df_annotation.loc[[slide_id]].query("type=='geojson'")
+
+    if not len(df_annotation): raise RuntimeError("No matching geojson annotations found!")
 
     slide_geojson, collection_name, annotation_name = df_annotation.slide_geojson.item(), df_annotation.collection_name.item(), df_annotation.annotation_name.item()
 
@@ -97,13 +103,14 @@ def generate_tile_labels(input_slide_annotation_dataset, input_slide_tiles, outp
             if intersection_area > max_overlap:
                 tile_label, max_overlap = label, intersection_area
 
+        logger.info(tile_polygon)
         l_regional_labels.append(tile_label)
         l_intersection_areas.append(max_overlap)
 
     df_tiles['regional_label']    = l_regional_labels
     df_tiles['intersection_area'] = l_intersection_areas
 
-    print ( df_tiles.loc[df_tiles.intersection_area > 0] )
+    logger.info ( df_tiles.loc[df_tiles.intersection_area > 0] )
 
     output_header_file = f"{output_dir}/{slide_id}.regional_label.tiles.csv"
     df_tiles.to_csv(output_header_file)        
