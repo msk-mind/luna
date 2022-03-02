@@ -271,7 +271,12 @@ def validate_params(given_params: dict, params_list: List[tuple]):
 
         except RuntimeError as e:
             raise e
-        logger.info(f"Param {name} set = {d_params[name]}")
+        
+        if name in MASK_KEYS:
+            logger.info(f"Param {name} set = *****")
+        else:
+            logger.info(f"Param {name} set = {d_params[name]}")
+
     return d_params
 
 
