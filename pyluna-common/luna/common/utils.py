@@ -236,46 +236,46 @@ def validate_params(given_params: dict, params_list: List[tuple]):
 
     Args:
         given_params (dict): keyword arguments to check types
-        params_list (List[tuple]): param list, where each element is the parameter (name, type)
+        params_list (List[tuple]): param list, where each element is the parameter (param, type)
 
     Returns:
         dict: Validated and casted keyword argument dictonary
     """
     logger = logging.getLogger(__name__)
     d_params = {}
-    for name, dtype in params_list:
-        if given_params.get(name, None) is None:
+    for param, dtype in params_list:
+        if given_params.get(param, None) is None:
             raise RuntimeError(
-                f"Param {name} of type {dtype} was never set, but required by transform, please check your input variables."
+                f"Param {param} of type {dtype} was never set, but required by transform, please check your input variables."
             )
         try:
             if "List" in str(dtype):
-                if type(given_params[name]) == list:
-                    d_params[name] = given_params[name]
+                if type(given_params[param]) == list:
+                    d_params[param] = given_params[param]
                 else:
-                    d_params[name] = [
-                        dtype.__args__[0](s) for s in given_params[name].split(",")
+                    d_params[param] = [
+                        dtype.__args__[0](s) for s in given_params[param].split(",")
                     ]
             elif dtype == dict:
-                if type(given_params[name]) == dict:
-                    d_params[name] = given_params[name]
+                if type(given_params[param]) == dict:
+                    d_params[param] = given_params[param]
                 else:
-                    d_params[name] = eval(str(given_params[name]))
+                    d_params[param] = eval(str(given_params[param]))
             elif type(dtype) == type:
-                d_params[name] = dtype(given_params[name])
+                d_params[param] = dtype(given_params[param])
             else:
                 raise RuntimeError(f"Type {type(dtype)} invalid!")
 
         except ValueError as exc:
-            raise RuntimeError(f"Param {name} could not be cast to {dtype} - {exc}")
+            raise RuntimeError(f"Param {param} could not be cast to {dtype} - {exc}")
 
         except RuntimeError as e:
             raise e
         
-        if name in MASK_KEYS:
-            logger.info(f"Param {name} set = *****")
+        if param in MASK_KEYS:
+            logger.info(f"Param {param} set = *****")
         else:
-            logger.info(f"Param {name} set = {d_params[name]}")
+            logger.info(f"Param {param} set = {d_params[param]}")
 
     return d_params
 
