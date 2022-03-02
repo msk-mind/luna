@@ -28,7 +28,6 @@ import pandas as pd
 
 from skimage.color   import rgb2gray, rgba2rgb
 
-
 palette = sns.color_palette("viridis",as_cmap=True)
 categorial = sns.color_palette("Set1", 8)
 categorical_colors = {}

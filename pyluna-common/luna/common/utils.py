@@ -15,13 +15,11 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-
 # Distinct types that are actually the same (effectively)
 TYPE_ALIASES = {"itk_geometry": "itk_volume"}
 
 # Sensitive cli inputs
 MASK_KEYS = ["username", "user", "password", "pw"]
-
 
 def to_sql_field(s):
     filter1 = s.replace(".", "_").replace(" ", "_")
@@ -393,11 +391,9 @@ def cli_runner(
         + "\n"
     )
 
-    
-
     with CodeTimer(logger, name=f"transform::{cli_function.__name__}"):
         if pass_keys: cli_function = partial (cli_function, keys=keys)
-        
+
         result = cli_function(**kwargs)
 
     kwargs.update(result)
