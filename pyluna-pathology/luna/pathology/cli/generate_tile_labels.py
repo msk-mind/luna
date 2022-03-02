@@ -7,7 +7,7 @@ import pandas as pd
 from luna.common.custom_logger   import init_logger
 
 init_logger()
-logger = logging.getLogger() ### Add CLI tool name
+logger = logging.getLogger("generate_tile_labels") ### Add CLI tool name
 
 from luna.common.utils import cli_runner
 
@@ -26,15 +26,15 @@ def cli(**cli_kwargs):
 
     \b
     Inputs:
-        input: input data
+        input_slide_annotation_dataset: annotation dataset containing metadata about geojsons
+        input_slide_tiles: path to tile images (.tiles.csv)
     \b
     Outputs:
-        output data
+        slide_tiles
     \b
     Example:
-        CLI_TOOL ./slides/10001.svs ./halo/10001.job18484.annotations
-            -an Tumor
-            -o ./masks/10001/
+        generate_tile_labels ./annotations/ tiles/slide-100012/tiles
+            -o ./labeled_tiles/10001/
     """
     cli_runner( cli_kwargs, _params_, generate_tile_labels, pass_keys=True)
 
@@ -42,12 +42,15 @@ from shapely.geometry import shape, GeometryCollection, Polygon
 from tqdm import tqdm
 ### Transform imports 
 def generate_tile_labels(input_slide_annotation_dataset, input_slide_tiles, output_dir, keys):
-    """ CLI tool method
+    """ Queries the dataset at input_slide_annotation_dataset for a slide_id matching input_slide_tiles
+
+    Adds regional_label, intersection_area columns to slide tiles, where the former is the annotation label, and the latter the fraction of intersecting area between the tile and annotation regions
 
     Args:
-        input_data (str): path to input data
+        input_slide_annotation_dataset (str): path to parquet annotation dataset
+        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
         output_dir (str): output/working directory
-
+        keys (dict): segment keys (this function needs 'slide_id')
     Returns:
         dict: metadata about function call
     """
