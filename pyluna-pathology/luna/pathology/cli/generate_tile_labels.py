@@ -85,7 +85,7 @@ def generate_tile_labels(input_slide_annotation_dataset, input_slide_tiles, outp
     for label in d_collections.keys():
         d_collections[label] = GeometryCollection( d_collections[label] )
 
-    df_tiles = pd.read_csv(input_slide_tiles).set_index('address').head(100)
+    df_tiles = pd.read_csv(input_slide_tiles).set_index('address')
     l_regional_labels = []
     l_intersection_areas = []
 
