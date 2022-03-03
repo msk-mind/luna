@@ -1,0 +1,6 @@
+annotation_name: Tissue-clf
+collection_name: lung-project
+input_dsa_endpoint: http://dlliskimind1:8080/api/v1
+num_cores: 4
+output_dir: ./datasets/annot_etl_hne
+slide_annotation_dataset: pyluna-pathology/tests/luna/pathology/cli/testdata/data/dsa_annots/slide_annotation_dataset_lung-project_Tissue-clf.parquet

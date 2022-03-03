@@ -108,6 +108,7 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
     properties = {
         "slide_tiles": output_header_file, # "Tiles" are the metadata that describe them
         "total_tiles": len(df),
+        "segment_keys": {"slide_id": str(slide_id)}
     }
 
     return properties

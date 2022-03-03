@@ -15,13 +15,11 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-
 # Distinct types that are actually the same (effectively)
 TYPE_ALIASES = {"itk_geometry": "itk_volume"}
 
 # Sensitive cli inputs
 MASK_KEYS = ["username", "user", "password", "pw"]
-
 
 def to_sql_field(s):
     filter1 = s.replace(".", "_").replace(" ", "_")
@@ -238,42 +236,47 @@ def validate_params(given_params: dict, params_list: List[tuple]):
 
     Args:
         given_params (dict): keyword arguments to check types
-        params_list (List[tuple]): param list, where each element is the parameter (name, type)
+        params_list (List[tuple]): param list, where each element is the parameter (param, type)
 
     Returns:
         dict: Validated and casted keyword argument dictonary
     """
     logger = logging.getLogger(__name__)
     d_params = {}
-    for name, dtype in params_list:
-        if given_params.get(name, None) is None:
+    for param, dtype in params_list:
+        if given_params.get(param, None) is None:
             raise RuntimeError(
-                f"Param {name} of type {dtype} was never set, but required by transform, please check your input variables."
+                f"Param {param} of type {dtype} was never set, but required by transform, please check your input variables."
             )
         try:
             if "List" in str(dtype):
-                if type(given_params[name]) == list:
-                    d_params[name] = given_params[name]
+                if type(given_params[param]) == list:
+                    d_params[param] = given_params[param]
                 else:
-                    d_params[name] = [
-                        dtype.__args__[0](s) for s in given_params[name].split(",")
+                    d_params[param] = [
+                        dtype.__args__[0](s) for s in given_params[param].split(",")
                     ]
             elif dtype == dict:
-                if type(given_params[name]) == dict:
-                    d_params[name] = given_params[name]
+                if type(given_params[param]) == dict:
+                    d_params[param] = given_params[param]
                 else:
-                    d_params[name] = eval(str(given_params[name]))
+                    d_params[param] = eval(str(given_params[param]))
             elif type(dtype) == type:
-                d_params[name] = dtype(given_params[name])
+                d_params[param] = dtype(given_params[param])
             else:
                 raise RuntimeError(f"Type {type(dtype)} invalid!")
 
         except ValueError as exc:
-            raise RuntimeError(f"Param {name} could not be cast to {dtype} - {exc}")
+            raise RuntimeError(f"Param {param} could not be cast to {dtype} - {exc}")
 
         except RuntimeError as e:
             raise e
-        logger.info(f"Param {name} set = {d_params[name]}")
+        
+        if param in MASK_KEYS:
+            logger.info(f"Param {param} set = *****")
+        else:
+            logger.info(f"Param {param} set = {d_params[param]}")
+
     return d_params
 
 
@@ -287,14 +290,15 @@ def expand_inputs(given_params: dict):
         dict: Input- expanded keyword argument dictonary
     """
     d_params = {}
+    d_keys = {}
 
-    for key, value in given_params.items():
-        if "input_" in key:  # We want to treat input_ params a bit differently
+    for param, param_value in given_params.items():
+        if "input_" in param:  # We want to treat input_ params a bit differently
 
             # For some inputs, they may be defined as a directory, where metadata about them is at the provided directory path
-            expected_metadata = os.path.join(value, "metadata.yml")
+            expected_metadata = os.path.join(param_value, "metadata.yml")
             print(expected_metadata)
-            if os.path.isdir(value) and os.path.exists(
+            if os.path.isdir(param_value) and os.path.exists(
                 expected_metadata
             ):  # Check for this metadata file
                 # We supplied an inferred input from some previous output, so figure it out from the metadata of this output fold
@@ -303,7 +307,7 @@ def expand_inputs(given_params: dict):
                     metadata = yaml.safe_load(yaml_file)
 
                 # Output names/slots are same as input names/slots, just without input_ prefix
-                input_type = key.replace("input_", "")
+                input_type = param.replace("input_", "")
 
                 # Convert any known type aliases
                 input_type = TYPE_ALIASES.get(input_type, input_type)
@@ -314,22 +318,36 @@ def expand_inputs(given_params: dict):
                 # Tree output_directories should never be passed to functions which cannot accept them
                 if expanded_input is None:
                     raise RuntimeError(
-                        f"No matching output slot of type [{key.replace('input_', '')}] at given input directory"
+                        f"No matching output slot of type [{param.replace('input_', '')}] at given input directory"
                     )
 
-                logger.info(f"Expanded input {value} -> {expanded_input}")
+                logger.info(f"Expanded input {param_value} -> {expanded_input}")
+                d_params[param] = expanded_input
 
-                d_params[key] = expanded_input
+                # Query any keys:
+                segment_keys = metadata.get('segment_keys', {})
+                logger.info(f"Found segment keys: {segment_keys}")
+
+                for key in segment_keys.keys():
+                    if key in d_keys.keys() and not segment_keys[key] == d_keys[key]:
+                        raise RuntimeError(
+                            f"Key mismatch for '{key}', found {segment_keys[key]} and {d_keys[key]}, cannot resolve!!"
+                        )
+                
+                d_keys.update(segment_keys)
+
             else:
-                d_params[key] = value
+                d_params[param] = param_value
         else:
-            d_params[key] = value
+            d_params[param] = param_value
 
-    return d_params
+    return d_params, d_keys
 
+
+from functools import partial 
 
 def cli_runner(
-    cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable[..., dict]
+    cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable[..., dict], pass_keys: bool = False
 ):
     """For special input_* parameters, see if we should infer the input given an output/result directory
 
@@ -367,7 +385,9 @@ def cli_runner(
         os.makedirs(output_dir, exist_ok=True)
 
     # Expand implied inputs
-    kwargs = expand_inputs(kwargs)
+    kwargs, keys = expand_inputs(kwargs)
+
+    logger.info (f"Full segment key set: {keys}")
 
     # Nice little log break
     print(
@@ -379,6 +399,8 @@ def cli_runner(
     )
 
     with CodeTimer(logger, name=f"transform::{cli_function.__name__}"):
+        if pass_keys: cli_function = partial (cli_function, keys=keys)
+
         result = cli_function(**kwargs)
 
     kwargs.update(result)
@@ -386,11 +408,16 @@ def cli_runner(
     # filter out kwargs with sensitive data
     for key in MASK_KEYS:
         kwargs.pop(key, None)
+    
+    # propagate keys
+    if kwargs.get('segment_keys', None):
+        kwargs['segment_keys'].update(keys)
+    else: 
+        kwargs['segment_keys'] = keys
 
     if "output_dir" in kwargs:
         with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
             yaml.dump(kwargs, fp)
-            # json.dump(kwargs, fp, indent=4, sort_keys=True)
 
     logger.info("Done.")
 

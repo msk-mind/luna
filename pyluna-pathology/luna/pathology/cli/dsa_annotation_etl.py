@@ -101,7 +101,9 @@ def dsa_annotation_etl(input_dsa_endpoint, username, password, collection_name, 
     df_full_annotation_data.to_parquet(slide_annotation_dataset_path)
 
     properties = {
-        "slide_annotation_dataset": slide_annotation_dataset_path
+        "slide_annotation_dataset": slide_annotation_dataset_path,
+        "segment_keys": {"dsa_collection_uuid": collection_uuid}
+
     }
 
     return properties

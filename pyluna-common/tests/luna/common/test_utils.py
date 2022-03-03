@@ -118,7 +118,7 @@ def test_expand_inputs_explicit():
         "extra": 1,
     }
 
-    kwargs = expand_inputs(given_params)
+    kwargs, keys = expand_inputs(given_params)
 
     assert (
         kwargs["input_text_file"]
@@ -134,7 +134,7 @@ def test_expand_inputs_implicit():
         "extra": 1,
     }
 
-    kwargs = expand_inputs(given_params)
+    kwargs, keys = expand_inputs(given_params)
 
     assert (
         kwargs["input_text_file"]
