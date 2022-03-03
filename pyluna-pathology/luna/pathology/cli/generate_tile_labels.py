@@ -85,7 +85,7 @@ def generate_tile_labels(input_slide_annotation_dataset, input_slide_tiles, outp
     for label in d_collections.keys():
         d_collections[label] = GeometryCollection( d_collections[label] )
 
-    df_tiles = pd.read_csv(input_slide_tiles).set_index('address')
+    df_tiles = pd.read_csv(input_slide_tiles).set_index('address').head(100)
     l_regional_labels = []
     l_intersection_areas = []
 
@@ -106,7 +106,6 @@ def generate_tile_labels(input_slide_annotation_dataset, input_slide_tiles, outp
             if intersection_area > max_overlap:
                 tile_label, max_overlap = label, intersection_area
 
-        logger.info(tile_polygon)
         l_regional_labels.append(tile_label)
         l_intersection_areas.append(max_overlap)
 
@@ -120,7 +119,6 @@ def generate_tile_labels(input_slide_annotation_dataset, input_slide_tiles, outp
     
     properties = {
         "slide_tiles": output_header_file, # "Tiles" are the metadata that describe them
-        "segment_keys": {'regional_annotation_id': f"dsa-{collection_name}-{annotation_name}"}
     }
 
     return properties

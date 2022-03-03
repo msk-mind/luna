@@ -387,6 +387,8 @@ def cli_runner(
     # Expand implied inputs
     kwargs, keys = expand_inputs(kwargs)
 
+    logger.info (f"Full segment key set: {keys}")
+
     # Nice little log break
     print(
         "\n"
@@ -410,11 +412,12 @@ def cli_runner(
     # propagate keys
     if kwargs.get('segment_keys', None):
         kwargs['segment_keys'].update(keys)
+    else: 
+        kwargs['segment_keys'] = keys
 
     if "output_dir" in kwargs:
         with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
             yaml.dump(kwargs, fp)
-            # json.dump(kwargs, fp, indent=4, sort_keys=True)
 
     logger.info("Done.")
 
