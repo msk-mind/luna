@@ -64,7 +64,7 @@ def run_stardist_cell_detection(input_slide_image, cell_expansion_size, image_ty
         dict: metadata about function call
     """
     slide_filename = Path(input_slide_image).name
-    slide_name = Path(input_slide_image).stem
+    slide_id = Path(input_slide_image).stem
 
     logger.info("Launching docker container:")
     logger.info(f"\tvolumes={input_slide_image}:'/inputs/{slide_filename}', {output_dir}:'/output_dir'")
@@ -91,7 +91,7 @@ def run_stardist_cell_detection(input_slide_image, cell_expansion_size, image_ty
 
     df = df.rename(columns={'Centroid X µm':'x_coord', 'Centroid Y µm': 'y_coord'}) # x,ys follow this convention
 
-    output_header_file = os.path.join (output_dir, f'{slide_name}_cell_objects.csv')
+    output_header_file = os.path.join (output_dir, f'{slide_id}_cell_objects.csv')
     df.to_csv(output_header_file)
 
     logger.info("Generated cell data:")
@@ -101,6 +101,7 @@ def run_stardist_cell_detection(input_slide_image, cell_expansion_size, image_ty
         "cell_objects": output_header_file,
         "spatial": True,
         "total_cells": len(df),
+        "segment_keys": {"slide_id": slide_id}
     }
 
     return properties
