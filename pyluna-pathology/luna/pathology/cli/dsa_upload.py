@@ -118,7 +118,7 @@ def upload_annotation_to_dsa(
     with open(annotation_filepath) as annotation_json:
         dsa_annotation = json.load(annotation_json)
 
-    dsa_uuid = get_item_uuid(image_filename, collection_name, gc)
+    dsa_uuid = get_item_uuid(gc, image_filename, collection_name)
 
     if dsa_uuid:
         dsa_uuid = push_annotation_to_dsa_image(
