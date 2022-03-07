@@ -349,7 +349,7 @@ def get_slide_annotation(
     print("Starting request for annotation")
     try:
         annotation_id_response = gc.get(f"/annotation?itemId={item_uuid}")
-        annotation_id = []
+        annotation_id = None
         for annot_dict in annotation_id_response:
             try:
                 if (
