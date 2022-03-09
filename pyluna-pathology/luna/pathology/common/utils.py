@@ -247,18 +247,20 @@ def extract_patch_texture_features(image_patch, mask_patch, stain_vectors,
 
     logging.getLogger('radiomics.featureextractor').setLevel(logging.WARNING)
     if not (len(np.unique(mask_patch)) > 1 and np.count_nonzero(mask_patch) > 1): return None
+
+    output_dict = {}
     
     stain_patch = pull_stain_channel(image_patch, stain_vectors, channel=stain_channel)
 
-    if glcm_feature==None:
-        original_pixels = stain_patch.astype(np.uint8)[np.where(mask_patch.astype(np.bool))].flatten()
-        original_pixels_valid = original_pixels[original_pixels > 0]
-        return original_pixels_valid 
+    original_pixels = stain_patch.astype(np.uint8)[np.where(mask_patch.astype(np.bool))].flatten()
+    original_pixels_valid = original_pixels[original_pixels > 0]
+    output_dict['original_pixels'] = original_pixels_valid
 
     extractor = radiomics.featureextractor.RadiomicsFeatureExtractor(binWidth=16)
     extractor.disableAllFeatures()
-    extractor.enableFeaturesByName(glcm=[glcm_feature])
     extractor.enableImageTypeByName('Original')
+    extractor.enableFeatureClassByName('glcm')
+    # extractor.enableFeatureByName('original_glcm_MCC', enable=False)
 
     sitk_image  = sitk.GetImageFromArray(stain_patch.astype(np.uint8))
     sitk_mask   = sitk.GetImageFromArray(mask_patch. astype(np.uint8))
@@ -273,11 +275,16 @@ def extract_patch_texture_features(image_patch, mask_patch, stain_vectors,
 
         fts = extractor.execute(sitk_image, sitk_mask, voxelBased=True)
 
-        stainomics_patch   = sitk.GetArrayFromImage(fts[f'original_glcm_{glcm_feature}']).astype(np.float)
-        stainomics_nonzero = stainomics_patch[stainomics_patch != 0].flatten()
-        stainomics_valid   = stainomics_nonzero[~np.isnan(stainomics_nonzero)]
+        for key in fts.keys():
+            if not 'original_glcm' in key: continue
+        
+            stainomics_patch   = sitk.GetArrayFromImage(fts[key]).astype(np.float32)
+            stainomics_nonzero = stainomics_patch[stainomics_patch != 0].flatten()
+            stainomics_valid   = stainomics_nonzero[~np.isnan(stainomics_nonzero)]
 
-        return stainomics_valid
+            output_dict[key] = stainomics_valid
+
+        return output_dict
 
 
 def get_tile_from_slide(tile_row, slide, size=None):

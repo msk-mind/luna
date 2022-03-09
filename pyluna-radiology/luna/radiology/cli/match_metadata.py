@@ -66,7 +66,7 @@ def match_metadata(dicom_tree_folder: str, input_itk_labels: str, output_dir: st
     for found_dicom_path in found_dicom_paths: 
         path = next(found_dicom_path.glob("*.dcm"))
         ds = dcmread(path)
-        print ("Matched: z=", label.shape[2], found_dicom_path, ds.PatientName, ds.AccessionNumber, ds.StudyDescription, ds.SeriesDescription, ds.SliceThickness)
+        print ("Matched: z=", label.shape[2], found_dicom_path, ds.PatientName, ds.AccessionNumber, ds.SeriesInstanceUID, ds.StudyDescription, ds.SeriesDescription, ds.SliceThickness)
     
     properties = {
         'dicom_folder': str(found_dicom_path),

@@ -45,6 +45,7 @@ import numpy as np
 from PIL import Image
 from luna.pathology.common.utils import get_layer_names, convert_xml_to_mask
 from skimage.measure import block_reduce
+from pathlib import Path
 def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_name):
     """ Generate a full resolution mask image (.tif) from vector annotations (polygons, shapes)
 
@@ -62,6 +63,7 @@ def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_nam
 
     slide = openslide.OpenSlide(input_slide_image)
     slide.get_thumbnail((1000, 1000)).save(f"{output_dir}/slide_thumbnail.png")
+    slide_id = Path(input_slide_image).stem
 
     wsi_shape = slide.dimensions[1], slide.dimensions[0] # Annotation file has flipped dimensions w.r.t openslide conventions
     logger.info(f"Slide shape={wsi_shape}")
@@ -80,6 +82,7 @@ def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_nam
     properties = {
         'slide_mask': slide_mask,
         'mask_size': list (wsi_shape),
+        'segment_keys': {'slide_id': slide_id}
     }
 
     return properties

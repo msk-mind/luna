@@ -3,6 +3,7 @@ import os, logging, sys
 import click
 
 from luna.common.custom_logger   import init_logger
+from collections import defaultdict
 
 init_logger()
 logger = logging.getLogger('extract_stain_texture')
@@ -94,7 +95,8 @@ def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_fact
     address_raster = [address for address in itertools.product(range(tile_x_count), range(tile_y_count))]
     logger.info("Number of tiles in raster: %s", len(address_raster))
 
-    features = []
+    features = defaultdict(list)
+
     for address in tqdm(address_raster, file=sys.stdout):
         mask_patch = np.array(mask_full_generator.get_tile(mask_full_level, address))[:, :, 0]
 
@@ -105,39 +107,47 @@ def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_fact
         texture_values = extract_patch_texture_features(image_patch, mask_patch, stain_vectors, stain_channel, glcm_feature, plot=False)
 
         if not texture_values is None:
-            features.append(texture_values)
+            for key, values in texture_values.items(): features[key].append(values)
         
-    features = np.concatenate(features).flatten()
+    for key, values in features.items():
+        features[key] = np.concatenate(values).flatten()
 
-    np.save(os.path.join(output_dir, "feature_vector.npy"), features)
+    np.save(os.path.join(output_dir, "feature_vectors.npy"), features)
 
-    n, (smin, smax), sm, sv, ss, sk = scipy.stats.describe(features)
-    ln_params = scipy.stats.lognorm.fit(features, floc=0)
+    hist_features = {}
+    for key, values in features.items():
+        if not len(values) > 0: continue 
 
-    fx_name_prefix = f'pixel_original_glcm_{glcm_feature}_channel_{stain_channel}'
-    hist_features = {
-        f'{fx_name_prefix}_nobs': n,
-        f'{fx_name_prefix}_min': smin,
-        f'{fx_name_prefix}_max': smax,
-        f'{fx_name_prefix}_mean': sm,
-        f'{fx_name_prefix}_variance': sv,
-        f'{fx_name_prefix}_skewness': ss,
-        f'{fx_name_prefix}_kurtosis': sk,
-        f'{fx_name_prefix}_lognorm_fit_p0': ln_params[0],
-        f'{fx_name_prefix}_lognorm_fit_p2': ln_params[2]
-    }
+        n, (smin, smax), sm, sv, ss, sk = scipy.stats.describe(values)
+
+        # ln_params = scipy.stats.lognorm.fit(values, floc=0)
+
+        fx_name_prefix = f'{key}_channel_{stain_channel}'
+        hist_features.update( {
+            f'{fx_name_prefix}_nobs': n,
+            f'{fx_name_prefix}_min': smin,
+            f'{fx_name_prefix}_max': smax,
+            f'{fx_name_prefix}_mean': sm,
+            f'{fx_name_prefix}_variance': sv,
+            f'{fx_name_prefix}_skewness': ss,
+            f'{fx_name_prefix}_kurtosis': sk,
+
+            # f'{fx_name_prefix}_lognorm_fit_p0': ln_params[0],
+            # f'{fx_name_prefix}_lognorm_fit_p2': ln_params[2]
+        }
+        )
 
     # The fit may fail sometimes, replace inf with 0
     df_result = pd.DataFrame(data=hist_features, index=[0]).replace([np.inf, -np.inf], 0.0).astype(float)
     logger.info (df_result)
 
-    output_filename = os.path.join(output_dir, "stainomics.csv")
+    output_filename = os.path.join(output_dir, "stainomics.parquet")
 
-    df_result.to_csv(output_filename, index=False)
+    df_result.to_parquet(output_filename, index=False)
 
     properties = {
         'num_pixel_observations': n,
-        'feature_csv': output_filename,
+        'feature_data': output_filename,
     }
 
     return properties
