@@ -1,0 +1,9 @@
+annotation_name: Tumor
+input_slide_image: pyluna-pathology/tests/luna/pathology/cli/testdata/data/123.svs
+input_slide_roi: pyluna-pathology/tests/luna/pathology/testdata/data/test-project/pathology_annotations/123456_annotation_from_halo.xml
+mask_size:
+- 2967
+- 2220
+output_dir: pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_mask
+segment_keys: {}
+slide_mask: pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_mask/mask_full_res.tif

@@ -4,7 +4,6 @@ import logging
 import os
 import shutil
 
-from datetime import datetime
 from typing import Dict
 from pathlib import Path
 
@@ -63,7 +62,7 @@ GEOJSON_POLYGON = {
     required=False,
     type=str,
     help="DSA username. This can be provided as an argument or as an "
-    "environment variable DSA_USERNAME."
+    "environment variable DSA_USERNAME.",
 )
 @click.option(
     "-p",
@@ -71,7 +70,7 @@ GEOJSON_POLYGON = {
     required=False,
     type=str,
     help="DSA password. This can be provided as an argument or as an "
-    "environment variable DSA_USERNAME."
+    "environment variable DSA_USERNAME.",
 )
 def cli(data_config_file: str, app_config_file: str, user: str, password: str):
     """This module generates parquets with regional annotation pathology data from DSA
@@ -92,7 +91,7 @@ def cli(data_config_file: str, app_config_file: str, user: str, password: str):
     Args:
         app_config_file (str): path to yaml file containing application runtime parameters.
             See config.yaml.template
-	data_config_file (str): path to yaml file containing data input and output parameters.
+        data_config_file (str): path to yaml file containing data input and output parameters.
             See dask_data_config.yaml.template
         user (str, optional): DSA username. This can be provided as an argument or as an
             environment variable DSA_USERNAME.
@@ -109,14 +108,16 @@ def cli(data_config_file: str, app_config_file: str, user: str, password: str):
     cfg = ConfigSet(name="APP_CFG", config_file=app_config_file)
 
     try:
-        dsa_username = user if user else os.environ['DSA_USERNAME']
-        dsa_password = password if password else os.environ['DSA_PASSWORD']
+        dsa_username = user if user else os.environ["DSA_USERNAME"]
+        dsa_password = password if password else os.environ["DSA_PASSWORD"]
     except KeyError:
-        logger.error("Please set DSA_USERNAME/DSA_PASSWORD environment variable, " +\
-            "or pass user/password arguments")
+        logger.error(
+            "Please set DSA_USERNAME/DSA_PASSWORD environment variable, "
+            + "or pass user/password arguments"
+        )
         exit()
 
-    with CodeTimer(logger, f"generate DSA annotation geojson table"):
+    with CodeTimer(logger, "generate DSA annotation geojson table"):
         logger.info("data template: " + data_config_file)
         logger.info("config_file: " + app_config_file)
 
@@ -124,12 +125,8 @@ def cli(data_config_file: str, app_config_file: str, user: str, password: str):
         config_location = const.CONFIG_LOCATION(cfg)
         os.makedirs(config_location, exist_ok=True)
 
-        shutil.copy(
-            app_config_file, os.path.join(config_location, "app_config.yaml")
-        )
-        shutil.copy(
-            data_config_file, os.path.join(config_location, "data_config.yaml")
-        )
+        shutil.copy(app_config_file, os.path.join(config_location, "app_config.yaml"))
+        shutil.copy(data_config_file, os.path.join(config_location, "data_config.yaml"))
         logger.info("config files copied to %s", config_location)
 
         generate_annotation_table(dsa_username, dsa_password)
@@ -137,9 +134,7 @@ def cli(data_config_file: str, app_config_file: str, user: str, password: str):
         return
 
 
-def regional_json_to_geojson(
-    dsa_annotation_json: Dict[str, any]
-) -> Dict[str, any]:
+def regional_json_to_geojson(dsa_annotation_json: Dict[str, any]) -> Dict[str, any]:
     """converts DSA regional annotations (JSON) to geoJSON format
 
     Args:
@@ -175,9 +170,7 @@ def regional_json_to_geojson(
     return json.dumps(annotation_geojson)
 
 
-def point_json_to_geojson(
-    dsa_annotation_json: Dict[str, any]
-) -> Dict[str, any]:
+def point_json_to_geojson(dsa_annotation_json: Dict[str, any]) -> Dict[str, any]:
     """converts DSA point annotations (JSON) to geoJSON format
 
     Args:
@@ -236,17 +229,17 @@ def generate_geojson(
     """
     slide_id = Path(slide_id).stem
 
-    store = DataStore_v2(slide_store_dir) 
+    store = DataStore_v2(slide_store_dir)
 
     # save dsa annotation json
     dsa_json_path = store.write(
         json.dumps(dsa_annotation_json, indent=4),
         store_id=slide_id,
         namespace_id=metadata["user"],
-        data_type=data_type+"_DSA_JSON",
+        data_type=data_type + "_DSA_JSON",
         data_tag=labelset,
     )
-   
+
     # build geojson based on type of annotation (regional or point)
     if data_type == "REGIONAL_METADATA_RESULTS":
         geojson_annotation = regional_json_to_geojson(dsa_annotation_json)
@@ -268,16 +261,16 @@ def generate_geojson(
     )
 
     return {
-            "project_name": None,  # gets assigned in outer loop
-            "slide_id": slide_id,
-            "user": "CONCAT",
-            "dsa_json_path": dsa_json_path,
-            "geojson_path": geojson_path,
-            "date_updated": metadata["date_updated"],
-            "date_created": metadata["date"],
-            "labelset": labelset,
-            "annotation_name": metadata["annotation_name"],
-            "annotation_type": annotation_type,
+        "project_name": None,  # gets assigned in outer loop
+        "slide_id": slide_id,
+        "user": "CONCAT",
+        "dsa_json_path": dsa_json_path,
+        "geojson_path": geojson_path,
+        "date_updated": metadata["date_updated"],
+        "date_created": metadata["date"],
+        "labelset": labelset,
+        "annotation_name": metadata["annotation_name"],
+        "annotation_type": annotation_type,
     }
 
 
@@ -296,8 +289,8 @@ def generate_annotation_table(dsa_username, dsa_password) -> None:
 
     cfg = ConfigSet()
 
-    #global params
-    #params = cfg.get_config_set("APP_CFG")
+    # global params
+    # params = cfg.get_config_set("APP_CFG")
 
     uri = cfg.get_value("DATA_CFG::DSA_URI")
     collection_name = cfg.get_value("DATA_CFG::COLLECTION_NAME")
@@ -349,9 +342,11 @@ def generate_annotation_table(dsa_username, dsa_password) -> None:
     # metadata table
     df = pd.DataFrame.from_dict(annotation_data)
 
-    client = Client(threads_per_worker=dask_threads_per_worker,
-			n_workers=dask_n_workers,
-			memory_limit=dask_memory_limit)
+    client = Client(
+        threads_per_worker=dask_threads_per_worker,
+        n_workers=dask_n_workers,
+        memory_limit=dask_memory_limit,
+    )
 
     client.run(init_logger)
     logger.info(client)
@@ -397,20 +392,15 @@ def generate_annotation_table(dsa_username, dsa_password) -> None:
                 geojson_dict["project_name"] = collection_name
                 table_data.append(geojson_dict)
 
-                logger.info(
-                    f"Annotation for slide {slide_id} generated successfully"
-                )
+                logger.info(f"Annotation for slide {slide_id} generated successfully")
 
-        except:
-            logger.warning(
-                f"Something wrong with future {geojson_future}, skipping"
-            )
+        except Exception:
+            logger.warning(f"Something wrong with future {geojson_future}, skipping")
 
     client.shutdown()
 
     df = pd.DataFrame(table_data)
     df.to_parquet(f"{table_out_dir}/{data_type}.parquet")
-
 
 
 if __name__ == "__main__":
