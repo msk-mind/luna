@@ -4,8 +4,6 @@ from click.testing import CliRunner
 from luna.pathology.cli.generate_mask import cli
 import openslide
 
-path = "pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_mask"
-
 
 def test_cli(tmp_path):
     runner = CliRunner()
