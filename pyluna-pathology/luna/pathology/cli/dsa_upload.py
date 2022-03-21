@@ -5,7 +5,7 @@ import requests
 
 import girder_client
 
-from luna.pathology.cli.dsa.dsa_api_handler import (
+from luna.pathology.dsa.dsa_api_handler import (
     get_item_uuid,
     push_annotation_to_dsa_image,
     system_check,

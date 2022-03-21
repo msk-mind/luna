@@ -1,0 +1,10 @@
+cell_id,Name    Class   Parent  ROI     x_coord y_coord Detection probability   Nucleus: Area µm^2      Nucleus: Length µm      Nucleus: Circularity    Nucleus: Solidity       Nucleus: Max diameter µm        Nucleus: Min diameter µm        Cell: Area µm^2 Cell: Length µm Cell: Circularity       Cell: Solidity  Cell: Max diameter µm   Cell: Min diameter µm
+cell-0,123     Other   Tissue  Polygon 30962.0 477.76  0.511   371.4885        71.8269 0.9049  0.9973  27.2845 17.6713 611.311 90.4254 0.9395  0.9985  33.246  23.5745
+cell-1,123     Other   Tissue  Polygon 31586.3 479.66  0.5913  84.0627 35.5292 0.8368  1.0     14.252  7.2876  184.2613        52.0825 0.8536  1.0     20.0369 10.9321
+cell-2,123     Other   Tissue  Polygon 32145.6 479.73  0.6447  80.4521 36.1473 0.7737  0.9915  15.1265 6.6066  176.9031        52.4307 0.8087  1.0     21.0786 9.9125
+cell-3,123     Other   Glass   Polygon 31527.3 479.82  0.5797  27.9008 19.3104 0.9402  1.0     6.6873  5.7049  62.7779 28.9674 0.9402  1.0     10.0317 8.5566
+cell-4,123     Other   Glass   Polygon 31877.1 479.34  0.5872  66.4235 35.3793 0.6669  0.9169  14.6258 6.8339  131.4989        49.8329 0.6654  0.9094  20.0062 9.9982
+cell-5,123     Other   Glass   Polygon 30908.5 479.82  0.7031  47.1267 25.0879 0.9409  1.0     8.9688  6.7041  104.5144        37.4394 0.937   1.0     13.2424 10.0541
+cell-6,123     Other   Glass   Polygon 31957.6 479.75  0.7284  46.0457 25.4708 0.8919  1.0     9.877   6.0802  98.9296 37.2486 0.896   1.0     13.8245 9.1178
+cell-7,123     Other   Glass   Polygon 31897.4 479.58  0.6838  160.5434        45.4079 0.9785  1.0     15.4339 13.605  317.4146        63.7823 0.9805  0.9991  21.3928 19.4084
+cell-8,123     Other   Glass   Polygon 32838.4 479.91  0.5485  210.7395        58.8523 0.7646  1.0     25.0742 10.5547 395.6253        76.3772 0.8522  1.0     29.9079 15.8295

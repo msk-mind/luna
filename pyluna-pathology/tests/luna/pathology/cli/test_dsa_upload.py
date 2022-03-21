@@ -1,7 +1,7 @@
 from click.testing import CliRunner
 from girder_client import GirderClient
 
-from luna.pathology.cli.dsa_upload import cli
+from luna.pathology.dsa_upload import cli
 
 
 def test_upload(monkeypatch):
@@ -22,11 +22,13 @@ def test_upload(monkeypatch):
         return [{"name": "test_collection", "_id": "uuid", "_modelType": "collection"}]
 
     def mock_listResource(*args, **kwargs):
-       return [{
-               "annotation": {"name": "123.svs"},
-               "_id": "uuid",
-               "_modelType": "annotation",
-           }]
+        return [
+            {
+                "annotation": {"name": "123.svs"},
+                "_id": "uuid",
+                "_modelType": "annotation",
+            }
+        ]
 
     def mock_put(*args, **kwargs):
 

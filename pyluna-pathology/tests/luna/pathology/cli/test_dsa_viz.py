@@ -2,7 +2,7 @@ from click.testing import CliRunner
 import os
 from pathlib import Path
 
-from luna.pathology.cli.dsa_viz import cli
+from luna.pathology.dsa_viz import cli
 
 
 def verify_cleanup(output_file):

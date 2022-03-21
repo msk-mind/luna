@@ -3,7 +3,7 @@ from click.testing import CliRunner
 from luna.pathology.cli.infer_tile_labels import cli
 
 import pandas as pd
-from luna.pathology.schemas import SlideTiles
+from luna.pathology.common.schemas import SlideTiles
 
 
 def test_cli(tmp_path):

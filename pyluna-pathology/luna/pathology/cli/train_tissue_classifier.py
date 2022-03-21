@@ -27,7 +27,7 @@ from torchmetrics import (
 
 from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner, load_func
-from luna.pathology.common.ml import (
+from luna.pathology.analysis.ml import (
     BaseTorchTileDataset,
     BaseTorchClassifier,
     TorchTileClassifierTrainer,
