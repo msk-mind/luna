@@ -1,7 +1,7 @@
 from click.testing import CliRunner
 from girder_client import GirderClient
 
-from luna.pathology.dsa_upload import cli
+from luna.pathology.cli.dsa_upload import cli
 
 
 def test_upload(monkeypatch):
