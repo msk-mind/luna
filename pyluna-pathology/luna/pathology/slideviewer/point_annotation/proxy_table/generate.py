@@ -207,7 +207,9 @@ def create_proxy_table():
     spark.sparkContext.addPyFile(
         get_absolute_path(__file__, "../../../common/EnsureByteContext.py")
     )
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
+    spark.sparkContext.addPyFile(
+        get_absolute_path(__file__, "../../../common/utils.py")
+    )
     from luna.common.utils import generate_uuid_dict
 
     sv_json_record_uuid_udf = udf(generate_uuid_dict, StringType())
