@@ -1,5 +1,5 @@
 # root path to pathology data in the data lake
-ROOT_PATH: pyluna-pathology/tests/luna/pathology/point_annotation/testdata
+ROOT_PATH: pyluna-pathology/tests/luna/pathology/slideviewer/point_annotation/testdata
 
 # data type
 DATA_TYPE: POINT_RAW_JSON

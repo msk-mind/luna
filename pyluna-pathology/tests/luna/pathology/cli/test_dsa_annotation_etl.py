@@ -3,7 +3,7 @@ from click.testing import CliRunner
 from girder_client import GirderClient
 
 
-from luna.pathology.dsa_annotation_etl import cli
+from luna.pathology.cli.dsa_annotation_etl import cli
 import numpy as np
 
 

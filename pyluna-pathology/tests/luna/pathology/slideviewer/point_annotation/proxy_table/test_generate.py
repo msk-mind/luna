@@ -88,7 +88,7 @@ def test_download_point_annotation(requests_mock):
     ]
 
 
-def test_create_proxy_table(monkeypatch, module):
+def test_create_proxy_table(monkeypatch):
     def mock_download(*args, **kwargs):
         return [
             {
@@ -115,7 +115,7 @@ def test_create_proxy_table(monkeypatch, module):
 
     create_proxy_table()
 
-    df = module.spark.read.format("parquet").load(point_json_table_path)
+    df = spark.read.format("parquet").load(point_json_table_path)
 
     assert 2 == df.count()
     assert set(
