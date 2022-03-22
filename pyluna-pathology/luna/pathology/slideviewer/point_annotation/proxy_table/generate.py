@@ -190,7 +190,7 @@ def create_proxy_table():
     # [{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"Tissue 1"},{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1424","y":"774","class":"3","classname":"Tissue 4"}]
     point_json_struct = ArrayType(MapType(StringType(), StringType()))
     spark.sparkContext.addPyFile(
-        get_absolute_path(__file__, "../../common/slideviewer_client.py")
+        get_absolute_path(__file__, "../../../common/slideviewer_client.py")
     )
     download_point_annotation_udf = udf(download_point_annotation, point_json_struct)
 
@@ -205,9 +205,9 @@ def create_proxy_table():
 
     # populate "date_added", "date_updated","latest", "sv_json_record_uuid"
     spark.sparkContext.addPyFile(
-        get_absolute_path(__file__, "../../common/EnsureByteContext.py")
+        get_absolute_path(__file__, "../../../common/EnsureByteContext.py")
     )
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/utils.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
     from luna.common.utils import generate_uuid_dict
 
     sv_json_record_uuid_udf = udf(generate_uuid_dict, StringType())

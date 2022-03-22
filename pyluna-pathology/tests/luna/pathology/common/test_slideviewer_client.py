@@ -101,7 +101,7 @@ def test_fetch_slide_ids_without_csv(requests_mock):
 def test_downlaod_zip(requests_mock):
 
     requests_mock.get(SLIDEVIEWER_API_URL,
-        content=Path('pyluna-pathology/tests/luna/pathology/proxy_table/regional_annotation/test_data/input/CMU-1.zip').read_bytes())
+        content=Path('pyluna-pathology/tests/luna/pathology/common/testdata/input/label.zip').read_bytes())
     download_zip(SLIDEVIEWER_API_URL, zipfile_path, chunk_size=128)
 
 
@@ -109,13 +109,12 @@ def test_downlaod_zip(requests_mock):
 
 
 def test_unzip():
-    shutil.copyfile('pyluna-pathology/tests/luna/pathology/proxy_table/'
-                            'regional_annotation/test_data/input/CMU-1.zip',
+    shutil.copyfile('pyluna-pathology/tests/luna/pathology/common/testdata/input/label.zip',
                     zipfile_path)
 
     unzipped_file_descriptor = unzip(zipfile_path)
 
-    assert len(unzipped_file_descriptor.read('labels.bmp')) == 230454
+    assert len(unzipped_file_descriptor.read('labels.bmp')) == 3299422
 
 def test_download_sv_point_annotation(requests_mock):
 

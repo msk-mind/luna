@@ -176,7 +176,7 @@ def create_refined_table():
     label_config = cfg.get_value(path=const.DATA_CFG + "::LABEL_SETS")
 
     spark.sparkContext.addPyFile(
-        get_absolute_path(__file__, "../../common/build_geojson.py")
+        get_absolute_path(__file__, "../../../common/build_geojson.py")
     )
     from build_geojson import build_geojson_from_pointclick_json
 
@@ -192,9 +192,9 @@ def create_refined_table():
 
     # populate "date_added", "date_updated","latest", "sv_json_record_uuid"
     spark.sparkContext.addPyFile(
-        get_absolute_path(__file__, "../../common/EnsureByteContext.py")
+        get_absolute_path(__file__, "../../../common/EnsureByteContext.py")
     )
-    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../common/utils.py"))
+    spark.sparkContext.addPyFile(get_absolute_path(__file__, "../../../common/utils.py"))
     from luna.common.utils import generate_uuid_dict
 
     geojson_record_uuid_udf = udf(generate_uuid_dict, StringType())
