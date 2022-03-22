@@ -12,33 +12,35 @@ import torchvision.models as models
 def get_transform() -> Callable:
     """get_transform
 
-    transformer which generates a torch tensor compatible with the model 
-    
-    Args: 
+    transformer which generates a torch tensor compatible with the model
+
+    Args:
         none
     Returns
         torchvision.Transform: transform object for tensor conversion
 
     """
-    return torchvision.transforms.Compose([
+    return torchvision.transforms.Compose(
+        [
             torchvision.transforms.ToTensor(),
-    ])
+        ]
+    )
 
 
 def get_classifier(
-        checkpoint_path:str="/gpfs/mskmindhdp_emc/user/shared_data_folder/kohlia/tile_classifier/ckpts/1.ckpt",
-    n_classes:int=5,
+    checkpoint_path: str = "/gpfs/mskmindhdp_emc/user/shared_data_folder/kohlia/tile_classifier/ckpts/1.ckpt",
+    n_classes: int = 5,
 ):
     """get_classifier
 
-    loads a model from a checkpoint and unpacks the network 
-    
+    loads a model from a checkpoint and unpacks the network
+
     Args:
         checkpoint_path (str): path to model checkpoint
         n_classes: number of classes used in training, used to set final layer in
             PyTorch model
     Returns:
-        nn.Module: PyTorch module with loaded weights 
+        nn.Module: PyTorch module with loaded weights
     """
     model = models.resnet18(num_classes=n_classes)
     model.load_state_dict(
