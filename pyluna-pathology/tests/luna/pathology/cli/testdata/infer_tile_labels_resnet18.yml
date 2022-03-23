@@ -1,7 +1,0 @@
-input_label_tag: test_generate_tile_ov_labels
-job_tag: infer_ov_clf
-model_package: luna.pathology.models.ov_tissuenet
-model:
-  checkpoint_path: some_epoch018.torch
-  n_classes: 4
-root_path: pyluna-pathology/tests/luna/pathology/cli/testdata/data/test/slides

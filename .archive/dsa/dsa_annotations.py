@@ -19,7 +19,7 @@ from luna.common.DataStore import DataStore_v2
 from luna.common.CodeTimer import CodeTimer
 from luna.common.config import ConfigSet
 from luna.common.custom_logger import init_logger
-from luna.pathology.cli.dsa.dsa_api_handler import (
+from luna.pathology.dsa.dsa_api_handler import (
     system_check,
     get_collection_metadata,
     get_slides_from_collection,

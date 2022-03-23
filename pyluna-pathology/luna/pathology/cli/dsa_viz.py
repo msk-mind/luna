@@ -11,7 +11,7 @@ from PIL import Image
 import re
 import numpy as np
 
-from luna.pathology.cli.dsa.utils import (
+from luna.pathology.dsa.utils import (
     get_continuous_color,
     vectorize_np_array_bitmask_by_pixel_value,
 )
