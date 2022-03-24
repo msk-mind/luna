@@ -65,9 +65,9 @@ def cli(**cli_kwargs):
         cell_objects
     \b
     Example:
-        run_stardist_cell_detection 10001.svs
-            -cs 8 -it -it BRIGHTFIELD_H_DAB -nc 8
-            -o 10001/cells
+        run_stardist_cell_detection /absolute/path/to/10001.svs
+            -cs 8 -it BRIGHTFIELD_H_DAB -nc 8
+            -o /absolute/path/to/working_dir
     """
     cli_runner(cli_kwargs, _params_, run_stardist_cell_detection)
 
@@ -95,25 +95,27 @@ def run_stardist_cell_detection(
     """
     slide_filename = Path(input_slide_image).name
     slide_id = Path(input_slide_image).stem
-
+    docker_image = "mskmind/qupath-stardist"
     logger.info("Launching docker container:")
     logger.info(
         f"\tvolumes={input_slide_image}:'/inputs/{slide_filename}', {output_dir}:'/output_dir'"
     )
     logger.info(f"\tnano_cpus={int(num_cores * 1e9)}")
-    logger.info("\timage='mskminddev/qupath-stardist-cuda:latest'")
+    logger.info(f"\timage='{docker_image}'")
     logger.info(
-        f"\tcommand=QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy"
+        f"\tcommand=QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},outputDir=/output_dir,{debug_opts}] /scripts/stardist_simple.groovy"
     )
+
+    os.makedirs(output_dir, exist_ok=True)
 
     client = docker.from_env()
     container = client.containers.run(
         volumes={
             input_slide_image: {"bind": f"/inputs/{slide_filename}", "mode": "ro"},
-            os.path.join(output_dir, "workdir"): {"bind": "/output_dir", "mode": "rw"},
+            output_dir: {"bind": "/output_dir", "mode": "rw"},
         },
         nano_cpus=int(num_cores * 1e9),
-        image="mskmind/qupath-stardist:latest",
+        image=docker_image,
         command=f"QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy",
         detach=True,
     )
@@ -121,7 +123,7 @@ def run_stardist_cell_detection(
     for line in container.logs(stream=True):
         print(line.decode(), end="")
 
-    stardist_output = os.path.join(output_dir, "workdir", "cell_detections.tsv")
+    stardist_output = os.path.join(output_dir, "cell_detections.tsv")
 
     df = pd.read_csv(stardist_output, sep="\t")
     df.index = "cell-" + df.index.astype(int).astype(str)
