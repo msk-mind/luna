@@ -309,6 +309,9 @@ def expand_inputs(given_params: dict):
                 # Output names/slots are same as input names/slots, just without input_ prefix
                 input_type = param.replace("input_", "")
 
+                # Alias flag
+                alias = input_type in TYPE_ALIASES.keys()
+
                 # Convert any known type aliases
                 input_type = TYPE_ALIASES.get(input_type, input_type)
 
@@ -324,15 +327,16 @@ def expand_inputs(given_params: dict):
                 logger.info(f"Expanded input {param_value} -> {expanded_input}")
                 d_params[param] = expanded_input
 
-                # Query any keys:
-                segment_keys = metadata.get('segment_keys', {})
-                logger.info(f"Found segment keys: {segment_keys}")
+                if not alias: # We don't want to propagate keys for alias types since they can mix two different inputs!
+                    # Query any keys:
+                    segment_keys = metadata.get('segment_keys', {})
+                    logger.info(f"Found segment keys: {segment_keys}")
 
-                for key in segment_keys.keys():
-                    if key in d_keys.keys() and not segment_keys[key] == d_keys[key]:
-                        raise RuntimeError(
-                            f"Key mismatch for '{key}', found {segment_keys[key]} and {d_keys[key]}, cannot resolve!!"
-                        )
+                    for key in segment_keys.keys():
+                        if key in d_keys.keys() and not segment_keys[key] == d_keys[key]:
+                            raise RuntimeError(
+                                f"Key mismatch for '{key}', found {segment_keys[key]} and {d_keys[key]}, cannot resolve!!"
+                            )
                 
                 d_keys.update(segment_keys)
 

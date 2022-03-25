@@ -50,9 +50,9 @@ import numpy as np
 import scipy.ndimage
 from luna.radiology.mirp.imageReaders import read_itk_image, read_itk_segmentation
 from pathlib import Path
-
+import pandas as pd
 def coregister_volumes(input_itk_volume: str, input_itk_geometry: str, resample_pixel_spacing: float, output_dir: str, order: int, save_npy: bool):
-     """Resamples and co-registeres all volumes to occupy the same physical coordinates of a reference geometry (given as a itk_volume) and desired voxel size
+    """Resamples and co-registeres all volumes to occupy the same physical coordinates of a reference geometry (given as a itk_volume) and desired voxel size
 
     Args:
         input_itk_volume (str): path to itk compatible image volume (.mhd, .nrrd, .nii, etc.)
@@ -65,7 +65,7 @@ def coregister_volumes(input_itk_volume: str, input_itk_geometry: str, resample_
     Returns:
         dict: metadata about function call
     """
-   resample_pixel_spacing = np.full((3), resample_pixel_spacing)
+    resample_pixel_spacing = np.full((3), resample_pixel_spacing)
 
     image_class_object_volume      = read_itk_image(input_itk_volume, modality=str(Path(input_itk_volume).stem))
     image_class_object_geometry    = read_itk_image(input_itk_geometry, modality=str(Path(input_itk_geometry).stem))
@@ -74,13 +74,23 @@ def coregister_volumes(input_itk_volume: str, input_itk_geometry: str, resample_
 
     image_file = image_class_object_volume.export(file_path=output_dir)
     
+    feature_data = {
+        "resample_spacing": list(resample_pixel_spacing),
+        "resample_origin": list(image_class_object_geometry.origin),
+        "resample_size": list(voxels_iso.shape)
+    }
+
     if save_npy:
         np.save(image_file + '.npy', image_class_object_volume.get_voxel_grid())
+        feature_data['volume_npy_path'] = image_file + '.npy'
+
+    output_feature_data = f"{output_dir}/volume_feature_data.parquet"
+    pd.DataFrame([feature_data]).to_parquet(output_feature_data)
 
     return {
         'itk_volume': image_file,
         'npy_volume': image_file + '.npy',
-        'reference_origin': list(image_class_object_geometry.origin)
+        'feature_data': output_feature_data
     }
 
 
@@ -132,7 +142,7 @@ def interpolate(image, resample_spacing, reference_geometry, order=3):
     image.set_spacing (resample_spacing)
     image.set_origin (image_origin + (reference_origin - image_origin))
     image.set_voxel_grid(voxel_grid=resampled_image)
-    
+
     logger.info ("New origin=%s" % (image.origin))
     
     return resampled_image 

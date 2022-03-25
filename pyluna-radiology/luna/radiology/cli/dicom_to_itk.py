@@ -39,6 +39,10 @@ def cli(**cli_kwargs):
     cli_runner(cli_kwargs, _params_, dicom_to_itk)
 
 import itk
+
+from pydicom import dcmread
+from pathlib import Path
+
 def dicom_to_itk(input_dicom_folder, output_dir, itk_image_type, itk_c_type):
     """Generate an ITK compatible image from a dicom series/folder
 
@@ -93,10 +97,20 @@ def dicom_to_itk(input_dicom_folder, output_dir, itk_image_type, itk_c_type):
         logger.info('Writing: ' + outFileName)
         writer.Update()
 
+    path = next(Path(input_dicom_folder).glob("*.dcm"))
+    ds = dcmread(path)
+
     # Prepare metadata and commit
     properties = {
         'itk_volume' : outFileName,
         'num_slices' : n_slices,
+        'segment_keys':{
+            "radiology_patient_name": str(ds.PatientName),
+            "radiology_accession_number": str(ds.AccessionNumber),
+            "radiology_series_instance_uuid": str(ds.SeriesInstanceUID),
+            "radiology_series_number": str(ds.SeriesNumber),
+            "radiology_modality": str(ds.Modality),
+        }
     }
 
     return properties
