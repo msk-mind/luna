@@ -65,6 +65,7 @@ twine
 Sphinx
 sphinx-click
 nbsphinx
+jinja2<3.1.0 # temporary fix for nbconvert issue https://github.com/jupyter/nbconvert/issues/1736
 ipython
 sphinx-book-theme
 girder-client==3.1.3
