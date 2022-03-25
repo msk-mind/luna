@@ -61,4 +61,4 @@ def test_cli(monkeypatch):
 
     assert result.exit_code == 0
 
-    assert os.path.exists(f"{tmppath}/workdir/cell_detections.tsv")
+    assert os.path.exists(f"{tmppath}/cell_detections.tsv")
