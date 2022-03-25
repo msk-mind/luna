@@ -112,7 +112,12 @@ class ImageClass:
         pylab.imshow(self.get_voxel_grid()[img_slice, :, :], cmap=pylab.cm.bone)
         pylab.show()
 
+    def set_origin(self, new_origin):
+        self.origin = new_origin
+
     def set_spacing(self, new_spacing):
+
+        if type(new_spacing) is list: new_spacing = np.array(new_spacing)
 
         # Update spacing
         self.spacing: np.ndarray = new_spacing

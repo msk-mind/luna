@@ -61,7 +61,7 @@ class DicomToITK:
         """
         os.makedirs(output_dir, exist_ok=True)
 
-        PixelType = itk.ctype('signed short')
+        PixelType = itk.ctype('float')
         ImageType = itk.Image[PixelType, 3]
 
         namesGenerator = itk.GDCMSeriesFileNames.New()

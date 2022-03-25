@@ -22,6 +22,7 @@ def read_itk_image(path_to_itk_file, modality=None):
     image_spacing       = np.array(sitk_img.GetSpacing())  [::-1]
     image_orientation   = np.array(sitk_img.GetDirection())[::-1]
 
+    print (image_origin, image_spacing, image_orientation)
     # Create an ImageClass object from the input image.
     image_obj = ImageClass(voxel_grid=voxel_grid,
                            origin=image_origin,
