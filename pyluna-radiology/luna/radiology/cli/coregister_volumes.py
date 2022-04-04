@@ -80,7 +80,6 @@ def coregister_volumes(input_itk_volume: str, input_itk_geometry: str, resample_
     return {
         'itk_volume': image_file,
         'npy_volume': image_file + '.npy',
-        'reference_origin': list(image_class_object_geometry.origin)
     }
 
 
