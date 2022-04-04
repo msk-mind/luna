@@ -52,7 +52,7 @@ from luna.radiology.mirp.imageReaders import read_itk_image, read_itk_segmentati
 from pathlib import Path
 
 def coregister_volumes(input_itk_volume: str, input_itk_geometry: str, resample_pixel_spacing: float, output_dir: str, order: int, save_npy: bool):
-     """Resamples and co-registeres all volumes to occupy the same physical coordinates of a reference geometry (given as a itk_volume) and desired voxel size
+    """Resamples and co-registeres all volumes to occupy the same physical coordinates of a reference geometry (given as a itk_volume) and desired voxel size
 
     Args:
         input_itk_volume (str): path to itk compatible image volume (.mhd, .nrrd, .nii, etc.)
@@ -65,7 +65,7 @@ def coregister_volumes(input_itk_volume: str, input_itk_geometry: str, resample_
     Returns:
         dict: metadata about function call
     """
-   resample_pixel_spacing = np.full((3), resample_pixel_spacing)
+    resample_pixel_spacing = np.full((3), resample_pixel_spacing)
 
     image_class_object_volume      = read_itk_image(input_itk_volume, modality=str(Path(input_itk_volume).stem))
     image_class_object_geometry    = read_itk_image(input_itk_geometry, modality=str(Path(input_itk_geometry).stem))
