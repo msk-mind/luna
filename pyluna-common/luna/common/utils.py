@@ -10,8 +10,15 @@ from typing import Callable, List
 from luna.common.CodeTimer import CodeTimer
 import itertools
 
+import shutil
+
 import pandas as pd
 from pathlib import Path
+
+import requests
+from functools import partial 
+import urllib
+
 
 logger = logging.getLogger(__name__)
 
@@ -344,7 +351,61 @@ def expand_inputs(given_params: dict):
     return d_params, d_keys
 
 
-from functools import partial 
+
+def get_dataset_url():
+    dataset_url = os.environ.get("DATASET_URL", None)
+
+    if dataset_url is None:
+        logger.warning("Requesting feature data be sent to dataset, however no dataset URL provided, please set env DATASET_URL!")
+    else:
+        logger.info(f"Found dataset URL = {dataset_url}")
+
+    return dataset_url
+
+    
+
+def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
+    """ CLI tool method
+
+    Args:
+        input_data (str): path to input data
+        output_dir (str): output/working directory
+
+    Returns:
+        dict: metadata about function call
+    """
+
+    logger.info(f"Adding {input_feature_data} to {dataset_id} via {waystation_url}")
+
+    segment_id = "-".join(
+        [v for _, v in sorted(keys.items())]
+    )
+
+    logger.info(f"SEGMENT_ID={segment_id}")
+    
+    post_url = os.path.join ( waystation_url, "datasets", dataset_id, "segments", segment_id )
+
+    if 'http' in post_url:
+        # The cool way, using luna waystation
+
+        logger.info (f"Posting to: {post_url}")
+
+        res = requests.post(post_url, files={'segment_data': open (input_feature_data, 'rb')}, data={"segment_keys": json.dumps(keys)})
+
+        logger.info (f"{res}: {res.text}")
+
+    elif 'file:/' in post_url:
+        # The less cool way, just using file paths
+
+        segment_dir = Path ( urllib.parse.urlparse(post_url).path )
+
+        logger.info (f"Writing to: {segment_dir}")
+
+        os.makedirs(segment_dir, exist_ok=True)
+
+        shutil.copy(input_feature_data, segment_dir.joinpath("data.parquet"))
+
+
 
 def cli_runner(
     cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable[..., dict], pass_keys: bool = False
@@ -364,6 +425,8 @@ def cli_runner(
     kwargs = {}
     # if "output_dir" not in cli_kwargs.keys():
     #    raise RuntimeError("CLI Runners assume an output directory")
+
+    dataset_id = cli_kwargs.get("dataset_id", None)
 
     # Get params from param file
     if cli_kwargs.get("method_param_path"):
@@ -415,9 +478,23 @@ def cli_runner(
     else: 
         kwargs['segment_keys'] = keys
 
+    # Save metadata on disk
     if "output_dir" in kwargs:
         with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
             yaml.dump(kwargs, fp)
+
+    # Save feature data in parquet
+    if dataset_id is not None:
+
+        if "feature_data" in kwargs:
+            feature_data = kwargs.get("feature_data")
+            logger.info(f"Adding feature segment {feature_data} to {dataset_id}")
+
+            dataset_url = get_dataset_url()
+
+            if dataset_url is not None:
+                post_to_dataset( feature_data, dataset_url, dataset_id, keys=kwargs['segment_keys'])
+
 
     logger.info("Done.")
 

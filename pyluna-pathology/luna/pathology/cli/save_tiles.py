@@ -22,6 +22,8 @@ _params_ = [('input_slide_image', str), ('input_slide_tiles', str), ('output_dir
               help="Batch size used for inference speedup", default=64)    
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
+@click.option('-dsid', '--dataset_id', required=False,
+              help='Optional dataset identifier to add results to')
 def cli(**cli_kwargs):
     """Saves tiles to disk
     
