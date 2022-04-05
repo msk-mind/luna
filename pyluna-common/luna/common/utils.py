@@ -489,16 +489,15 @@ def cli_runner(
             yaml.dump(kwargs, fp)
 
     # Save feature data in parquet
-    if dataset_id is not None:
+    if dataset_id is not None and  "feature_data" in kwargs:
 
-        if "feature_data" in kwargs:
-            feature_data = kwargs.get("feature_data")
-            logger.info(f"Adding feature segment {feature_data} to {dataset_id}")
+        feature_data = kwargs.get("feature_data")
+        logger.info(f"Adding feature segment {feature_data} to {dataset_id}")
 
-            dataset_url = get_dataset_url()
+        dataset_url = get_dataset_url()
 
-            if dataset_url is not None:
-                post_to_dataset( feature_data, dataset_url, dataset_id, keys=kwargs['segment_keys'])
+        if dataset_url is not None:
+            post_to_dataset( feature_data, dataset_url, dataset_id, keys=kwargs['segment_keys'])
 
 
     logger.info("Done.")
