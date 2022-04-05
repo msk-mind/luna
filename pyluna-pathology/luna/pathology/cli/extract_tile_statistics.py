@@ -65,9 +65,10 @@ def extract_tile_statistics(input_slide_tiles, output_dir):
     """
 
     df = (
-        pd.read_csv(input_slide_tiles)
+        pd.read_parquet(input_slide_tiles)
+        .reset_index()
         .set_index("address")
-        .drop(columns=["x_coord", "y_coord", "tile_size", 'xy_extent', 'tile_units'])
+        .drop(columns=["x_coord", "y_coord", "tile_size", 'xy_extent', 'tile_units'], errors='ignore')
     )
     print(df.columns)
 
