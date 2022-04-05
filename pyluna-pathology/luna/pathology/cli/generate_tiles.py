@@ -102,8 +102,8 @@ def generate_tiles(input_slide_image, tile_size, requested_magnification, output
 
     logger.info(df)
 
-    output_header_file = f"{output_dir}/{slide_id}.tiles.csv"
-    df.to_csv(output_header_file)
+    output_header_file = f"{output_dir}/{slide_id}.tiles.parquet"
+    df.to_parquet(output_header_file)
 
     properties = {
         "slide_tiles": output_header_file, # "Tiles" are the metadata that describe them

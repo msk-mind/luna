@@ -22,9 +22,9 @@ def test_cli(tmp_path):
     )
 
     assert result.exit_code == 0
-    assert os.path.exists(f"{tmp_path}/123.tiles.csv")
+    assert os.path.exists(f"{tmp_path}/123.tiles.parquet")
 
-    assert SlideTiles.check(f"{tmp_path}/123.tiles.csv")
+    assert SlideTiles.check(f"{tmp_path}/123.tiles.parquet")
 
 
 def test_cli_bad_mag(tmp_path):

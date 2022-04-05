@@ -466,6 +466,8 @@ def cli_runner(
 
         result = cli_function(**kwargs)
 
+    logger.info("Transform code completed, running post-transform functions now...")
+
     kwargs.update(result)
 
     # filter out kwargs with sensitive data
