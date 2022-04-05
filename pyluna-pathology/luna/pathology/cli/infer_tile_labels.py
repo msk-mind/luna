@@ -109,12 +109,12 @@ def infer_tile_labels(
     Args:
         input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
         output_dir (str): output/working directory
-        repo_name (str): repository root name like (namespace/repo) at github.com to serve torch.hub models
-        transform_name (str): torch hub transform name (a function at the repo repo_name)
+        hub_repo_or_dir (str): repository root name like (namespace/repo) at github.com to serve torch.hub models.
+            Or path to a local model
         model_name (str): torch hub model name (a nn.Module at the repo repo_name)
-        weight_tag (str): what weight tag to use
         num_cores (int): Number of cores to use for CPU parallelization
         batch_size (int): size in batch dimension to chuck inference (8-256 recommended, depending on memory usage)
+        kwargs (str): additional keywords to pass to model initialization
 
     Returns:
         dict: metadata about function call
