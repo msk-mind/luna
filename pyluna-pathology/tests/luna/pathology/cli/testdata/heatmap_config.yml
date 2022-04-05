@@ -5,4 +5,3 @@ output_dir: pyluna-pathology/tests/luna/pathology/cli/testouts
 annotation_name: test
 tile_size: 128
 scale_factor: 8
-requested_magnification: 20
