@@ -87,7 +87,7 @@ def save_tiles(input_slide_image, input_slide_tiles, output_dir, num_cores, batc
         dict: metadata about function call
     """
     slide_id = Path(input_slide_image).stem
-    df = pd.read_parquet(input_slide_tiles).set_index('address')
+    df = pd.read_parquet(input_slide_tiles).reset_index().set_index('address')
 
     output_header_file = f"{output_dir}/{slide_id}.tiles.parquet"
     output_hdf_file    = f"{output_dir}/{slide_id}.tiles.h5"

@@ -453,12 +453,10 @@ def cli_runner(
     logger.info (f"Full segment key set: {keys}")
 
     # Nice little log break
-    print(
-        "\n"
-        + "-" * 35
-        + f" Running transform::{cli_function.__name__} "
-        + "-" * 35
-        + "\n"
+    logger.info(
+          "-" * 60
+        + f"\n Starting transform::{cli_function.__name__} \n"
+        + "-" * 60
     )
 
     with CodeTimer(logger, name=f"transform::{cli_function.__name__}"):
@@ -466,7 +464,12 @@ def cli_runner(
 
         result = cli_function(**kwargs)
 
-    logger.info("Transform code completed, running post-transform functions now...")
+    # Nice little log break
+    logger.info(
+          "-" * 60
+        + f"\n Done with transform, running post-transform functions... \n"
+        + "-" * 60
+    )
 
     kwargs.update(result)
 
