@@ -24,11 +24,11 @@ def test_cli(tmp_path):
 
     assert result.exit_code == 0
     assert SlideTiles.check(
-        f"{tmp_path}" f"/tile_scores_and_labels_pytorch_inference.csv"
+        f"{tmp_path}" f"/tile_scores_and_labels_pytorch_inference.parquet"
     )
 
     # Default to 2 channels..
-    df = pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
+    df = pd.read_parquet(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet")
     assert df.shape == (12, 9)
 
     assert set(["Background", "Tumor"]).intersection(set(df.columns)) == set(
@@ -56,10 +56,10 @@ def test_cli_kwargs(tmp_path):
 
     assert result.exit_code == 0
     assert SlideTiles.check(
-        f"{tmp_path}" f"/tile_scores_and_labels_pytorch_inference.csv"
+        f"{tmp_path}" f"/tile_scores_and_labels_pytorch_inference.parquet"
     )
 
-    df = pd.read_csv(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
+    df = pd.read_parquet(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet")
 
     assert df.shape == (12, 17)  # 8 more
 
@@ -83,12 +83,12 @@ def test_cli_resnet(tmp_path):
     )
 
     assert result.exit_code == 0
-    assert SlideTiles.check(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv")
+    assert SlideTiles.check(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet")
 
-    assert pd.read_csv(
-        f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv"
+    assert pd.read_parquet(
+        f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet"
     ).shape == (12, 1007)
 
-    assert pd.read_csv(
-        f"{tmp_path}/tile_scores_and_labels_pytorch_inference.csv"
+    assert pd.read_parquet(
+        f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet"
     ).shape == (12, 1007)

@@ -143,7 +143,7 @@ def infer_tile_labels(
         transform = ttm.transform
         ttm.model.to(device)
 
-    df = pd.read_csv(input_slide_tiles).set_index("address")
+    df = pd.read_parquet(input_slide_tiles).reset_index().set_index("address")
     ds = HD5FDataset(df, preprocess=preprocess)
     loader = DataLoader(
         ds, num_workers=num_cores, batch_size=batch_size, pin_memory=True
@@ -165,13 +165,14 @@ def infer_tile_labels(
         df_scores = df_scores.rename(columns=ttm.class_labels)
 
     df_output = df.join(df_scores)
+    df_output.columns = df_output.columns.astype(str)
 
     logger.info(df_output)
 
     output_file = os.path.join(
-        output_dir, "tile_scores_and_labels_pytorch_inference.csv"
+        output_dir, "tile_scores_and_labels_pytorch_inference.parquet"
     )
-    df_output.to_csv(output_file)
+    df_output.to_parquet(output_file)
 
     # Save our properties and params
     properties = {
