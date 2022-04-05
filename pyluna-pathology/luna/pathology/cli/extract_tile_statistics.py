@@ -29,6 +29,12 @@ _params_ = [("input_slide_tiles", str), ("output_dir", str)]
     required=False,
     help="path to a metadata json/yaml file with method parameters to reproduce results",
 )
+@click.option(
+    "-dsid",
+    "--dataset_id",
+    required=False,
+    help="Optional dataset identifier to add tabular output to",
+)
 def cli(**cli_kwargs):
     """Extracts statistics over tiles
 
