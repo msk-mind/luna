@@ -113,20 +113,20 @@ def run_stardist_cell_detection(
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # client = docker.from_env()
-    # container = client.containers.run(
-    #     volumes={
-    #         input_slide_image: {"bind": f"/inputs/{slide_filename}", "mode": "ro"},
-    #         output_dir: {"bind": "/output_dir", "mode": "rw"},
-    #     },
-    #     nano_cpus=int(num_cores * 1e9),
-    #     image=docker_image,
-    #     command=command,
-    #     detach=True,
-    # )
+    client = docker.from_env()
+    container = client.containers.run(
+        volumes={
+            input_slide_image: {"bind": f"/inputs/{slide_filename}", "mode": "ro"},
+            output_dir: {"bind": "/output_dir", "mode": "rw"},
+        },
+        nano_cpus=int(num_cores * 1e9),
+        image=docker_image,
+        command=command,
+        detach=True,
+    )
 
-    # for line in container.logs(stream=True):
-    #     print(line.decode(), end="")
+    for line in container.logs(stream=True):
+        print(line.decode(), end="")
 
     stardist_output = os.path.join(output_dir, "cell_detections.tsv")
 
