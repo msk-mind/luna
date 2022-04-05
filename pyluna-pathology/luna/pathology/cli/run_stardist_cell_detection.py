@@ -107,20 +107,20 @@ def run_stardist_cell_detection(
 
     os.makedirs(output_dir, exist_ok=True)
 
-    client = docker.from_env()
-    container = client.containers.run(
-        volumes={
-            input_slide_image: {"bind": f"/inputs/{slide_filename}", "mode": "ro"},
-            output_dir: {"bind": "/output_dir", "mode": "rw"},
-        },
-        nano_cpus=int(num_cores * 1e9),
-        image=docker_image,
-        command=command,
-        detach=True,
-    )
+    # client = docker.from_env()
+    # container = client.containers.run(
+    #     volumes={
+    #         input_slide_image: {"bind": f"/inputs/{slide_filename}", "mode": "ro"},
+    #         output_dir: {"bind": "/output_dir", "mode": "rw"},
+    #     },
+    #     nano_cpus=int(num_cores * 1e9),
+    #     image=docker_image,
+    #     command=command,
+    #     detach=True,
+    # )
 
-    for line in container.logs(stream=True):
-        print(line.decode(), end="")
+    # for line in container.logs(stream=True):
+    #     print(line.decode(), end="")
 
     stardist_output = os.path.join(output_dir, "cell_detections.tsv")
 
@@ -132,14 +132,15 @@ def run_stardist_cell_detection(
         columns={"Centroid X µm": "x_coord", "Centroid Y µm": "y_coord"}
     )  # x,ys follow this convention
 
-    output_header_file = os.path.join(output_dir, f"{slide_id}_cell_objects.csv")
-    df.to_csv(output_header_file)
+    output_header_file = os.path.join(output_dir, f"{slide_id}_cell_objects.parquet")
+    df.to_parquet(output_header_file)
 
     logger.info("Generated cell data:")
     logger.info(df)
 
     properties = {
         "cell_objects": output_header_file,
+        "feature_data": output_header_file,
         "spatial": True,
         "total_cells": len(df),
         "segment_keys": {"slide_id": slide_id},

@@ -87,7 +87,7 @@ def save_tiles(input_slide_image, input_slide_tiles, output_dir, num_cores, batc
     slide_id = Path(input_slide_image).stem
     df = pd.read_csv(input_slide_tiles).set_index('address')
 
-    output_header_file = f"{output_dir}/{slide_id}.tiles.csv"
+    output_header_file = f"{output_dir}/{slide_id}.tiles.parquet"
     output_hdf_file    = f"{output_dir}/{slide_id}.tiles.h5"
 
     logger.info(f"Now generating tiles with num_cores={num_cores} and batch_size={batch_size}!")
@@ -108,10 +108,11 @@ def save_tiles(input_slide_image, input_slide_tiles, output_dir, num_cores, batc
     df['tile_store'] = output_hdf_file
     
     logger.info(df)
-    df.to_csv(output_header_file)
+    df.to_parquet(output_header_file)
 
     properties = {
         "slide_tiles": output_header_file, # "Tiles" are the metadata that describe them
+        "feature_data": output_header_file, # Tiles can act like feature data
         "total_tiles": len(df),
     }
 

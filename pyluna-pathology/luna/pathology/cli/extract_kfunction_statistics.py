@@ -73,7 +73,7 @@ def extract_kfunction(input_cell_objects, tile_size, intensity_label, tile_strid
     Returns:
         dict: metadata about function call
     """
-    df = pd.read_csv(input_cell_objects)
+    df = pd.read_parquet(input_cell_objects)
 
     l_address = []
     l_k_function = []

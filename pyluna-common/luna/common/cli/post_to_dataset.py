@@ -30,9 +30,9 @@ def cli(**cli_kwargs):
         output data
     \b
     Example:
-        CLI_TOOL ./slides/10001.svs ./halo/10001.job18484.annotations
-            -an Tumor
-            -o ./masks/10001/
+        post_to_dataset /path/to/featuredata
+            --waystation_url Tumor
+            --dataset_id MY_DATASET
     """
     cli_runner( cli_kwargs, _params_, post_to_dataset, pass_keys=True)
 
@@ -60,6 +60,8 @@ def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
     logger.info (f"Posting to: {post_url}")
 
     res = requests.post(post_url, files={'segment_data': open (input_feature_data, 'rb')}, data={"segment_keys": json.dumps(keys)})
+
+    print (res.text)
 
     logger.info (f"Response: {res}, Response data: {res.json()}")
     
