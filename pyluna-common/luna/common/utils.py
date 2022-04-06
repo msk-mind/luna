@@ -281,9 +281,9 @@ def validate_params(given_params: dict, params_list: List[tuple]):
             raise e
         
         if param in MASK_KEYS:
-            logger.info(f" -> Param {param} ({dtype}) set = *****")
+            logger.info(f" -> Set {param} ({dtype}) = *****")
         else:
-            logger.info(f" -> Param {param} ({dtype}) set = {d_params[param]}")
+            logger.info(f" -> Set {param} ({dtype}) = {d_params[param]}")
 
     return d_params
 
