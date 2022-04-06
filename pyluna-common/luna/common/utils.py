@@ -248,7 +248,8 @@ def validate_params(given_params: dict, params_list: List[tuple]):
     Returns:
         dict: Validated and casted keyword argument dictonary
     """
-    logger = logging.getLogger(__name__)
+    logger.info("Validating params...")
+
     d_params = {}
     for param, dtype in params_list:
         if given_params.get(param, None) is None:
@@ -280,9 +281,9 @@ def validate_params(given_params: dict, params_list: List[tuple]):
             raise e
         
         if param in MASK_KEYS:
-            logger.info(f"Param {param} set = *****")
+            logger.info(f" -> Param {param} ({dtype}) set = *****")
         else:
-            logger.info(f"Param {param} set = {d_params[param]}")
+            logger.info(f" -> Param {param} ({dtype}) set = {d_params[param]}")
 
     return d_params
 
@@ -299,12 +300,15 @@ def expand_inputs(given_params: dict):
     d_params = {}
     d_keys = {}
 
+    logger.info("Expanding inputs...")
+
     for param, param_value in given_params.items():
         if "input_" in param:  # We want to treat input_ params a bit differently
 
             # For some inputs, they may be defined as a directory, where metadata about them is at the provided directory path
             expected_metadata = os.path.join(param_value, "metadata.yml")
-            print(expected_metadata)
+            logger.info(f"Attempting to read metadata at {expected_metadata}")
+
             if os.path.isdir(param_value) and os.path.exists(
                 expected_metadata
             ):  # Check for this metadata file
@@ -328,7 +332,7 @@ def expand_inputs(given_params: dict):
                         f"No matching output slot of type [{param.replace('input_', '')}] at given input directory"
                     )
 
-                logger.info(f"Expanded input {param_value} -> {expanded_input}")
+                logger.info(f"Expanded input:\n -> {param_value}\n -> {expanded_input}")
                 d_params[param] = expanded_input
 
                 # Query any keys:
@@ -421,34 +425,37 @@ def cli_runner(
         None
 
     """
-    logger.info(f"Running {cli_function} with {cli_kwargs}")
-    kwargs = {}
+    logger.info(f"Started CLI Runner wtih {cli_function}")
+    logger.debug(f"cli_kwargs={cli_kwargs}")
+    logger.debug(f"cli_params={cli_params}")
+    logger.debug(f"pass_keys={pass_keys}")
+
+    trm_kwargs = {}
+
     # if "output_dir" not in cli_kwargs.keys():
     #    raise RuntimeError("CLI Runners assume an output directory")
-
-    dataset_id = cli_kwargs.get("dataset_id", None)
 
     # Get params from param file
     if cli_kwargs.get("method_param_path"):
         with open(cli_kwargs.get("method_param_path"), "r") as yaml_file:
             yaml_kwargs = yaml.safe_load(yaml_file)
-        kwargs.update(yaml_kwargs)  # Fill from json
+        trm_kwargs.update(yaml_kwargs)  # Fill from json
 
     for key in list(cli_kwargs.keys()):
         if cli_kwargs[key] is None:
             del cli_kwargs[key]
 
     # Override with CLI arguments
-    kwargs.update(cli_kwargs)
+    trm_kwargs.update(cli_kwargs)
 
-    kwargs = validate_params(kwargs, cli_params)
+    trm_kwargs = validate_params(trm_kwargs, cli_params)
 
-    if "output_dir" in kwargs:
-        output_dir = kwargs["output_dir"]
+    if "output_dir" in trm_kwargs:
+        output_dir = trm_kwargs["output_dir"]
         os.makedirs(output_dir, exist_ok=True)
 
     # Expand implied inputs
-    kwargs, keys = expand_inputs(kwargs)
+    trm_kwargs, keys = expand_inputs(trm_kwargs)
 
     logger.info (f"Full segment key set: {keys}")
 
@@ -462,7 +469,7 @@ def cli_runner(
     with CodeTimer(logger, name=f"transform::{cli_function.__name__}"):
         if pass_keys: cli_function = partial (cli_function, keys=keys)
 
-        result = cli_function(**kwargs)
+        result = cli_function(**trm_kwargs)
 
     # Nice little log break
     logger.info(
@@ -471,33 +478,34 @@ def cli_runner(
         + "-" * 60
     )
 
-    kwargs.update(result)
+    trm_kwargs.update(result)
 
     # filter out kwargs with sensitive data
     for key in MASK_KEYS:
-        kwargs.pop(key, None)
+        trm_kwargs.pop(key, None)
     
     # propagate keys
-    if kwargs.get('segment_keys', None):
-        kwargs['segment_keys'].update(keys)
+    if trm_kwargs.get('segment_keys', None):
+        trm_kwargs['segment_keys'].update(keys)
     else: 
-        kwargs['segment_keys'] = keys
+        trm_kwargs['segment_keys'] = keys
 
     # Save metadata on disk
-    if "output_dir" in kwargs:
+    if "output_dir" in trm_kwargs:
         with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
-            yaml.dump(kwargs, fp)
+            yaml.dump(trm_kwargs, fp)
 
-    # Save feature data in parquet
-    if dataset_id is not None and  "feature_data" in kwargs:
+    # Save feature data in parquet if indicated:
+    if "dataset_id" in cli_kwargs and  "feature_data" in trm_kwargs:
+        dataset_id   = cli_kwargs.get("dataset_id")
+        feature_data = trm_kwargs.get("feature_data")
 
-        feature_data = kwargs.get("feature_data")
         logger.info(f"Adding feature segment {feature_data} to {dataset_id}")
 
         dataset_url = get_dataset_url()
 
         if dataset_url is not None:
-            post_to_dataset( feature_data, dataset_url, dataset_id, keys=kwargs['segment_keys'])
+            post_to_dataset( feature_data, dataset_url, dataset_id, keys=trm_kwargs['segment_keys'])
 
 
     logger.info("Done.")
