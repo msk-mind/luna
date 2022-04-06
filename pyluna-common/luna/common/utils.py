@@ -389,7 +389,9 @@ def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
     
     post_url = os.path.join ( waystation_url, "datasets", dataset_id, "segments", segment_id )
 
-    if 'http' in post_url:
+    parsed_url = urllib.parse.urlparse(post_url)
+
+    if 'http' in parsed_url.scheme:
         # The cool way, using luna waystation
 
         logger.info (f"Posting to: {post_url}")
@@ -398,10 +400,10 @@ def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
 
         logger.info (f"{res}: {res.text}")
 
-    elif 'file:/' in post_url:
+    elif 'file' in parsed_url.scheme:
         # The less cool way, just using file paths
 
-        segment_dir = Path ( urllib.parse.urlparse(post_url).path )
+        segment_dir = Path ( parsed_url.path )
 
         logger.info (f"Writing to: {segment_dir}")
 
