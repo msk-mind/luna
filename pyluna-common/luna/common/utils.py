@@ -369,14 +369,13 @@ def get_dataset_url():
     
 
 def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
-    """ CLI tool method
+    """ Interface feature data to a parquet dataset
 
     Args:
-        input_data (str): path to input data
-        output_dir (str): output/working directory
-
-    Returns:
-        dict: metadata about function call
+        input_feature_data (str): path to input data
+        waystation_url (str): URL of dataset root (either file or using waystation)
+        dataset_id (str): Dataset name/ID
+        keys (dict): corresponding segment keys
     """
 
     logger.info(f"Adding {input_feature_data} to {dataset_id} via {waystation_url}")
@@ -410,6 +409,9 @@ def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
         os.makedirs(segment_dir, exist_ok=True)
 
         shutil.copy(input_feature_data, segment_dir.joinpath("data.parquet"))
+    
+    else:
+        logger.warning("Unrecognized scheme: {parsed_url.scheme}, skipping!")
 
 
 
