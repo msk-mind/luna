@@ -135,7 +135,8 @@ def infer_tile_labels(
 
     logger.info(f"Torch hub source = {source} @ {hub_repo_or_dir}")
 
-    logger.info(f"Available models: {torch.hub.list(hub_repo_or_dir)}")
+    if source == "github":
+        logger.info(f"Available models: {torch.hub.list(hub_repo_or_dir)}")
 
     ttm = torch.hub.load(hub_repo_or_dir, model_name, source=source, **kwargs, force_reload=True)
 
@@ -169,7 +170,7 @@ def infer_tile_labels(
             ]
         )
 
-    if hasattr(ttm, "class_labels"):
+    if hasattr(ttm, "column_labels"):
         logger.info(f"Mapping column labels -> {ttm.column_labels}")
         df_scores = df_scores.rename(columns=ttm.column_labels)
 
