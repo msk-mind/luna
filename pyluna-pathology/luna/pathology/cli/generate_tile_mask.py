@@ -54,9 +54,9 @@ def cli(**cli_kwargs):
         output data
     \b
     Example:
-        convert_tiles_to_mask ./slides/10001.svs ./tiles_scores_and_labels.csv
+        convert_tiles_to_mask ./slides/10001.svs ./tiles_scores_and_labels.parquet
             -lc Background,Tumor
-            -o ./label_mask.csv
+            -o ./label_mask.parquet
     """
     cli_runner(cli_kwargs, _params_, convert_tiles_to_mask)
 
@@ -93,7 +93,7 @@ def convert_tiles_to_mask(
     # check if tile_col is a valid argument
     logger.info("Reading SlideTiles")
     print(label_cols)
-    tile_df = pd.read_csv(input_slide_tiles).set_index("address")
+    tile_df = pd.read_parquet(input_slide_tiles).reset_index().set_index("address")
 
     if not set(label_cols).issubset(tile_df.columns):
         raise ValueError(f"Invalid label_cols={label_cols}, verify input dataframe")

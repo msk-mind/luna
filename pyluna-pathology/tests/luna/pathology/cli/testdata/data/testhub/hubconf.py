@@ -13,14 +13,14 @@ class MyCustomModel(TorchTransformModel):
         )
 
         if n_channels == 2:
-            self.class_labels = {0: "Background", 1: "Tumor"}
+            self.column_labels = {0: "Background", 1: "Tumor"}
 
     def get_preprocess(self):
         return self.preprocess
 
     def transform(self, X):
         X = X.permute(0, 3, 1, 2).float() / 255
-        out = self.model(X).view(X.shape[0], -1)
+        out = self.model(X).view(X.shape[0], -1).cpu().numpy()
         return out
 
 
@@ -38,7 +38,7 @@ class Resnet(TorchTransformModel):
 
     def transform(self, X):
         X = X.permute(0, 3, 1, 2).float() / 255
-        out = self.model(X).view(X.shape[0], -1)
+        out = self.model(X).view(X.shape[0], -1).cpu().numpy()
         return out
 
 

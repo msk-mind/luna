@@ -46,9 +46,11 @@ _params_ = [
     help="repository name to pull model and weight from, e.g. msk-mind/luna-ml",
 )
 @click.option(
-    "-tn", "--transform_name", required=False, help="torch hub transform name"
+    "-mn", 
+    "--model_name", 
+    required=False, 
+    help="torch hub model name",
 )
-@click.option("-mn", "--model_name", required=False, help="torch hub model name")
 @click.option(
     "-kw",
     "--kwargs",
@@ -71,6 +73,12 @@ _params_ = [
     "--method_param_path",
     required=False,
     help="path to a metadata json/yaml file with method parameters to reproduce results",
+)
+@click.option(
+    "-dsid",
+    "--dataset_id",
+    required=False,
+    help="Optional dataset identifier to add results to",
 )
 def cli(**cli_kwargs):
     """Run a model with a specific pre-transform for all tiles in a slide (tile_images), requires tiles to be saved (save_tiles) first
@@ -110,7 +118,6 @@ def infer_tile_labels(
         input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
         output_dir (str): output/working directory
         repo_name (str): repository root name like (namespace/repo) at github.com to serve torch.hub models
-        transform_name (str): torch hub transform name (a function at the repo repo_name)
         model_name (str): torch hub model name (a nn.Module at the repo repo_name)
         weight_tag (str): what weight tag to use
         num_cores (int): Number of cores to use for CPU parallelization
@@ -128,10 +135,13 @@ def infer_tile_labels(
 
     logger.info(f"Torch hub source = {source} @ {hub_repo_or_dir}")
 
-    ttm = torch.hub.load(hub_repo_or_dir, model_name, source=source, **kwargs)
+    if source == "github":
+        logger.info(f"Available models: {torch.hub.list(hub_repo_or_dir)}")
+
+    ttm = torch.hub.load(hub_repo_or_dir, model_name, source=source, **kwargs, force_reload=True)
 
     if not isinstance(ttm, TorchTransformModel):
-        raise RuntimeError("Not a valid model!")
+        raise RuntimeError(f"Not a valid model, loaded model was of type {type(ttm)}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device = {device}")
@@ -143,7 +153,7 @@ def infer_tile_labels(
         transform = ttm.transform
         ttm.model.to(device)
 
-    df = pd.read_csv(input_slide_tiles).set_index("address")
+    df = pd.read_parquet(input_slide_tiles).reset_index().set_index("address")
     ds = HD5FDataset(df, preprocess=preprocess)
     loader = DataLoader(
         ds, num_workers=num_cores, batch_size=batch_size, pin_memory=True
@@ -160,22 +170,24 @@ def infer_tile_labels(
             ]
         )
 
-    if hasattr(ttm, "class_labels"):
-        logger.info(f"Mapping column labels -> {ttm.class_labels}")
-        df_scores = df_scores.rename(columns=ttm.class_labels)
+    if hasattr(ttm, "column_labels"):
+        logger.info(f"Mapping column labels -> {ttm.column_labels}")
+        df_scores = df_scores.rename(columns=ttm.column_labels)
 
     df_output = df.join(df_scores)
+    df_output.columns = df_output.columns.astype(str)
 
     logger.info(df_output)
 
     output_file = os.path.join(
-        output_dir, "tile_scores_and_labels_pytorch_inference.csv"
+        output_dir, "tile_scores_and_labels_pytorch_inference.parquet"
     )
-    df_output.to_csv(output_file)
+    df_output.to_parquet(output_file)
 
     # Save our properties and params
     properties = {
         "slide_tiles": output_file,
+        "feature_data": output_file,
         "total_tiles": len(df_output),
         "available_labels": list(df_output.columns),
     }

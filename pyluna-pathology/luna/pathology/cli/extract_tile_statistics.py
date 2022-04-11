@@ -29,6 +29,12 @@ _params_ = [("input_slide_tiles", str), ("output_dir", str)]
     required=False,
     help="path to a metadata json/yaml file with method parameters to reproduce results",
 )
+@click.option(
+    "-dsid",
+    "--dataset_id",
+    required=False,
+    help="Optional dataset identifier to add tabular output to",
+)
 def cli(**cli_kwargs):
     """Extracts statistics over tiles
 
@@ -59,9 +65,10 @@ def extract_tile_statistics(input_slide_tiles, output_dir):
     """
 
     df = (
-        pd.read_csv(input_slide_tiles)
+        pd.read_parquet(input_slide_tiles)
+        .reset_index()
         .set_index("address")
-        .drop(columns=["x_coord", "y_coord", "tile_size"])
+        .drop(columns=["x_coord", "y_coord", "tile_size", 'xy_extent', 'tile_units'], errors='ignore')
     )
     print(df.columns)
 
@@ -75,14 +82,14 @@ def extract_tile_statistics(input_slide_tiles, output_dir):
     df_feature_data = pd.DataFrame([dict_feature_data])
 
     output_feature_file = os.path.join(
-        output_dir, Path(input_slide_tiles).stem + "_tile_stats.csv"
+        output_dir, Path(input_slide_tiles).stem + "_tile_stats.parquet"
     )
 
     logger.info(df_feature_data)
 
-    df_feature_data.to_csv(output_feature_file)
+    df_feature_data.to_parquet(output_feature_file)
 
-    properties = {"feature_csv": output_feature_file}
+    properties = {"feature_data": output_feature_file}
 
     return properties
 

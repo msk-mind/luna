@@ -10,8 +10,15 @@ from typing import Callable, List
 from luna.common.CodeTimer import CodeTimer
 import itertools
 
+import shutil
+
 import pandas as pd
 from pathlib import Path
+
+import requests
+from functools import partial 
+import urllib
+
 
 logger = logging.getLogger(__name__)
 
@@ -241,7 +248,8 @@ def validate_params(given_params: dict, params_list: List[tuple]):
     Returns:
         dict: Validated and casted keyword argument dictonary
     """
-    logger = logging.getLogger(__name__)
+    logger.info("Validating params...")
+
     d_params = {}
     for param, dtype in params_list:
         if given_params.get(param, None) is None:
@@ -273,9 +281,9 @@ def validate_params(given_params: dict, params_list: List[tuple]):
             raise e
         
         if param in MASK_KEYS:
-            logger.info(f"Param {param} set = *****")
+            logger.info(f" -> Set {param} ({dtype}) = *****")
         else:
-            logger.info(f"Param {param} set = {d_params[param]}")
+            logger.info(f" -> Set {param} ({dtype}) = {d_params[param]}")
 
     return d_params
 
@@ -292,12 +300,15 @@ def expand_inputs(given_params: dict):
     d_params = {}
     d_keys = {}
 
+    logger.info("Expanding inputs...")
+
     for param, param_value in given_params.items():
         if "input_" in param:  # We want to treat input_ params a bit differently
 
             # For some inputs, they may be defined as a directory, where metadata about them is at the provided directory path
             expected_metadata = os.path.join(param_value, "metadata.yml")
-            print(expected_metadata)
+            logger.info(f"Attempting to read metadata at {expected_metadata}")
+
             if os.path.isdir(param_value) and os.path.exists(
                 expected_metadata
             ):  # Check for this metadata file
@@ -324,7 +335,7 @@ def expand_inputs(given_params: dict):
                         f"No matching output slot of type [{param.replace('input_', '')}] at given input directory"
                     )
 
-                logger.info(f"Expanded input {param_value} -> {expanded_input}")
+                logger.info(f"Expanded input:\n -> {param_value}\n -> {expanded_input}")
                 d_params[param] = expanded_input
 
                 # Only propagate keys from non-aliases
@@ -349,7 +360,66 @@ def expand_inputs(given_params: dict):
     return d_params, d_keys
 
 
-from functools import partial 
+
+def get_dataset_url():
+    """ Retrieve a "dataset URL" from the environment, may look like http://localhost:6077 or file:///absolute/path/to/dataset/dir """
+    dataset_url = os.environ.get("DATASET_URL", None)
+
+    if dataset_url is None:
+        logger.warning("Requesting feature data be sent to dataset, however no dataset URL provided, please set env DATASET_URL!")
+    else:
+        logger.info(f"Found dataset URL = {dataset_url}")
+
+    return dataset_url
+
+    
+
+def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
+    """ Interface feature data to a parquet dataset
+
+    Args:
+        input_feature_data (str): path to input data
+        waystation_url (str): URL of dataset root (either file or using waystation)
+        dataset_id (str): Dataset name/ID
+        keys (dict): corresponding segment keys
+    """
+
+    logger.info(f"Adding {input_feature_data} to {dataset_id} via {waystation_url}")
+
+    segment_id = "-".join(
+        [v for _, v in sorted(keys.items())]
+    )
+
+    logger.info(f"SEGMENT_ID={segment_id}")
+    
+    post_url = os.path.join ( waystation_url, "datasets", dataset_id, "segments", segment_id )
+
+    parsed_url = urllib.parse.urlparse(post_url)
+
+    if 'http' in parsed_url.scheme:
+        # The cool way, using luna waystation
+
+        logger.info (f"Posting to: {post_url}")
+
+        res = requests.post(post_url, files={'segment_data': open (input_feature_data, 'rb')}, data={"segment_keys": json.dumps(keys)})
+
+        logger.info (f"{res}: {res.text}")
+
+    elif 'file' in parsed_url.scheme:
+        # The less cool way, just using file paths
+
+        segment_dir = Path ( parsed_url.path )
+
+        logger.info (f"Writing to: {segment_dir}")
+
+        os.makedirs(segment_dir, exist_ok=True)
+
+        shutil.copy(input_feature_data, segment_dir.joinpath("data.parquet"))
+    
+    else:
+        logger.warning("Unrecognized scheme: {parsed_url.scheme}, skipping!")
+
+
 
 def cli_runner(
     cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable[..., dict], pass_keys: bool = False
@@ -360,13 +430,19 @@ def cli_runner(
         cli_kwargs (dict): keyword arguments from the CLI call
         cli_params (List[tuple]): param list, where each element is the parameter (name, type)
         cli_function (Callable[..., dict]): cli_function entry point, should accept exactly the arguments given by cli_params
+        pass_keys (bool): will pass found segment keys to transform function as 'keys' kwarg
 
     Returns:
         None
 
     """
-    logger.info(f"Running {cli_function} with {cli_kwargs}")
-    kwargs = {}
+    logger.info(f"Started CLI Runner wtih {cli_function}")
+    logger.debug(f"cli_kwargs={cli_kwargs}")
+    logger.debug(f"cli_params={cli_params}")
+    logger.debug(f"pass_keys={pass_keys}")
+
+    trm_kwargs = {}
+
     # if "output_dir" not in cli_kwargs.keys():
     #    raise RuntimeError("CLI Runners assume an output directory")
 
@@ -374,55 +450,74 @@ def cli_runner(
     if cli_kwargs.get("method_param_path"):
         with open(cli_kwargs.get("method_param_path"), "r") as yaml_file:
             yaml_kwargs = yaml.safe_load(yaml_file)
-        kwargs.update(yaml_kwargs)  # Fill from json
+        trm_kwargs.update(yaml_kwargs)  # Fill from json
 
     for key in list(cli_kwargs.keys()):
         if cli_kwargs[key] is None:
             del cli_kwargs[key]
 
     # Override with CLI arguments
-    kwargs.update(cli_kwargs)
+    trm_kwargs.update(cli_kwargs)
 
-    kwargs = validate_params(kwargs, cli_params)
+    trm_kwargs = validate_params(trm_kwargs, cli_params)
 
-    if "output_dir" in kwargs:
-        output_dir = kwargs["output_dir"]
+    if "output_dir" in trm_kwargs:
+        output_dir = trm_kwargs["output_dir"]
         os.makedirs(output_dir, exist_ok=True)
 
     # Expand implied inputs
-    kwargs, keys = expand_inputs(kwargs)
+    trm_kwargs, keys = expand_inputs(trm_kwargs)
 
     logger.info (f"Full segment key set: {keys}")
 
     # Nice little log break
-    print(
-        "\n"
-        + "-" * 35
-        + f" Running transform::{cli_function.__name__} "
-        + "-" * 35
-        + "\n"
+    logger.info(
+          "-" * 60
+        + f"\n Starting transform::{cli_function.__name__} \n"
+        + "-" * 60
     )
 
     with CodeTimer(logger, name=f"transform::{cli_function.__name__}"):
         if pass_keys: cli_function = partial (cli_function, keys=keys)
 
-        result = cli_function(**kwargs)
+        result = cli_function(**trm_kwargs)
 
-    kwargs.update(result)
+    # Nice little log break
+    logger.info(
+          "-" * 60
+        + f"\n Done with transform, running post-transform functions... \n"
+        + "-" * 60
+    )
+
+    trm_kwargs.update(result)
 
     # filter out kwargs with sensitive data
     for key in MASK_KEYS:
-        kwargs.pop(key, None)
+        trm_kwargs.pop(key, None)
     
     # propagate keys
-    if kwargs.get('segment_keys', None):
-        kwargs['segment_keys'].update(keys)
+    if trm_kwargs.get('segment_keys', None):
+        trm_kwargs['segment_keys'].update(keys)
     else: 
-        kwargs['segment_keys'] = keys
+        trm_kwargs['segment_keys'] = keys
 
-    if "output_dir" in kwargs:
+    # Save metadata on disk
+    if "output_dir" in trm_kwargs:
         with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
-            yaml.dump(kwargs, fp)
+            yaml.dump(trm_kwargs, fp)
+
+    # Save feature data in parquet if indicated:
+    if "dataset_id" in cli_kwargs and  "feature_data" in trm_kwargs:
+        dataset_id   = cli_kwargs.get("dataset_id")
+        feature_data = trm_kwargs.get("feature_data")
+
+        logger.info(f"Adding feature segment {feature_data} to {dataset_id}")
+
+        dataset_url = get_dataset_url()
+
+        if dataset_url is not None:
+            post_to_dataset( feature_data, dataset_url, dataset_id, keys=trm_kwargs['segment_keys'])
+
 
     logger.info("Done.")
 
