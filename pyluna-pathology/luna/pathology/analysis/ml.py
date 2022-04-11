@@ -104,17 +104,20 @@ class HD5FDataset(Dataset):
             return self.preprocess(img), row.name
 
 
-def post_transform_to_2d(input: torch.Tensor) -> np.array:
+def post_transform_to_2d(input: np.array) -> np.array:
     """Convert input to a 2D numpy array on CPU
 
     Args:
         input (torch.tensor): tensor input of shape [B, *] where B is the batch dimension
     """
+    if type (input)== torch.tensor:
+        input = input.cpu.numpy()
+
     if not len(input.shape) == 2:
         warnings.warn(f"Reshaping model output (was {input.shape}) to 2D")
-        return input.view(input.shape[0], -1).cpu().numpy()
-    else:
-        return input.cpu().numpy()
+        input = np.reshape(input, (input.shape[0], -1))
+    
+    return input
 
 
 class BaseTorchTileDataset(Dataset):

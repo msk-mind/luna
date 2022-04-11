@@ -443,7 +443,7 @@ def visualize_tiling_scores(df:pd.DataFrame, thumbnail_img:np.ndarray, scale_fac
 
     assert isinstance(thumbnail_img, np.ndarray)
 
-    if normalize:
+    if normalize and df[score_type_to_visualize].dtype.kind in 'biuf':
         df[score_type_to_visualize] = (df[score_type_to_visualize] - np.min(df[score_type_to_visualize]))/np.ptp(df[score_type_to_visualize])
 
     for _, row in tqdm(df.iterrows(), total=len(df)):
