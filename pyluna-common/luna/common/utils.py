@@ -357,6 +357,7 @@ def expand_inputs(given_params: dict):
 
 
 def get_dataset_url():
+    """ Retrieve a "dataset URL" from the environment, may look like http://localhost:6077 or file:///absolute/path/to/dataset/dir """
     dataset_url = os.environ.get("DATASET_URL", None)
 
     if dataset_url is None:
@@ -424,6 +425,7 @@ def cli_runner(
         cli_kwargs (dict): keyword arguments from the CLI call
         cli_params (List[tuple]): param list, where each element is the parameter (name, type)
         cli_function (Callable[..., dict]): cli_function entry point, should accept exactly the arguments given by cli_params
+        pass_keys (bool): will pass found segment keys to transform function as 'keys' kwarg
 
     Returns:
         None
