@@ -13,7 +13,7 @@ class SlideTiles:
     @classmethod
     def check(self, slide_tiles):
         """Returns True if the given path is readable as "SlideTiles <slide_tiles>", else, reaises SchemaMismatchError"""
-        df = pd.read_csv(slide_tiles)
+        df = pd.read_parquet(slide_tiles).reset_index()
 
         if not set(df.columns).intersection(self.REQ_COLUMNS) == self.REQ_COLUMNS:
             raise SchemaMismatchError(

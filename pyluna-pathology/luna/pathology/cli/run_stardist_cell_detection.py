@@ -50,6 +50,12 @@ _params_ = [
     required=False,
     help="path to a metadata json/yaml file with method parameters to reproduce results",
 )
+@click.option(
+    "-dsid",
+    "--dataset_id",
+    required=False,
+    help="Optional dataset identifier to add tabular output to",
+)
 def cli(**cli_kwargs):
     """Run stardist using qupath CLI within a docker container
 
@@ -132,14 +138,15 @@ def run_stardist_cell_detection(
         columns={"Centroid X µm": "x_coord", "Centroid Y µm": "y_coord"}
     )  # x,ys follow this convention
 
-    output_header_file = os.path.join(output_dir, f"{slide_id}_cell_objects.csv")
-    df.to_csv(output_header_file)
+    output_header_file = os.path.join(output_dir, f"{slide_id}_cell_objects.parquet")
+    df.to_parquet(output_header_file)
 
     logger.info("Generated cell data:")
     logger.info(df)
 
     properties = {
         "cell_objects": output_header_file,
+        "feature_data": output_header_file,
         "spatial": True,
         "total_cells": len(df),
         "segment_keys": {"slide_id": slide_id},

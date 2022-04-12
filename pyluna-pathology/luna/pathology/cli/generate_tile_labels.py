@@ -41,7 +41,7 @@ def cli(**cli_kwargs):
     \b
     Inputs:
         input_slide_annotation_dataset: annotation dataset containing metadata about geojsons
-        input_slide_tiles: path to tile images (.tiles.csv)
+        input_slide_tiles: path to tile images (.tiles.parquet)
     \b
     Outputs:
         slide_tiles
@@ -63,7 +63,7 @@ def generate_tile_labels(
 
     Args:
         input_slide_annotation_dataset (str): path to parquet annotation dataset
-        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
+        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.parquet)
         output_dir (str): output/working directory
         keys (dict): segment keys (this function needs 'slide_id')
     Returns:
@@ -107,7 +107,7 @@ def generate_tile_labels(
     for label in d_collections.keys():
         d_collections[label] = GeometryCollection(d_collections[label])
 
-    df_tiles = pd.read_csv(input_slide_tiles).set_index("address")
+    df_tiles = pd.read_parquet(input_slide_tiles).reset_index().set_index("address")
     l_regional_labels = []
     l_intersection_areas = []
 
@@ -140,8 +140,8 @@ def generate_tile_labels(
 
     logger.info(df_tiles.loc[df_tiles.intersection_area > 0])
 
-    output_header_file = f"{output_dir}/{slide_id}.regional_label.tiles.csv"
-    df_tiles.to_csv(output_header_file)
+    output_header_file = f"{output_dir}/{slide_id}.regional_label.tiles.parquet"
+    df_tiles.to_parquet(output_header_file)
 
     properties = {
         "slide_tiles": output_header_file,  # "Tiles" are the metadata that describe them

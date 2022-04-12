@@ -10,7 +10,7 @@ def test_cli(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "pyluna-pathology/tests/luna/pathology/cli/testdata/test_tile_stats.csv",
+            "pyluna-pathology/tests/luna/pathology/cli/testdata/test_tile_stats.parquet",
             "-o",
             tmp_path,
             "-il",
@@ -25,8 +25,8 @@ def test_cli(tmp_path):
     )
 
     assert result.exit_code == 0
-    assert os.path.exists(f"{tmp_path}/test_tile_stats_kfunction_supertiles.csv")
+    assert os.path.exists(f"{tmp_path}/test_tile_stats_kfunction_supertiles.parquet")
 
-    df = pd.read_csv(f"{tmp_path}/test_tile_stats_kfunction_supertiles.csv")
+    df = pd.read_parquet(f"{tmp_path}/test_tile_stats_kfunction_supertiles.parquet")
     assert "ikfunction_r160.0_stainCentroid_X_µm" in df.columns
     assert df["ikfunction_r160.0_stainCentroid_X_µm_norm"].values[0] == 1.0

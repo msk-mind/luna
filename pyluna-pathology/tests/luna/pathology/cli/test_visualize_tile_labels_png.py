@@ -10,12 +10,12 @@ import numpy as np
 def test_viz(tmp_path):
     df = pd.read_csv("pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/123.tiles.csv")
     df['random'] = np.random.rand(len(df))
-    df.to_csv(f"{tmp_path}/input_tiles.csv")
+    df.to_parquet(f"{tmp_path}/input_tiles.parquet")
 
     runner = CliRunner()
     result = runner.invoke(cli, [
         'pyluna-pathology/tests/luna/pathology/cli/testdata/data/123.svs',
-        f"{tmp_path}/input_tiles.csv",
+        f"{tmp_path}/input_tiles.parquet",
         '-o', tmp_path,
         '-pl', 'random',
         '-rmg', 5])

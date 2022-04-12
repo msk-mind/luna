@@ -22,18 +22,20 @@ _params_ = [('input_slide_image', str), ('input_slide_tiles', str), ('output_dir
               help="Batch size used for inference speedup", default=64)    
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
+@click.option('-dsid', '--dataset_id', required=False,
+              help='Optional dataset identifier to add results to')
 def cli(**cli_kwargs):
     """Saves tiles to disk
     
     Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
-    and the corresponding manifest/header file (tiles.csv) is also generated
+    and the corresponding manifest/header file (tiles.parquet) is also generated
 
     Adds tile_store to manifest for use in HDF5 Image loader
 
     \b
     Inputs:
         input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        input_slide_tiles: path to tile images (.tiles.csv)
+        input_slide_tiles: path to tile images (.tiles.parquet)
 
     Outputs:
         slide_tiles
@@ -73,11 +75,11 @@ def save_tiles(input_slide_image, input_slide_tiles, output_dir, num_cores, batc
     """Saves tiles to disk
     
     Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
-    and the corresponding manifest/header file (tiles.csv) is also generated
+    and the corresponding manifest/header file (tiles.parquet) is also generated
 
     Args:
         input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
+        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.parquet)
         output_dir (str): output/working directory
         batch_size (int): size in batch dimension to chuck jobs
 
@@ -85,9 +87,9 @@ def save_tiles(input_slide_image, input_slide_tiles, output_dir, num_cores, batc
         dict: metadata about function call
     """
     slide_id = Path(input_slide_image).stem
-    df = pd.read_csv(input_slide_tiles).set_index('address')
+    df = pd.read_parquet(input_slide_tiles).reset_index().set_index('address')
 
-    output_header_file = f"{output_dir}/{slide_id}.tiles.csv"
+    output_header_file = f"{output_dir}/{slide_id}.tiles.parquet"
     output_hdf_file    = f"{output_dir}/{slide_id}.tiles.h5"
 
     logger.info(f"Now generating tiles with num_cores={num_cores} and batch_size={batch_size}!")
@@ -108,10 +110,11 @@ def save_tiles(input_slide_image, input_slide_tiles, output_dir, num_cores, batc
     df['tile_store'] = output_hdf_file
     
     logger.info(df)
-    df.to_csv(output_header_file)
+    df.to_parquet(output_header_file)
 
     properties = {
         "slide_tiles": output_header_file, # "Tiles" are the metadata that describe them
+        "feature_data": output_header_file, # Tiles can act like feature data
         "total_tiles": len(df),
     }
 

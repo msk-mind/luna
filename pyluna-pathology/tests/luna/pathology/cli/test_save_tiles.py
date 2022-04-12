@@ -12,7 +12,7 @@ def test_save_cli(tmp_path):
         cli,
         [
             "pyluna-pathology/tests/luna/pathology/cli/testdata/data/123.svs",
-            "pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/123.tiles.csv",
+            "pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/123.tiles.parquet",
             "-o",
             tmp_path,
             "-bx",
@@ -23,6 +23,6 @@ def test_save_cli(tmp_path):
     )
 
     assert result.exit_code == 0
-    assert os.path.exists(f"{tmp_path}/123.tiles.csv")
+    assert os.path.exists(f"{tmp_path}/123.tiles.parquet")
 
-    assert SlideTiles.check(f"{tmp_path}/123.tiles.csv")
+    assert SlideTiles.check(f"{tmp_path}/123.tiles.parquet")

@@ -73,7 +73,7 @@ def extract_kfunction(input_cell_objects, tile_size, intensity_label, tile_strid
     Returns:
         dict: metadata about function call
     """
-    df = pd.read_csv(input_cell_objects)
+    df = pd.read_parquet(input_cell_objects)
 
     l_address = []
     l_k_function = []
@@ -116,8 +116,8 @@ def extract_kfunction(input_cell_objects, tile_size, intensity_label, tile_strid
     logger.info("Generated k-function feature data:")
     logger.info (df_stats)
     
-    output_tile_header = os.path.join(output_dir, Path(input_cell_objects).stem + '_kfunction_supertiles.csv')
-    df_stats.to_csv(output_tile_header)
+    output_tile_header = os.path.join(output_dir, Path(input_cell_objects).stem + '_kfunction_supertiles.parquet')
+    df_stats.to_parquet(output_tile_header)
 
     properties = {
         'slide_tiles': output_tile_header,

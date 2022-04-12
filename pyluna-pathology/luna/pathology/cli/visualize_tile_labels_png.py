@@ -81,7 +81,7 @@ def visualize_tiles(input_slide_image, input_slide_tiles, requested_magnificatio
         to_mag_scale_factor *= unit_sf
 
     # Get tiles
-    df = pd.read_csv(input_slide_tiles).set_index('address')
+    df = pd.read_parquet(input_slide_tiles).reset_index().set_index('address')
 
     # only visualize tile scores that were able to be computed
     all_score_types = set(plot_labels)

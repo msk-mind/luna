@@ -14,7 +14,7 @@ def compute_stats_1d(vec, fx_name_prefix, n_percentiles=4):
         dict: summary statistics
     """
     n, _, sm, sv, ss, sk = scipy.stats.describe(vec)
-    ln_params = scipy.stats.lognorm.fit(vec, floc=0)
+    # ln_params = scipy.stats.lognorm.fit(vec, floc=0)
 
     hist_features = {
         f'{fx_name_prefix}_nobs': n,
@@ -22,8 +22,8 @@ def compute_stats_1d(vec, fx_name_prefix, n_percentiles=4):
         f'{fx_name_prefix}_variance': sv,
         f'{fx_name_prefix}_skewness': ss,
         f'{fx_name_prefix}_kurtosis': sk,
-        f'{fx_name_prefix}_lognorm_fit_p0': ln_params[0],
-        f'{fx_name_prefix}_lognorm_fit_p2': ln_params[2]
+        # f'{fx_name_prefix}_lognorm_fit_p0': ln_params[0],
+        # f'{fx_name_prefix}_lognorm_fit_p2': ln_params[2]
     }
     
     percentiles = np.linspace(0, 100, n_percentiles + 1)

@@ -131,7 +131,7 @@ def detect_tissue(input_slide_image, input_slide_tiles, requested_magnification,
     """
     slide = openslide.OpenSlide(input_slide_image)
     slide_id = Path(input_slide_image).stem
-    df = pd.read_csv(input_slide_tiles).set_index('address')
+    df = pd.read_parquet(input_slide_tiles).reset_index().set_index('address')
 
     logger.info (f"Slide dimensions {slide.dimensions}")
 
@@ -208,9 +208,9 @@ def detect_tissue(input_slide_image, input_slide_tiles, requested_magnification,
 
     logger.info (df)
 
-    output_header_file = f"{output_dir}/{slide_id}-filtered.tiles.csv"
+    output_header_file = f"{output_dir}/{slide_id}-filtered.tiles.parquet"
 
-    df.to_csv(output_header_file)
+    df.to_parquet(output_header_file)
 
     properties = {
         "slide_tiles": output_header_file,
