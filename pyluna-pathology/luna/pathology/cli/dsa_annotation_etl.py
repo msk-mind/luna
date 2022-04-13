@@ -48,13 +48,13 @@ _params_ = [
 )
 @click.option(
     "-c",
-    "--collection-name",
+    "--collection_name",
     required=False,
     help="name of the collection to pull data from in DSA",
 )
 @click.option(
     "-a",
-    "--annotation-name",
+    "--annotation_name",
     required=False,
     help="name of the annotations to pull from DSA (same annotation name for all slides)",
 )
@@ -71,7 +71,8 @@ _params_ = [
     help="DSA password, should be inferred from DSA_PASSWORD",
 )
 @click.option(
-    "-nc", "--num_cores", required=False, help="Number of cores to use", default=4
+    "-nc", "--num_cores", required=False, help="Number of cores to use (default: 4)",
+    default=4
 )
 @click.option(
     "-m",
@@ -92,9 +93,9 @@ def cli(**cli_kwargs):
     Example:
         export DSA_USERNAME=username
         export DSA_PASSWORD=password
-        dsa_annotation_etl http://localhost:8080/dsa/api/v1
-            --collection-name tcga-data
-            --annotation-name TumorVsOther
+        dsa_annotation_ http://localhost:8080/dsa/api/v1
+            --collection_name tcga-data
+            --annotation_name TumorVsOther
             -o /data/annotations/
     """
     cli_runner(cli_kwargs, _params_, dsa_annotation_etl)

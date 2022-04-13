@@ -65,7 +65,7 @@ def cli(**cli_kwargs):
         dsa_upload http://localhost:8080/dsa/api/v1
             --collection_name tcga-data
             --image_filename 123.svs
-            --annotation_name TumorVsOther
+            --annotation_filepath /path/to/dsa_annotation.json
     """
     params = [
         ("annotation_filepath", str),

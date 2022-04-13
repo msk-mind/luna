@@ -1,9 +1,0 @@
-# path to DSA compatible annotation
-annotation_filepath: ./dsa_annotations/StarDist_Segmentations_with_Lymphocyte_Classifications_HobI20-681330526186.json
-
-# image file name from DSA    
-image_filename: HobI20-681330526186.svs
-    
-# collection name from DSA
-collection_name: test-path
-
