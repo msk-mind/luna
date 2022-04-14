@@ -1,79 +1,69 @@
-'''
-Created: February 2021
-@author: aukermaa@mskcc.org
-
-Given a scan (container) ID
-1. resolve the path to a volumentric image and annotation (label) files
-2. resample image and segmentation, and save voxels as a 3d numpy array (.npy)
-3. store results on HDFS and add metadata to the graph
-
-'''
-
-# General imports
-import os, json, logging
+import os, logging
 import click
 
-# From common
 from luna.common.custom_logger   import init_logger
-from luna.common.DataStore       import DataStore
-from luna.common.Node            import Node
-from luna.common.config          import ConfigSet
 
-# From radiology.common
-from luna.radiology.common.preprocess   import extract_voxels
+init_logger()
+logger = logging.getLogger('extract_voxels')
 
-cfg = ConfigSet("APP_CFG",  config_file="config.yaml")
+from luna.common.utils import cli_runner
+
+_params_ = [('input_itk_volume', str), ('output_dir', str)]
 
 @click.command()
-@click.option('-c', '--cohort_id',    required=True)
-@click.option('-s', '--datastore_id', required=True)
-@click.option('-m', '--method_param_path',    required=True)
-def cli(cohort_id, datastore_id, method_param_path):
-    init_logger()
+@click.argument('input_itk_volume', nargs=1)
+@click.option('-o', '--output_dir', required=False,
+              help='path to output directory to save results')
+@click.option('-m', '--method_param_path', required=False,
+              help='path to a metadata json/yaml file with method parameters to reproduce results')
+def cli(**cli_kwargs):
+    """Turns an ITK volume into a numpy volume
 
-    with open(method_param_path) as json_file:
-        method_data = json.load(json_file)
-    extract_voxels_with_container(cohort_id, datastore_id, method_data)
-
-def extract_voxels_with_container(cohort_id: str, container_id: str, method_data: dict, semaphore=0):
+    \b
+    Inputs:
+        input_itk_volume: itk compatible image volume (.mhd, .nrrd, .nii, etc.)
+    \b
+    Outputs:
+        npy_volume
+    \b
+    Example:
+        extract_voxels ./scans/original/NRRDs/10001.nrrd
+            -o scans/windowed/NRRDs/10001
     """
-    Using the container API interface, extract voxels for a given scan container
+    cli_runner(cli_kwargs, _params_, extract_voxels)
+
+import medpy.io
+import numpy as np
+from pathlib import Path
+def extract_voxels(input_itk_volume, output_dir):
+    """Save a numpy file from a given ITK volume
+
+    Args:
+        input_itk_volume (str): path to itk compatible image volume (.mhd, .nrrd, .nii, etc.)
+        output_dir (str): output/working directory
+
+    Returns:
+        dict: metadata about function call
     """
-    logger = logging.getLogger(f"[datastore={container_id}]")
+    file_stem = Path(input_itk_volume).stem
+    file_ext  = Path(input_itk_volume).suffix
 
-    # Do some setup
-    datastore   = DataStore( cfg ).setNamespace(cohort_id).setDatastore(container_id)
-    method_id   = method_data.get("job_tag", "none")
+    outFileName = os.path.join(output_dir, file_stem + '.npy')
 
-    image_node  = datastore.get("VolumetricImage", method_data['image_input_tag']) 
-    label_node  = datastore.get("VolumetricLabel", method_data['label_input_tag'])
+    image, header = medpy.io.load(input_itk_volume)
 
-    try:
-        if image_node is None: raise ValueError("Image node not found")
-        if label_node is None: raise ValueError("Label node not found")
+    np.save(outFileName, image)
 
-        # Data just goes under namespace/name
-        # TODO: This path is really not great, but works for now
-        output_dir = os.path.join(os.environ['MIND_GPFS_DIR'], method_data.get("env", "data"),
-                                  datastore._namespace_id, datastore._name, method_id)
-        if not os.path.exists(output_dir): os.makedirs(output_dir)
+    logger.info (f"Extracted voxels of shape {image.shape}")
 
-        properties = extract_voxels(
-            image_path = image_node.data,
-            label_path = label_node.data,
-            output_dir = output_dir,
-            params     = method_data
-        )
+    # Prepare metadata and commit
+    properties = {
+        'npy_volume' : outFileName,
+    }
 
-    except Exception as e:
-        logger.exception (f"{e}, stopping job execution...")
-        raise e
-    else:
-        output_node = Node("Voxels", method_id, properties)
-        datastore.put(output_node)
-        
-    finally:
-        return semaphore + 1   
+    return properties
+
 
 if __name__ == "__main__":
     cli()
+

@@ -1,4 +1,0 @@
-input_label_tag: test_generate_tile_ov_labels
-input_wsi_tag: pathology.etl
-output_datastore: ovarian_clf_v1
-root_path: /path/to/output/data

@@ -1,0 +1,14 @@
+# path to CSV containing tile coordinates and tile scores
+input: path/to/tile_level.csv
+# image file name from DSA
+image_filename: 123.svs
+# path to write converted json annotations
+output_dir: path/to/folder/to/write/annotations
+# annotation name to be shown in DSA
+annotation_name: tile-based heatmap
+# column in CSV with value range (0, 1)
+column: otsu_score
+# size of the tiles
+tile_size: 128
+# scale to match the image on DSA
+scale_factor: 1

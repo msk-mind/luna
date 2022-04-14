@@ -6,6 +6,13 @@ coverage:
   round: down
   range: "85...100"
 
+ignore:
+  - "pyluna-common/tests/**/*"
+  - "pyluna-core/tests/**/*"
+  - "pyluna-pathology/tests/**/*"
+  - "pyluna-pathology/luna/pathology/examples/*"
+  - "pyluna-radiology/tests/**/*"
+
 parsers:
   gcov:
     branch_detection:

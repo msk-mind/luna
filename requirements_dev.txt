@@ -9,18 +9,19 @@
 
 dask
 distributed
+bokeh>=2.1.1
 click
 decorator>=4.3,<5.0  # force constrain versions to avoid incompatibility with networkx requirements
 filehash
 joblib
 minio
 neo4j
-numpy>=1.9.0
+numpy>=1.9.0,<=1.21.2 # spams install error with 1.22.x
 pandas>=1.1.0
 pyarrow>=3.0.0
-pyspark
-scipy>=1.7.0
+pyspark==3.1.2
 scikit-image
+scipy>=1.7.0
 itk
 opencv-python
 tornado>=6.0.4
@@ -44,13 +45,15 @@ ijson
 geojson
 orjson
 torch
-torchvision
+torchmetrics
+scikit-learn
 staintools
 pytest
 pytest-cov
 pytest-mock
 pytest-runner
 testfixtures
+ray
 requests-mock
 mock
 wheel>=0.22
@@ -62,5 +65,13 @@ twine
 Sphinx
 sphinx-click
 nbsphinx
+jinja2<3.1.0 # temporary fix for nbconvert issue https://github.com/jupyter/nbconvert/issues/1736
 ipython
 sphinx-book-theme
+girder-client==3.1.3
+dicom2nifti
+h5py
+spams
+docker
+pre-commit
+

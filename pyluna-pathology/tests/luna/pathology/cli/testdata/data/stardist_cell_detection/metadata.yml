@@ -1,0 +1,12 @@
+cell_expansion_size: 8.0
+cell_objects: pyluna-pathology/tests/luna/pathology/cli/testdata/data/stardist_cell_detection/123_cell_objects.parquet
+debug_opts: ''
+feature_data: pyluna-pathology/tests/luna/pathology/cli/testdata/data/stardist_cell_detection/123_cell_objects.parquet
+image_type: BRIGHTFIELD_H_DAB
+input_slide_image: pyluna-pathology/tests/luna/pathology/cli/testdata/data/123.svs
+num_cores: 4
+output_dir: pyluna-pathology/tests/luna/pathology/cli/testdata/data/stardist_cell_detection
+segment_keys:
+  slide_id: '123'
+spatial: true
+total_cells: 9

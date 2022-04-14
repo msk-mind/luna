@@ -1,0 +1,23 @@
+# paths to bitmask png images in label:path format
+input:
+  Tumor: /path/to/Tumor.png
+  Fat: /path/to/Fat.png
+  Necrosis: /path/to/Necrosis.png
+  Stroma: /path/to/Stroma.png
+# image file name from DSA
+image_filename: 123.svs
+# path to write converted json annotations
+output_dir: path/to/folder/to/write/annotations
+# annotation name to be shown in DSA
+annotation_name: Full Res Tile-Based Pixel Classifier Inference
+# line and fill colors in label:rgb/a format
+line_colors:
+  Stroma: rgb(0,191,255)
+  Tumor: rgb(0,255,0)
+  Fat: rgb(255,255,0)
+  Necrosis: rgb(255,0,0)
+fill_colors:
+  Stroma: rgba(0,191,255,100)
+  Tumor: rgba(0,255,0,100)
+  Fat: rgba(255,255,0,100)
+  Necrosis: rgba(255,0,0,100)

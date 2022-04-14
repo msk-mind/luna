@@ -1,6 +1,0 @@
-{
-           "image_input_tag": "generate_scan_example",
-           "label_input_tag": "amp-annotations",
-           "job_tag" : "example_randomize_contours",
-            "env": "data_staging"
-}

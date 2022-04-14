@@ -1,0 +1,6 @@
+input_slide_image: pyluna-pathology/tests/luna/pathology/cli/testdata/data/123.svs
+output_dir: pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123/
+requested_magnification: 10.0
+slide_tiles: pyluna-pathology/tests/luna/pathology/cli/testdata/data/generate_tiles/123//123.tiles.csv
+tile_size: 256
+total_tiles: 12

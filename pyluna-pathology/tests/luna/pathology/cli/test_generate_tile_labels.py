@@ -2,17 +2,24 @@ import os
 from click.testing import CliRunner
 
 from luna.pathology.cli.generate_tile_labels import cli
+import pandas as pd
 
-
-def test_cli():
-
+def test_cli(tmp_path):
     runner = CliRunner()
-    result = runner.invoke(cli, [
-        '-a', 'pyluna-pathology/tests/luna/pathology/cli/testdata/test_config.yml',
-        '-s', '123',
-        '-m', 'pyluna-pathology/tests/luna/pathology/cli/testdata/generate_tile_labels_with_ov_labels.yml'])
+
+    result = runner.invoke(
+        cli,
+        [
+            "pyluna-pathology/tests/luna/pathology/cli/testdata/data/dsa_annots/",
+            "pyluna-pathology/tests/luna/pathology/cli/testdata/data/save_tiles/123/",
+            "-o",
+            tmp_path,
+        ],
+    )
 
     assert result.exit_code == 0
-    assert os.path.exists("pyluna-pathology/tests/luna/pathology/cli/testdata/data/test/slides/123/test_generate_tile_ov_labels/TileImages/data/address.slice.csv")
-    assert os.path.exists("pyluna-pathology/tests/luna/pathology/cli/testdata/data/test/slides/123/test_generate_tile_ov_labels/TileImages/data/tiles.slice.pil")
-    assert os.path.exists("pyluna-pathology/tests/luna/pathology/cli/testdata/data/test/slides/123/test_generate_tile_ov_labels/TileImages/data/metadata.json")
+
+    out_tile = pd.read_parquet(f"{tmp_path}/123.regional_label.tiles.parquet").reset_index().set_index('address')
+
+    assert out_tile.loc["x1_y1_z10.0", "regional_label"] == "Other"
+    assert out_tile.loc["x3_y4_z10.0", "regional_label"] == "Tumor"

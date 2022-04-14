@@ -27,7 +27,7 @@ ROOT_PATH: ..
 DATASET_NAME: ""
 
 # DSA api uri (ie host:portnumber)
-DSA_URI: localhost:8080
+DSA_URI: host.docker.internal:8081
 
 # DSA annotation name
 ANNOTATION_NAME: ov_regional

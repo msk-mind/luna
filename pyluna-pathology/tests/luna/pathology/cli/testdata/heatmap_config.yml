@@ -1,0 +1,7 @@
+input: pyluna-pathology/tests/luna/pathology/cli/testdata/tile_scores.csv
+image_filename: 123.svs
+column: otsu_score
+output_dir: pyluna-pathology/tests/luna/pathology/cli/testouts
+annotation_name: test
+tile_size: 128
+scale_factor: 8

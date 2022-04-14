@@ -167,6 +167,8 @@ def provision(opts):
 
     :param opts: the argparse options.
     """
+
+    print(">>>>>>>>>"+opts.user)
     # If there is are no admin users, create an admin user
     if User().findOne({'admin': True}) is None:
         adminParams = dict({
@@ -181,7 +183,10 @@ def provision(opts):
     adminUser = User().findOne({'admin': True})
 
     # Make sure we have an assetstore
-    assetstoreParams = opts.assetstore or {'name': 'Assetstore', 'root': '/assetstore'}
+    if opts.user:
+        assetstoreParams = opts.assetstore or {'name': 'Assetstore', 'root': '/home/'+opts.user+'/vmount/assetstore'}
+    else:
+        assetstoreParams = opts.assetstore or {'name': 'Assetstore', 'root': '/assetstore'}
     assetstoreCreateMethod = assetstoreParams.pop('method', 'createFilesystemAssetstore')
     if Assetstore().findOne() is None:
         getattr(Assetstore(), assetstoreCreateMethod)(**assetstoreParams)
@@ -325,6 +330,9 @@ if __name__ == '__main__':
         '--no-mongo-compat', action='store_false', dest='mongo_compat',
         default=None, help='Do not automatically set the mongo feature '
         'compatibility version to the current server version.')
+    parser.add_argument(
+        '--user', default=None, help='Username if specified, places the '
+                                     'assetstore in the user home dir.')
     parser.add_argument(
         '--verbose', '-v', action='count', default=0, help='Increase verbosity')
     opts = parser.parse_args(args=sys.argv[1:])

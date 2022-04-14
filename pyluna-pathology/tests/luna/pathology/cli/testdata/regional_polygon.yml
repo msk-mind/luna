@@ -1,0 +1,8 @@
+input: pyluna-pathology/tests/luna/pathology/cli/testdata/regional_annotation.json
+image_filename: 123.svs
+output_dir: pyluna-pathology/tests/luna/pathology/cli/testouts
+annotation_name: Slideviewer Regional Annotations
+line_colors:
+  invasive_carcinoma: rgb(0,191,255)
+fill_colors:
+  invasive_carcinoma: rgba(0,191,255,100)

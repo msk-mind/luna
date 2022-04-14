@@ -80,7 +80,7 @@ def randomise_roi_contours(img_obj, roi_list, settings):
         # aauker: aka, highest overlapping supervoxel is always included
         overlap_fract[np.argmax(overlap_fract)] = 1.0
 
-        # Include supervoxels with 90% coverage and exclude those with less then 20% coverage
+        # Include supervoxels with 80% coverage and exclude those with less then 20% coverage
         a = 0.80
         b = 0.20
         
@@ -108,7 +108,8 @@ def randomise_roi_contours(img_obj, roi_list, settings):
         for ii in np.arange(settings.vol_adapt.roi_random_rep):
 
             # Draw random numbers between 0.0 and 1.0
-            random_incl = np.random.random(size=len(overlap_fract))
+            # Use numpy rng for deterministic behavior (updated)
+            random_incl = np.random.default_rng(ii).random(size=len(overlap_fract))
 
             # Select those segments where the random number is less than the overlap fraction - i.e. the fraction is the
             # probability of selecting the supervoxel

@@ -634,7 +634,8 @@ def combine_all_rois(roi_list, settings):
     label_grid_mapping = { roi.label_value : roi.roi.get_voxel_grid() for roi in roi_list}
 
     for label_value in sorted(label_grid_mapping.keys(), reverse=True):
-        roi_vox_new[np.where(label_grid_mapping[label_value] != 0)] = label_value
+        roi_vox_new = np.where(label_grid_mapping[label_value] != 0, label_grid_mapping[label_value], roi_vox_new)
+        # roi_vox_new[np.where(label_grid_mapping[label_value] != 0)] = label_grid_mapping[label_value]
 
     repl_roi.roi.set_voxel_grid(roi_vox_new)
     repl_roi.name += "_COMBINED"          # Adapt roi name
