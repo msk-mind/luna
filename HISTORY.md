@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.1 (2022-04-18)
+### Fix
+* Loosen bokeh versions ([`5526b5f`](https://github.com/msk-mind/luna/commit/5526b5f9eba466e56750b5f78756723491352de4))
+
 ## v0.3.0 (2022-04-18)
 ### Feature
 * Force version bump ([`dc7e668`](https://github.com/msk-mind/luna/commit/dc7e66856ee52a2c0d3faa917fc04f7c30d40c67))
