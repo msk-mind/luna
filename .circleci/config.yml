@@ -67,7 +67,7 @@ jobs:
       - store_artifacts:
           path: htmlcov
       - store_test_results:
-          path: luna-test-results
+          path: test-results 
       - codecov/upload:
           file: coverage.xml
 
