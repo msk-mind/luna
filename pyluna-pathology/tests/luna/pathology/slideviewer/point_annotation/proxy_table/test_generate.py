@@ -52,41 +52,42 @@ def teardown_module(module):
         shutil.rmtree(PROJECT_PATH)
 
 
-def test_download_point_annotation(requests_mock):
-
-    requests_mock.get(
-        "http://test/slides/username@mskcc.org/projects;8;123.svs/getSVGLabels/nucleus",
-        text='[{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"Tissue 1"}, '
-        + '{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1424","y":"774","class":"3","classname":"Tissue 4"}]',
-    )
-
-    import luna
-
-    sys.modules["slideviewer_client"] = luna.pathology.common.slideviewer_client
-
-    res = download_point_annotation("http://test", "123.svs", 8, "username")
-
-    assert res == [
-        {
-            "project_id": "8",
-            "image_id": "123.svs",
-            "label_type": "nucleus",
-            "x": "1440",
-            "y": "747",
-            "class": "0",
-            "classname": "Tissue 1",
-        },
-        {
-            "project_id": "8",
-            "image_id": "123.svs",
-            "label_type": "nucleus",
-            "x": "1424",
-            "y": "774",
-            "class": "3",
-            "classname": "Tissue 4",
-        },
-    ]
-
+# Removed spark transform
+# def test_download_point_annotation(requests_mock):
+# 
+#     requests_mock.get(
+#         "http://test/slides/username@mskcc.org/projects;8;123.svs/getSVGLabels/nucleus",
+#         text='[{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"Tissue 1"}, '
+#         + '{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1424","y":"774","class":"3","classname":"Tissue 4"}]',
+#     )
+# 
+#     import luna
+# 
+#     sys.modules["slideviewer_client"] = luna.pathology.common.slideviewer_client
+# 
+#     res = download_point_annotation("http://test", "123.svs", 8, "username")
+# 
+#     assert res == [
+#         {
+#             "project_id": "8",
+#             "image_id": "123.svs",
+#             "label_type": "nucleus",
+#             "x": "1440",
+#             "y": "747",
+#             "class": "0",
+#             "classname": "Tissue 1",
+#         },
+#         {
+#             "project_id": "8",
+#             "image_id": "123.svs",
+#             "label_type": "nucleus",
+#             "x": "1424",
+#             "y": "774",
+#             "class": "3",
+#             "classname": "Tissue 4",
+#         },
+#     ]
+# 
 
 def test_create_proxy_table(monkeypatch):
     def mock_download(*args, **kwargs):
