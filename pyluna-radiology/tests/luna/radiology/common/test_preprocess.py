@@ -4,7 +4,6 @@ from medpy.io import load
 import numpy as np
 from luna.radiology.common.preprocess import *
 
-from luna.common.sparksession import SparkConfig
 from luna.common.config import ConfigSet
 import luna.common.constants as const
 from pathlib import Path
@@ -64,16 +63,16 @@ def test_subset_bound_seg():
     os.remove(f'{data_dir}/2.000000-CTAC-24716/volumes/subset_image.raw')
 
 
-def test_crop_images():
-
-    ConfigSet(name=const.APP_CFG, config_file='pyluna-radiology/tests/test_config.yml')
-    spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-radiology-utils')
-
-    png = spark.read.format("delta").load(f"{data_dir}/test-project/tables/PNG_dsn").toPandas()
-    dicom = png['dicom'][0]
-    overlay = png['overlay'][0]
-    dicom_overlay = crop_images(360, 198, Image.frombytes("L", (512,512), bytes(dicom)), Image.frombytes("RGB", (512,512), bytes(overlay)), 256, 256, 512, 512)
-
-    assert 256*256 == len(dicom_overlay[0])
-    # RGB overlay image
-    assert 256*256*3 == len(dicom_overlay[1])
+# def test_crop_images():
+# 
+#     ConfigSet(name=const.APP_CFG, config_file='pyluna-radiology/tests/test_config.yml')
+#     spark = SparkConfig().spark_session(config_name=const.APP_CFG, app_name='test-radiology-utils')
+# 
+#     png = spark.read.format("delta").load(f"{data_dir}/test-project/tables/PNG_dsn").toPandas()
+#     dicom = png['dicom'][0]
+#     overlay = png['overlay'][0]
+#     dicom_overlay = crop_images(360, 198, Image.frombytes("L", (512,512), bytes(dicom)), Image.frombytes("RGB", (512,512), bytes(overlay)), 256, 256, 512, 512)
+# 
+#     assert 256*256 == len(dicom_overlay[0])
+#     # RGB overlay image
+#     assert 256*256*3 == len(dicom_overlay[1])

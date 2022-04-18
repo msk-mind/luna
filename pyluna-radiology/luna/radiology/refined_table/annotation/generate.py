@@ -141,8 +141,6 @@ def generate_image_table():
 
         # generate uuid
         spark.sparkContext.addPyFile(
-            get_absolute_path(__file__, "../../../../../pyluna-common/luna/common/EnsureByteContext.py"))
-        spark.sparkContext.addPyFile(
             get_absolute_path(__file__, "../../../../../pyluna-common/luna/common/utils.py"))
         from utils import generate_uuid_binary
         generate_uuid_udf = F.udf(generate_uuid_binary, StringType())

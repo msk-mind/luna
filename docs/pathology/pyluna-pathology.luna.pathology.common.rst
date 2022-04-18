@@ -4,14 +4,6 @@ pyluna\-pathology.luna.pathology.common package
 Submodules
 ----------
 
-pyluna\-pathology.luna.pathology.common.EnsureByteContext module
-----------------------------------------------------------------
-
-.. automodule:: luna.pathology.common.EnsureByteContext
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 pyluna\-pathology.luna.pathology.common.annotation\_utils module
 ----------------------------------------------------------------
 

@@ -44,28 +44,30 @@ jobs:
           name: Run tests - pyluna-common
           command: |
             set -e
-            COMMON_TEST_FILES=$(circleci tests glob "pyluna-common/tests/**/test_*.py" | circleci tests split --split-by=timings)
-            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-common $COMMON_TEST_FILES --cov-report=xml
+            COMMON_TEST_FILES=$(circleci tests glob "pyluna-common/tests/**/test_*.py")
+            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-common $COMMON_TEST_FILES --cov-report=xml --junitxml=./luna-tests/common-results.xml
       - run:
           name: Run tests - pyluna-core
           command: |
             set -e
-            COMMON_TEST_FILES=$(circleci tests glob "pyluna-core/tests/**/test_*.py" | circleci tests split --split-by=timings)
-            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-core $COMMON_TEST_FILES --cov-report=xml
+            COMMON_TEST_FILES=$(circleci tests glob "pyluna-core/tests/**/test_*.py")
+            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-core $COMMON_TEST_FILES --cov-report=xml --junitxml=./luna-tests/core-results.xml
       - run:
           name: Run tests - pyluna-radiology
           command: |
             set -e
-            RADIOLOGY_TEST_FILES=$(circleci tests glob "pyluna-radiology/tests/**/test_*.py" | circleci tests split --split-by=timings)
-            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-radiology $RADIOLOGY_TEST_FILES --cov-report=xml --cov-append
+            RADIOLOGY_TEST_FILES=$(circleci tests glob "pyluna-radiology/tests/**/test_*.py")
+            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-radiology $RADIOLOGY_TEST_FILES --cov-report=xml --cov-append --junitxml=./luna-tests/rad-results.xml
       - run:
           name: Run tests - pyluna-pathology
           command: |
             set -e
             PATHOLOGY_TEST_FILES=$(circleci tests glob "pyluna-pathology/tests/**/test_*.py" | circleci tests split --split-by=timings)
-            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-pathology $PATHOLOGY_TEST_FILES --cov-report=xml --cov-append
+            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-pathology $PATHOLOGY_TEST_FILES --cov-report=xml --cov-append --junitxml=./luna-tests/path-results.xml
       - store_artifacts:
           path: htmlcov
+      - store_test_results:
+          path: luna-tests 
       - codecov/upload:
           file: coverage.xml
 
