@@ -20,14 +20,6 @@ pyluna\-common.luna.common.DataStore module
    :undoc-members:
    :show-inheritance:
 
-pyluna\-common.luna.common.EnsureByteContext module
----------------------------------------------------
-
-.. automodule:: luna.common.EnsureByteContext
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 pyluna\-common.luna.common.GraphEnum module
 -------------------------------------------
 
