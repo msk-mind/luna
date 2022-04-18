@@ -14,11 +14,6 @@ scores_csv_path = "pyluna-pathology/tests/luna/pathology/common/testdata/input/t
 slide = openslide.OpenSlide(slide_path)
 img_arr = get_downscaled_thumbnail(slide, 10)
 
-def test_fail():
-    print ("1==0")
-    assert 1==0
-
-
 def test_get_scale_factor_at_magnification_double():
     # slide scanned mag is 20
     res = get_scale_factor_at_magnfication(slide, 10)
