@@ -21,7 +21,6 @@ orbs:
 
 jobs:
   test:
-    parallelism: 3
     docker:
       - image: $DOCKER_ORG/luna-dev:latest  # primary container for the build job
 
