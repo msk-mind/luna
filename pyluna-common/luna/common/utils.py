@@ -19,6 +19,7 @@ import requests
 from functools import partial 
 import urllib
 
+import warnings
 
 logger = logging.getLogger(__name__)
 
