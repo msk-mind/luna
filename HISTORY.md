@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.1 (2022-04-18)
+### Fix
+* Dependency Updates ([#297](https://github.com/msk-mind/luna/issues/297)) ([`7ca77b9`](https://github.com/msk-mind/luna/commit/7ca77b95c45de175a9e10f4b876d82ffced89633))
+
 ## v0.2.0 (2022-04-18)
 Improved installation and testing.
 
