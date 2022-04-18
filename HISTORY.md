@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.0 (2022-04-18)
+### Feature
+* Force version bump ([`dc7e668`](https://github.com/msk-mind/luna/commit/dc7e66856ee52a2c0d3faa917fc04f7c30d40c67))
+
 ## v0.2.1 (2022-04-18)
 ### Fix
 * Dependency Updates ([#297](https://github.com/msk-mind/luna/issues/297)) ([`7ca77b9`](https://github.com/msk-mind/luna/commit/7ca77b95c45de175a9e10f4b876d82ffced89633))
