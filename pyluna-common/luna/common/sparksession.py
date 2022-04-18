@@ -11,7 +11,7 @@ class SparkConfig:
 		'''
 
 		cfg = ConfigSet()
-                warnings.warn("You are using SparkConfig to generate a spark_session, however spark has been depreciated from this package!")
+		warnings.warn("You are using SparkConfig to generate a spark_session, however spark has been depreciated from this package!")
 
 		spark_uri = cfg.get_value(path=config_name+'::$.spark_cluster_config[:1]["spark.uri"]')
 		spark_driver_host = cfg.get_value(path=config_name+'::$.spark_cluster_config[:2]["spark.driver.host"]')
