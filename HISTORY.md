@@ -2,6 +2,9 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.2 (2022-04-14)
+Extensive updates to the CLI tools and removal of old code. 
+
 ## v0.1.1 (2022-01-11)
 ### Documentation
 * Pathology - use sample data from kitware ([#262](https://github.com/msk-mind/luna/issues/262)) ([`c016d21`](https://github.com/msk-mind/luna/commit/c016d218da2eca003d06b96f2c03f16b3ce97873))
