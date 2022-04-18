@@ -44,25 +44,25 @@ jobs:
           name: Run tests - pyluna-common
           command: |
             set -e
-            COMMON_TEST_FILES=$(circleci tests glob "pyluna-common/tests/**/test_*.py" | circleci tests split --split-by=timings)
+            COMMON_TEST_FILES=$(circleci tests glob "pyluna-common/tests/**/test_*.py")
             pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-common $COMMON_TEST_FILES --cov-report=xml
       - run:
           name: Run tests - pyluna-core
           command: |
             set -e
-            COMMON_TEST_FILES=$(circleci tests glob "pyluna-core/tests/**/test_*.py" | circleci tests split --split-by=timings)
+            COMMON_TEST_FILES=$(circleci tests glob "pyluna-core/tests/**/test_*.py")
             pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-core $COMMON_TEST_FILES --cov-report=xml
       - run:
           name: Run tests - pyluna-radiology
           command: |
             set -e
-            RADIOLOGY_TEST_FILES=$(circleci tests glob "pyluna-radiology/tests/**/test_*.py" | circleci tests split --split-by=timings)
+            RADIOLOGY_TEST_FILES=$(circleci tests glob "pyluna-radiology/tests/**/test_*.py")
             pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-radiology $RADIOLOGY_TEST_FILES --cov-report=xml --cov-append
       - run:
           name: Run tests - pyluna-pathology
           command: |
             set -e
-            PATHOLOGY_TEST_FILES=$(circleci tests glob "pyluna-pathology/tests/**/test_*.py" | circleci tests split --split-by=timings)
+            PATHOLOGY_TEST_FILES=$(circleci tests glob "pyluna-pathology/tests/**/test_*.py")
             pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-pathology $PATHOLOGY_TEST_FILES --cov-report=xml --cov-append
       - store_artifacts:
           path: htmlcov
