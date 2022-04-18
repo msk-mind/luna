@@ -3,7 +3,7 @@
 <!--next-version-placeholder-->
 
 ## v0.1.2 (2022-04-14)
-
+Extensive updates to the CLI tools and removal of old code. 
 
 ## v0.1.1 (2022-01-11)
 ### Documentation
