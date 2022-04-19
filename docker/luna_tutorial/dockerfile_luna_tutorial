@@ -7,8 +7,9 @@ ARG USER_ID
 ARG GROUP_ID
 ARG USER_NAME
 ARG GROUP_NAME
+ARG LUNA_VERSION
 RUN echo $USER_ID:$GROUP_ID $USER_NAME:$GROUP_NAME
-
+RUN echo Installing luna v$LUNA_VERSION
 ## install OS dependencies
 RUN apt-get update
 RUN apt-get install build-essential libgdal-dev libgl1 software-properties-common openslide-tools python3-openslide git vim curl tree -y 
@@ -27,7 +28,7 @@ ENV PIP_DEFAULT_TIMEOUT=100
 
 ## Install everything
 RUN python3 -m pip install --no-cache-dir --user --upgrade pip pytest
-RUN python3 -m pip install histomicstk --find-links https://girder.github.io/large_image_wheels && python3 -m pip install pyluna[pathology]
+RUN python3 -m pip install histomicstk --find-links https://girder.github.io/large_image_wheels && python3 -m pip install pyluna[pathology]==$LUNA_VERSION
 RUN python3 -m pip install --no-cache-dir jupyter
 
 ## set env vars
@@ -42,12 +43,9 @@ RUN python3 -c 'import luna; import luna.common; import luna.pathology'
 
 # Ideally we want to remove the need to do this, maybe?
 COPY vmount/conf/logging.cfg "/home/$USER_NAME/vmount/conf/logging.cfg"
-#COPY vmount/conf/datastore.cfg "/home/$USER_NAME/vmount/conf/datastore.cfg" 
 
-RUN python3 -m pip install pyradiomics tqdm staintools requests_mock
-RUN python3 --version
-
-RUN git clone https://github.com/msk-mind/luna.git && cd luna && git checkout tags/v0.3.2 && pytest pyluna-pathology/tests
+RUN python3 -m pip install requests_mock testfixtures
+RUN git clone https://github.com/msk-mind/luna.git && cd luna && git checkout tags/v$LUNA_VERSION && pytest pyluna-pathology/tests && pytest pyluna-common/tests
 
 ## entrypoint # more flexibility
 #CMD jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount
