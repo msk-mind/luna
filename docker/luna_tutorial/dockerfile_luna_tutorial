@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM python:3.9-slim
 
 ## supress interactive dialogs
 ARG DEBIAN_FRONTEND=noninteractive
@@ -11,10 +11,7 @@ RUN echo $USER_ID:$GROUP_ID $USER_NAME:$GROUP_NAME
 
 ## install OS dependencies
 RUN apt-get update
-RUN apt-get install software-properties-common openslide-tools python-openslide default-jre git vim curl tree -y
-RUN add-apt-repository ppa:deadsnakes/ppa
-RUN apt-get install python3.9 python3-pip -y
-
+RUN apt-get install build-essential libgdal-dev libgl1 software-properties-common openslide-tools python3-openslide git vim curl tree -y 
 
 ## create user so python packages are not being installed with root and jupyter is not executed with rootr
 ## map host user to container user so files can be easily accessed from host and container
@@ -24,42 +21,34 @@ USER $USER_NAME
 WORKDIR /home/$USER_NAME
 ENV PATH=$PATH:/home/$USER_NAME/.local/bin
 
-## install luna
-# applying temp hack for getting pyspark v3.1.2 to play well with deltalake
-# tensorboard and sklearn are missing pyluna dependencies
-# pip timeout error
+# install luna
+## Set pip timeout error
 ENV PIP_DEFAULT_TIMEOUT=100
-RUN python3 -m pip install --no-cache-dir --user --upgrade pip \
-	&& pip3 install pillow>=8.1.1 pyluna[pathology] \
-	&& pip3 uninstall -y pyspark \
-	&& pip3 install pyspark==3.1.2 \
-	&& pip3 install tensorboard sklearn tqdm
 
-## install jupyter
+## Install everything
+RUN python3 -m pip install --no-cache-dir --user --upgrade pip pytest
+RUN python3 -m pip install histomicstk --find-links https://girder.github.io/large_image_wheels && python3 -m pip install pyluna[pathology]
 RUN python3 -m pip install --no-cache-dir jupyter
 
 ## set env vars
 ENV LUNA_HOME="/home/$USER_NAME/vmount"
-# pyspark adds /bin/java
-ENV JAVA_HOME="/usr"
 ENV LANG="C.UTF-8"
-ENV PYSPARK_PYTHON="/usr/bin/python3"
-ENV PYSPARK_DRIVER_PYTHON="/usr/bin/python3"
-
 
 ## verify installation
-RUN java --version
-RUN echo $JAVA_HOME
 RUN echo $LUNA_HOME
-RUN echo $PYSPARK_PYTHON
-RUN echo $PYSPARK_DRIVER_PYTHON
 RUN which jupyter
 RUN pip list | grep luna
-RUN python3 -c 'import luna'
+RUN python3 -c 'import luna; import luna.common; import luna.pathology'
 
+# Ideally we want to remove the need to do this, maybe?
+COPY vmount/conf/logging.cfg "/home/$USER_NAME/vmount/conf/logging.cfg"
+#COPY vmount/conf/datastore.cfg "/home/$USER_NAME/vmount/conf/datastore.cfg" 
+
+RUN python3 -m pip install pyradiomics tqdm staintools requests_mock
+RUN python3 --version
+
+RUN git clone https://github.com/msk-mind/luna.git && cd luna && git checkout tags/v0.3.2 && pytest pyluna-pathology/tests
 
 ## entrypoint # more flexibility
 #CMD jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount
 #CMD jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount/notebooks
-
-
