@@ -44,6 +44,7 @@ services:
         - GROUP_ID=${GROUP_ID}
         - USER_NAME=${USER_NAME}
         - GROUP_NAME=${GROUP_NAME}
+        - LUNA_VERSION=0.3.3
     # Set USER_ID to your user id (e.g., `USER_ID=$(id -u):$(id -g)`)
     # so that logs and tmp files are owned by yourself.
     user: ${USER_ID}
