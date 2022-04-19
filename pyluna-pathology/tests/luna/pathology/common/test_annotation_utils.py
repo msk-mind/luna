@@ -47,17 +47,17 @@ def test_check_slideviewer_and_download_bmp(requests_mock):
     assert res[1]['bmp_filepath'] == BMP_FILE_PATH
 
 
-def test_convert_slide_bitmap_to_geojson():
-    outputs = [
-        {'sv_project_id': '1', 'slideviewer_path': '1;123.svs', 'slide_id': '123', 'user': 'n/a',
-         'bmp_filepath': 'n/a', 'npy_filepath': 'n/a', 'geojson': 'n/a', 'geojson_path': 'n/a', 'date': datetime(2021, 7, 28, 10, 23, 27, 816088)},
-        {'sv_project_id': '1', 'slideviewer_path': '1;123.svs', 'slide_id': '123', 'user': 'user',
-         'bmp_filepath': 'pyluna-pathology/tests/luna/pathology/common/testdata/project/regional_bmps/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.bmp',
-         'npy_filepath': 'pyluna-pathology/tests/luna/pathology/common/testdata/project/regional_npys/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.npy',
-         'geojson': 'n/a', 'geojson_path': 'n/a', 'date': datetime(2021, 7, 28, 10, 23, 27, 816088)}]
-
-    labelset = {"DEFAULT_LABELS": {1:'tumor', 2:'stroma', 3:'lymphocytes', 4:'adipocytes'}}
-    res = convert_slide_bitmap_to_geojson(outputs, labelset, 0.5, SLIDE_NPY_DIR, SLIDE_STORE_DIR)
-
-    assert res[0] == '123'
-    assert isinstance(res[1][0]['geojson'], str)
+# def test_convert_slide_bitmap_to_geojson():
+#     outputs = [
+#         {'sv_project_id': '1', 'slideviewer_path': '1;123.svs', 'slide_id': '123', 'user': 'n/a',
+#          'bmp_filepath': 'n/a', 'npy_filepath': 'n/a', 'geojson': 'n/a', 'geojson_path': 'n/a', 'date': datetime(2021, 7, 28, 10, 23, 27, 816088)},
+#         {'sv_project_id': '1', 'slideviewer_path': '1;123.svs', 'slide_id': '123', 'user': 'user',
+#          'bmp_filepath': 'pyluna-pathology/tests/luna/pathology/common/testdata/project/regional_bmps/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.bmp',
+#          'npy_filepath': 'pyluna-pathology/tests/luna/pathology/common/testdata/project/regional_npys/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.npy',
+#          'geojson': 'n/a', 'geojson_path': 'n/a', 'date': datetime(2021, 7, 28, 10, 23, 27, 816088)}]
+# 
+#     labelset = {"DEFAULT_LABELS": {1:'tumor', 2:'stroma', 3:'lymphocytes', 4:'adipocytes'}}
+#     res = convert_slide_bitmap_to_geojson(outputs, labelset, 0.5, SLIDE_NPY_DIR, SLIDE_STORE_DIR)
+# 
+#     assert res[0] == '123'
+#     assert isinstance(res[1][0]['geojson'], str)
