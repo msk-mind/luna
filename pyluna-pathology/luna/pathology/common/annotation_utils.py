@@ -212,7 +212,7 @@ def convert_slide_bitmap_to_geojson(outputs, all_labelsets:List[dict],
     """
 
     import warnings
-    warning.warn ("convert_slide_bitmap_to_geojson() is currently depreciated!")
+    warnings.warn ("convert_slide_bitmap_to_geojson() is currently depreciated!")
     return None
 
 #     outputs = copy.deepcopy(outputs)
