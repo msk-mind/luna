@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.3 (2022-04-19)
+### Fix
+* Update missing packages, cleanup unused code + Update totorial dockerfile ([#305](https://github.com/msk-mind/luna/issues/305)) ([`8436dff`](https://github.com/msk-mind/luna/commit/8436dff68e6489bdffd69a50407b58bf5d9def1a))
+
 ## v0.3.2 (2022-04-18)
 ### Fix
 * Find package namespace ([`8b8d4a5`](https://github.com/msk-mind/luna/commit/8b8d4a587480ed2cc4d71dc967c4f08cf85f3b08))
