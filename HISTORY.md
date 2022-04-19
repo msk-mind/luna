@@ -2,6 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.2 (2022-04-18)
+### Fix
+* Find package namespace ([`8b8d4a5`](https://github.com/msk-mind/luna/commit/8b8d4a587480ed2cc4d71dc967c4f08cf85f3b08))
+
+## v0.3.1 (2022-04-18)
+### Fix
+* Loosen bokeh versions ([`5526b5f`](https://github.com/msk-mind/luna/commit/5526b5f9eba466e56750b5f78756723491352de4))
+
+## v0.3.0 (2022-04-18)
+### Feature
+* Force version bump ([`dc7e668`](https://github.com/msk-mind/luna/commit/dc7e66856ee52a2c0d3faa917fc04f7c30d40c67))
+
 ## v0.2.1 (2022-04-18)
 ### Fix
 * Dependency Updates ([#297](https://github.com/msk-mind/luna/issues/297)) ([`7ca77b9`](https://github.com/msk-mind/luna/commit/7ca77b95c45de175a9e10f4b876d82ffced89633))
