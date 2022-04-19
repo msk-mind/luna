@@ -7,9 +7,7 @@ import logging
 
 from luna.common.CodeTimer import CodeTimer
 from luna.common.config import ConfigSet
-from luna.common.DataStore import DataStore_v2, DataStore
 
-# from luna.common.sparksession import SparkConfig
 import luna.common.constants as const
 from luna.common.utils import get_absolute_path
 from luna.pathology.common.utils import get_labelset_keys
