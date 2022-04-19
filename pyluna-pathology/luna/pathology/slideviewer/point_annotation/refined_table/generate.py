@@ -192,9 +192,6 @@ def create_refined_table():
 
     # populate "date_added", "date_updated","latest", "sv_json_record_uuid"
     spark.sparkContext.addPyFile(
-        get_absolute_path(__file__, "../../../common/EnsureByteContext.py")
-    )
-    spark.sparkContext.addPyFile(
         get_absolute_path(__file__, "../../../common/utils.py")
     )
     from luna.common.utils import generate_uuid_dict

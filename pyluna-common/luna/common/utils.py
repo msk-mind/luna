@@ -19,6 +19,7 @@ import requests
 from functools import partial 
 import urllib
 
+import warnings
 
 logger = logging.getLogger(__name__)
 
@@ -91,13 +92,11 @@ def generate_uuid_binary(content, prefix):
     :param prefix: list e.g. ["FEATURE"]
     :return: string uuid
     """
+    warnings.warn("generate_uuid_binary() should not be used anymore, the UUIDs generated are not valid!")
+
     content = BytesIO(content)
 
-    import EnsureByteContext
-
-    with EnsureByteContext.EnsureByteContext():
-        uuid = FileHash("sha256").hash_file(content)
-
+    uuid = '00000000'
     prefix.append(uuid)
     return "-".join(prefix)
 
@@ -110,12 +109,9 @@ def generate_uuid_dict(json_str, prefix):
     :return: v
     """
     json_bytes = json.dumps(json_str).encode("utf-8")
+    warnings.warn("generate_uuid_dict() should not be used anymore, the UUIDs generated are not valid!")
 
-    import EnsureByteContext
-
-    with EnsureByteContext.EnsureByteContext():
-        uuid = FileHash("sha256").hash_file(BytesIO(json_bytes))
-
+    uuid = '00000000'
     prefix.append(uuid)
     return "-".join(prefix)
 

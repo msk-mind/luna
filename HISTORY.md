@@ -2,6 +2,32 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.3 (2022-04-19)
+### Fix
+* Update missing packages, cleanup unused code + Update totorial dockerfile ([#305](https://github.com/msk-mind/luna/issues/305)) ([`8436dff`](https://github.com/msk-mind/luna/commit/8436dff68e6489bdffd69a50407b58bf5d9def1a))
+
+## v0.3.2 (2022-04-18)
+### Fix
+* Find package namespace ([`8b8d4a5`](https://github.com/msk-mind/luna/commit/8b8d4a587480ed2cc4d71dc967c4f08cf85f3b08))
+
+## v0.3.1 (2022-04-18)
+### Fix
+* Loosen bokeh versions ([`5526b5f`](https://github.com/msk-mind/luna/commit/5526b5f9eba466e56750b5f78756723491352de4))
+
+## v0.3.0 (2022-04-18)
+### Feature
+* Force version bump ([`dc7e668`](https://github.com/msk-mind/luna/commit/dc7e66856ee52a2c0d3faa917fc04f7c30d40c67))
+
+## v0.2.1 (2022-04-18)
+### Fix
+* Dependency Updates ([#297](https://github.com/msk-mind/luna/issues/297)) ([`7ca77b9`](https://github.com/msk-mind/luna/commit/7ca77b95c45de175a9e10f4b876d82ffced89633))
+
+## v0.2.0 (2022-04-18)
+Improved installation and testing.
+
+## v0.1.2 (2022-04-14)
+Extensive updates to the CLI tools and removal of old code. 
+
 ## v0.1.1 (2022-01-11)
 ### Documentation
 * Pathology - use sample data from kitware ([#262](https://github.com/msk-mind/luna/issues/262)) ([`c016d21`](https://github.com/msk-mind/luna/commit/c016d218da2eca003d06b96f2c03f16b3ce97873))
