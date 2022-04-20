@@ -11,7 +11,7 @@
 version: '3'
 services:
   girder:
-    image: luna_tutorial_girder:v0.0.1
+    image: ${USER_NAME}_luna_tutorial_girder:v0.0.1
     build:
       context: .
       dockerfile: dockerfile_girder
@@ -35,7 +35,7 @@ services:
     volumes:
       - ${PWD}/vmount/db:/db
   luna_tutorial:
-    image: luna_tutorial_main:v0.0.1
+    image: ${USER_NAME}_luna_tutorial_main:v0.0.1
     build:
       context: .
       dockerfile: dockerfile_luna_tutorial

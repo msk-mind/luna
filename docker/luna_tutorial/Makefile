@@ -9,7 +9,7 @@ GROUP_ID=$(shell id -g)
 CURRENT_UID=$(USER):$(GID)
 DOCKER_PATH=$(shell which docker)
 
-export COMPOSE_PROJECT_NAME=$(USER_NAME)-luna-tutorial-
+export COMPOSE_PROJECT_NAME=$(USER_NAME)_
 
 .PHONY: all help build clean test run
 .DEFAULT_GOAL := help
@@ -56,7 +56,7 @@ clean-image:  ## remove luna tutorial image
 
 build:        ## build containers
 	mkdir -p vmount/logs vmount/db vmount/tmp
-	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose build
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose build --parallel
 
 
 run:        ## launch containers
