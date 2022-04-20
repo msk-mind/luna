@@ -9,7 +9,7 @@ GROUP_ID=$(shell id -g)
 CURRENT_UID=$(USER):$(GID)
 DOCKER_PATH=$(shell which docker)
 
-export COMPOSE_PROJECT_NAME=$(USER_NAME)_
+export COMPOSE_PROJECT_NAME=$(USER_NAME)
 
 .PHONY: all help build clean test run
 .DEFAULT_GOAL := help
@@ -56,7 +56,7 @@ clean-image:  ## remove luna tutorial image
 
 build:        ## build containers
 	mkdir -p vmount/logs vmount/db vmount/tmp
-	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose build --parallel
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose build
 
 
 run:        ## launch containers
@@ -69,9 +69,13 @@ run:        ## launch containers
 	@echo "$$(hostname):$$(cat .dsa_port)"
 	@echo
 	@echo To access the tutorial, copy-paste this URL in your browser.
-	@echo Then get token by running the command \"tail vmount/logs/tutorial.log\"
-	@echo and enter the token into the browser page.
+	@echo
 	@echo "$$(hostname):$$(cat .jupyter_port)"
+	@echo
+	@echo Then copy-paste this token on browser page
+	@echo
+	@sleep 4
+	@grep "token=" vmount/logs/tutorial.log |  tail -1 | cut -d "=" -f2
 	@echo
 
 stop:       ## terminate containers but keep volumes
@@ -80,5 +84,5 @@ stop:       ## terminate containers but keep volumes
 	rm -f .jupyter_port
 
 exec:       ## launches terminal prompt inside luna_tutorial container
-	docker exec -it luna_tutorial_luna_tutorial_1 /bin/bash
+	docker exec -it $(USER_NAME)_luna_tutorial_1 /bin/bash
 

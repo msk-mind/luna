@@ -47,6 +47,4 @@ COPY vmount/conf/logging.cfg "/home/$USER_NAME/vmount/conf/logging.cfg"
 RUN python3 -m pip install requests_mock testfixtures
 RUN git clone https://github.com/msk-mind/luna.git && cd luna && git checkout tags/v$LUNA_VERSION && pytest pyluna-pathology/tests && pytest pyluna-common/tests
 
-## entrypoint # more flexibility
-#CMD jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount
-#CMD jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount/notebooks
+## entrypoint (see docker-compose file)
