@@ -1,7 +1,7 @@
 FROM python:3.9-slim
 
 ARG USER_NAME
-#ENV user=$user
+ENV user=$USER_NAME
 ARG USER_ID
 ARG GROUP_NAME
 ARG GROUP_ID
@@ -53,4 +53,4 @@ USER $USER_NAME
 #  - Organizes the sample images in TCGA collection
 #  - Uploads annotations to the slides.
 
-CMD python vmount/provision.py --sample-data --user $USER_NAME && girder serve --database mongodb://mongodb:27017/girder
+CMD python vmount/provision.py --sample-data --user $user && girder serve --database mongodb://mongodb:27017/girder
