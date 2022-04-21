@@ -290,10 +290,10 @@ def resolve_paths(given_params: dict):
             raise NotImplementedError("S3 inputs are not currently supported yet!")
 
         elif "input_" in param and 'http:/' in param_value:  # We want to treat input_ params a bit differently
-            pass
+            d_params[param] = param_value
 
         elif "input_" in param and 'https:/' in param_value:  # We want to treat input_ params a bit differently
-            pass
+            d_params[param] = param_value
 
         elif "input_" in param:  # We want to treat input_ params a bit differently
             if '~' in param_value: logger.warning ("Resolving a user directory, be careful!")
