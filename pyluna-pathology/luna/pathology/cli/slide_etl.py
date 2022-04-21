@@ -275,6 +275,7 @@ class SlideProcessor:
         kv.update(self.generate_properties(path))
         kv.update(self.estimate_stain_type(path))
         kv.update(self.writer.write(path, f"{self.project}/slides"))
+        kv['slide_image'] = kv['data_url']
 
         return kv
 

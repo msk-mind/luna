@@ -283,6 +283,17 @@ def validate_params(given_params: dict, params_list: List[tuple]):
 
     return d_params
 
+def resolve_paths(given_params: dict):
+    d_params = {}
+    for param, param_value in given_params.items():
+        if "input_" in param:  # We want to treat input_ params a bit differently
+            if '~' in param_value: logger.warning ("Resolving a user directory, be careful!")
+            resolved_input = Path(param_value.replace('file:', '')).expanduser().resolve()
+            logger.info(f"Resolved input:\n -> {param_value}\n -> {resolved_input}")
+            d_params[param] = resolved_input 
+        else:
+            d_params[param] = param_value
+    return d_params
 
 def expand_inputs(given_params: dict):
     """For special input_* parameters, see if we should infer the input given an output/result directory
@@ -591,3 +602,43 @@ def load_func(dotpath: str):
     module_, func = dotpath.rsplit(".", maxsplit=1)
     m = import_module(module_)
     return getattr(m, func)
+
+
+import subprocess
+import os
+
+class LunaCliClient:
+    def __init__(self, base_dir, uuid):
+        self.base_dir = Path(base_dir).expanduser()
+        self.uuid = uuid
+        self.cli_steps = {}
+    def run(self, cli_resource, *args, **kwargs):
+        
+        cli_name, cli_step = cli_resource.split('::')
+        
+        output_dir = os.path.join(self.base_dir, self.uuid, cli_step)
+
+        if cli_name == 'bootstrap':
+            self.cli_steps[cli_step] = Path(args[0]).expanduser()
+            return None
+        
+        cli_call = [cli_name]
+        for arg in args: 
+            if arg in self.cli_steps.keys():
+                cli_call.append(self.cli_steps[arg])
+            else:
+                cli_call.append(Path(arg).expanduser())
+            
+        for key, value in kwargs.items(): 
+            cli_call.append(f"--{key}")
+            cli_call.append(f"{value}")
+            
+        cli_call.append("-o")
+        cli_call.append(output_dir)
+        
+        print (" ".join(f"{x}" for x in cli_call))
+        
+        subprocess.Popen(cli_call).communicate()
+        
+        self.cli_steps[cli_step] = output_dir
+
