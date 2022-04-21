@@ -288,7 +288,7 @@ def resolve_paths(given_params: dict):
     for param, param_value in given_params.items():
         if "input_" in param:  # We want to treat input_ params a bit differently
             if '~' in param_value: logger.warning ("Resolving a user directory, be careful!")
-            resolved_input = Path(param_value.replace('file:', '')).expanduser().resolve()
+            resolved_input = Path(param_value.replace('file:', '')).expanduser().resolve().as_posix()
             logger.info(f"Resolved input:\n -> {param_value}\n -> {resolved_input}")
             d_params[param] = resolved_input 
         else:
