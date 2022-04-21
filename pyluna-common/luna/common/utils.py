@@ -487,6 +487,9 @@ def cli_runner(
 
     # Expand implied inputs
     trm_kwargs, keys = expand_inputs(trm_kwargs)
+    
+    # Nicely resolve sometimes messy input paths
+    trm_kwargs = resolve_paths(trm_kwargs)
 
     logger.info (f"Full segment key set: {keys}")
 
