@@ -434,12 +434,11 @@ def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
 
         data = pd.read_parquet(input_feature_data).reset_index()
         data = data.drop(columns='index', errors='ignore')
-        data['SEGMENT_ID'] = sid
+        data['SEGMENT_ID'] = segment_id 
         re_indexors = ['SEGMENT_ID']
     
-        if segment_keys is not None:
-            segment_keys = json.loads(segment_keys)
-            for key, value in segment_keys.items():
+        if keys is not None:
+            for key, value in keys.items():
                 data.loc[:, key] = value
                 re_indexors.append(key)
      
