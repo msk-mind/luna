@@ -286,11 +286,22 @@ def validate_params(given_params: dict, params_list: List[tuple]):
 def resolve_paths(given_params: dict):
     d_params = {}
     for param, param_value in given_params.items():
-        if "input_" in param:  # We want to treat input_ params a bit differently
+        if "input_" in param and 's3:/' in param_value:  # We want to treat input_ params a bit differently
+            raise NotImplementedError("S3 inputs are not currently supported yet!")
+
+        elif "input_" in param and 'http:/' in param_value:  # We want to treat input_ params a bit differently
+            pass
+
+        elif "input_" in param and 'https:/' in param_value:  # We want to treat input_ params a bit differently
+            pass
+
+        elif "input_" in param:  # We want to treat input_ params a bit differently
             if '~' in param_value: logger.warning ("Resolving a user directory, be careful!")
             resolved_input = Path(param_value.replace('file:', '')).expanduser().resolve().as_posix()
             logger.info(f"Resolved input:\n -> {param_value}\n -> {resolved_input}")
+
             d_params[param] = resolved_input 
+
         else:
             d_params[param] = param_value
     return d_params
