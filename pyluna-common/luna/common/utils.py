@@ -421,7 +421,20 @@ def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
 
         os.makedirs(segment_dir, exist_ok=True)
 
-        shutil.copy(input_feature_data, segment_dir.joinpath("data.parquet"))
+        data = pd.read_parquet(input_feature_data).reset_index()
+        data = data.drop(columns='index', errors='ignore')
+        data['SEGMENT_ID'] = sid
+        re_indexors = ['SEGMENT_ID']
+    
+        if segment_keys is not None:
+            segment_keys = json.loads(segment_keys)
+            for key, value in segment_keys.items():
+                data.loc[:, key] = value
+                re_indexors.append(key)
+     
+        data = data.set_index(re_indexors).reset_index() # a trick to move columns to the left
+        
+        data.to_parquet (segment_dir.joinpath("data.parquet"))
     
     else:
         logger.warning("Unrecognized scheme: {parsed_url.scheme}, skipping!")
