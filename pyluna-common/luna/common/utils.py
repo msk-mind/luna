@@ -643,6 +643,8 @@ class LunaCliCall:
         Args:
             step_name (str): Name of the CLI call, determines output directory, can act as inputs to other CLI steps
         """
+        if "/" in step_name: raise RuntimeError ("Cannot name steps with path-like character /")
+
         output_dir = self.cli_client.get_output_dir(step_name)
         self.cli_call.append("-o")
         self.cli_call.append(output_dir)
