@@ -2,6 +2,7 @@ import os
 import json
 import yaml
 import logging
+import subprocess
 
 from filehash import FileHash
 from importlib import import_module
@@ -630,41 +631,82 @@ def load_func(dotpath: str):
     return getattr(m, func)
 
 
-import subprocess
-import os
+
+class LunaCliCall:
+    def __init__(self, cli_call, cli_client):
+        self.cli_call = cli_call
+        self.cli_client = cli_client
+        print (" ".join(f"{x}" for x in cli_call))
+
+    def run(self, step_name):
+        """ Run (execute) CLI Call given a 'step_name', add step to parent CLI Client once completed 
+        Args:
+            step_name (str): Name of the CLI call, determines output directory, can act as inputs to other CLI steps
+        """
+        output_dir = self.cli_client.get_output_dir(step_name)
+        self.cli_call.append("-o")
+        self.cli_call.append(output_dir)
+        
+        print (self.cli_call)
+
+        subprocess.Popen(self.cli_call).communicate()
+
+        self.cli_client.cli_steps[step_name] = output_dir
 
 class LunaCliClient:
     def __init__(self, base_dir, uuid):
+        """ Initialize Luna CLI Client with a base directory (the root working directory) and a UUID to track results
+    
+        Args:
+            base_dir (str): parent working directory 
+            uuid (str): some unique string for this instance
+        """
         self.base_dir = Path(base_dir).expanduser()
         self.uuid = uuid
         self.cli_steps = {}
-    def run(self, cli_resource, *args, **kwargs):
-        
-        cli_name, cli_step = cli_resource.split('::')
-        
-        output_dir = os.path.join(self.base_dir, self.uuid, cli_step)
 
-        if cli_name == 'bootstrap':
-            self.cli_steps[cli_step] = Path(args[0]).expanduser()
-            return None
-        
-        cli_call = [cli_name]
-        for arg in args: 
+    def bootstrap(self, step_name, data_path):
+        """ Add data  (boostrap a root CLI call)
+    
+        Args:
+            step_name (str): Name of the (boostrap) CLI call, determines output directory, can act as inputs to other CLI steps
+            data_path (str): Input data path
+        """
+        self.cli_steps[step_name] = Path(data_path).expanduser()
+
+    def configure(self, cli_resource, *args, **kwargs):
+        """ Configure a CLI step 
+    
+        Args:
+            cli_resource (str): CLI Resource string like 
+            args (list): List of CLI arguements
+            kwargs (list): List of CLI parameters
+        Returns:
+            LunaCliCall 
+        """
+        cli_call = [cli_resource]
+        for arg in args:
             if arg in self.cli_steps.keys():
                 cli_call.append(self.cli_steps[arg])
             else:
                 cli_call.append(Path(arg).expanduser())
-            
-        for key, value in kwargs.items(): 
+
+        for key, value in kwargs.items():
             cli_call.append(f"--{key}")
             cli_call.append(f"{value}")
             
-        cli_call.append("-o")
-        cli_call.append(output_dir)
+        return LunaCliCall(cli_call, self)
+
+    def get_output_dir(self, step_name):
+        """Get output_dir based on base_dir, uuid, and step name
+    
+        Args:
+            step_name (str): parent working directory 
+        Returns:
+            output_dir (str)
+        """
+        output_dir = os.path.join(self.base_dir, self.uuid, step_name)
         
-        print (" ".join(f"{x}" for x in cli_call))
-        
-        subprocess.Popen(cli_call).communicate()
-        
-        self.cli_steps[cli_step] = output_dir
+        return output_dir
+
 
