@@ -28,7 +28,11 @@ ENV PIP_DEFAULT_TIMEOUT=100
 
 ## Install everything
 RUN python3 -m pip install --no-cache-dir --user --upgrade pip pytest
-RUN python3 -m pip install histomicstk --find-links https://girder.github.io/large_image_wheels && python3 -m pip install pyluna[pathology]==$LUNA_VERSION
+RUN python3 -m pip install histomicstk --find-links https://girder.github.io/large_image_wheels
+
+RUN git clone https://github.com/msk-mind/luna.git
+RUN cd luna && git checkout dev && cd pyluna-common  && python3 -m pip install -e .
+RUN cd luna && git checkout dev && cd pyluna-pathology && python3 -m pip install -e .
 RUN python3 -m pip install --no-cache-dir jupyter
 
 ## set env vars
@@ -45,6 +49,6 @@ RUN python3 -c 'import luna; import luna.common; import luna.pathology'
 COPY vmount/conf/logging.cfg "/home/$USER_NAME/vmount/conf/logging.cfg"
 
 RUN python3 -m pip install requests_mock testfixtures
-RUN git clone https://github.com/msk-mind/luna.git && cd luna && git checkout tags/v$LUNA_VERSION && pytest pyluna-pathology/tests && pytest pyluna-common/tests
+RUN cd luna && git checkout tags/v$LUNA_VERSION && pytest pyluna-pathology/tests && pytest pyluna-common/tests
 
 ## entrypoint (see docker-compose file)
