@@ -75,7 +75,7 @@ def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_nam
     openslide.ImageSlide(Image.fromarray(255 * block_reduce(mask_arr, block_size=(10, 10), func=np.mean, cval=0.0))).get_thumbnail((1000, 1000)).save(f"{output_dir}/mask_thumbnail.png")
 
     slide_mask = f"{output_dir}/mask_full_res.tif"
-    tifffile.imsave(slide_mask, mask_arr, compress=5)
+    tifffile.imwrite(slide_mask, mask_arr)
 
     properties = {
         'slide_mask': slide_mask,
