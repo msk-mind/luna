@@ -2,6 +2,7 @@ import os
 import json
 import yaml
 import logging
+import subprocess
 
 from filehash import FileHash
 from importlib import import_module
@@ -283,6 +284,28 @@ def validate_params(given_params: dict, params_list: List[tuple]):
 
     return d_params
 
+def resolve_paths(given_params: dict):
+    d_params = {}
+    for param, param_value in given_params.items():
+        if "input_" in param and 's3:/' in param_value:  # We want to treat input_ params a bit differently
+            raise NotImplementedError("S3 inputs are not currently supported yet!")
+
+        elif "input_" in param and 'http:/' in param_value:  # We want to treat input_ params a bit differently
+            d_params[param] = param_value
+
+        elif "input_" in param and 'https:/' in param_value:  # We want to treat input_ params a bit differently
+            d_params[param] = param_value
+
+        elif "input_" in param:  # We want to treat input_ params a bit differently
+            if '~' in param_value: logger.warning ("Resolving a user directory, be careful!")
+            resolved_input = Path(param_value.replace('file:', '')).expanduser().resolve().as_posix()
+            logger.info(f"Resolved input:\n -> {param_value}\n -> {resolved_input}")
+
+            d_params[param] = resolved_input 
+
+        else:
+            d_params[param] = param_value
+    return d_params
 
 def expand_inputs(given_params: dict):
     """For special input_* parameters, see if we should infer the input given an output/result directory
@@ -410,7 +433,19 @@ def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
 
         os.makedirs(segment_dir, exist_ok=True)
 
-        shutil.copy(input_feature_data, segment_dir.joinpath("data.parquet"))
+        data = pd.read_parquet(input_feature_data).reset_index()
+        data = data.drop(columns='index', errors='ignore')
+        data['SEGMENT_ID'] = segment_id 
+        re_indexors = ['SEGMENT_ID']
+    
+        if keys is not None:
+            for key, value in keys.items():
+                data.loc[:, key] = value
+                re_indexors.append(key)
+     
+        data = data.set_index(re_indexors).reset_index() # a trick to move columns to the left
+        
+        data.to_parquet (segment_dir.joinpath("data.parquet"))
     
     else:
         logger.warning("Unrecognized scheme: {parsed_url.scheme}, skipping!")
@@ -463,6 +498,9 @@ def cli_runner(
 
     # Expand implied inputs
     trm_kwargs, keys = expand_inputs(trm_kwargs)
+    
+    # Nicely resolve sometimes messy input paths
+    trm_kwargs = resolve_paths(trm_kwargs)
 
     logger.info (f"Full segment key set: {keys}")
 
@@ -591,3 +629,86 @@ def load_func(dotpath: str):
     module_, func = dotpath.rsplit(".", maxsplit=1)
     m = import_module(module_)
     return getattr(m, func)
+
+
+
+class LunaCliCall:
+    def __init__(self, cli_call, cli_client):
+        self.cli_call = cli_call
+        self.cli_client = cli_client
+        print (" ".join(f"{x}" for x in cli_call))
+
+    def run(self, step_name):
+        """ Run (execute) CLI Call given a 'step_name', add step to parent CLI Client once completed 
+        Args:
+            step_name (str): Name of the CLI call, determines output directory, can act as inputs to other CLI steps
+        """
+        if "/" in step_name: raise RuntimeError ("Cannot name steps with path-like character /")
+
+        output_dir = self.cli_client.get_output_dir(step_name)
+        self.cli_call.append("-o")
+        self.cli_call.append(output_dir)
+        
+        print (self.cli_call)
+
+        subprocess.Popen(self.cli_call).communicate()
+
+        self.cli_client.cli_steps[step_name] = output_dir
+
+class LunaCliClient:
+    def __init__(self, base_dir, uuid):
+        """ Initialize Luna CLI Client with a base directory (the root working directory) and a UUID to track results
+    
+        Args:
+            base_dir (str): parent working directory 
+            uuid (str): some unique string for this instance
+        """
+        self.base_dir = Path(base_dir).expanduser()
+        self.uuid = uuid
+        self.cli_steps = {}
+
+    def bootstrap(self, step_name, data_path):
+        """ Add data  (boostrap a root CLI call)
+    
+        Args:
+            step_name (str): Name of the (boostrap) CLI call, determines output directory, can act as inputs to other CLI steps
+            data_path (str): Input data path
+        """
+        self.cli_steps[step_name] = Path(data_path).expanduser()
+
+    def configure(self, cli_resource, *args, **kwargs):
+        """ Configure a CLI step 
+    
+        Args:
+            cli_resource (str): CLI Resource string like 
+            args (list): List of CLI arguements
+            kwargs (list): List of CLI parameters
+        Returns:
+            LunaCliCall 
+        """
+        cli_call = [cli_resource]
+        for arg in args:
+            if arg in self.cli_steps.keys():
+                cli_call.append(self.cli_steps[arg])
+            else:
+                cli_call.append(Path(arg).expanduser())
+
+        for key, value in kwargs.items():
+            cli_call.append(f"--{key}")
+            cli_call.append(f"{value}")
+            
+        return LunaCliCall(cli_call, self)
+
+    def get_output_dir(self, step_name):
+        """Get output_dir based on base_dir, uuid, and step name
+    
+        Args:
+            step_name (str): parent working directory 
+        Returns:
+            output_dir (str)
+        """
+        output_dir = os.path.join(self.base_dir, self.uuid, step_name)
+        
+        return output_dir
+
+
