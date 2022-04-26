@@ -21,7 +21,7 @@ from torchmetrics import (
     Accuracy,
     Precision,
     Recall,
-    F1,
+    F1Score,
     ConfusionMatrix,
 )
 
