@@ -140,11 +140,20 @@ def xnat_etl(
 
         logger.info(df_project)
 
-    return {}
+
+    output_file = os.path.join(output_dir, f"xnat_data_{project_name}.parquet")
+    df_project.to_parquet(output_file)
+
+    return {
+        'feature_data': output_file,
+        'segment_keys':{
+            'xnat_project_id':project_name,
+        }
+    }
 
 
 def experiment_scans_to_df(s, experiment_id):
-    print (experiment_id)
+    logger.info (f"Processing experiment id={experiment_id}")
     
     e = s.experiment(experiment_id)
     
@@ -163,7 +172,7 @@ def experiment_scans_to_df(s, experiment_id):
         dest_dir = f'/gpfs/mskmind_ess/aukermaa/16-1335/{experiment_id}/{scan_id}'
         os.makedirs(dest_dir, exist_ok=True)
         r = e.scan(scan_id).resource('DICOM')
-        print ("Resource", experiment_id, scan_id, df_scan['@type'].item(), r)
+        logger.info (f"Scan: {experiment_id} {scan_id} {df_scan['@type'].item()}, Resource: {r}")
         
         if not len(list(r.files())): continue # Will be >0 if there are files to download
             
@@ -176,7 +185,7 @@ def experiment_scans_to_df(s, experiment_id):
 
 
 def get_patient_scans(s):
-    print ("Processing subject V2", s)
+    logger.info (f"Processing subject {s}")
     
     d_exps_list = [xmltodict.parse(experiment.get()) for experiment in s.experiments() ]
     d_exps_types = [list(d_exp.items())[0][0] for d_exp in d_exps_list ]
