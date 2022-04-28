@@ -27,7 +27,7 @@ ROOT_PATH: ../
 DATASET_NAME: ""
 
 # DSA api uri (ie host:portnumber)
-DSA_URI: host.docker.internal:8081
+DSA_URI: girder:8080
 
 # DSA annotation name
 ANNOTATION_NAME: point
