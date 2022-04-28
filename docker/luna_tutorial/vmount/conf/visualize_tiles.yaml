@@ -18,7 +18,7 @@ magnification: 20
 
 # map of dsa instance details
 dsa_config:
-    host: host.docker.internal
+    host: girder
     port: 8080
     token: <your-dsa-config-token>
     

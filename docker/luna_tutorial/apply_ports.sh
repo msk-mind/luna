@@ -15,13 +15,13 @@ unameOut="$(uname -s)"
 if [[ "$unameOut" == *"Darwin"* ]];
 then   # for mac
     sed -i '' -E "s/[0-9]{4}:8080/$PORT:8080/g" docker-compose.yml
-    sed -i '' -E "s/host.docker.internal:[0-9]{4}/host.docker.internal:$PORT/g" vmount/conf/dsa_regional_annotation.yaml
-    sed -i '' -E "s/host.docker.internal:[0-9]{4}/host.docker.internal:$PORT/g" vmount/conf/dsa_point_annotation.yaml
+    sed -i '' -E "s/girder:[0-9]{4}/girder:$PORT/g" vmount/conf/dsa_regional_annotation.yaml
+    sed -i '' -E "s/girder:[0-9]{4}/girder:$PORT/g" vmount/conf/dsa_point_annotation.yaml
     sed -i '' -E "s/port: [0-9]{4}/port: $PORT/g" vmount/conf/visualize_tiles.yaml
 else   # for linux
     sed -i -r "s/[0-9]{4}:8080/$PORT:8080/g" docker-compose.yml
-    sed -i -r "s/host.docker.internal:[0-9]{4}/host.docker.internal:$PORT/g" vmount/conf/dsa_regional_annotation.yaml
-    sed -i -r "s/host.docker.internal:[0-9]{4}/host.docker.internal:$PORT/g" vmount/conf/dsa_point_annotation.yaml
+    sed -i -r "s/girder:[0-9]{4}/girder:$PORT/g" vmount/conf/dsa_regional_annotation.yaml
+    sed -i -r "s/girder:[0-9]{4}/girder:$PORT/g" vmount/conf/dsa_point_annotation.yaml
     sed -i -r "s/port: [0-9]{4}/port: $PORT/g" vmount/conf/visualize_tiles.yaml
 fi
 
