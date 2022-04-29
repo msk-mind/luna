@@ -22,7 +22,7 @@ services:
         - GROUP_NAME=${GROUP_NAME}
     restart: unless-stopped
     ports:
-      - "8081:8080"
+      - "8080:8080"
     volumes:
       - ${PWD}/vmount/assetstore:/home/${USER_NAME}/vmount/assetstore
       - ${PWD}/vmount:/home/${USER_NAME}/vmount
@@ -50,10 +50,10 @@ services:
     user: ${USER_ID}
     restart: unless-stopped
     ports:
-      - "8893:8888"
+      - "8888:8888"
       - "6006:6006"
     command: |
-      bash -c "jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount --NotebookApp.token='' >>~/vmount/logs/tutorial.log 2>&1"
+      bash -c "jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount >>~/vmount/logs/tutorial.log 2>&1"
     volumes:
       - ${PWD}/vmount:/home/${USER_NAME}/vmount
   minio:
