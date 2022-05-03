@@ -24,8 +24,6 @@ _params_ = [
     ("username", str),
     ("password", str),
     ("num_cores", int),
-    ("store_url", str),
-    ("no_write", bool),
     ("project_name", str),
     ("debug_limit", int),
     ("output_dir", str),
@@ -51,13 +49,6 @@ _params_ = [
     required=False,
     help="project name to which slides are assigned or associated",
 )
-@click.option(
-    "-s",
-    "--store_url",
-    required=False,
-    help="Where to store all slides in URL format (use file:///path/folder for local, s3://www.host:9000/ for s3)",
-)
-@click.option("--no-write", is_flag=True, help="Disables write adapters")
 @click.option(
     "-dl",
     "--debug-limit",
@@ -101,9 +92,11 @@ def cli(**cli_kwargs):
     Example:
         xnat_etl https://xnat.my.insitution.org
             --project_name 12-345
-            --store_url s3://localhost:9000/
             --num_cores 8
-            -o /data/RAD-12-345/table
+            -o /data/RAD-12-345/
+            -dsid XNAT_TABLE
+
+    python3 -m luna.radiology.cli.xnat_etl https://xnat.mskcc.org -p 16-1335 -s _ -nc 16 --no-write -o . -dl 8 -dsid XNAT_TABLE
     """
     cli_runner(cli_kwargs, _params_, xnat_etl)
 
@@ -114,9 +107,7 @@ def xnat_etl(
     password,
     project_name,
     num_cores,
-    no_write,
     debug_limit,
-    store_url,
     output_dir,
 ):
     """
@@ -135,7 +126,7 @@ def xnat_etl(
         logger.info(f"Client: {client} ")
         logger.info(f"Dashboard: {client.dashboard_link}")
 
-        dfs = [delayed(get_patient_scans)(s) for i, s in enumerate(p.subjects()) if (i < debug_limit or debug_limit < 0)]
+        dfs = [delayed(get_patient_scans)(s, output_dir) for i, s in enumerate(p.subjects()) if (i < debug_limit or debug_limit < 0)]
         df_project = delayed(pd.concat)(dfs).compute()
 
         logger.info(df_project)
@@ -147,17 +138,17 @@ def xnat_etl(
     return {
         'feature_data': output_file,
         'segment_keys':{
-            'xnat_project_id':project_name,
+            'xnat_project_id': project_name,
         }
     }
 
 
-def experiment_scans_to_df(s, experiment_id):
+def experiment_scans_to_df(s, experiment_id, output_dir):
     logger.info (f"Processing experiment id={experiment_id}")
     
     e = s.experiment(experiment_id)
     
-    d_scans_list = [xmltodict.parse(scan.get()) for scan in e.scans() ]
+    d_scans_list  = [xmltodict.parse(scan.get()) for scan in e.scans() ]
     d_scans_types = [list(d_scan.items())[0][0] for d_scan in d_scans_list ]
     d_scans_list  = [list(d_scan.items())[0][1] for d_scan in d_scans_list ]
 
@@ -169,7 +160,7 @@ def experiment_scans_to_df(s, experiment_id):
         
         df_scan = df_scans.loc[df_scans['@ID'] == scan_id]
                      
-        dest_dir = f'/gpfs/mskmind_ess/aukermaa/16-1335/{experiment_id}/{scan_id}'
+        dest_dir = os.path.join(output_dir, experiment_id, scan_id)
         os.makedirs(dest_dir, exist_ok=True)
         r = e.scan(scan_id).resource('DICOM')
         logger.info (f"Scan: {experiment_id} {scan_id} {df_scan['@type'].item()}, Resource: {r}")
@@ -184,22 +175,23 @@ def experiment_scans_to_df(s, experiment_id):
     return df_scans
 
 
-def get_patient_scans(s):
+def get_patient_scans(s, output_dir):
     logger.info (f"Processing subject {s}")
     
-    d_exps_list = [xmltodict.parse(experiment.get()) for experiment in s.experiments() ]
+    d_exps_list  = [xmltodict.parse(experiment.get()) for experiment in s.experiments() ]
     d_exps_types = [list(d_exp.items())[0][0] for d_exp in d_exps_list ]
-    d_exps_list = [list(d_exp.items())[0][1] for d_exp in d_exps_list ]
+    d_exps_list  = [list(d_exp.items())[0][1] for d_exp in d_exps_list ]
     
     df_exps = pd.json_normalize(d_exps_list, sep='_').drop(columns=['xnat:scans_xnat:scan'])
     df_exps['xnatExpType'] = d_exps_types
 
-    df_scans = [ experiment_scans_to_df(s, exp_id) for exp_id in df_exps['@ID'] ]
+    df_scans = [ experiment_scans_to_df(s, exp_id, output_dir) for exp_id in df_exps['@ID'] ]
     
     df_scans = pd.concat(df_scans)
     
     df_subject = df_scans.set_index('experiment_id').join(df_exps.set_index('@ID').drop(columns=df_scans.columns, errors='ignore'))
     
+    # Do some normalization
     df_subject = df_subject.rename(columns={
         'xnat:dcmAccessionNumber': 'radiology_accession_number',
         'xnat:dcmPatientName': 'radiology_patient_id',
@@ -207,7 +199,6 @@ def get_patient_scans(s):
         '@type': 'scan_type_description',
         '@UID': 'radiology_series_instance_uuid',
         '@project': 'xnat_project_id',
-        
     })
     return df_subject
 
