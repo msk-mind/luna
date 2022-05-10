@@ -76,7 +76,7 @@ def get_annotation_uuid(gc, item_id, annotation_name):
 
     annotation_id = df_annotation_data.reset_index()[
         "_id"
-    ].item()  # This is the annotation UUID
+    ].to_list()  # This is the annotation UUID, as a list 
 
     return annotation_id
 
