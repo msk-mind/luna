@@ -6,7 +6,7 @@ import click
 import torch
 from torch.utils.data import DataLoader
 from luna.pathology.analysis.ml import (
-    HD5FDataset,
+    HDF5Dataset,
     TorchTransformModel,
     post_transform_to_2d,
 )
@@ -155,7 +155,7 @@ def infer_tile_labels(
         ttm.model.to(device)
 
     df = pd.read_parquet(input_slide_tiles).reset_index().set_index("address")
-    ds = HD5FDataset(df, preprocess=preprocess)
+    ds = HDF5Dataset(df, preprocess=preprocess)
     loader = DataLoader(
         ds, num_workers=num_cores, batch_size=batch_size, pin_memory=True
     )
