@@ -47,7 +47,7 @@ def create_source(url, token):
 
   payload = json.dumps({
     "_type": "source",
-    "name": "local",
+    "name": "local_lake",
     "description": "tutorial source",
     "type": "NAS",
     "config": {
@@ -84,6 +84,8 @@ if __name__ == '__main__':
     parser.add_argument(
       '--verbose', '-v', default=0, help='Increase verbosity')
 
+    print('\nProvisioning Dremio...')
+
     opts = parser.parse_args(args=sys.argv[1:])
     logger.addHandler(logging.StreamHandler(sys.stdout))
     logger.setLevel(max(1, logging.WARNING - 10 * opts.verbose))
@@ -99,6 +101,8 @@ if __name__ == '__main__':
         
         if response.status_code != 200:
             print('Dremio provision error: {}'.format(response.json()['errorMessage']))
+        else:
+            print('Successful!\n')
             
     else:
         print('Dremio provision error: unable to log into dremio '

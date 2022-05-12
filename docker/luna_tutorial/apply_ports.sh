@@ -105,7 +105,6 @@ fi
 
 PORT=$(./find_open_port.sh 31010 31110)
 echo "Found port $PORT"
-rm -f .dremio_port
 
 unameOut="$(uname -s)"
 
@@ -118,7 +117,6 @@ fi
 
 PORT=$(./find_open_port.sh 45678 45778)
 echo "Found port $PORT"
-rm -f .dremio_port
 
 unameOut="$(uname -s)"
 
