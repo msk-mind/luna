@@ -173,7 +173,7 @@ def provision(opts):
     if User().findOne({'admin': True}) is None:
         adminParams = dict({
             'login': 'admin',
-            'password': 'password',
+            'password': 'password1',
             'firstName': 'Admin',
             'lastName': 'Admin',
             'email': 'admin@nowhere.nil',

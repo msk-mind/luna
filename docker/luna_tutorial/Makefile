@@ -77,7 +77,7 @@ run:        ## launch containers
 	@echo -> Then provision Dremio by running 'make provision_dremio'
 	@echo
 	@echo
-	@echo DSA is being deployed and provisioned with root credentials admin:password
+	@echo DSA is being deployed and provisioned with root credentials admin:password1
 	@echo -> DSA is being provisioned with sample images and annotations and this will take a few minutes...
 	@echo
 	@echo "$$(hostname):$$(cat .dsa_port)"
