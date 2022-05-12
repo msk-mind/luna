@@ -5,7 +5,7 @@
 
 # find and apply open port for girder
 echo "Finding available port for girder..."
-PORT=$(./find_open_port.sh 8080 65535)
+PORT=$(./find_open_port.sh 8080 8887)
 echo "Found port $PORT"
 rm -f .dsa_port
 echo $PORT >> .dsa_port
@@ -28,7 +28,7 @@ fi
 
 # find and apply open port for jupyterlab
 echo "Finding available ports for jupyterlab..."
-PORT=$(./find_open_port.sh 8888 65535)
+PORT=$(./find_open_port.sh 8888 8999)
 echo "Found port $PORT"
 rm -f .jupyter_port
 echo $PORT >> .jupyter_port
@@ -43,7 +43,7 @@ else   # for linux
 fi
 
 
-PORT=$(./find_open_port.sh 6006 65535)
+PORT=$(./find_open_port.sh 6006 8079)
 echo "Found port $PORT"
 
 unameOut="$(uname -s)"
@@ -53,4 +53,37 @@ then   # for mac
     sed -i '' -E "s/[0-9]{4}:6006/$PORT:6006/g" docker-compose.yml
 else   # for linux
     sed -i -r "s/[0-9]{4}:6006/$PORT:6006/g" docker-compose.yml
+fi
+
+# find and apply open ports for minio
+echo "Finding available ports for minio..."
+PORT=$(./find_open_port.sh 9000 9500)
+echo "Found port $PORT"
+rm -f .minio_port
+echo $PORT >> .minio_port
+
+unameOut="$(uname -s)"
+
+if [[ "$unameOut" == *"Darwin"* ]];
+then   # for mac
+    sed -i '' -E "s/[0-9]{4}:9000/$PORT:9000/g" docker-compose.yml
+else   # for linux
+    sed -i -r "s/[0-9]{4}:9000/$PORT:9000/g" docker-compose.yml
+fi
+
+
+PORT=$(./find_open_port.sh 9500 9999)
+echo "Found port $PORT"
+
+unameOut="$(uname -s)"
+
+if [[ "$unameOut" == *"Darwin"* ]];
+then   # for mac
+    sed -i '' -E "s/[0-9]{4}:9001/$PORT:9001/g" docker-compose.yml
+    sed -i '' -E "s/console-address \":[0-9]{4}\"/console-address \":$PORT\"/g" docker-compose.yml
+    sed -i '' -E "s/minio:[0-9]{4}/minio:$PORT/g" docker-compose.yml
+else   # for linux
+    sed -i -r "s/[0-9]{4}:9001/$PORT:9001/g" docker-compose.yml
+    sed -i -r "s/console-address \":[0-9]{4}\"/console-address \":$PORT\"/g" docker-compose.yml
+    sed -i -r "s/minio:[0-9]{4}/minio:$PORT/g" docker-compose.yml
 fi
