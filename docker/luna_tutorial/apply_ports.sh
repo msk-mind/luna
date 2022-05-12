@@ -80,10 +80,8 @@ unameOut="$(uname -s)"
 if [[ "$unameOut" == *"Darwin"* ]];
 then   # for mac
     sed -i '' -E "s/[0-9]{4}:9001/$PORT:9001/g" docker-compose.yml
-    sed -i '' -E "s/console-address \":[0-9]{4}\"/console-address \":$PORT\"/g" docker-compose.yml
     sed -i '' -E "s/minio:[0-9]{4}/minio:$PORT/g" docker-compose.yml
 else   # for linux
     sed -i -r "s/[0-9]{4}:9001/$PORT:9001/g" docker-compose.yml
-    sed -i -r "s/console-address \":[0-9]{4}\"/console-address \":$PORT\"/g" docker-compose.yml
     sed -i -r "s/minio:[0-9]{4}/minio:$PORT/g" docker-compose.yml
 fi
