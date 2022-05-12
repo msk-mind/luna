@@ -57,10 +57,8 @@ fi
 
 # find and apply open ports for minio
 echo "Finding available ports for minio..."
-PORT=$(./find_open_port.sh 9000 9500)
+PORT=$(./find_open_port.sh 9000 9046)
 echo "Found port $PORT"
-rm -f .minio_port
-echo $PORT >> .minio_port
 
 unameOut="$(uname -s)"
 
@@ -74,6 +72,8 @@ fi
 
 PORT=$(./find_open_port.sh 9500 9999)
 echo "Found port $PORT"
+rm -f .minio_port
+echo $PORT >> .minio_port
 
 unameOut="$(uname -s)"
 
@@ -84,4 +84,47 @@ then   # for mac
 else   # for linux
     sed -i -r "s/[0-9]{4}:9001/$PORT:9001/g" docker-compose.yml
     sed -i -r "s/minio:[0-9]{4}/minio:$PORT/g" docker-compose.yml
+fi
+
+
+# find and apply open ports for dremio
+echo "Finding available ports for dremio..."
+PORT=$(./find_open_port.sh 9047 9499)
+echo "Found port $PORT"
+rm -f .dremio_port
+echo $PORT >> .dremio_port
+
+unameOut="$(uname -s)"
+
+if [[ "$unameOut" == *"Darwin"* ]];
+then   # for mac
+    sed -i '' -E "s/[0-9]{4}:9047/$PORT:9047/g" docker-compose.yml
+else   # for linux
+    sed -i -r "s/[0-9]{4}:9047/$PORT:9047/g" docker-compose.yml
+fi
+
+PORT=$(./find_open_port.sh 31010 31110)
+echo "Found port $PORT"
+rm -f .dremio_port
+
+unameOut="$(uname -s)"
+
+if [[ "$unameOut" == *"Darwin"* ]];
+then   # for mac
+    sed -i '' -E "s/[0-9]{5}:31010/$PORT:31010/g" docker-compose.yml
+else   # for linux
+    sed -i -r "s/[0-9]{5}:31010/$PORT:31010/g" docker-compose.yml
+fi
+
+PORT=$(./find_open_port.sh 45678 45778)
+echo "Found port $PORT"
+rm -f .dremio_port
+
+unameOut="$(uname -s)"
+
+if [[ "$unameOut" == *"Darwin"* ]];
+then   # for mac
+    sed -i '' -E "s/[0-9]{5}:45678/$PORT:45678/g" docker-compose.yml
+else   # for linux
+    sed -i -r "s/[0-9]{5}:45678/$PORT:45678/g" docker-compose.yml
 fi

@@ -56,7 +56,7 @@ clean-image:  ## remove luna tutorial image
 
 build:        ## build containers
 	mkdir -p vmount/logs vmount/db vmount/tmp
-	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose build
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose build --parallel
 
 
 run:        ## launch containers
@@ -64,15 +64,30 @@ run:        ## launch containers
 	mkdir -p vmount/logs vmount/db vmount/tmp vmount/assetstore
 	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d
 	@echo
-	@echo DSA is being set up with sample images, annotations and
-	@echo admin user admin/password. It will take a couple minutes to become available at
+	@echo Minio is deployed with root credentials admin:password at,
+	@echo
+	@echo "$$(hostname):$$(cat .minio_port)"
+	@echo
+	@echo
+	@echo Dremio is deployed at,
+	@echo
+	@echo @echo "$$(hostname):$$(cat .minio_port)"
+	@echo
+	@echo -> Open Dremio in your browser and create user with root credentials admin:password1
+	@echo -> Then provision Dremio by running 'make provision_dremio'
+	@echo
+	@echo
+	@echo DSA is being deployed and provisioned with root credentials admin:password
+	@echo -> DSA is being provisioned with sample images and annotations and this will take a few minutes...
+	@echo
 	@echo "$$(hostname):$$(cat .dsa_port)"
 	@echo
-	@echo To access the tutorial, copy-paste this URL in your browser.
+	@echo
+	@echo Finally, Jupyterlab is deployed at,
 	@echo
 	@echo "$$(hostname):$$(cat .jupyter_port)"
 	@echo
-	@echo Then copy-paste this token on browser page
+	@echo -> Open Jupyterlab in your broswer and copy-paste this token to view the tutorial notebooks
 	@echo
 	@sleep 4
 	@grep "token=" vmount/logs/tutorial.log |  tail -1 | cut -d "=" -f2
@@ -85,4 +100,8 @@ stop:       ## terminate containers but keep volumes
 
 exec:       ## launches terminal prompt inside luna_tutorial container
 	docker exec -it $(USER_NAME)_luna_tutorial_1 /bin/bash
+
+
+provision_dremio:    ## provision dremio
+	docker exec $(USER_NAME)_luna_tutorial_1 python vmount/provision_dremio.py -u admin -p password1 -r $$(cat .dremio_port)
 
