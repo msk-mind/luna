@@ -64,7 +64,9 @@ services:
       - "9001:9001"
     environment:
       MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: password 
+      MINIO_ROOT_PASSWORD: password
+    volumes:
+      - ${PWD}/vmount:/data
 
   waystation:
     image: mskmind/luna-waystation
