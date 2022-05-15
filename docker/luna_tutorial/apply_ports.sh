@@ -56,9 +56,10 @@ else   # for linux
 fi
 
 # find and apply open ports for minio
-echo "Finding available ports for minio..."
+echo "Finding available ports for minio api url..."
 PORT=$(./find_open_port.sh 9000 9046)
 echo "Found port $PORT"
+echo $PORT >> .minio_api_port
 
 unameOut="$(uname -s)"
 
@@ -70,10 +71,11 @@ else   # for linux
 fi
 
 
+echo "Finding available ports for minio web url..."
 PORT=$(./find_open_port.sh 9500 9999)
 echo "Found port $PORT"
 rm -f .minio_port
-echo $PORT >> .minio_port
+echo $PORT >> .minio_web_port
 
 unameOut="$(uname -s)"
 

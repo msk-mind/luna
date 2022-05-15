@@ -108,5 +108,5 @@ exec:       ## launches terminal prompt inside luna_tutorial container
 
 
 provision_dremio:    ## provision dremio
-	docker exec $(USER_NAME)_luna_tutorial_1 python vmount/provision_dremio.py -u admin -p password1 -r $$(cat .dremio_port)
+	docker exec $(USER_NAME)_luna_tutorial_1 python vmount/provision_dremio.py -u admin -p password1 -d $$(cat .dremio_port) -m $$(cat .minio_api_port)
 
