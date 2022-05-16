@@ -66,7 +66,7 @@ run:        ## launch containers
 	@echo
 	@echo Minio is deployed with root credentials admin:password1 at,
 	@echo
-	@echo "http://$$(hostname):$$(cat .minio_port)"
+	@echo "http://$$(hostname):$$(cat .minio_web_port)"
 	@echo
 	@echo == You may use this interface to access your project files
 	@echo
@@ -91,7 +91,7 @@ run:        ## launch containers
 	@echo
 	@echo Finally, Jupyterlab is deployed at,
 	@echo
-	@echo "http://$$(hostname):$$(cat .jupyter_port)"
+	@echo "http://$$(hostname):$$(cat .jupyter_port)/tree/notebooks"
 	@echo
 	@echo == Open Jupyterlab in your broswer and copy-paste this token to view and execute the tutorial notebooks
 	@echo
