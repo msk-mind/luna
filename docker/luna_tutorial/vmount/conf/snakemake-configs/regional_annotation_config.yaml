@@ -1,7 +1,7 @@
 REQUESTOR: viki mancoridis                                  # The name of requestor. You are likely the requestor
 REQUESTOR_DEPARTMENT: computational oncology                # The department to which the requestor belongs
 REQUESTOR_EMAIL: MancoriV@mskcc.org                         # The email address of the requestor
-PROJECT: PRO_12-123                                         # Project name decided by data coordination
+PROJECT: PRO-12-123                                         # Project name decided by data coordination
 PROJECT_ID: 134                                             # Project ID in SlideViewer
 SOURCE: slide_viewer                                        # Source name of input data file
 MODALITY: pathology                                         # Data modality
@@ -12,7 +12,7 @@ ROOT_PATH: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snake
 DATASET_NAME: ""                                            # Dataset name set to empty string
 
 # Root path for tables and file transfer
-LANDING_PATH: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/data/snakemake_PRO_12-123/regional-annotations          
+LANDING_PATH: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/data/snakemake_PRO-12-123/regional-annotations
 SLIDEVIEWER_API_URL: "https://slides-res.mskcc.org/"        # Slide viewer api url (must contain trailing slash)
 
 # an optional path to a SlideViewer csv file to use that lists the names of the whole slide images

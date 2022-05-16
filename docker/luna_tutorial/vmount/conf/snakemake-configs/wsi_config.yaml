@@ -1,7 +1,7 @@
 REQUESTOR: viki mancoridis                                     # The name of the requestor. You are likely the requestor
 REQUESTOR_DEPARTMENT: computational oncology                   # The department to which the requestor belongs
 REQUESTOR_EMAIL: MancoriV@mskcc.org                            # The email address of the requestor
-PROJECT: snakemake_PRO_12-123                                  # The project name decided by data coordination
+PROJECT: snakemake_PRO-12-123                                  # The project name decided by data coordination
 SOURCE: toy_set                                                # Source name of the input data file
 MODALITY: radiology                                            # Data modality
 DATA_TYPE: WSI                                                 # Data type within this modality

@@ -2,7 +2,7 @@
 job_tag: ov_slides
 
 # path to whole slide image table
-table_path: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/PRO_12-123/data/PRO_12-123/tables/WSI_toy_data_set
+table_path: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/PRO-12-123/data/PRO-12-123/tables/WSI_toy_data_set
 
 # path to store data
 datastore_path: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/tiles

@@ -8,4 +8,4 @@ input_wsi_tag: ov_slides
 output_datastore: ov_tileset
 
 # destination where the tiles will be loaded and stored (path to output data)
-root_path: ../PRO_12-123/tables/tiles
+root_path: ../PRO-12-123/tables/tiles

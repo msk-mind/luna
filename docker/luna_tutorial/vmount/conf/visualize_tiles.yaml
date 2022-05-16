@@ -23,10 +23,10 @@ dsa_config:
     token: <your-dsa-config-token>
     
 # path to output directory
-root_path: ../PRO_12-123/tiles
+root_path: ../PRO-12-123/tiles
 
 # path to output folder within output directory
-output_folder: ../PRO_12-123/tiles/dsa_annotations
+output_folder: ../PRO-12-123/tiles/dsa_annotations
 
 # name given to the collection
 collection_name: pathology-tutorial

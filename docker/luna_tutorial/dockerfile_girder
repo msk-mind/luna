@@ -45,12 +45,12 @@ RUN mkdir /logs && chmod -R 777 /logs
 USER $USER_NAME
 
 
-# provision.py -
-#  - creates an admin user (admin/password)
+# provision_girder.py -
+#  - creates an admin user with root credentials admin:password1
 #  - Downloads svs images from https://data.kitware.com/#user/61b9f3dc4acac99f42ca7678/folder/61b9f4564acac99f42ca7692
-#      and saves the slides at ~/vmount/PRO_12-123/data/toy_data_set
+#      and saves the slides at ~/vmount/PRO-12-123/data/toy_data_set
 #  - Creates an assetstore at ~/vmount/assetstore
 #  - Organizes the sample images in TCGA collection
 #  - Uploads annotations to the slides.
 
-CMD python vmount/provision.py --sample-data --user $user && girder serve --database mongodb://mongodb:27017/girder
+CMD python vmount/provision_girder.py --sample-data --user $user && girder serve --database mongodb://mongodb:27017/girder

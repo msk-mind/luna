@@ -14,7 +14,7 @@ scale_factor: 16
 requested_magnification: 20
 
 # optional project id, if using regional annotations
-project_id: PRO_12-123
+project_id: PRO-12-123
 
 # optional annotation labelset name, if using regional annotations
 labelset: DEFAULT_LABELS
@@ -25,8 +25,8 @@ filter:
     otsu_score: 0.5
 
 # destination path (path to output data)
-root_path: ../PRO_12-123/tables/tiles
+root_path: ../PRO-12-123/tables/tiles
 
 # optional path to the regional annotation table
-annotation_table_path: ../PRO_12-123/tables/REGIONAL_METADATA_RESULTS
+annotation_table_path: ../PRO-12-123/tables/REGIONAL_METADATA_RESULTS
 

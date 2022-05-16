@@ -14,7 +14,7 @@ scale_factor: 16
 magnification: 20
 
 # optional project id, if using regional annotations
-project_id: PRO_12-123
+project_id: PRO-12-123
 
 # optional annotation labelset name, if using regional annotations
 labelset: DEFAULT_LABELS
@@ -28,4 +28,4 @@ filter:
 root_path: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/tiles
 
 # optional path to the regional annotation table
-annotation_table_path: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/PRO_12-123/tables/REGIONAL_METADATA_RESULTS
+annotation_table_path: /gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/PRO-12-123/tables/REGIONAL_METADATA_RESULTS

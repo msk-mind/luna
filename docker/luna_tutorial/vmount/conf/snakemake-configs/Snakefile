@@ -59,7 +59,7 @@ rule regional_annotation_etl:
 
 rule build_proxy_table:
     input: "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/snakemake/data/snakemake_toy_data_set/",
-    output: directory("../data/snakemake_PRO_12-123"), touch("../outputs/build_proxy_table.done")
+    output: directory("../data/snakemake_PRO-12-123"), touch("../outputs/build_proxy_table.done")
     log: "../logs/build_proxy_table.log",
     shell: "python3 -m data_processing.pathology.proxy_table.generate \
             -d ../../configs/snakemake-configs/wsi_config.yaml \
