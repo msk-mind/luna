@@ -1,7 +1,7 @@
 REQUESTOR: viki mancoridis                                  # The name of requestor. You are likely the requestor
 REQUESTOR_DEPARTMENT: computational oncology                # The department to which the requestor belongs
 REQUESTOR_EMAIL: MancoriV@mskcc.org                         # The email address of the requestor
-PROJECT: PRO_12-123                                         # Project name decided by data coordination
+PROJECT: PRO-12-123                                         # Project name decided by data coordination
 PROJECT_ID: 134                                             # Project ID in SlideViewer
 SOURCE: slide_viewer                                        # Source name of input data file
 MODALITY: pathology                                         # Data modality

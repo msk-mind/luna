@@ -4,7 +4,7 @@ import shutil
 # ------------------------------------------------------------------------------------------------------------------------------------------
 # updates the wsi table to include patient_ids
 
-wsi_table_path = "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/PRO_12-123/data/PRO_12-123/tables/WSI_toy_data_set"
+wsi_table_path = "/gpfs/mskmindhdp_emc/user/shared_data_folder/pathology-tutorial/PRO-12-123/data/PRO-12-123/tables/WSI_toy_data_set"
 
 # setup spark session
 spark = SparkSession.builder \

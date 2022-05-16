@@ -19,4 +19,4 @@ filter:
     otsu_score: 0.5
     
 # destination path (path to output data)
-root_path: ../PRO_12-123/tables/tiles
+root_path: ../PRO-12-123/tables/tiles

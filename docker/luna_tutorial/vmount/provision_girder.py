@@ -67,7 +67,7 @@ def get_sample_data(adminUser, collName, folderName, folderPath):
     annotations = sorted([item for item in all_items if item['name'].endswith('.json')], key=lambda x: x['name'])
 
     # save slides on ~/vmount
-    slide_dir = os.getenv("HOME") + "/vmount/PRO_12-123/data/toy_data_set"
+    slide_dir = os.getenv("HOME") + "/vmount/PRO-12-123/data/toy_data_set"
     os.makedirs(slide_dir, exist_ok=True)
  
     for remoteItem, remoteAnnot in zip(wsi, annotations):
