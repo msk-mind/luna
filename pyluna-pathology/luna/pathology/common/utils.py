@@ -314,7 +314,7 @@ def get_tile_array(row: pd.DataFrame) -> np.ndarray:
         row (pd.DataFrame): row with address and tile_image_file columns
     """
     with h5py.File(row.tile_store, 'r') as hf:
-        tile = np.array(hf[row.address])
+        tile = np.array(hf[row.name])
     return tile
 
 # USED -> utils

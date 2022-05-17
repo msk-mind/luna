@@ -8,11 +8,13 @@ import pandas as pd
 import pyarrow.parquet as pq
 import ray
 import ray.train as train
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
 from ray import tune
 from ray.train import Trainer
+
 
 from torchvision import transforms
 from torch.utils.data import DataLoader
@@ -221,8 +223,9 @@ def train_func(config: Dict[str, any]):
     label_col = config.get("label_col")
     stratify_by = config.get("stratify_col")
     network = config.get("network")
+    checkpoint_dir = config.get("checkpoint_dir")
 
-    df = pd.read_parquet(tile_dataset_fpath).query("intersection_area > 0")
+    df = pd.read_parquet(tile_dataset_fpath).query("intersection_area > 0").reset_index().set_index("address")
 
     # reset index
     df_nh = df.reset_index()
@@ -290,6 +293,7 @@ def train_func(config: Dict[str, any]):
         classifier=classifier, criterion=criterion, optimizer=optimizer
     )
     logger.info("Starting training procedure")
+ 
     for ii in range(epochs):
 
         train_results = classifier_trainer.train_epoch(train_loader, train_metrics)
@@ -297,10 +301,13 @@ def train_func(config: Dict[str, any]):
 
         results = {**train_results, **val_results}
         train.report(**results)
-        train.save_checkpoint(epoch=ii, model=model)
+        path = os.path.join(checkpoint_dir, f'checkpoint_{ii}.pt')
+        torch.save({'epcoh':ii, 'model_state_dict':model.state_dict()}, path)
 
     logger.info("Completed model training")
 
+def trial_str_creator(trial):
+    return "{}_{}_123".format(trial.trainable_name, trial.trial_id)
 
 def train_model(
     tile_dataset_fpath: str,
@@ -377,7 +384,7 @@ def train_model(
     )
 
     logger.info(f"View Ray Dashboard to see worker logs: {output['webui_url']}")
-    print("training model")
+    logger.info("training model")
 
     # instantiaing Ray Trainer, setting resouce limits
     logger.info(
@@ -421,11 +428,14 @@ def train_model(
         "stratify_col": stratify_col,
         "network": network,
         "num_splits": num_splits,
+        "checkpoint_dir": output_dir,
     }
+    # timestamp output dir the same as ray does, just replicate it 
 
     trainable = trainer.to_tune_trainable(train_func)
 
     cli_reporter = CustomReporter(max_report_frequency=180)
+    
 
     # run distributed model training
     analysis = tune.run(

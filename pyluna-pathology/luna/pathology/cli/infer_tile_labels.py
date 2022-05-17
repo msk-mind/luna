@@ -183,6 +183,8 @@ def infer_tile_labels(
     output_file = os.path.join(
         output_dir, "tile_scores_and_labels_pytorch_inference.parquet"
     )
+    # 
+    df_output.index.name = 'address'
     df_output.to_parquet(output_file)
 
     # Save our properties and params
