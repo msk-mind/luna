@@ -21,6 +21,6 @@ pyinstaller==4.0
 tornado==6.0.4
 PyYAML==5.4
 jsonpath-ng==1.5.2
-yamale==3.0.4
+yamale==3.0.8
 pydicom==2.1.0
 flask
