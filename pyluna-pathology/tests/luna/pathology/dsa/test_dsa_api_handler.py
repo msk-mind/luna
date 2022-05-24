@@ -51,7 +51,7 @@ def test_get_annotation_uuid(monkeypatch):
     gc = GirderClient(apiUrl="http://localhost/api/v1")
     annotation_uid = get_annotation_uuid(gc, "123", "regional")
 
-    assert annotation_uid == "321"
+    assert annotation_uid == ["321"]
 
 
 def test_get_item_uuid(monkeypatch):

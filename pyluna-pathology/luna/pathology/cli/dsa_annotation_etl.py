@@ -1,7 +1,8 @@
-# General imports
+# imports
 import os
 import logging
 import click
+import requests
 
 import girder_client
 import pandas as pd
@@ -22,6 +23,7 @@ from luna.pathology.dsa.dsa_api_handler import (
     get_slide_df,
     get_annotation_uuid,
     get_annotation_df,
+    system_check
 )
 
 init_logger()
@@ -48,13 +50,13 @@ _params_ = [
 )
 @click.option(
     "-c",
-    "--collection_name",
+    "--collection-name",
     required=False,
     help="name of the collection to pull data from in DSA",
 )
 @click.option(
     "-a",
-    "--annotation_name",
+    "--annotation-name",
     required=False,
     help="name of the annotations to pull from DSA (same annotation name for all slides)",
 )
@@ -71,8 +73,7 @@ _params_ = [
     help="DSA password, should be inferred from DSA_PASSWORD",
 )
 @click.option(
-    "-nc", "--num_cores", required=False, help="Number of cores to use (default: 4)",
-    default=4
+    "-nc", "--num_cores", required=False, help="Number of cores to use", default=4
 )
 @click.option(
     "-m",
@@ -93,9 +94,9 @@ def cli(**cli_kwargs):
     Example:
         export DSA_USERNAME=username
         export DSA_PASSWORD=password
-        dsa_annotation_ http://localhost:8080/dsa/api/v1
-            --collection_name tcga-data
-            --annotation_name TumorVsOther
+        dsa_annotation_etl http://localhost:8080/dsa/api/v1
+            --collection-name tcga-data
+            --annotation-name TumorVsOther
             -o /data/annotations/
     """
     cli_runner(cli_kwargs, _params_, dsa_annotation_etl)
@@ -120,9 +121,24 @@ def dsa_annotation_etl(
     Returns:
         dict: metadata about function call
     """
-    girder = girder_client.GirderClient(apiUrl=input_dsa_endpoint)
+    #girder = girder_client.GirderClient(apiUrl=input_dsa_endpoint)
+    try:
+        girder = girder_client.GirderClient(apiUrl=input_dsa_endpoint)
+        # girder python client doesn't support turning off ssl verify.
+        # can be removed once we replace the self-signed cert
+        session = requests.Session()
+        session.verify = False
+        girder._session = session
+        girder.authenticate(username, password)
 
-    dsa_authenticate(girder, username, password)
+        # check DSA connection
+        system_check(girder)
+
+    except Exception as exc:
+        logger.error(exc)
+        raise RuntimeError("Error connecting to DSA API")
+
+    #dsa_authenticate(girder, username, password)
 
     collection_uuid = get_collection_uuid(girder, collection_name)
 
@@ -216,6 +232,8 @@ class DsaAnnotationProcessor:
 
             elif row[shape_type_col] == "point":
                 geometry = Point((x[0], y[0]))
+            else:
+                continue # don't process non-polyline(regional) or point annotations
 
             logger.info(f"\tCreated geometry {str(shape(geometry)):.40s}...")
             feature = Feature(
@@ -240,16 +258,23 @@ class DsaAnnotationProcessor:
             f"Trying to process annotation for slide_id={slide_id}, item_id={itemId}"
         )
 
-        annotation_uuid = get_annotation_uuid(
+        annotation_uuids = get_annotation_uuid(
             self.girder, item_id=itemId, annotation_name=self.annotation_name
         )
 
-        if annotation_uuid is None:
+        if annotation_uuids is None:
             return None
 
-        df_annotations = get_annotation_df(self.girder, annotation_uuid)
+        # need to loop through annotation uuids since the same annotation name 
+        # can coorespond to multiple uuids (a 'Regional' annotation on the same
+        # slide made two days apart)
+        df_annotations = []
+        for annotation_uuid in annotation_uuids:
 
-        print(df_annotations)
+       	    df_annotation = get_annotation_df(self.girder, annotation_uuid)
+            df_annotations.append(df_annotation)
+	
+        df_annotations = pd.concat(df_annotations) 
 
         # This turns the regional data into a nice geojson
         feature_collection = self.histomics_annotation_table_to_geojson(
