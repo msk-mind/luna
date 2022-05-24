@@ -51,7 +51,7 @@ _params_ = [
 )
 @click.option(
     "-dl",
-    "--debug-limit",
+    "--debug_limit",
     required=False,
     default=-1,
     help="limit number of slides process, for debugging, no_write is automatically enabled",
