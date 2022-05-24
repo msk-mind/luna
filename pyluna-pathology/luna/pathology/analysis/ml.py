@@ -45,31 +45,31 @@ class TorchTransformModel:
     pass
 
 
-class HD5FDataset(Dataset):
+class HDF5Dataset(Dataset):
     """General dataset that uses a HDF5 manifest convention
 
     Applies preprocessing steps per instance, returning aggregate batches of data. Useful for training and inference.
     """
 
     def __init__(
-        self, hd5f_manifest, preprocess=nn.Identity(), label_cols=[], using_ray=False
+        self, hdf5_manifest, preprocess=nn.Identity(), label_cols=[], using_ray=False
     ):
         """Initialize HD5FDataset
 
         Args:
-            hd5f_manifest (pd.DataFrame): Dataframe of H5 data
+            hdf5_manifest (pd.DataFrame): Dataframe of H5 data
             preprocess (transform): Function to apply to every bit of data
             label_cols (list[str]): (Optional) label columns to return as tensors, e.g. for training
             using_ray (bool): (Optional) Perform distributed dataloading with Ray for training
         """
 
-        self.hd5f_manifest = hd5f_manifest
+        self.hdf5_manifest = hdf5_manifest
         self.label_cols = label_cols
         self.using_ray = using_ray
         self.preprocess = preprocess
 
     def __len__(self):
-        return len(self.hd5f_manifest)
+        return len(self.hdf5_manifest)
 
     def set_preprocess(self, preprocess):
         preprocess = preprocess
@@ -91,7 +91,7 @@ class HD5FDataset(Dataset):
             (optional str, torch.tensor, optional torch.tensor): tuple of the tile index and corresponding tile as a torch tensor, and metadata labels if specified, else the index
         """
 
-        row = self.hd5f_manifest.iloc[idx]
+        row = self.hdf5_manifest.iloc[idx]
         img = get_tile_array(row)
 
         if self.using_ray and not (len(self.label_cols)):

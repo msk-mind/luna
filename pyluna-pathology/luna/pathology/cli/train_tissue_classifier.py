@@ -1,18 +1,20 @@
 import os
 import logging
 import click
-
-from typing import Union, Callable, Dict
+import h5py
+from typing import Union, Callable, Dict, List
 
 import pandas as pd
 import pyarrow.parquet as pq
 import ray
 import ray.train as train
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
 from ray import tune
 from ray.train import Trainer
+
 
 from torchvision import transforms
 from torch.utils.data import DataLoader
@@ -21,7 +23,7 @@ from torchmetrics import (
     Accuracy,
     Precision,
     Recall,
-    F1,
+    F1Score,
     ConfusionMatrix,
 )
 
@@ -32,6 +34,7 @@ from luna.pathology.analysis.ml import (
     BaseTorchClassifier,
     TorchTileClassifierTrainer,
     get_group_stratified_sampler,
+    HDF5Dataset
 )
 
 init_logger()
@@ -45,11 +48,11 @@ _params_ = [
     ("label_col", str),
     ("stratify_col", str),
     ("num_splits", int),
-    ("num_epochs", list),
-    ("batch_size", list),
-    ("learning_rate", list),
+    ("num_epochs", List[int]),
+    ("batch_size", List[int]),
+    ("learning_rate", List[float]),
     ("network", str),  # string, but parsed as an object
-    ("use_gpu", bool),
+    #("use_gpu", str), # treated like bool
     ("num_cpus_per_worker", int),
     ("num_gpus_per_worker", int),
     ("num_gpus", int),
@@ -75,7 +78,7 @@ _params_ = [
 )
 @click.option(
     "-lc",
-    "--label_cols",
+    "--label_col",
     required=False,
     help="Column name in the input dataframe cooresponding to the tissue type (eg. regional_label)",
 )
@@ -123,13 +126,13 @@ _params_ = [
 )
 @click.option(
     "-cw",
-    "--num_cpus_per_workers",
+    "--num_cpus_per_worker",
     required=False,
     help="Number of CPUs transparent to each worker",
 )
 @click.option(
     "-gw",
-    "--num_gpus_per_workers",
+    "--num_gpus_per_worker",
     required=False,
     help="Number of GPUs transparent to each worker. Can't be more than num_gpus",
 )
@@ -193,15 +196,6 @@ class CustomReporter(tune.CLIReporter):
     def report(self, trials, done, *sys_info):
         logger.info(self._progress_str(trials, done, *sys_info))
 
-
-class TileDataset(BaseTorchTileDataset):
-    def setup(self):
-        self.transform = transforms.Compose([transforms.ToTensor()])
-
-    def preprocess(self, input_tile):
-        return self.transform(input_tile)
-
-
 class TorchTileClassifier(BaseTorchClassifier):
     def setup(self, model):
         self.model = model
@@ -229,21 +223,22 @@ def train_func(config: Dict[str, any]):
     label_col = config.get("label_col")
     stratify_by = config.get("stratify_col")
     network = config.get("network")
+    checkpoint_dir = config.get("checkpoint_dir")
 
-    df = pq.ParquetDataset(tile_dataset_fpath).read().to_pandas()
+    df = pd.read_parquet(tile_dataset_fpath).query("intersection_area > 0").reset_index().set_index("address")
 
     # reset index
     df_nh = df.reset_index()
-
     # stratify by slide id while balancing regional_label
     train_sampler, val_sampler = get_group_stratified_sampler(
         df_nh, label_col, stratify_by, num_splits=num_splits
     )
-
-    dataset_local = TileDataset(
-        tile_manifest=df, label_cols=[label_col], using_ray=True
+    # replace string labels with categorical values
+    df[label_col] = df[label_col].replace(label_set)
+    dataset_local = HDF5Dataset(
+        hdf5_manifest=df, label_cols=[label_col], using_ray=True, preprocess=transforms.Compose([transforms.ToTensor()])
     )
-
+   
     train_loader = DataLoader(
         dataset_local,
         batch_size=int(batch_size),
@@ -278,7 +273,7 @@ def train_func(config: Dict[str, any]):
             Accuracy(),
             Precision(num_classes=len(label_set)),
             Recall(num_classes=len(label_set)),
-            F1(num_classes=len(label_set)),
+            F1Score(num_classes=len(label_set)),
         ],
         prefix="train_",
     ).to(train.torch.get_device())
@@ -288,17 +283,17 @@ def train_func(config: Dict[str, any]):
             Accuracy(),
             Precision(num_classes=len(label_set)),
             Recall(num_classes=len(label_set)),
-            F1(num_classes=len(label_set)),
+            F1Score(num_classes=len(label_set)),
             ConfusionMatrix(num_classes=len(label_set)),
         ],
         prefix="val_",
     ).to(train.torch.get_device())
-
+    
     classifier_trainer = TorchTileClassifierTrainer(
         classifier=classifier, criterion=criterion, optimizer=optimizer
     )
-
     logger.info("Starting training procedure")
+ 
     for ii in range(epochs):
 
         train_results = classifier_trainer.train_epoch(train_loader, train_metrics)
@@ -306,10 +301,13 @@ def train_func(config: Dict[str, any]):
 
         results = {**train_results, **val_results}
         train.report(**results)
-        train.save_checkpoint(epoch=ii, model=model)
+        path = os.path.join(checkpoint_dir, f'checkpoint_{ii}.pt')
+        torch.save({'epcoh':ii, 'model_state_dict':model.state_dict()}, path)
 
     logger.info("Completed model training")
 
+def trial_str_creator(trial):
+    return "{}_{}_123".format(trial.trainable_name, trial.trial_id)
 
 def train_model(
     tile_dataset_fpath: str,
@@ -321,7 +319,6 @@ def train_model(
     batch_size: Union[int, Callable],
     learning_rate: Union[float, Callable],
     network: nn.Module,
-    use_gpu: bool,
     num_cpus_per_worker: int,
     num_gpus_per_worker: int,
     num_gpus: int,
@@ -387,7 +384,7 @@ def train_model(
     )
 
     logger.info(f"View Ray Dashboard to see worker logs: {output['webui_url']}")
-    print("training model")
+    logger.info("training model")
 
     # instantiaing Ray Trainer, setting resouce limits
     logger.info(
@@ -397,7 +394,7 @@ def train_model(
     trainer = Trainer(
         backend="torch",
         num_workers=num_workers,
-        use_gpu=use_gpu,
+        #use_gpu=use_gpu,
         logdir=output_dir,
         resources_per_worker={
             "CPU": num_cpus_per_worker,
@@ -407,7 +404,7 @@ def train_model(
 
     batch_size = ray.tune.choice(batch_size)
 
-    num_epochs = ray.tune.choice(batch_size)
+    num_epochs = ray.tune.choice(num_epochs)
 
     if len(learning_rate) == 2:
         learning_rate = ray.tune.loguniform(learning_rate[0], learning_rate[1])
@@ -431,11 +428,14 @@ def train_model(
         "stratify_col": stratify_col,
         "network": network,
         "num_splits": num_splits,
+        "checkpoint_dir": output_dir,
     }
+    # timestamp output dir the same as ray does, just replicate it 
 
     trainable = trainer.to_tune_trainable(train_func)
 
     cli_reporter = CustomReporter(max_report_frequency=180)
+    
 
     # run distributed model training
     analysis = tune.run(
@@ -465,6 +465,7 @@ def train_model(
         "num_trials": len(result_df),  # total number of trials run
         "best_trial": best_trial,  # df associated with bthe best trial
     }
+    logger.info(f"Output: {output_dir}")
 
     ray.shutdown()
 
