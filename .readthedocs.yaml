@@ -30,5 +30,5 @@ build:
 python:
     #version: "3.9"
    install:
-   - package: numpy==1.21.2  
+   - requirements: docs/requirements_extra.txt # for numpy dep.
    - requirements: requirements_dev.txt
