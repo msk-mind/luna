@@ -20,7 +20,7 @@ build:
      - liblapack-dev
      - gfortran
   tools:
-      python: 3.9
+    python: "3.9"
 
 # Optionally set the version of Python and requirements required to build your docs
 python:
