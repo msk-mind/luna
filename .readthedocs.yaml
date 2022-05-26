@@ -21,7 +21,7 @@ build:
      - liblapack-dev
      - gfortran
      - openslide-tools
-     - python-openslide
+     - python3-openslide
      - libgdal-dev
   tools:
     python: "3.9"
