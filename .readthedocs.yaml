@@ -15,13 +15,20 @@ formats:
 
 # https://docs.readthedocs.io/en/stable/config-file/v2.html#build-apt-packages
 build:
+  os: ubuntu-20.04
   apt_packages:
      - libblas-dev
      - liblapack-dev
      - gfortran
+     - openslide-tools
+     - python3-openslide
+     - libgdal-dev
+  tools:
+    python: "3.9"
 
 # Optionally set the version of Python and requirements required to build your docs
 python:
-   version: "3.7"
+    #version: "3.9"
    install:
+   - requirements: docs/requirements_extra.txt # for numpy dep.
    - requirements: requirements_dev.txt

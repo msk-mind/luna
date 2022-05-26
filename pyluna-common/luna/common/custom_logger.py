@@ -19,7 +19,7 @@ class MultilineFormatter(logging.Formatter):
         return output
 
 
-def init_logger(filename="data-processing.log"):
+def init_logger(filename="luna.log"):
     # Logging configuration
     if os.environ["LUNA_HOME"]:
         cfg = ConfigSet(

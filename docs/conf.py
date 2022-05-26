@@ -37,6 +37,10 @@ for img in glob.glob("../docker/luna_tutorial/vmount/img/*png"):
 # TODO fix error
 os.remove("tutorials/8_teardown.ipynb")
 
+# TODO: add outputs back to notebooks so sphinx doesn't need run notebooks to generate
+# outputs, then remove this 
+nbsphinx_allow_errors = True
+
 # -- General configuration ---------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
