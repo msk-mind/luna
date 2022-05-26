@@ -72,4 +72,4 @@ h5py
 spams
 docker
 pre-commit
-
+ipykernel # ipykernel for docs
