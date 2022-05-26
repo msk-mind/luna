@@ -20,6 +20,9 @@ build:
      - libblas-dev
      - liblapack-dev
      - gfortran
+     - openslide-tools
+     - python-openslide
+     - libgdal-dev
   tools:
     python: "3.9"
 
@@ -27,4 +30,5 @@ build:
 python:
     #version: "3.9"
    install:
+   - package: numpy==1.21.2  
    - requirements: requirements_dev.txt
