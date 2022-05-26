@@ -18,12 +18,12 @@ class TutorialModel(TorchTransformModel):
         self.model = load_func(network)(num_classes=num_labels)
 
         # removing data parallel formatting from weights
-        self.state_dict = OrderedDict()
-        for k, v in self.state_dict_dp.items():
-            name = k[7:] # remove `module.`
-            self.state_dict[name] = v
+        #self.state_dict = OrderedDict()
+        #for k, v in self.state_dict_dp.items():
+        #    name = k[7:] # remove `module.`
+        #    self.state_dict[name] = v
         
-        self.model.load_state_dict(self.state_dict)
+        self.model.load_state_dict(self.state_dict_dp)
 
     def get_preprocess(self):
         return self.preprocess
