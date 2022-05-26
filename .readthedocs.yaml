@@ -19,9 +19,11 @@ build:
      - libblas-dev
      - liblapack-dev
      - gfortran
+  tools:
+      python: 3.9
 
 # Optionally set the version of Python and requirements required to build your docs
 python:
-   version: "3.9"
+    #version: "3.9"
    install:
    - requirements: requirements_dev.txt
