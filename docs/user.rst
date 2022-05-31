@@ -41,7 +41,8 @@ The following notebook tutorials walk you through analysis workflows.
     :maxdepth: 1
 
     tutorials/1_dataset-prep.ipynb
-    tutorials/2_tiling.ipynb
+    tutorials/2_tiling-file.ipynb
+    tutorials/2_tiling-waystation
     tutorials/3_model-training.ipynb
     tutorials/4_inference-and-visualization.ipynb
     tutorials/5_end-to-end-pipeline.ipynb
