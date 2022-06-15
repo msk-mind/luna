@@ -540,8 +540,15 @@ def cli_runner(
         with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
             yaml.dump(trm_kwargs, fp)
 
+    
+
     # Save feature data in parquet if indicated:
     if "dataset_id" in cli_kwargs and  "feature_data" in trm_kwargs:
+        # If there's a super key, add it now:
+
+        if cli_kwargs.get("super_key"):
+            trm_kwargs['segment_keys']['super_key'] = cli_kwargs.get("super_key")
+
         dataset_id   = cli_kwargs.get("dataset_id")
         feature_data = trm_kwargs.get("feature_data")
 
