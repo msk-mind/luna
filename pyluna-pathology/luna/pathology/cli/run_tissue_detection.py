@@ -1,8 +1,6 @@
 # General imports
 import logging
 import click
-
-# cli specific imports
 import pandas as pd
 from tqdm import tqdm
 
@@ -25,8 +23,13 @@ from functools import partial
 from pathlib import Path
 from PIL import Image, ImageEnhance
 
+import pandas as pd
+from tqdm import tqdm
+
+import openslide
 
 from luna.common.custom_logger import init_logger
+
 from luna.common.utils import cli_runner
 
 init_logger()
@@ -45,24 +48,15 @@ _params_ = [
 @click.command()
 @click.argument("input_slide_image", nargs=1)
 @click.argument("input_slide_tiles", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-nc", "--num_cores", required=False, help="Number of cores to use", default=4
-)
+@click.option("-o", "--output_dir", required=False, help="path to output directory to save results")
+@click.option("-nc", "--num_cores", required=False, help="Number of cores to use", default=4)
 @click.option(
     "-rmg",
     "--requested_magnification",
     required=False,
     help="Magnificiation scale at which to perform tissue detection",
 )
-@click.option(
-    "-fq", "--filter_query", required=False, help="Filter query (pandas format)"
-)
+@click.option("-fq", "--filter_query", required=False, help="Filter query (pandas format)")
 @click.option(
     "-m",
     "--method_param_path",
@@ -71,7 +65,6 @@ _params_ = [
 )
 def cli(**cli_kwargs):
     """Run a model with a specific pre-transform for all tiles in a slide (tile_images)
-
     \b
     Inputs:
         input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
@@ -92,7 +85,6 @@ def cli(**cli_kwargs):
 def compute_otsu_score(iterrow: tuple, slide, otsu_threshold: float) -> float:
     """
     Return otsu score for the tile.
-
     Args:
         iterrow (pd.Series): row with tile metadata
         slide (str): path to slide
@@ -110,7 +102,6 @@ def compute_otsu_score(iterrow: tuple, slide, otsu_threshold: float) -> float:
 def compute_purple_score(iterrow: tuple, slide) -> float:
     """
     Return purple score for the tile.
-
     Args:
         iterrow (pd.Series): row with tile metadata
         slide (str): path to slide
@@ -124,12 +115,9 @@ def compute_purple_score(iterrow: tuple, slide) -> float:
     return score
 
 
-def compute_stain_score(
-    iterrow: pd.DataFrame, slide, vectors, channel, stain_threshold: float
-) -> float:
+def compute_stain_score(iterrow: pd.DataFrame, slide, vectors, channel, stain_threshold: float) -> float:
     """
     Returns stain score for the tile
-
     Args:
         iterrow (pd.Series): row with tile metadata
         slide (str): path to slide
@@ -146,16 +134,8 @@ def compute_stain_score(
     return score
 
 
-def detect_tissue(
-    input_slide_image,
-    input_slide_tiles,
-    requested_magnification,
-    filter_query,
-    output_dir,
-    num_cores,
-):
+def detect_tissue(input_slide_image, input_slide_tiles, requested_magnification, filter_query, output_dir, num_cores):
     """Run simple/deterministic tissue detection algorithms based on a filter query, to reduce tiles to those (likely) to contain actual tissue
-
     Args:
         input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
@@ -163,7 +143,6 @@ def detect_tissue(
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
         output_dir (str): output/working directory
         num_cores (int): Number of cores to use for CPU parallelization
-
     Returns:
         dict: metadata about function call
     """
@@ -173,9 +152,7 @@ def detect_tissue(
 
     logger.info(f"Slide dimensions {slide.dimensions}")
 
-    to_mag_scale_factor = get_scale_factor_at_magnfication(
-        slide, requested_magnification=requested_magnification
-    )
+    to_mag_scale_factor = get_scale_factor_at_magnfication(slide, requested_magnification=requested_magnification)
 
     logger.info(f"Thumbnail scale factor: {to_mag_scale_factor}")
 
@@ -184,12 +161,8 @@ def detect_tissue(
     logger.info(f"Sample array size: {sample_arr.shape}")
     Image.fromarray(sample_arr).save(output_dir + "/sample_arr.png")
 
-    # Enhance to drive stain apart from shadows
-    enhanced_sample_img = ImageEnhance.Contrast(
-        ImageEnhance.Color(Image.fromarray(sample_arr)).enhance(10)
-    ).enhance(
-        10
-    )  # This pushes darks from colors
+    # Enhance to drive stain apart from shadows, pushes darks from colors
+    enhanced_sample_img = ImageEnhance.Contrast(ImageEnhance.Color(Image.fromarray(sample_arr)).enhance(10)).enhance(10)
     enhanced_sample_img.save(output_dir + "/enhanced_sample_arr.png")
 
     # Look at HSV space
@@ -222,29 +195,19 @@ def detect_tissue(
 
     # Get stain background thresholds
     threshold_stain0 = threshold_otsu(
-        pull_stain_channel(
-            sample_arr_filtered, vectors=stain_vectors, channel=0
-        ).flatten()
+        pull_stain_channel(sample_arr_filtered, vectors=stain_vectors, channel=0).flatten()
     )
     threshold_stain1 = threshold_otsu(
-        pull_stain_channel(
-            sample_arr_filtered, vectors=stain_vectors, channel=1
-        ).flatten()
+        pull_stain_channel(sample_arr_filtered, vectors=stain_vectors, channel=1).flatten()
     )
 
     # Get the otsu mask
-    otsu_mask = np.where(rgb2gray(sample_arr_filtered) < threshold, 255, 0).astype(
-        np.uint8
-    )
+    otsu_mask = np.where(rgb2gray(sample_arr_filtered) < threshold, 255, 0).astype(np.uint8)
     Image.fromarray(otsu_mask).save(output_dir + "/otsu_mask.png")
 
     # Get the stain masks
-    stain0_mask = np.where(deconv_sample_arr[..., 0] > threshold_stain0, 255, 0).astype(
-        np.uint8
-    )
-    stain1_mask = np.where(deconv_sample_arr[..., 1] > threshold_stain1, 255, 0).astype(
-        np.uint8
-    )
+    stain0_mask = np.where(deconv_sample_arr[..., 0] > threshold_stain0, 255, 0).astype(np.uint8)
+    stain1_mask = np.where(deconv_sample_arr[..., 1] > threshold_stain1, 255, 0).astype(np.uint8)
     Image.fromarray(stain0_mask).save(output_dir + "/stain0_mask.png")
     Image.fromarray(stain1_mask).save(output_dir + "/stain1_mask.png")
 
@@ -254,27 +217,17 @@ def detect_tissue(
             logger.info(f"Starting otsu thresholding, threshold={threshold}")
             df["otsu_score"] = list(
                 tqdm(
-                    p.map(
-                        partial(
-                            compute_otsu_score, slide=slide, otsu_threshold=threshold
-                        ),
-                        df.iterrows(),
-                    ),
+                    p.map(partial(compute_otsu_score, slide=slide, otsu_threshold=threshold), df.iterrows()),
                     total=len(df),
                 )
             )
         if "purple_score" in filter_query:
             logger.info("Starting purple scoring")
             df["purple_score"] = list(
-                tqdm(
-                    p.map(partial(compute_purple_score, slide=slide), df.iterrows()),
-                    total=len(df),
-                )
+                tqdm(p.map(partial(compute_purple_score, slide=slide), df.iterrows()), total=len(df))
             )
         if "stain0_score" in filter_query:
-            logger.info(
-                f"Starting stain thresholding, channel=0, threshold={threshold_stain0}"
-            )
+            logger.info(f"Starting stain thresholding, channel=0, threshold={threshold_stain0}")
             df["stain0_score"] = list(
                 tqdm(
                     p.map(
@@ -291,9 +244,7 @@ def detect_tissue(
                 )
             )
         if "stain1_score" in filter_query:
-            logger.info(
-                f"Starting stain thresholding, channel=1, threshold={threshold_stain1}"
-            )
+            logger.info(f"Starting stain thresholding, channel=1, threshold={threshold_stain1}")
             df["stain1_score"] = list(
                 tqdm(
                     p.map(
