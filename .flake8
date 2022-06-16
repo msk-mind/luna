@@ -7,8 +7,9 @@ ignore =
     W503 # line break before binary operator (Not PEP8 compliant, Python Black)
     E731 # Do not use a lambda expression use a def
     F811 # redefinition of unused name (Unit tests)
+    #B950
 
-max-line-length = 80
+max-line-length = 120
 select = E, F, W, C, B, B9, T4
 max_complexity=12
 # can make a more extensive exclude list as necessary 
