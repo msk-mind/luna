@@ -15,7 +15,7 @@ decorator>=4.3,<5.0  # force constrain versions to avoid incompatibility with ne
 filehash
 joblib
 minio
-numpy>=1.9.0,<=1.21.2 # spams install error with 1.22.x
+numpy>=1.9.0,<1.22.1 # spams install error with 1.22.x
 pandas>=1.1.0
 pyarrow>=3.0.0
 scikit-image
