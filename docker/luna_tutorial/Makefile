@@ -7,7 +7,7 @@ GROUP_NAME=$(USER)
 USER_ID=$(shell id -u)
 GROUP_ID=$(shell id -g)
 CURRENT_UID=$(USER):$(GID)
-DOCKER_PATH=$(shell which docker)
+DOCKER_PATH="$(shell which docker)"
 
 export COMPOSE_PROJECT_NAME=$(USER_NAME)
 
@@ -42,7 +42,7 @@ export PRINT_HELP_PYSCRIPT
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
 help:
-	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+	@python3 -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 
 clean:      ## cleanup luna_tutorial images and containers
@@ -108,5 +108,5 @@ exec:       ## launches terminal prompt inside luna_tutorial container
 
 
 provision_dremio:    ## provision dremio
-	docker exec $(USER_NAME)_luna_tutorial_1 python vmount/provision_dremio.py -u admin -p password1 -d $$(cat .dremio_port) -m $$(cat .minio_api_port)
+	docker exec $(USER_NAME)-luna_tutorial-1 python vmount/provision_dremio.py -u admin -p password1 -d $$(cat .dremio_port) -m $$(cat .minio_api_port)
 
