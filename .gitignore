@@ -26,4 +26,3 @@ docker/luna_tutorial/.minio_api_port
 docker/luna_tutorial/.minio_web_port
 docker/luna_tutorial/vmount/.minio.sys
 docker/luna_tutorial/vmount/assetstore
-pyluna-pathology/tests/luna/pathology/cli/testdata/data/test/slides/123/pathology.etl/WholeSlideImage/data
