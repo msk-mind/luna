@@ -147,7 +147,7 @@ if __name__ == '__main__':
 
     response = login(dremio_url, opts.username, opts.password)
 
-    print('Logged in to Dremio...')
+    print('Logging in to Dremio...')
 
     if response.status_code == 200:
         token = response.json()['token']
