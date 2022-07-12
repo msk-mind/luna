@@ -1,5 +1,4 @@
 IMAGE=$(USER)-luna-tutorial:0.0.1
-CONTAINER=$(USER)-luna-tutorial
 PWD=$(shell pwd)
 USER_NAME=$(USER)
 #GROUP_NAME=$(shell id -g -n $(USER))
@@ -104,9 +103,9 @@ stop:       ## terminate containers but keep volumes
 	rm -f .*_port
 
 exec:       ## launches terminal prompt inside luna_tutorial container
-	docker exec -it $(USER_NAME)_luna_tutorial_1 /bin/bash
+	docker exec -it $(USER_NAME)_luna_tutorial /bin/bash
 
 
 provision_dremio:    ## provision dremio
-	docker exec $(USER_NAME)_luna_tutorial_1 python vmount/provision_dremio.py -u admin -p password1 -d $$(cat .dremio_port) -m $$(cat .minio_api_port)
+	docker exec $(USER_NAME)_luna_tutorial python vmount/provision_dremio.py -u admin -p password1 -d $$(cat .dremio_port) -m $$(cat .minio_api_port)
 
