@@ -61,6 +61,8 @@ def cli(**cli_kwargs):
 
     Note: containers are spawned with a root process, and will not exit if the CLI tool is aborted.
 
+    Note: Stardist cell coordinates are in microns. To convert to pixel coordinates, divide by microns-per-pixel (mpp)
+
     TODO: Improve handling of containers, move to singularity, and/or ensure graceful exits
 
     \b
