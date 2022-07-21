@@ -23,6 +23,8 @@ _params_ = [('input_itk_volume', str), ('input_itk_geometry', str), ('output_dir
               help='path to output directory to save results')
 @click.option('-m', '--method_param_path', required=False,
               help='path to a metadata json/yaml file with method parameters to reproduce results')
+@click.option('-dsid', '--dataset_id',  required=False,
+              help='Optional dataset identifier to add results to')
 def cli(**cli_kwargs):
     """Resamples and co-registeres all volumes to occupy the same physical coordinates of a reference geometry (given as a itk_volume)
 
@@ -47,6 +49,7 @@ def cli(**cli_kwargs):
 
 
 import numpy as np
+import pandas as pd
 import scipy.ndimage
 from luna.radiology.mirp.imageReaders import read_itk_image, read_itk_segmentation
 from pathlib import Path
@@ -65,22 +68,32 @@ def coregister_volumes(input_itk_volume: str, input_itk_geometry: str, resample_
     Returns:
         dict: metadata about function call
     """
+    d_properties = {}
+
     resample_pixel_spacing = np.full((3), resample_pixel_spacing)
 
-    image_class_object_volume      = read_itk_image(input_itk_volume, modality=str(Path(input_itk_volume).stem))
+    image_class_object_volume      = read_itk_image(input_itk_volume,   modality=str(Path(input_itk_volume) .stem))
     image_class_object_geometry    = read_itk_image(input_itk_geometry, modality=str(Path(input_itk_geometry).stem))
 
-    voxels_iso = interpolate(image_class_object_volume, resample_pixel_spacing, reference_geometry=image_class_object_geometry, order=order)
+    _ = interpolate(image_class_object_volume, resample_pixel_spacing, reference_geometry=image_class_object_geometry, order=order)
 
     image_file = image_class_object_volume.export(file_path=output_dir)
+    d_properties['itk_volume'] = image_file
     
     if save_npy:
         np.save(image_file + '.npy', image_class_object_volume.get_voxel_grid())
+        d_properties['npy_volume'] = image_file + '.npy'
 
-    return {
-        'itk_volume': image_file,
-        'npy_volume': image_file + '.npy',
-    }
+    # d_properties['volume_size']    = list (image_class_object_volume.size.flatten())
+    # d_properties['volume_spacing'] = list (image_class_object_volume.spacing.flatten())
+    # d_properties['volume_percentiles'] = list (np.percentile(image_class_object_volume.get_voxel_grid(), np.linspace(0, 100, 11)).flatten())
+
+    output_file = f"{output_dir}/volume_registered_features.parquet"
+    pd.DataFrame([d_properties]).to_parquet(output_file)
+
+    d_properties['feature_data'] = output_file
+
+    return d_properties
 
 
 def interpolate(image, resample_spacing, reference_geometry, order=3):
