@@ -79,6 +79,7 @@ def get_sample_data(adminUser, collName, folderName, folderPath):
         for remoteFile in remote.listFile(remoteItem['_id']):
             
             logger.info('Downloading %s', remoteFile['name'])
+            print('Downloading ', remoteFile['name'])
             fileName = os.path.join(slide_dir, remoteFile['name'])
             remote.downloadFile(remoteFile['_id'], fileName)
 
@@ -168,7 +169,6 @@ def provision(opts):
     :param opts: the argparse options.
     """
 
-    print(">>>>>>>>>"+opts.user)
     # If there is are no admin users, create an admin user
     if User().findOne({'admin': True}) is None:
         adminParams = dict({

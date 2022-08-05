@@ -80,12 +80,11 @@ run:        ## launch containers
 	@echo == You may use this interface to view and query the parquet datasets
 	@echo
 	@echo
-	@echo DSA is being deployed and provisioned with root credentials admin:password1 at,
+	@echo DSA is deployed and provisioned with root credentials admin:password1 at,
 	@echo
 	@echo "http://$$(hostname):$$(cat .dsa_port)"
 	@echo
-	@echo == DSA is being provisioned with sample images and annotations and this will take a few minutes...
-	@echo == Once available, you may use this interface to view the pathology images and annotations
+	@echo == Execute \"make download_sample_data\" to download sample svs files and import them into DSA. This takes a few minutes. 
 	@echo
 	@echo
 	@echo Finally, Jupyterlab is deployed at,
@@ -108,4 +107,8 @@ exec:       ## launches terminal prompt inside luna_tutorial container
 
 provision_dremio:    ## provision dremio
 	docker exec $(USER_NAME)_luna_tutorial python vmount/provision_dremio.py -u admin -p password1 -d $$(cat .dremio_port) -m $$(cat .minio_api_port)
+
+
+download_sample_data:    ## download sample_data
+	docker exec $(USER_NAME)_girder python vmount/provision_girder.py --sample-data --user $(USER_NAME)
 

@@ -56,4 +56,4 @@ USER $USER_NAME
 #  - Organizes the sample images in TCGA collection
 #  - Uploads annotations to the slides.
 
-CMD python vmount/provision_girder.py --sample-data --user $user && girder serve --database mongodb://mongodb:27017/girder
+CMD python vmount/provision_girder.py --user $user && girder serve --database mongodb://mongodb:27017/girder
