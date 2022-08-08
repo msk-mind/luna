@@ -62,6 +62,8 @@ run:        ## launch containers
 	./apply_ports.sh
 	mkdir -p vmount/logs vmount/db vmount/tmp vmount/assetstore
 	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d
+	@sleep 4
+	make download_sample_data
 	@echo
 	@echo Minio is deployed with root credentials admin:password1 at,
 	@echo
