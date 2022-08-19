@@ -651,7 +651,9 @@ class LunaCliCall:
         
         print (self.cli_call)
 
-        subprocess.Popen(self.cli_call).communicate()
+        out, err = subprocess.Popen(self.cli_call, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+
+        print (f"{out.decode()}\n{err.decode()}")
 
         self.cli_client.cli_steps[step_name] = output_dir
 
@@ -686,7 +688,7 @@ class LunaCliClient:
         Returns:
             LunaCliCall 
         """
-        cli_call = [cli_resource]
+        cli_call = cli_resource.split(" ")
         for arg in args:
             if arg in self.cli_steps.keys():
                 cli_call.append(self.cli_steps[arg])
@@ -695,7 +697,8 @@ class LunaCliClient:
 
         for key, value in kwargs.items():
             cli_call.append(f"--{key}")
-            cli_call.append(f"{value}")
+            if type(value) is not bool:
+                cli_call.append(f"{value}")
             
         return LunaCliCall(cli_call, self)
 
