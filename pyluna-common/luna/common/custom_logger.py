@@ -1,7 +1,6 @@
 import os, logging
 from logging.handlers import RotatingFileHandler
 from log4mongo.handlers import MongoHandler
-from logging import FileHandler
 
 from luna.common.config import ConfigSet
 
@@ -54,11 +53,5 @@ def init_logger(filename='data-processing.log'):
     logger.info("FYI: Initalized logger, log file at: " + log_file + " with handlers: " + str(logger.handlers))
     return logger
 
-def add_log_dir(logger, output_dir):
-    formatter = MultilineFormatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 
-    fh = FileHandler(f"{output_dir}/output.log")
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
 
