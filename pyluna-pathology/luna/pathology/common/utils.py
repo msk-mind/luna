@@ -94,6 +94,7 @@ def convert_xml_to_mask(xml_fn: str, shape:list, annotation_name:str) -> np.ndar
     # Annotations >> 
     e = et.parse(xml_fn).getroot()
     e = e.findall('Annotation')
+    n_regions = 0
     for ann in e:
         if ann.get('Name') != annotation_name:
                 continue
@@ -127,11 +128,17 @@ def convert_xml_to_mask(xml_fn: str, shape:list, annotation_name:str) -> np.ndar
                 board_neg = cv2.drawContours(board_neg, [np.array(plist, dtype=np.int32)], -1, [0, 0, 0], -1)
             else:
                 board_pos = cv2.drawContours(board_pos, [np.array(plist, dtype=np.int32)], contourIdx=-1, color=[255, 0, 0], thickness=-1)
+            n_regions += 1
 
         ret = (board_pos>0) * (board_neg==0)
 
     mask = ret.astype(np.uint8)
-    return mask
+
+    properties = {
+        'n_regions': n_regions,
+        'n_positive_pixels' : np.where(mask > 0, 1, 0).sum()
+    }
+    return mask, properties
 
 
 def convert_halo_xml_to_roi(xml_fn:str) -> Tuple[List, List]:

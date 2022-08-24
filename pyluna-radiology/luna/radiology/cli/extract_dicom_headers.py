@@ -2,7 +2,7 @@ import os, logging
 import click
 from pydicom import dcmread
 
-from luna.common.custom_logger   import init_logger
+from luna.common.custom_logger   import init_logger, add_log_dir
 
 init_logger()
 logger = logging.getLogger('extract_dicom_headers')
@@ -78,6 +78,8 @@ def extract_dicom_headers(input_dicom_folder, output_dir):
     Returns:
         dict: metadata about function call
     """
+    add_log_dir(logger, output_dir)
+
     dcms = list(Path(input_dicom_folder).glob("*.dcm"))
 
     dicom_kvs = []
@@ -87,6 +89,8 @@ def extract_dicom_headers(input_dicom_folder, output_dir):
     output_ds = f"{output_dir}/scan_metadata.parquet"
 
     df = pd.DataFrame(dicom_kvs)
+
+    logger.info(df)
     
     df.to_parquet(output_ds, index=False)
     

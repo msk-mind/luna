@@ -2,7 +2,7 @@
 import os, logging, sys
 import click
 
-from luna.common.custom_logger   import init_logger
+from luna.common.custom_logger   import init_logger, add_log_dir
 from collections import defaultdict
 
 init_logger()
@@ -74,6 +74,7 @@ def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_fact
     Returns:
         dict: metadata about function call
     """
+    add_log_dir(logger, output_dir)
 
     slide = openslide.OpenSlide(input_slide_image)
     mask  = openslide.ImageSlide(input_slide_mask)
@@ -97,7 +98,8 @@ def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_fact
 
     features = defaultdict(list)
 
-    for address in tqdm(address_raster, file=sys.stdout):
+    N_tiles = len(address_raster)
+    for n_tile, address in tqdm(enumerate(address_raster), file=sys.stdout):
         mask_patch = np.array(mask_full_generator.get_tile(mask_full_level, address))[:, :, 0]
 
         if not np.count_nonzero(mask_patch) > 1: continue
@@ -107,20 +109,25 @@ def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_fact
         texture_values = extract_patch_texture_features(image_patch, mask_patch, stain_vectors, stain_channel, glcm_feature, plot=False)
 
         if not texture_values is None:
-            for key, values in texture_values.items(): features[key].append(values)
+            for key, values in texture_values.items(): features[key].append(values)\
+
+        logger.info(f"Processed Tile [{n_tile} / {N_tiles}] at {address}")
         
     for key, values in features.items():
         features[key] = np.concatenate(values).flatten()
 
-    np.save(os.path.join(output_dir, "feature_vectors.npy"), features)
-
     hist_features = {}
     for key, values in features.items():
+        np.save(os.path.join(output_dir, f"feature_vector_{key}.npy"), values)
+
         if not len(values) > 0: continue 
 
         n, (smin, smax), sm, sv, ss, sk = scipy.stats.describe(values)
 
-        # ln_params = scipy.stats.lognorm.fit(values, floc=0)
+        if np.min(values) > 0:
+            ln_params = scipy.stats.lognorm.fit(values, floc=0)
+        else:
+            ln_params = (0, 0, 0)
 
         fx_name_prefix = f'{key}_channel_{stain_channel}'
         hist_features.update( {
@@ -131,9 +138,8 @@ def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_fact
             f'{fx_name_prefix}_variance': sv,
             f'{fx_name_prefix}_skewness': ss,
             f'{fx_name_prefix}_kurtosis': sk,
-
-            # f'{fx_name_prefix}_lognorm_fit_p0': ln_params[0],
-            # f'{fx_name_prefix}_lognorm_fit_p2': ln_params[2]
+            f'{fx_name_prefix}_lognorm_fit_p0': ln_params[0],
+            f'{fx_name_prefix}_lognorm_fit_p2': ln_params[2]
         }
         )
 
