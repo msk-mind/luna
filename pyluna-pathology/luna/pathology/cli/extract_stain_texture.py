@@ -2,7 +2,7 @@
 import os, logging, sys
 import click
 
-from luna.common.custom_logger   import init_logger, add_log_dir
+from luna.common.custom_logger   import init_logger
 from collections import defaultdict
 
 init_logger()
@@ -74,8 +74,6 @@ def extract_stain_texture(input_slide_image, input_slide_mask, stain_sample_fact
     Returns:
         dict: metadata about function call
     """
-    add_log_dir(logger, output_dir)
-
     slide = openslide.OpenSlide(input_slide_image)
     mask  = openslide.ImageSlide(input_slide_mask)
 
