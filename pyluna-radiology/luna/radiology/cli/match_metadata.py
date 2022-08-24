@@ -59,17 +59,23 @@ def match_metadata(dicom_tree_folder: str, input_itk_labels: str, output_dir: st
         n_slices_dcm = len(list((dicom_folder).glob("*.dcm")))
         if label.shape[2] == n_slices_dcm: found_dicom_paths.add (dicom_folder)
 
-    # logger.info(found_dicom_paths)
-    # if not len(found_dicom_paths)==1:
-    #     raise RuntimeError("Could not find unique matching scans!")
+    logger.info(found_dicom_paths)
+    if not len(found_dicom_paths) > 0:
+        raise RuntimeError("Could not find matching scans!")
 
+    matched = None
     for found_dicom_path in found_dicom_paths: 
         path = next(found_dicom_path.glob("*.dcm"))
         ds = dcmread(path)
-        print ("Matched: z=", label.shape[2], found_dicom_path, ds.PatientName, ds.AccessionNumber, ds.StudyDescription, ds.SeriesDescription, ds.SliceThickness)
-    
+        if not ds.Modality=='CT': continue
+        print ("Matched: z=", label.shape[2], found_dicom_path, ds.PatientName, ds.AccessionNumber, ds.SeriesInstanceUID, ds.StudyDescription, ds.SeriesDescription, ds.SliceThickness)
+        matched = found_dicom_path
+ 
+    if matched is None:
+        raise RuntimeError("Could not find matching CT!")
+
     properties = {
-        'dicom_folder': str(found_dicom_path),
+        'dicom_folder': str(matched),
         'zdim': label.shape[2],
     }
 

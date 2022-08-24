@@ -45,6 +45,9 @@ import numpy as np
 from PIL import Image
 from luna.pathology.common.utils import get_layer_names, convert_xml_to_mask
 from skimage.measure import block_reduce
+from pathlib import Path
+import pandas as pd
+
 def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_name):
     """ Generate a full resolution mask image (.tif) from vector annotations (polygons, shapes)
 
@@ -59,9 +62,11 @@ def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_nam
     Returns:
         dict: metadata about function call
     """
+    mask_properties = {}
 
     slide = openslide.OpenSlide(input_slide_image)
     slide.get_thumbnail((1000, 1000)).save(f"{output_dir}/slide_thumbnail.png")
+    slide_id = Path(input_slide_image).stem
 
     wsi_shape = slide.dimensions[1], slide.dimensions[0] # Annotation file has flipped dimensions w.r.t openslide conventions
     logger.info(f"Slide shape={wsi_shape}")
@@ -69,7 +74,12 @@ def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_nam
     layer_names     = get_layer_names(input_slide_roi)
     logger.info(f"Available layer names={layer_names}")
 
-    mask_arr = convert_xml_to_mask(input_slide_roi, wsi_shape, annotation_name)
+    mask_properties['layer_names'] = list (layer_names)
+    mask_properties['mask_size'] = list (wsi_shape)
+
+    mask_arr, xml_region_properties = convert_xml_to_mask(input_slide_roi, wsi_shape, annotation_name)
+
+    mask_properties.update(xml_region_properties)
 
     logger.info(f"Generating mask thumbnail, mask size={mask_arr.shape}")
     openslide.ImageSlide(Image.fromarray(255 * block_reduce(mask_arr, block_size=(10, 10), func=np.mean, cval=0.0))).get_thumbnail((1000, 1000)).save(f"{output_dir}/mask_thumbnail.png")
@@ -77,9 +87,14 @@ def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_nam
     slide_mask = f"{output_dir}/mask_full_res.tif"
     tifffile.imwrite(slide_mask, mask_arr)
 
+    output_filename = f"{output_dir}/mask_data.parquet"
+    pd.DataFrame([mask_properties]).to_parquet(output_filename)
+
     properties = {
         'slide_mask': slide_mask,
+        'feature_data': output_filename,
         'mask_size': list (wsi_shape),
+        'segment_keys': {'slide_id': slide_id}
     }
 
     return properties

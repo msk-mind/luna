@@ -64,9 +64,10 @@ def test_convert_halo_xml_to_roi():
    assert roi == ([1, 10], [40, 1])
 
 def test_convert_xml_to_mask():
-   roi = convert_xml_to_mask(xml_data_path, shape=(20,50), annotation_name="Tumor")
+   roi, properties = convert_xml_to_mask(xml_data_path, shape=(20,50), annotation_name="Tumor")
    assert list(np.bincount(roi.flatten())) == [929,  71]
    assert list(roi[5,:7]) == [False, False,  True,  True, True,  True, False]
+   assert properties == {'n_positive_pixels': 71, 'n_regions': 1}
 
 def test_get_tile_array():
     import pandas as pd
