@@ -44,9 +44,12 @@ help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 
-clean:      ## cleanup luna_tutorial images and containers
+clean:      ## cleanup luna_tutorial images, containers volumes and results files on host
 	-docker rmi $$(docker images luna* -q)
 	-docker rmi $$(docker container ls -f "name=luna*" -q)
+	rm -rf vmount/PRO-12-123
+	rm -rf vmount/assetstore
+	rm vmount/logs/tutorial.log
 
 
 clean-image:  ## remove luna tutorial image
