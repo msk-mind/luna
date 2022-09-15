@@ -322,4 +322,5 @@ class DsaAnnotationProcessor:
 
 
 if __name__ == "__main__":
+    # auto_envvar_prefix - for username and passwords
     cli(auto_envvar_prefix="DSA")

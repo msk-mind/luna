@@ -308,7 +308,10 @@ def resolve_paths(given_params: dict):
     return d_params
 
 def expand_inputs(given_params: dict):
-    """For special input_* parameters, see if we should infer the input given an output/result directory
+    """
+    Implements the Input/Output Manager function.
+
+    For special input_* parameters, see if we should infer the input given an output/result directory
 
     Args:
         given_params (dict): keyword arguments to check types
@@ -459,9 +462,9 @@ def cli_runner(
 
     Args:
         cli_kwargs (dict): keyword arguments from the CLI call
-        cli_params (List[tuple]): param list, where each element is the parameter (name, type)
+        cli_params (List[tuple]): param list, where each element is the parameter (name, type) ::kvps?::
         cli_function (Callable[..., dict]): cli_function entry point, should accept exactly the arguments given by cli_params
-        pass_keys (bool): will pass found segment keys to transform function as 'keys' kwarg
+        pass_keys (bool): will pass found segment keys from manifest file to transform function as 'keys' kwarg ::not_clear, what are segment keys?::
 
     Returns:
         None
@@ -472,6 +475,7 @@ def cli_runner(
     logger.debug(f"cli_params={cli_params}")
     logger.debug(f"pass_keys={pass_keys}")
 
+    # transform method keywords
     trm_kwargs = {}
 
     # if "output_dir" not in cli_kwargs.keys():
@@ -490,6 +494,7 @@ def cli_runner(
     # Override with CLI arguments
     trm_kwargs.update(cli_kwargs)
 
+    # param schema validation
     trm_kwargs = validate_params(trm_kwargs, cli_params)
 
     if "output_dir" in trm_kwargs:
@@ -529,7 +534,7 @@ def cli_runner(
     for key in MASK_KEYS:
         trm_kwargs.pop(key, None)
     
-    # propagate keys
+    # propagate keys (ID/Key Manager)
     if trm_kwargs.get('segment_keys', None):
         trm_kwargs['segment_keys'].update(keys)
     else: 
@@ -540,7 +545,7 @@ def cli_runner(
         with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
             yaml.dump(trm_kwargs, fp)
 
-    # Save feature data in parquet if indicated:
+    # Save feature data in parquet if indicated: (Dataset Manager)
     if "dataset_id" in cli_kwargs and  "feature_data" in trm_kwargs:
         dataset_id   = cli_kwargs.get("dataset_id")
         feature_data = trm_kwargs.get("feature_data")

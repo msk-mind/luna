@@ -30,7 +30,7 @@ _params_ = [('input_cell_objects', str), ('tile_size', int), ('intensity_label',
 def cli(**cli_kwargs):
     """Run k function using a sliding window approach, where the k-function is computed locally in a smaller window, and aggregated across the entire slide.
     
-    Additionally runs the IK function, which is a special version of the normal K function, senstive to the intensity of staining withink the K-function radius.
+    Additionally runs the IK function, which is a special version of the normal K function, senstive to the intensity of staining within the K-function radius.
 
     Generates "super tiles" with the windowed statistics for downstream processing.
 
@@ -68,7 +68,7 @@ def extract_kfunction(input_cell_objects, tile_size, intensity_label, tile_strid
         tile_stride (int): spacing between tiles
         distance_scale (float): scale at which to consider k-function
         num_cores (int): Number of cores to use for CPU parallelization
-        intensity_label (str): Columns of cell object to use for intensity calculations
+        intensity_label (str): Columns of cell object to use for intensity calculations (for I-K function - spatial + some scalar value clustering)
 
     Returns:
         dict: metadata about function call
