@@ -27,12 +27,13 @@ ENV PATH=$PATH:/home/$USER_NAME/.local/bin
 ENV PIP_DEFAULT_TIMEOUT=100
 
 ## Install everything
-RUN python3 -m pip install --no-cache-dir --user --upgrade pip pytest
+RUN python3 -m pip install --no-cache-dir --user --upgrade pip pytest ray[tune]
 RUN python3 -m pip install histomicstk --find-links https://girder.github.io/large_image_wheels
 
 RUN git clone https://github.com/msk-mind/luna.git
 RUN cd luna && git checkout dev && cd pyluna-common  && python3 -m pip install -e .
 RUN cd luna && git checkout dev && cd pyluna-pathology && python3 -m pip install -e .
+RUN cd luna && git checkout dev && cd pyluna-core && python3 -m pip install -e .
 RUN python3 -m pip install --no-cache-dir jupyter s3fs
 
 ## set env vars

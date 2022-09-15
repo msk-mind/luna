@@ -30,12 +30,13 @@ RUN python -m pip install --upgrade pip
 # lock down versions for build stability
 RUN python -m pip install --pre --no-cache-dir \
     packaging==21.3 \
-    histomicsui==1.3.1.dev183 \
-    large_image[sources]==1.15.1.dev2 \
+    histomicsui==1.3.0 \
+    large_image[sources]==1.15.1 \
     # girder[mount] adds dependencies to show tiles from S3 assets \
-    girder[mount]==3.1.15.dev2 \
-    girder-homepage==3.1.15.dev2 \
-    girder_client==3.1.15.dev2 \
+    girder[mount]==3.1.14 \
+    girder-homepage==3.1.14 \
+    girder_client==3.1.14 \
+    tqdm==4.64.0 \
     --find-links https://girder.github.io/large_image_wheels
 
 RUN girder build
@@ -56,4 +57,4 @@ USER $USER_NAME
 #  - Organizes the sample images in TCGA collection
 #  - Uploads annotations to the slides.
 
-CMD python vmount/provision_girder.py --sample-data --user $user && girder serve --database mongodb://mongodb:27017/girder
+CMD python vmount/provision_girder.py --user $user && girder serve --database mongodb://mongodb:27017/girder

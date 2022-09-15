@@ -9,6 +9,8 @@ import glob
 import json
 import requests
 from pathlib import Path
+from os.path import exists
+from tqdm import tqdm
 
 import girder.utility.path as path_util
 import girder_client
@@ -69,44 +71,52 @@ def get_sample_data(adminUser, collName, folderName, folderPath):
     # save slides on ~/vmount
     slide_dir = os.getenv("HOME") + "/vmount/PRO-12-123/data/toy_data_set"
     os.makedirs(slide_dir, exist_ok=True)
- 
-    for remoteItem, remoteAnnot in zip(wsi, annotations):
-        item = Item().findOne({'folderId': folder['_id'], 'name': remoteItem['name']})
-        if item:
-            continue
-            
-        item = Item().createItem(remoteItem['name'], creator=adminUser, folder=folder)
-        for remoteFile in remote.listFile(remoteItem['_id']):
-            
-            logger.info('Downloading %s', remoteFile['name'])
-            fileName = os.path.join(slide_dir, remoteFile['name'])
-            remote.downloadFile(remoteFile['_id'], fileName)
 
-            Upload().uploadFromFile(
-                open(fileName, 'rb'), os.path.getsize(fileName),
-                name=remoteItem['name'], parentType='item',
-                parent=item, user=adminUser)
-        
-            if 'largeImage' not in item:
-                logger.info('Making large_item %s', item['name'])
-                try:
-                    # ImageItem().createImageItem(item, createJob=False)
-                    # get File attached to the item
-                    girder_file = item.childFiles(item, limit=1)
-                    ImageItem().createImageItem(item, girder_file, user=adminUser, createJob=False)
-                except Exception:
-                    pass
+    logger.info("downloading sample files and annotations...")
+    print("downloading sample files and annotations...")
 
-        for remoteAnnotFile in remote.listFile(remoteAnnot['_id']):
-            with tempfile.NamedTemporaryFile() as atf:
-                annotFileName = atf.name
-                atf.close()
-                logger.info('Downloading %s', remoteAnnotFile['name'])
-                remote.downloadFile(remoteAnnotFile['_id'], annotFileName)
+    for remoteItem, remoteAnnot in tqdm(zip(wsi, annotations), total=len(wsi)):
+            item = Item().findOne({'folderId': folder['_id'], 'name': remoteItem['name']})
+            if item:
+                continue
 
-                # annotation
-                annot = json.load(open(annotFileName, 'rb'))
-                Annotation().createAnnotation(item, adminUser, annot["annotation"])
+            item = Item().createItem(remoteItem['name'], creator=adminUser, folder=folder)
+            for remoteFile in remote.listFile(remoteItem['_id']):
+                    fileName = os.path.join(slide_dir, remoteFile['name'])
+
+                    if os.path.exists(fileName):
+                        logger.info(remoteFile['name']," exists...")
+                        print(remoteFile['name'],"exists...")
+                    else:
+                        logger.info('Downloading %s', remoteFile['name'])
+                        print('Downloading ', remoteFile['name'])
+                        remote.downloadFile(remoteFile['_id'], fileName)
+
+                    Upload().uploadFromFile(
+                        open(fileName, 'rb'), os.path.getsize(fileName),
+                        name=remoteItem['name'], parentType='item',
+                        parent=item, user=adminUser)
+
+                    if 'largeImage' not in item:
+                        logger.info('Making large_item %s', item['name'])
+                        try:
+                            # ImageItem().createImageItem(item, createJob=False)
+                            # get File attached to the item
+                            girder_file = item.childFiles(item, limit=1)
+                            ImageItem().createImageItem(item, girder_file, user=adminUser, createJob=False)
+                        except Exception:
+                            pass
+
+            for remoteAnnotFile in remote.listFile(remoteAnnot['_id']):
+                with tempfile.NamedTemporaryFile() as atf:
+                    annotFileName = atf.name
+                    atf.close()
+                    logger.info('Downloading %s', remoteAnnotFile['name'])
+                    remote.downloadFile(remoteAnnotFile['_id'], annotFileName)
+
+                    # annotation
+                    annot = json.load(open(annotFileName, 'rb'))
+                    Annotation().createAnnotation(item, adminUser, annot["annotation"])
 
     return folder
 
@@ -168,9 +178,8 @@ def provision(opts):
     :param opts: the argparse options.
     """
 
-    print(">>>>>>>>>"+opts.user)
     # If there is are no admin users, create an admin user
-    if User().findOne({'admin': True}) is None:
+    if User().findOne({'login': 'admin'}) is None:
         adminParams = dict({
             'login': 'admin',
             'password': 'password1',
@@ -180,7 +189,7 @@ def provision(opts):
             'public': True,
         }, **(opts.admin if opts.admin else {}))
         User().createUser(admin=True, **adminParams)
-    adminUser = User().findOne({'admin': True})
+    adminUser = User().findOne({'login': 'admin'})
 
     # Make sure we have an assetstore
     if opts.user:

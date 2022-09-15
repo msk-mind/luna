@@ -1,5 +1,4 @@
 IMAGE=$(USER)-luna-tutorial:0.0.1
-CONTAINER=$(USER)-luna-tutorial
 PWD=$(shell pwd)
 USER_NAME=$(USER)
 #GROUP_NAME=$(shell id -g -n $(USER))
@@ -45,9 +44,12 @@ help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 
-clean:      ## cleanup luna_tutorial images and containers
+clean:      ## cleanup luna_tutorial images, containers volumes and results files on host
 	-docker rmi $$(docker images luna* -q)
 	-docker rmi $$(docker container ls -f "name=luna*" -q)
+	rm -rf vmount/PRO-12-123
+	rm -rf vmount/assetstore
+	rm vmount/logs/tutorial.log
 
 
 clean-image:  ## remove luna tutorial image
@@ -63,6 +65,8 @@ run:        ## launch containers
 	./apply_ports.sh
 	mkdir -p vmount/logs vmount/db vmount/tmp vmount/assetstore
 	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d
+	@sleep 4
+	make download_sample_data
 	@echo
 	@echo Minio is deployed with root credentials admin:password1 at,
 	@echo
@@ -81,12 +85,11 @@ run:        ## launch containers
 	@echo == You may use this interface to view and query the parquet datasets
 	@echo
 	@echo
-	@echo DSA is being deployed and provisioned with root credentials admin:password1 at,
+	@echo DSA is deployed and provisioned with root credentials admin:password1 at,
 	@echo
 	@echo "http://$$(hostname):$$(cat .dsa_port)"
 	@echo
-	@echo == DSA is being provisioned with sample images and annotations and this will take a few minutes...
-	@echo == Once available, you may use this interface to view the pathology images and annotations
+	@echo == Execute \"make download_sample_data\" to download sample svs files and import them into DSA. This takes a few minutes. 
 	@echo
 	@echo
 	@echo Finally, Jupyterlab is deployed at,
@@ -104,9 +107,13 @@ stop:       ## terminate containers but keep volumes
 	rm -f .*_port
 
 exec:       ## launches terminal prompt inside luna_tutorial container
-	docker exec -it $(USER_NAME)_luna_tutorial_1 /bin/bash
+	docker exec -it $(USER_NAME)_luna_tutorial /bin/bash
 
 
 provision_dremio:    ## provision dremio
-	docker exec $(USER_NAME)_luna_tutorial_1 python vmount/provision_dremio.py -u admin -p password1 -d $$(cat .dremio_port) -m $$(cat .minio_api_port)
+	docker exec $(USER_NAME)_luna_tutorial python vmount/provision_dremio.py -u admin -p password1 -d $$(cat .dremio_port) -m $$(cat .minio_api_port)
+
+
+download_sample_data:    ## download sample_data
+	docker exec $(USER_NAME)_girder python vmount/provision_girder.py --sample-data --user $(USER_NAME)
 
