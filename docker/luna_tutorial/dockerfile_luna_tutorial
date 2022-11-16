@@ -1,4 +1,6 @@
-FROM python:3.9-slim
+FROM mambaorg/micromamba:1.0.0
+USER root
+RUN apt-get update && apt-get install build-essential libgdal-dev liblapack-dev libblas-dev gfortran libgl1 software-properties-common git vim curl tree -y
 
 ## supress interactive dialogs
 ARG DEBIAN_FRONTEND=noninteractive
@@ -6,35 +8,42 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG USER_ID
 ARG GROUP_ID
 ARG USER_NAME
-ARG GROUP_NAME
 ARG LUNA_VERSION
-RUN echo $USER_ID:$GROUP_ID $USER_NAME:$GROUP_NAME
-RUN echo Installing luna v$LUNA_VERSION
-## install OS dependencies
-RUN apt-get update
-RUN apt-get install build-essential libgdal-dev libgl1 software-properties-common openslide-tools python3-openslide git vim curl tree -y 
+
+ENV PYTHONFAULTHANDLER=1 \
+                       PYTHONUNBUFFERED=1 \
+                       PYTHONHASHSEED=random \
+                       PIP_NO_CACHE_DIR=off \
+                       PIP_DISABLE_PIP_VERSION_CHECK=on \
+                       PIP_DEFAULT_TIMEOUT=100 \
+                       POETRY_VERSION=1.1.15
 
 ## create user so python packages are not being installed with root and jupyter is not executed with rootr
 ## map host user to container user so files can be easily accessed from host and container
-RUN groupadd $GROUP_NAME
-RUN useradd -l -rm -d /home/$USER_NAME -s /bin/bash -g $GROUP_NAME -u $USER_ID $USER_NAME
-USER $USER_NAME
-WORKDIR /home/$USER_NAME
-ENV PATH=$PATH:/home/$USER_NAME/.local/bin
+RUN usermod "--login=${USER_NAME}" "--home=/home/${USER_NAME}" \
+        --move-home "-u ${USER_ID}" "${MAMBA_USER}" && \
+    groupmod "--new-name=${USER_NAME}" \
+             "-g ${GROUP_ID}" "${MAMBA_USER}" && \
+    # Update the expected value of MAMBA_USER for the
+    # _entrypoint.sh consistency check.
+    echo "${USER_NAME}" > "/etc/arg_mamba_user" && \
+    :
+ENV MAMBA_USER=$USER_NAME
+USER $MAMBA_USER
+COPY --chown=$USER_ID:$GROUP_ID environment.yml poetry.lock pyproject.toml /home/$USER_NAME/luna/
 
-# install luna
-## Set pip timeout error
-ENV PIP_DEFAULT_TIMEOUT=100
+WORKDIR /home/$USER_NAME/luna
 
-## Install everything
-RUN python3 -m pip install --no-cache-dir --user --upgrade pip pytest ray[tune]
-RUN python3 -m pip install histomicstk --find-links https://girder.github.io/large_image_wheels
+RUN micromamba install -y -n base -f environment.yml && \
+    micromamba clean --all --yes
+ARG MAMBA_DOCKERFILE_ACTIVATE=1  # (otherwise python will not be found)
 
-RUN git clone https://github.com/msk-mind/luna.git
-RUN cd luna && git checkout dev && cd pyluna-common  && python3 -m pip install -e .
-RUN cd luna && git checkout dev && cd pyluna-pathology && python3 -m pip install -e .
-RUN cd luna && git checkout dev && cd pyluna-core && python3 -m pip install -e .
-RUN python3 -m pip install --no-cache-dir jupyter s3fs
+# workaround for https://github.com/pypa/setuptools/issues/3693
+RUN poetry export --dev --without-hashes -f requirements.txt | SETUPTOOLS_USE_DISTUTILS=stdlib pip install --no-deps -r /dev/stdin
+
+COPY --chown=$USER_ID:$GROUP_ID . /home/$USER_NAME/luna
+RUN poetry config virtualenvs.create false && \
+        poetry build &&  pip install --no-deps dist/*.whl
 
 ## set env vars
 ENV LUNA_HOME="/home/$USER_NAME/vmount"
@@ -42,14 +51,11 @@ ENV LANG="C.UTF-8"
 
 ## verify installation
 RUN echo $LUNA_HOME
-RUN which jupyter
-RUN pip list | grep luna
 RUN python3 -c 'import luna; import luna.common; import luna.pathology'
+RUN which jupyter
 
 # Ideally we want to remove the need to do this, maybe?
-COPY vmount/conf/logging.cfg "/home/$USER_NAME/vmount/conf/logging.cfg"
+COPY docker/luna_tutorial/vmount/conf/logging.cfg "/home/$USER_NAME/vmount/conf/logging.cfg"
 
-RUN python3 -m pip install requests_mock testfixtures
-RUN cd luna && git checkout dev && pytest pyluna-pathology/tests && pytest pyluna-common/tests
 
 ## entrypoint (see docker-compose file)

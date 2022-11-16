@@ -76,50 +76,13 @@ jobs:
         run: pip install wheel
 
       # pyluna-common
-      - name: Generate dist pyluna-common
-        run: python setup.py sdist bdist_wheel
-        working-directory: ./pyluna-common
+      - name: Generate dist luna
+        run: poetry install
 
-      - name: Publish pyluna-common to PyPI
+      - name: Publish pyluna to PyPI
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
-          packages_dir: ./pyluna-common/dist
-
-      # pyluna-core
-      - name: Generate dist pyluna-core
-        run: python setup.py sdist bdist_wheel
-        working-directory: ./pyluna-core
-
-      - name: Publish pyluna-core to PyPI
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
-          packages_dir: ./pyluna-core/dist
-
-      # pyluna-radiology
-      - name: Generate dist pyluna-radiology
-        run: python setup.py sdist bdist_wheel
-        working-directory: ./pyluna-radiology
-
-      - name: Publish pyluna-radiology to PyPI
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
-          packages_dir: ./pyluna-radiology/dist
-
-      # pyluna-pathology
-      - name: Generate dist pyluna-pathology
-        run: python setup.py sdist bdist_wheel
-        working-directory: ./pyluna-pathology
-
-      - name: Publish pyluna-pathology to PyPI
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
-          packages_dir: ./pyluna-pathology/dist
+          packages_dir: ./dist
 

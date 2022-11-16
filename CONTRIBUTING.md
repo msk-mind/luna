@@ -17,8 +17,8 @@ This document is a quick guide to contributing.
 Refer to the [development setup guide](https://pyluna.readthedocs.io/en/latest/dev.html#development-setup-instructions)
 to:
 - Get the latest code from git
-- Add Luna packages to `$PYTHONPATH`
-- Setup `$LUNA_HOME` environment variable
+- Setup environment with `make venv`
+- See other available `make` targets with `make help`
 
 ## Code Development
 
@@ -27,17 +27,26 @@ We follow the [git branching workflow](https://git-scm.com/book/en/v2/Git-Branch
 Create your branch with the naming convention `IssueNumber-Description` (e.g. 123-annotation) from the default branch.
 
 ### Development guide
-1. Use Google docstring format to clearly document all classes, methods, variables.
-  In PyCharm, you can change the settting in `Settings > Tools > Python Integrated Tools > Docstring format`
-2. Setup pre-commit Python linter for uniform code styles. In the cloned repo, run
-   `pre-commit install`. When you attempt to make a commit, `black` will reformat your
-   code and `flake8` will check for PEP8 compliance. Once these tests pass, you can
-   re-add and commit properly formatted files. 
+1. Use Google docstring format to clearly document all classes, methods,
+   variables. In PyCharm, you can change the settting in `Settings > Tools >
+   Python Integrated Tools > Docstring format`
+2. Setup pre-commit Python linter for uniform code styles. In the cloned repo,
+   run `pre-commit install`. When you attempt to make a commit, `black` will
+   reformat your code and `flake8` will check for PEP8 compliance. Once these
+   tests pass, you can re-add and commit properly formatted files.
 3. Follow clean code principles
-4. Add new dependencies to `requirements_dev.txt`, and `setup.cfg` in the appropriate packages.
-The circleci tests depend on the docker image defined in `docker/Dockerfile`. To update the docker, you need to trigger the docker workflow in circleci.
-To trigger this workflow using circleci API, first create a [circleci personal token](https://circleci.com/docs/2.0/managing-api-tokens/#creating-a-personal-api-token).
-In your terminal, send the POST request to the circlcie API with your branch, circle-token.:
+4. Add new dependencies to `pyproject.toml` using `poetry add`. If a dependency
+   cannot be added using `poetry`, add it to the `environment.yml` so that it
+   will be installed with `mamba` or `conda`. If that package is also
+   managed by `poetry`, add it to the `pyproject.toml` using `poetry add
+   --lock` with the same version added by `mamba` or `conda`.
+5. The circleci tests depend on the docker image defined in
+   `docker/Dockerfile`. To update the docker, you need to trigger the docker
+   workflow in circleci. To trigger this workflow using circleci API, first
+   create a [circleci personal
+   token](https://circleci.com/docs/2.0/managing-api-tokens/#creating-a-personal-api-token).
+   In your terminal, send the POST request to the circlcie API with your
+   branch, circle-token.:
 ```
 curl --request POST \
   --url https://circleci.com/api/v2/project/gh/msk-mind/luna/pipeline \
@@ -45,16 +54,17 @@ curl --request POST \
   --header 'content-type: application/json' \
   --data '{"branch": "<REPLACE_WITH_YOUR_BRANCH>", "parameters" : {"run_workflow_test": false, "run_workflow_docker":  true }}'
 ```
-5. Aim for 85% test coverage for new modules and ensure these tests pass.
-6. Apply meaningful log statements.
-7. Check that no sensitive information (credentials, hostnames, author info) is accidentally committed.
-8. Add or update the tutorials in the documentation site. 
+6. Aim for 85% test coverage for new modules and ensure these tests pass.
+7. Apply meaningful log statements.
+8. Check that no sensitive information (credentials, hostnames, author info) is accidentally committed.
+9. Add or update the tutorials in the documentation site.
   Refer to [Sphinx documenation generation guide](https://pyluna.readthedocs.io/en/latest/dev.html#documentation-generation)
 
 ### Unit tests
-Luna uses [pytest](https://docs.pytest.org) for testing.
-Each code contribution should have appropriate test coverage, as per the development guide.
-Tests should follow the code package structure and any data required for testing should be added under the same package under `testdata` directory.
+Luna uses [pytest](https://docs.pytest.org) for testing. Each code contribution
+should have appropriate test coverage, as per the development guide. Tests
+should follow the code package structure and any data required for testing
+should be added under the same package under `testdata` directory.
 
 To run all tests locally, run
 ```
@@ -112,7 +122,7 @@ Once the PR is merged, delete your branch.
 
 ## Additional Resources
 
-### Release 
+### Release
 #### Branches
 
 - **dev**: default branch. All PRs are merged to dev branch
@@ -128,7 +138,7 @@ Release is automated via Github actions from the master branch. During the relea
 -	Semantic release determines the new version and updates the version
 -	Github tag/release is created with specification fo the new changes.
 -	Pyluna and its subpackages are pushed to [pypi](https://pypi.org/project/pyluna/).
-     
+
 ### Useful Links
 - [Github pull requests docs](https://docs.github.com/en/pull-requests)
 - [Python semantic release](https://python-semantic-release.readthedocs.io/en/latest/)

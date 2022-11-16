@@ -9,7 +9,7 @@ version: 2.1
 
 # Note: to edit context and environment variables, see Organization Settings https://app.circleci.com/settings/organization/github/msk-mind/contexts
 parameters:
-  run_workflow_test:
+  run_workflow_build_and_test:
     type: boolean
     default: true
   run_workflow_docker:
@@ -20,54 +20,52 @@ orbs:
   codecov: codecov/codecov@1.0.2
 
 jobs:
-  test:
+  build:
     parallelism: 3
     docker:
-      - image: $DOCKER_ORG/luna-dev:latest  # primary container for the build job
-
+      - image: mambaorg/micromamba:1.0.0
+        user: root
+    working_directory: ~/repo
     steps:
+      # step 1: obtain repo from github
       - checkout
-      - run: cat /etc/os-release
-      - run: java -version
-      - run: which java
-      - run: echo "export PATH=/home/circleci/.local/bin:$PATH" >> $BASH_ENV  # some python packages get installed  here
-      - run: echo "export CODECOV_TOKEN="4d2ae912-4489-4e40-ac13-02add6c0d1a6"" >> $BASH_ENV
-      - run: echo "export LUNA_HOME=pyluna-common/tests/luna/common/testdata" >> $BASH_ENV
-      - run: echo "export PYTHONPATH=.:pyluna-common:pyluna-core:pyluna-radiology:pyluna-pathology" >> $BASH_ENV
-      - run: export PYSPARK_PYTHON=`which python`
-      - run: echo $PATH
-      - run: python --version
-      - run: pip --version
-      - run: pip list
-      - run: pip check
+      # step 2: install required packages
+      - run: apt-get update
+      - run: apt-get install -y build-essential libgdal-dev liblapack-dev libblas-dev gfortran libgl1 git curl
+      - restore_cache: # restores saved dependency cache
+          key: &deps1-cache deps1-{{ .Branch }}-{{ checksum "environment.yml" }}-{{ checksum "poetry.lock" }}-{{ checksum "pyproject.toml" }}
+      # step 3: create virtual env
       - run:
-          name: Run tests - pyluna-common
           command: |
-            set -e
-            COMMON_TEST_FILES=$(circleci tests glob "pyluna-common/tests/**/test_*.py")
-            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-common $COMMON_TEST_FILES --cov-report=xml --junitxml=./luna-tests/common-results.xml
+            if [ ! -d ./venv ]; then
+              micromamba create -y -p ./venv -f environment.yml
+              . ./venv/bin/activate
+              poetry export --without-hashes -f requirements.txt --dev  | SETUPTOOLS_USE_DISTUTILS=stdlib pip install --no-deps -r /dev/stdin
+            fi
+      - save_cache:
+          key: *deps1-cache
+          paths:
+            - "venv"
+      # step 4: build project
       - run:
-          name: Run tests - pyluna-core
           command: |
-            set -e
-            COMMON_TEST_FILES=$(circleci tests glob "pyluna-core/tests/**/test_*.py")
-            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-core $COMMON_TEST_FILES --cov-report=xml --junitxml=./luna-tests/core-results.xml
+            . ./venv/bin/activate
+            poetry config virtualenvs.create false
+            poetry build
+            pip install --no-deps dist/*.whl
+      # step 5: run tests
       - run:
-          name: Run tests - pyluna-radiology
+          name: Run tests
           command: |
-            set -e
-            RADIOLOGY_TEST_FILES=$(circleci tests glob "pyluna-radiology/tests/**/test_*.py")
-            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-radiology $RADIOLOGY_TEST_FILES --cov-report=xml --cov-append --junitxml=./luna-tests/rad-results.xml
-      - run:
-          name: Run tests - pyluna-pathology
-          command: |
-            set -e
-            PATHOLOGY_TEST_FILES=$(circleci tests glob "pyluna-pathology/tests/**/test_*.py" | circleci tests split --split-by=timings)
-            pytest -v --capture=tee-sys --show-capture=all --cov=pyluna-pathology $PATHOLOGY_TEST_FILES --cov-report=xml --cov-append --junitxml=./luna-tests/path-results.xml
+            . ./venv/bin/activate
+            export LUNA_HOME=$PWD
+            cp conf/logging.default.yml conf/logging.cfg
+            TEST_FILES=$(circleci tests glob "tests/**/test_*.py" | circleci tests split --split-by=timings)
+            pytest -v --capture=tee-sys --show-capture=all $TEST_FILES --cov-report=xml --junitxml=./luna-tests/results.xml
       - store_artifacts:
           path: htmlcov
       - store_test_results:
-          path: luna-tests 
+          path: luna-tests
       - codecov/upload:
           file: coverage.xml
 
@@ -77,19 +75,20 @@ jobs:
     steps:
       - checkout
       - run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-      - run: docker build -t $DOCKER_ORG/luna-dev:latest -f docker/Dockerfile .
-      - run: docker push $DOCKER_ORG/luna-dev:latest
+      - run: docker build -t $DOCKER_ORG/luna:${CIRCLE_SHA1} .
+      - run: docker tag $DOCKER_ORG/luna:${CIRCLE_SHA1} $DOCKER_ORG/luna:latest
+      - run: docker push $DOCKER_ORG/luna:${CIRCLE_SHA1}
 
 workflows:
   version: 2
-  test:
-    when: << pipeline.parameters.run_workflow_test >>
+  build_and_test:
+    when: << pipeline.parameters.run_workflow_build_and_test >>
     jobs:
-      - test:
+      - build:
           context:
             - MIND-Data-Processing
 
-  build:
+  build_docker:
     when: << pipeline.parameters.run_workflow_docker >>
     jobs:
       - docker_build:

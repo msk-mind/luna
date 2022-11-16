@@ -19,10 +19,7 @@
 #
 import os, sys, glob, shutil
 
-sys.path.insert(0, os.path.abspath('../pyluna-common/'))
-sys.path.insert(0, os.path.abspath('../pyluna-pathology/'))
-sys.path.insert(0, os.path.abspath('../pyluna-radiology/'))
-sys.path.insert(0, os.path.abspath('../pyluna-core/'))
+sys.path.insert(0, os.path.abspath('../src/'))
 
 import luna.pathology
 
@@ -38,7 +35,7 @@ for img in glob.glob("../docker/luna_tutorial/vmount/img/*png"):
 os.remove("tutorials/8_teardown.ipynb")
 
 # TODO: add outputs back to notebooks so sphinx doesn't need run notebooks to generate
-# outputs, then remove this 
+# outputs, then remove this
 nbsphinx_allow_errors = True
 
 # -- General configuration ---------------------------------------------
@@ -55,8 +52,10 @@ extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.autosectionlabel',
 	'sphinx_click',
 	'm2r2',
-	'nbsphinx', 
+	'nbsphinx',
         ]
+
+suppress_warnings = ['autosectionlabel.*']
 
 
 # Add any paths that contain templates here, relative to this directory.
@@ -91,7 +90,7 @@ author = "msk-mind"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -113,7 +112,12 @@ numfig = True
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_book_theme'
+html_theme = 'python_docs_theme'
+
+html_sidebars = {
+   '**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html'],
+   'using/windows': ['windowssidebar.html', 'searchbox.html'],
+}
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.  For a list of options available for each theme, see the
