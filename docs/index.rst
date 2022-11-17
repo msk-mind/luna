@@ -10,6 +10,7 @@
    modules
    dev
    about
+   publications
    history
 
 
