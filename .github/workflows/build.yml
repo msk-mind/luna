@@ -1,10 +1,7 @@
-name: Build and Test
+name: luna build
 run-name: ${{ github.actor }} build
-on:
-  push:
-    branches: [ $default-branch ]
-  pull_request:
-    branches: [ $default-branch ]
+on: [push]
+
 jobs:
   build:
 
@@ -52,8 +49,4 @@ jobs:
           export LUNA_HOME=$PWD
           cp conf/logging.default.yml conf/logging.cfg
           pytest -v --capture=tee-sys --show-capture=all tests --cov-report=xml --junitxml=./luna-tests/results.xml
-
-
-
-
 
