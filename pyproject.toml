@@ -98,6 +98,10 @@ python-docs-theme = "^2022.1"
 myst-parser = "^0.18.1"
 pandoc = "^2.2"
 Sphinx = "^5.1.1"
+isort = "^5.10.1"
+black = "^22.10.0"
+flake8 = "^6.0.0"
+pydocstyle = "^6.1.1"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
