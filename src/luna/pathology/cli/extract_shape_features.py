@@ -1,11 +1,11 @@
 # General imports
-import os
 import logging
+import os
 from typing import List
+
 import click
 import pandas as pd
 import tifffile
-
 from skimage import measure
 
 from luna.common.custom_logger import init_logger
@@ -38,19 +38,19 @@ _params_ = [("input_slide_mask", str), ("output_dir", str), ("label_cols", List[
     help="path to a metadata json/yaml file with method parameters to reproduce results",
 )
 def cli(**cli_kwargs):
-    """Extracts shape and spatial features (HIF features) from a slide mask. 
-    This CLI extracts two sets of features. The first set are 'whole slide features', where 
+    """Extracts shape and spatial features (HIF features) from a slide mask.
+    This CLI extracts two sets of features. The first set are 'whole slide features', where
     the entire mask label is considred as a single region and features are extracted. These features
-    are useful for determining things like total area of x tissue. 
-    
-    The second set of features are 'regional features', where each label is split up according to 
-    their connectivity and features are extracted from these smaller regions. 
+    are useful for determining things like total area of x tissue.
+
+    The second set of features are 'regional features', where each label is split up according to
+    their connectivity and features are extracted from these smaller regions.
     These features are useful for determining things like solidity of the top ten largest
-    regions of tissue y. Pixel intensity values from the WSI are unused. In order to generate 
+    regions of tissue y. Pixel intensity values from the WSI are unused. In order to generate
     connected regions, skimage generates a mask itself where different values coorespond
     to different regions, which removes the tissue type information from the original mask.
-    So, the original mask is passed as an intensity image to ensure that each region can be 
-    associated with a tissue type.  
+    So, the original mask is passed as an intensity image to ensure that each region can be
+    associated with a tissue type.
 
     \b
     Inputs:
@@ -79,11 +79,11 @@ def extract_shape_features(
         output_dir (str): output/working directory
 
     Returns:
-        dict: output .tif path and the number of shapes for which features were generated 
+        dict: output .tif path and the number of shapes for which features were generated
     """
     # List of features to extract.
     # Default behavior of regionprops_table only generates label and bbox features.
-    # Not all of these features may be relevant 
+    # Not all of these features may be relevant
     properties = [
         "area",
         "bbox",

@@ -1,13 +1,11 @@
 import pytest
 from girder_client import GirderClient
-from luna.pathology.dsa.dsa_api_handler import (
-    get_collection_uuid,
-    get_collection_uuid,
-    get_annotation_uuid,
-    get_collection_metadata,
-    get_slide_annotation,
-    get_item_uuid,
-)
+
+from luna.pathology.dsa.dsa_api_handler import (get_annotation_uuid,
+                                                get_collection_metadata,
+                                                get_collection_uuid,
+                                                get_item_uuid,
+                                                get_slide_annotation)
 
 
 def test_get_collection_uuid(monkeypatch):

@@ -1,9 +1,10 @@
 import os
+
+import numpy as np
+import tifffile
 from click.testing import CliRunner
 
 from luna.pathology.cli.generate_tile_mask import cli
-import tifffile
-import numpy as np
 
 
 def test_cli_generate_mask(tmp_path):

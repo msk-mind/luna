@@ -1,9 +1,9 @@
-import os
 import logging
+import os
+from typing import Callable, Dict, List, Union
+
 import click
 import h5py
-from typing import Union, Callable, Dict, List
-
 import pandas as pd
 import pyarrow.parquet as pq
 import ray
@@ -11,31 +11,19 @@ import ray.train as train
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
 from ray import tune
 from ray.train import Trainer
-
-
-from torchvision import transforms
 from torch.utils.data import DataLoader
-from torchmetrics import (
-    MetricCollection,
-    Accuracy,
-    Precision,
-    Recall,
-    F1Score,
-    ConfusionMatrix,
-)
+from torchmetrics import (Accuracy, ConfusionMatrix, F1Score, MetricCollection,
+                          Precision, Recall)
+from torchvision import transforms
 
 from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner, load_func
-from luna.pathology.analysis.ml import (
-    BaseTorchTileDataset,
-    BaseTorchClassifier,
-    TorchTileClassifierTrainer,
-    get_group_stratified_sampler,
-    HDF5Dataset
-)
+from luna.pathology.analysis.ml import (BaseTorchClassifier,
+                                        BaseTorchTileDataset, HDF5Dataset,
+                                        TorchTileClassifierTrainer,
+                                        get_group_stratified_sampler)
 
 init_logger()
 logger = logging.getLogger("train_tissue_classifier")
@@ -52,7 +40,7 @@ _params_ = [
     ("batch_size", List[int]),
     ("learning_rate", List[float]),
     ("network", str),  # string, but parsed as an object
-    #("use_gpu", str), # treated like bool
+    # ("use_gpu", str), # treated like bool
     ("num_cpus_per_worker", int),
     ("num_gpus_per_worker", int),
     ("num_gpus", int),
@@ -196,6 +184,7 @@ class CustomReporter(tune.CLIReporter):
     def report(self, trials, done, *sys_info):
         logger.info(self._progress_str(trials, done, *sys_info))
 
+
 class TorchTileClassifier(BaseTorchClassifier):
     def setup(self, model):
         self.model = model
@@ -225,7 +214,12 @@ def train_func(config: Dict[str, any]):
     network = config.get("network")
     checkpoint_dir = config.get("checkpoint_dir")
 
-    df = pd.read_parquet(tile_dataset_fpath).query("intersection_area > 0").reset_index().set_index("address")
+    df = (
+        pd.read_parquet(tile_dataset_fpath)
+        .query("intersection_area > 0")
+        .reset_index()
+        .set_index("address")
+    )
 
     # reset index
     df_nh = df.reset_index()
@@ -236,9 +230,12 @@ def train_func(config: Dict[str, any]):
     # replace string labels with categorical values
     df[label_col] = df[label_col].replace(label_set)
     dataset_local = HDF5Dataset(
-        hdf5_manifest=df, label_cols=[label_col], using_ray=True, preprocess=transforms.Compose([transforms.ToTensor()])
+        hdf5_manifest=df,
+        label_cols=[label_col],
+        using_ray=True,
+        preprocess=transforms.Compose([transforms.ToTensor()]),
     )
-   
+
     train_loader = DataLoader(
         dataset_local,
         batch_size=int(batch_size),
@@ -288,12 +285,12 @@ def train_func(config: Dict[str, any]):
         ],
         prefix="val_",
     ).to(train.torch.get_device())
-    
+
     classifier_trainer = TorchTileClassifierTrainer(
         classifier=classifier, criterion=criterion, optimizer=optimizer
     )
     logger.info("Starting training procedure")
- 
+
     for ii in range(epochs):
 
         train_results = classifier_trainer.train_epoch(train_loader, train_metrics)
@@ -301,13 +298,15 @@ def train_func(config: Dict[str, any]):
 
         results = {**train_results, **val_results}
         train.report(**results)
-        path = os.path.join(checkpoint_dir, f'checkpoint_{ii}.pt')
-        torch.save({'epcoh':ii, 'model_state_dict':model.state_dict()}, path)
+        path = os.path.join(checkpoint_dir, f"checkpoint_{ii}.pt")
+        torch.save({"epcoh": ii, "model_state_dict": model.state_dict()}, path)
 
     logger.info("Completed model training")
 
+
 def trial_str_creator(trial):
     return "{}_{}_123".format(trial.trainable_name, trial.trial_id)
+
 
 def train_model(
     tile_dataset_fpath: str,
@@ -394,7 +393,7 @@ def train_model(
     trainer = Trainer(
         backend="torch",
         num_workers=num_workers,
-        #use_gpu=use_gpu,
+        # use_gpu=use_gpu,
         logdir=output_dir,
         resources_per_worker={
             "CPU": num_cpus_per_worker,
@@ -430,12 +429,11 @@ def train_model(
         "num_splits": num_splits,
         "checkpoint_dir": output_dir,
     }
-    # timestamp output dir the same as ray does, just replicate it 
+    # timestamp output dir the same as ray does, just replicate it
 
     trainable = trainer.to_tune_trainable(train_func)
 
     cli_reporter = CustomReporter(max_report_frequency=180)
-    
 
     # run distributed model training
     analysis = tune.run(

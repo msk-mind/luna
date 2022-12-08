@@ -1,30 +1,57 @@
-import os, logging
+import logging
+import os
+
 import click
 
-from luna.common.custom_logger   import init_logger
+from luna.common.custom_logger import init_logger
 
 init_logger()
-logger = logging.getLogger('dicom_to_itk')
+logger = logging.getLogger("dicom_to_itk")
 
 from luna.common.utils import cli_runner
 
-_params_ = [('input_dicom_folder', str), ('output_dir', str), ('itk_image_type', str), ('convert_to_suv', bool), ('itk_c_type', str)]
+_params_ = [
+    ("input_dicom_folder", str),
+    ("output_dir", str),
+    ("itk_image_type", str),
+    ("convert_to_suv", bool),
+    ("itk_c_type", str),
+]
+
 
 @click.command()
-@click.argument('input_dicom_folder', nargs=1)
-@click.option('-o', '--output_dir', required=False,
-              help='path to output directory to save results')
-@click.option('-it', '--itk_image_type', required=False,
-              help="desired ITK image extention")
-@click.option('-ct', '--itk_c_type', required=False,
-              help="desired C datatype (float, unsigned short)")   
-@click.option('-suv', '--convert_to_suv', required=False,
-              help="If an applicable PET image, convert to SUVs", is_flag=True)   
-@click.option('-m', '--method_param_path', required=False,
-              help='path to a metadata json/yaml file with method parameters to reproduce results')
+@click.argument("input_dicom_folder", nargs=1)
+@click.option(
+    "-o",
+    "--output_dir",
+    required=False,
+    help="path to output directory to save results",
+)
+@click.option(
+    "-it", "--itk_image_type", required=False, help="desired ITK image extention"
+)
+@click.option(
+    "-ct",
+    "--itk_c_type",
+    required=False,
+    help="desired C datatype (float, unsigned short)",
+)
+@click.option(
+    "-suv",
+    "--convert_to_suv",
+    required=False,
+    help="If an applicable PET image, convert to SUVs",
+    is_flag=True,
+)
+@click.option(
+    "-m",
+    "--method_param_path",
+    required=False,
+    help="path to a metadata json/yaml file with method parameters to reproduce results",
+)
 def cli(**cli_kwargs):
     """Generates a ITK compatible image from a dicom series
-    
+
     \b
     Inputs:
         input_dicom_folder: A folder containing a dicom series
@@ -40,13 +67,17 @@ def cli(**cli_kwargs):
     """
     cli_runner(cli_kwargs, _params_, dicom_to_itk)
 
-import itk
 
-from pydicom import dcmread
 from pathlib import Path
-import medpy.io
 
-def dicom_to_itk(input_dicom_folder, output_dir, itk_image_type, itk_c_type, convert_to_suv):
+import itk
+import medpy.io
+from pydicom import dcmread
+
+
+def dicom_to_itk(
+    input_dicom_folder, output_dir, itk_image_type, itk_c_type, convert_to_suv
+):
     """Generate an ITK compatible image from a dicom series/folder
 
     Args:
@@ -71,17 +102,22 @@ def dicom_to_itk(input_dicom_folder, output_dir, itk_image_type, itk_c_type, con
     num_dicoms = len(seriesUIDs)
 
     if num_dicoms < 1:
-        logger.warning('No DICOMs in: ' + input_dicom_folder)
+        logger.warning("No DICOMs in: " + input_dicom_folder)
         return None
 
-    logger.info('The directory {} contains {} DICOM Series'.format(input_dicom_folder, str(num_dicoms)))
+    logger.info(
+        "The directory {} contains {} DICOM Series".format(
+            input_dicom_folder, str(num_dicoms)
+        )
+    )
 
     n_slices = 0
 
     for uid in seriesUIDs:
-        logger.info('Reading: ' + uid)
+        logger.info("Reading: " + uid)
         fileNames = namesGenerator.GetFileNames(uid)
-        if len(fileNames) < 1: continue
+        if len(fileNames) < 1:
+            continue
 
         n_slices = len(fileNames)
 
@@ -93,36 +129,40 @@ def dicom_to_itk(input_dicom_folder, output_dir, itk_image_type, itk_c_type, con
 
         writer = itk.ImageFileWriter[ImageType].New()
 
-        outFileName = os.path.join(output_dir, uid + '_volumetric_image.' + itk_image_type)
+        outFileName = os.path.join(
+            output_dir, uid + "_volumetric_image." + itk_image_type
+        )
         writer.SetFileName(outFileName)
         writer.UseCompressionOn()
         writer.SetInput(reader.GetOutput())
-        logger.info('Writing: ' + outFileName)
+        logger.info("Writing: " + outFileName)
         writer.Update()
 
-    if convert_to_suv: convert_pet_volume_to_suv(input_dicom_folder, outFileName )
+    if convert_to_suv:
+        convert_pet_volume_to_suv(input_dicom_folder, outFileName)
 
     path = next(Path(input_dicom_folder).glob("*.dcm"))
     ds = dcmread(path)
 
     # Prepare metadata and commit
     properties = {
-        'itk_volume' : outFileName,
-        'num_slices' : n_slices,
-        'segment_keys':{
+        "itk_volume": outFileName,
+        "num_slices": n_slices,
+        "segment_keys": {
             "radiology_patient_name": str(ds.PatientName),
             "radiology_accession_number": str(ds.AccessionNumber),
             "radiology_series_instance_uuid": str(ds.SeriesInstanceUID),
             "radiology_series_number": str(ds.SeriesNumber),
             "radiology_modality": str(ds.Modality),
-        }
+        },
     }
 
     return properties
 
+
 def check_pet(dcms):
-    """ Ensures dicom directory contains PET images
-    
+    """Ensures dicom directory contains PET images
+
     Args:
         dcms (list[str]): list of dicom paths
 
@@ -131,32 +171,41 @@ def check_pet(dcms):
     """
     for dcm in dcms:
         ds = dcmread(dcm)
-        if not ds.Modality=='PT': 
-            logger.warning("check_pet - FAILED - Trying to apply PT corrections to non-PT image, gracefully skipping!")
+        if not ds.Modality == "PT":
+            logger.warning(
+                "check_pet - FAILED - Trying to apply PT corrections to non-PT image, gracefully skipping!"
+            )
             return False
-    
+
     logger.info("check_pet - PASSED - These are PT images")
 
     return True
 
+
 def check_delay_correction(dcms):
-    """ Ensures all dicom images were delay corrected to their Aquisition TIme
-    
+    """Ensures all dicom images were delay corrected to their Aquisition TIme
+
     Args:
         dcms (list[str]): list of dicom paths
     """
     for dcm in dcms:
         ds = dcmread(dcm)
-        if not ds.DecayCorrection=='START': 
-            logger.error("check_delay_correction - FAILED - Cannot process a PET volume not constructed of 'START' time delay corrected slices!")
-            raise RuntimeError("Cannot process a PET volume not constructed of 'START' time delay corrected slices!")
+        if not ds.DecayCorrection == "START":
+            logger.error(
+                "check_delay_correction - FAILED - Cannot process a PET volume not constructed of 'START' time delay corrected slices!"
+            )
+            raise RuntimeError(
+                "Cannot process a PET volume not constructed of 'START' time delay corrected slices!"
+            )
 
-    logger.info("check_delay_correction - PASSED - All slices were decay corrected to their START AquisitionTime")
+    logger.info(
+        "check_delay_correction - PASSED - All slices were decay corrected to their START AquisitionTime"
+    )
 
 
 def calculate_normalization(dcms):
-    """ Calculates the SUV normalization (g/BQ)
-    
+    """Calculates the SUV normalization (g/BQ)
+
     Args:
         dcms (list[str]): list of dicom paths
 
@@ -165,10 +214,10 @@ def calculate_normalization(dcms):
     """
     logger.info("About to convert PET volume to SUV units")
 
-    ds = dcmread ( dcms[0] ) 
+    ds = dcmread(dcms[0])
 
-    dose   = float( ds.RadiopharmaceuticalInformationSequence[0].RadionuclideTotalDose )
-    weight = float (ds.PatientWeight) * 1000
+    dose = float(ds.RadiopharmaceuticalInformationSequence[0].RadionuclideTotalDose)
+    weight = float(ds.PatientWeight) * 1000
 
     logger.info(f"Radionuclide dose={dose}, patient weight={weight}")
 
@@ -176,14 +225,15 @@ def calculate_normalization(dcms):
 
     return norm
 
+
 def convert_pet_volume_to_suv(input_dicom_folder, input_volume):
-    """ Renormalizes a PET ITK volume to SUVs, saves a new volume in-place
-    
+    """Renormalizes a PET ITK volume to SUVs, saves a new volume in-place
+
     Args:
         input_dicom_folder (str): path to matching dicom series within a folder
         input_volume (str): path to PT volume
     """
-    dcms = list ( Path(input_dicom_folder).glob('*.dcm') )
+    dcms = list(Path(input_dicom_folder).glob("*.dcm"))
 
     if check_pet(dcms):
         check_delay_correction(dcms)

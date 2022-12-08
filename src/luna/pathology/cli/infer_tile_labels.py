@@ -1,20 +1,18 @@
 # General imports
-import os
 import logging
+import os
 import sys
+
 import click
+import pandas as pd
 import torch
 from torch.utils.data import DataLoader
-from luna.pathology.analysis.ml import (
-    HDF5Dataset,
-    TorchTransformModel,
-    post_transform_to_2d,
-)
-
-import pandas as pd
 from tqdm import tqdm
+
 from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner
+from luna.pathology.analysis.ml import (HDF5Dataset, TorchTransformModel,
+                                        post_transform_to_2d)
 
 init_logger()
 logger = logging.getLogger("infer_tile_labels")
@@ -46,9 +44,9 @@ _params_ = [
     help="repository name to pull model and weight from, e.g. msk-mind/luna-ml",
 )
 @click.option(
-    "-mn", 
-    "--model_name", 
-    required=False, 
+    "-mn",
+    "--model_name",
+    required=False,
     help="torch hub model name",
 )
 @click.option(
@@ -139,7 +137,9 @@ def infer_tile_labels(
     if source == "github":
         logger.info(f"Available models: {torch.hub.list(hub_repo_or_dir)}")
 
-    ttm = torch.hub.load(hub_repo_or_dir, model_name, source=source, **kwargs, force_reload=True)
+    ttm = torch.hub.load(
+        hub_repo_or_dir, model_name, source=source, **kwargs, force_reload=True
+    )
 
     if not isinstance(ttm, TorchTransformModel):
         raise RuntimeError(f"Not a valid model, loaded model was of type {type(ttm)}")
@@ -183,8 +183,8 @@ def infer_tile_labels(
     output_file = os.path.join(
         output_dir, "tile_scores_and_labels_pytorch_inference.parquet"
     )
-    # 
-    df_output.index.name = 'address'
+    #
+    df_output.index.name = "address"
     df_output.to_parquet(output_file)
 
     # Save our properties and params

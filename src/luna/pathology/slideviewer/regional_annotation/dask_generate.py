@@ -1,23 +1,19 @@
-import click
-import os
 import logging
+import os
 import shutil
 
+import click
+import numpy as np
+import pandas as pd
+from dask.distributed import Client, as_completed
+
+import luna.common.constants as const
 from luna.common.CodeTimer import CodeTimer
 from luna.common.config import ConfigSet
 from luna.common.custom_logger import init_logger
-import luna.common.constants as const
-
 from luna.pathology.common.annotation_utils import (
-    convert_slide_bitmap_to_geojson,
-    check_slideviewer_and_download_bmp,
-)
+    check_slideviewer_and_download_bmp, convert_slide_bitmap_to_geojson)
 from luna.pathology.common.slideviewer_client import fetch_slide_ids
-
-import pandas as pd
-import numpy as np
-
-from dask.distributed import Client, as_completed
 
 
 @click.command()

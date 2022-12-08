@@ -1,26 +1,23 @@
-import os
+import itertools
 import json
-import yaml
 import logging
+import os
+import shutil
 import subprocess
-
-from filehash import FileHash
+import urllib
+import warnings
+from functools import partial
 from importlib import import_module
 from io import BytesIO
+from pathlib import Path
 from typing import Callable, List
-from luna.common.CodeTimer import CodeTimer
-import itertools
-
-import shutil
 
 import pandas as pd
-from pathlib import Path
-
 import requests
-from functools import partial 
-import urllib
+import yaml
+from filehash import FileHash
 
-import warnings
+from luna.common.CodeTimer import CodeTimer
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +26,7 @@ TYPE_ALIASES = {"itk_geometry": "itk_volume"}
 
 # Sensitive cli inputs
 MASK_KEYS = ["username", "user", "password", "pw"]
+
 
 def to_sql_field(s):
     filter1 = s.replace(".", "_").replace(" ", "_")
@@ -83,6 +81,8 @@ def rebase_schema_numeric(df):
             continue
 
         df[col] = df[col].astype(float, errors="ignore")
+
+
 #        df[col] = df[col].astype(int, errors="ignore") # This was converting small floats to integers...
 
 
@@ -93,11 +93,13 @@ def generate_uuid_binary(content, prefix):
     :param prefix: list e.g. ["FEATURE"]
     :return: string uuid
     """
-    warnings.warn("generate_uuid_binary() should not be used anymore, the UUIDs generated are not valid!")
+    warnings.warn(
+        "generate_uuid_binary() should not be used anymore, the UUIDs generated are not valid!"
+    )
 
     content = BytesIO(content)
 
-    uuid = '00000000'
+    uuid = "00000000"
     prefix.append(uuid)
     return "-".join(prefix)
 
@@ -110,9 +112,11 @@ def generate_uuid_dict(json_str, prefix):
     :return: v
     """
     json_bytes = json.dumps(json_str).encode("utf-8")
-    warnings.warn("generate_uuid_dict() should not be used anymore, the UUIDs generated are not valid!")
+    warnings.warn(
+        "generate_uuid_dict() should not be used anymore, the UUIDs generated are not valid!"
+    )
 
-    uuid = '00000000'
+    uuid = "00000000"
     prefix.append(uuid)
     return "-".join(prefix)
 
@@ -276,7 +280,7 @@ def validate_params(given_params: dict, params_list: List[tuple]):
 
         except RuntimeError as e:
             raise e
-        
+
         if param in MASK_KEYS:
             logger.info(f" -> Set {param} ({dtype}) = *****")
         else:
@@ -284,28 +288,39 @@ def validate_params(given_params: dict, params_list: List[tuple]):
 
     return d_params
 
+
 def resolve_paths(given_params: dict):
     d_params = {}
     for param, param_value in given_params.items():
-        if "input_" in param and 's3:/' in param_value:  # We want to treat input_ params a bit differently
+        if (
+            "input_" in param and "s3:/" in param_value
+        ):  # We want to treat input_ params a bit differently
             raise NotImplementedError("S3 inputs are not currently supported yet!")
 
-        elif "input_" in param and 'http:/' in param_value:  # We want to treat input_ params a bit differently
+        elif (
+            "input_" in param and "http:/" in param_value
+        ):  # We want to treat input_ params a bit differently
             d_params[param] = param_value
 
-        elif "input_" in param and 'https:/' in param_value:  # We want to treat input_ params a bit differently
+        elif (
+            "input_" in param and "https:/" in param_value
+        ):  # We want to treat input_ params a bit differently
             d_params[param] = param_value
 
         elif "input_" in param:  # We want to treat input_ params a bit differently
-            if '~' in param_value: logger.warning ("Resolving a user directory, be careful!")
-            resolved_input = Path(param_value.replace('file:', '')).expanduser().resolve().as_posix()
+            if "~" in param_value:
+                logger.warning("Resolving a user directory, be careful!")
+            resolved_input = (
+                Path(param_value.replace("file:", "")).expanduser().resolve().as_posix()
+            )
             logger.info(f"Resolved input:\n -> {param_value}\n -> {resolved_input}")
 
-            d_params[param] = resolved_input 
+            d_params[param] = resolved_input
 
         else:
             d_params[param] = param_value
     return d_params
+
 
 def expand_inputs(given_params: dict):
     """
@@ -361,17 +376,20 @@ def expand_inputs(given_params: dict):
                 d_params[param] = expanded_input
 
                 # Only propagate keys from non-aliases
-                if not alias: 
+                if not alias:
                     # Query any keys:
-                    segment_keys = metadata.get('segment_keys', {})
+                    segment_keys = metadata.get("segment_keys", {})
                     logger.info(f"Found segment keys: {segment_keys}")
 
                     for key in segment_keys.keys():
-                        if key in d_keys.keys() and not segment_keys[key] == d_keys[key]:
+                        if (
+                            key in d_keys.keys()
+                            and not segment_keys[key] == d_keys[key]
+                        ):
                             raise RuntimeError(
                                 f"Key mismatch for '{key}', found {segment_keys[key]} and {d_keys[key]}, cannot resolve!!"
                             )
-                    
+
                     d_keys.update(segment_keys)
 
             else:
@@ -382,22 +400,22 @@ def expand_inputs(given_params: dict):
     return d_params, d_keys
 
 
-
 def get_dataset_url():
-    """ Retrieve a "dataset URL" from the environment, may look like http://localhost:6077 or file:///absolute/path/to/dataset/dir """
+    """Retrieve a "dataset URL" from the environment, may look like http://localhost:6077 or file:///absolute/path/to/dataset/dir"""
     dataset_url = os.environ.get("DATASET_URL", None)
 
     if dataset_url is None:
-        logger.warning("Requesting feature data be sent to dataset, however no dataset URL provided, please set env DATASET_URL!")
+        logger.warning(
+            "Requesting feature data be sent to dataset, however no dataset URL provided, please set env DATASET_URL!"
+        )
     else:
         logger.info(f"Found dataset URL = {dataset_url}")
 
     return dataset_url
 
-    
 
 def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
-    """ Interface feature data to a parquet dataset
+    """Interface feature data to a parquet dataset
 
     Args:
         input_feature_data (str): path to input data
@@ -408,55 +426,63 @@ def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
 
     logger.info(f"Adding {input_feature_data} to {dataset_id} via {waystation_url}")
 
-    segment_id = "-".join(
-        [v for _, v in sorted(keys.items())]
-    )
+    segment_id = "-".join([v for _, v in sorted(keys.items())])
 
     logger.info(f"SEGMENT_ID={segment_id}")
-    
-    post_url = os.path.join ( waystation_url, "datasets", dataset_id, "segments", segment_id )
+
+    post_url = os.path.join(
+        waystation_url, "datasets", dataset_id, "segments", segment_id
+    )
 
     parsed_url = urllib.parse.urlparse(post_url)
 
-    if 'http' in parsed_url.scheme:
+    if "http" in parsed_url.scheme:
         # The cool way, using luna waystation
 
-        logger.info (f"Posting to: {post_url}")
+        logger.info(f"Posting to: {post_url}")
 
-        res = requests.post(post_url, files={'segment_data': open (input_feature_data, 'rb')}, data={"segment_keys": json.dumps(keys)})
+        res = requests.post(
+            post_url,
+            files={"segment_data": open(input_feature_data, "rb")},
+            data={"segment_keys": json.dumps(keys)},
+        )
 
-        logger.info (f"{res}: {res.text}")
+        logger.info(f"{res}: {res.text}")
 
-    elif 'file' in parsed_url.scheme:
+    elif "file" in parsed_url.scheme:
         # The less cool way, just using file paths
 
-        segment_dir = Path ( parsed_url.path )
+        segment_dir = Path(parsed_url.path)
 
-        logger.info (f"Writing to: {segment_dir}")
+        logger.info(f"Writing to: {segment_dir}")
 
         os.makedirs(segment_dir, exist_ok=True)
 
         data = pd.read_parquet(input_feature_data).reset_index()
-        data = data.drop(columns='index', errors='ignore')
-        data['SEGMENT_ID'] = segment_id 
-        re_indexors = ['SEGMENT_ID']
-    
+        data = data.drop(columns="index", errors="ignore")
+        data["SEGMENT_ID"] = segment_id
+        re_indexors = ["SEGMENT_ID"]
+
         if keys is not None:
             for key, value in keys.items():
                 data.loc[:, key] = value
                 re_indexors.append(key)
-     
-        data = data.set_index(re_indexors).reset_index() # a trick to move columns to the left
-        
-        data.to_parquet (segment_dir.joinpath("data.parquet"))
-    
+
+        data = data.set_index(
+            re_indexors
+        ).reset_index()  # a trick to move columns to the left
+
+        data.to_parquet(segment_dir.joinpath("data.parquet"))
+
     else:
         logger.warning("Unrecognized scheme: {parsed_url.scheme}, skipping!")
 
 
-
 def cli_runner(
-    cli_kwargs: dict, cli_params: List[tuple], cli_function: Callable[..., dict], pass_keys: bool = False
+    cli_kwargs: dict,
+    cli_params: List[tuple],
+    cli_function: Callable[..., dict],
+    pass_keys: bool = False,
 ):
     """For special input_* parameters, see if we should infer the input given an output/result directory
 
@@ -503,27 +529,26 @@ def cli_runner(
 
     # Expand implied inputs
     trm_kwargs, keys = expand_inputs(trm_kwargs)
-    
+
     # Nicely resolve sometimes messy input paths
     trm_kwargs = resolve_paths(trm_kwargs)
 
-    logger.info (f"Full segment key set: {keys}")
+    logger.info(f"Full segment key set: {keys}")
 
     # Nice little log break
     logger.info(
-          "-" * 60
-        + f"\n Starting transform::{cli_function.__name__} \n"
-        + "-" * 60
+        "-" * 60 + f"\n Starting transform::{cli_function.__name__} \n" + "-" * 60
     )
 
     with CodeTimer(logger, name=f"transform::{cli_function.__name__}"):
-        if pass_keys: cli_function = partial (cli_function, keys=keys)
+        if pass_keys:
+            cli_function = partial(cli_function, keys=keys)
 
         result = cli_function(**trm_kwargs)
 
     # Nice little log break
     logger.info(
-          "-" * 60
+        "-" * 60
         + f"\n Done with transform, running post-transform functions... \n"
         + "-" * 60
     )
@@ -533,12 +558,12 @@ def cli_runner(
     # filter out kwargs with sensitive data
     for key in MASK_KEYS:
         trm_kwargs.pop(key, None)
-    
+
     # propagate keys (ID/Key Manager)
-    if trm_kwargs.get('segment_keys', None):
-        trm_kwargs['segment_keys'].update(keys)
-    else: 
-        trm_kwargs['segment_keys'] = keys
+    if trm_kwargs.get("segment_keys", None):
+        trm_kwargs["segment_keys"].update(keys)
+    else:
+        trm_kwargs["segment_keys"] = keys
 
     # Save metadata on disk
     if "output_dir" in trm_kwargs:
@@ -546,8 +571,8 @@ def cli_runner(
             yaml.dump(trm_kwargs, fp)
 
     # Save feature data in parquet if indicated: (Dataset Manager)
-    if "dataset_id" in cli_kwargs and  "feature_data" in trm_kwargs:
-        dataset_id   = cli_kwargs.get("dataset_id")
+    if "dataset_id" in cli_kwargs and "feature_data" in trm_kwargs:
+        dataset_id = cli_kwargs.get("dataset_id")
         feature_data = trm_kwargs.get("feature_data")
 
         logger.info(f"Adding feature segment {feature_data} to {dataset_id}")
@@ -555,8 +580,9 @@ def cli_runner(
         dataset_url = get_dataset_url()
 
         if dataset_url is not None:
-            post_to_dataset( feature_data, dataset_url, dataset_id, keys=trm_kwargs['segment_keys'])
-
+            post_to_dataset(
+                feature_data, dataset_url, dataset_id, keys=trm_kwargs["segment_keys"]
+            )
 
     logger.info("Done.")
 
@@ -636,38 +662,41 @@ def load_func(dotpath: str):
     return getattr(m, func)
 
 
-
 class LunaCliCall:
     def __init__(self, cli_call, cli_client):
         self.cli_call = cli_call
         self.cli_client = cli_client
-        print (" ".join(f"{x}" for x in cli_call))
+        print(" ".join(f"{x}" for x in cli_call))
 
     def run(self, step_name):
-        """ Run (execute) CLI Call given a 'step_name', add step to parent CLI Client once completed 
+        """Run (execute) CLI Call given a 'step_name', add step to parent CLI Client once completed
         Args:
             step_name (str): Name of the CLI call, determines output directory, can act as inputs to other CLI steps
         """
-        if "/" in step_name: raise RuntimeError ("Cannot name steps with path-like character /")
+        if "/" in step_name:
+            raise RuntimeError("Cannot name steps with path-like character /")
 
         output_dir = self.cli_client.get_output_dir(step_name)
         self.cli_call.append("-o")
         self.cli_call.append(output_dir)
-        
-        print (self.cli_call)
 
-        out, err = subprocess.Popen(self.cli_call, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+        print(self.cli_call)
 
-        print (f"{out.decode()}\n{err.decode()}")
+        out, err = subprocess.Popen(
+            self.cli_call, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        ).communicate()
+
+        print(f"{out.decode()}\n{err.decode()}")
 
         self.cli_client.cli_steps[step_name] = output_dir
 
+
 class LunaCliClient:
     def __init__(self, base_dir, uuid):
-        """ Initialize Luna CLI Client with a base directory (the root working directory) and a UUID to track results
-    
+        """Initialize Luna CLI Client with a base directory (the root working directory) and a UUID to track results
+
         Args:
-            base_dir (str): parent working directory 
+            base_dir (str): parent working directory
             uuid (str): some unique string for this instance
         """
         self.base_dir = Path(base_dir).expanduser()
@@ -675,8 +704,8 @@ class LunaCliClient:
         self.cli_steps = {}
 
     def bootstrap(self, step_name, data_path):
-        """ Add data  (boostrap a root CLI call)
-    
+        """Add data  (boostrap a root CLI call)
+
         Args:
             step_name (str): Name of the (boostrap) CLI call, determines output directory, can act as inputs to other CLI steps
             data_path (str): Input data path
@@ -684,14 +713,14 @@ class LunaCliClient:
         self.cli_steps[step_name] = Path(data_path).expanduser()
 
     def configure(self, cli_resource, *args, **kwargs):
-        """ Configure a CLI step 
-    
+        """Configure a CLI step
+
         Args:
-            cli_resource (str): CLI Resource string like 
+            cli_resource (str): CLI Resource string like
             args (list): List of CLI arguements
             kwargs (list): List of CLI parameters
         Returns:
-            LunaCliCall 
+            LunaCliCall
         """
         cli_call = cli_resource.split(" ")
         for arg in args:
@@ -704,19 +733,17 @@ class LunaCliClient:
             cli_call.append(f"--{key}")
             if type(value) is not bool:
                 cli_call.append(f"{value}")
-            
+
         return LunaCliCall(cli_call, self)
 
     def get_output_dir(self, step_name):
         """Get output_dir based on base_dir, uuid, and step name
-    
+
         Args:
-            step_name (str): parent working directory 
+            step_name (str): parent working directory
         Returns:
             output_dir (str)
         """
         output_dir = os.path.join(self.base_dir, self.uuid, step_name)
-        
+
         return output_dir
-
-

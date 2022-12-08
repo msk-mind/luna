@@ -2,22 +2,24 @@ import os
 from collections import Counter
 from itertools import product
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def index_to_world(index, origin, spacing):
-    """"Translates index to world coordinates"""
+    """ "Translates index to world coordinates"""
     return origin + index * spacing
 
 
 def world_to_index(coord, origin, spacing, affine=None):
 
-    """"Translates world coordinates to index"""
-    if not np.array_equal( spacing , np.diag(affine)): print ("Warning, affine does not match spacing!", spacing, affine)
+    """ "Translates world coordinates to index"""
+    if not np.array_equal(spacing, np.diag(affine)):
+        print("Warning, affine does not match spacing!", spacing, affine)
     if affine is None:
         return (coord - origin) / spacing
     else:
-        return (coord - origin) / np.diag(affine) 
+        return (coord - origin) / np.diag(affine)
 
 
 def extract_roi_names(roi_list):
@@ -47,6 +49,7 @@ def parse_roi_name(roi):
 
     return indiv_roi
 
+
 def expand_grid(data_dict):
     rows = product(*data_dict.values())
     return pd.DataFrame.from_records(rows, columns=data_dict.keys())
@@ -58,7 +61,7 @@ def check_string(input_string):
     input_string = input_string.replace(",", "_")
     input_string = input_string.replace(";", "_")
     input_string = input_string.replace(":", "_")
-    input_string = input_string.replace("\"", "_")
+    input_string = input_string.replace('"', "_")
     input_string = input_string.replace("=", "_equal_")
     input_string = input_string.replace(">", "_greater_")
     input_string = input_string.replace("<", "_smaller_")
@@ -86,7 +89,7 @@ def get_most_common_element(input_list):
 
 
 def get_version():
-    with open(os.path.join("..", 'VERSION.txt')) as version_file:
+    with open(os.path.join("..", "VERSION.txt")) as version_file:
         version = version_file.read().strip()
 
     return version
@@ -99,7 +102,11 @@ def get_spherical_structure(radius, spacing):
     extent = np.ceil(np.divide(radius, spacing)).astype(np.int)
 
     # Generate coordinate grids. Note that this will generate a grid with 0,0,0 as center voxel.
-    grid_z, grid_y, grid_x= np.mgrid[-extent[0]:extent[0]+1, -extent[1]:extent[1]+1, -extent[2]:extent[2]+1]
+    grid_z, grid_y, grid_x = np.mgrid[
+        -extent[0] : extent[0] + 1,
+        -extent[1] : extent[1] + 1,
+        -extent[2] : extent[2] + 1,
+    ]
 
     # Transform coordinates back to real world space. We then square the values to compute the Euclidean norm later on.
     grid_z = np.power(grid_z * spacing[0], 2.0)
@@ -120,6 +127,3 @@ def makedirs_check(path):
 
     if not os.path.isdir(path):
         os.makedirs(path)
-
-
-

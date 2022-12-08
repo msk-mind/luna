@@ -1,8 +1,7 @@
+import pandas as pd
 from click.testing import CliRunner
 
 from luna.pathology.cli.infer_tile_labels import cli
-
-import pandas as pd
 from luna.pathology.common.schemas import SlideTiles
 
 
@@ -83,7 +82,9 @@ def test_cli_resnet(tmp_path):
     )
 
     assert result.exit_code == 0
-    assert SlideTiles.check(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet")
+    assert SlideTiles.check(
+        f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet"
+    )
 
     assert pd.read_parquet(
         f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet"

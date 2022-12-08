@@ -1,17 +1,15 @@
 import json
-import orjson
-import requests
-import time
-
-from typing import Dict, Optional, Tuple
-from pathlib import Path
-
 import logging
-import girder_client
-import pandas as pd
+import time
+from pathlib import Path
+from typing import Dict, Optional, Tuple
 
+import girder_client
 import histomicstk
 import histomicstk.annotations_and_masks.annotation_and_mask_utils
+import orjson
+import pandas as pd
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +74,7 @@ def get_annotation_uuid(gc, item_id, annotation_name):
 
     annotation_id = df_annotation_data.reset_index()[
         "_id"
-    ].to_list()  # This is the annotation UUID, as a list 
+    ].to_list()  # This is the annotation UUID, as a list
 
     return annotation_id
 

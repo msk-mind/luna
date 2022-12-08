@@ -1,8 +1,8 @@
 import os
+
 from click.testing import CliRunner
 
 from luna.pathology.cli.generate_tiles import cli
-
 from luna.pathology.common.schemas import SlideTiles
 
 

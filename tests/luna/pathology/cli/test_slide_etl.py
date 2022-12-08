@@ -1,8 +1,10 @@
-import pytest
 import os
-from click.testing import CliRunner
-from luna.pathology.cli.slide_etl import cli
+
 import pandas as pd
+import pytest
+from click.testing import CliRunner
+
+from luna.pathology.cli.slide_etl import cli
 
 
 @pytest.fixture(autouse=True)
@@ -23,9 +25,7 @@ def test_slide_etl(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/testdata/data/test-project"
-            ""
-            "/wsi",
+            "tests/luna/pathology/testdata/data/test-project" "" "/wsi",
             "-o",
             table_location,
             "--store_url",
@@ -74,9 +74,7 @@ def test_slide_etl_subset(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/testdata/data/test-project"
-            ""
-            "/wsi",
+            "tests/luna/pathology/testdata/data/test-project" "" "/wsi",
             "-o",
             table_location,
             "--store_url",
@@ -88,8 +86,7 @@ def test_slide_etl_subset(tmp_path):
             "--comment",
             "Test ingestion",
             "--subset-csv",
-            "tests/luna/pathology/cli/testdata"
-            "/slide_etl_subset.csv",
+            "tests/luna/pathology/cli/testdata" "/slide_etl_subset.csv",
         ],
     )
 

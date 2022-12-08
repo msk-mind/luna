@@ -1,12 +1,10 @@
+import numpy as np
 import pytest
-
-from luna.pathology.analysis.ml import BaseTorchTileDataset, BaseTorchTileClassifier
-
 import torch
-
 from torch import nn
 
-import numpy as np
+from luna.pathology.analysis.ml import (BaseTorchTileClassifier,
+                                        BaseTorchTileDataset)
 
 # we are using sample PIL data
 test_data = "tests/luna/pathology/cli/testdata/data/save_tiles/123/123.tiles.csv"

@@ -1,8 +1,8 @@
 from random import randint
 
 import numpy as np
-from skimage import measure
 import seaborn as sns
+from skimage import measure
 
 
 def get_color(name, line_colors={}, fill_colors={}, alpha=100):

@@ -3,19 +3,18 @@ Created on January 31, 2021
 
 @author: pashaa@mskcc.org
 """
-import os, sys
+import os
 import shutil
-import requests
+import sys
 from pathlib import Path
+
+import requests
+
 from luna.common.config import ConfigSet
-from luna.common.constants import DATA_CFG, CONFIG_LOCATION, PROJECT_LOCATION
+from luna.common.constants import CONFIG_LOCATION, DATA_CFG, PROJECT_LOCATION
 from luna.pathology.common.slideviewer_client import (
-    get_slide_id,
-    fetch_slide_ids,
-    download_zip,
-    unzip,
-    download_sv_point_annotation,
-)
+    download_sv_point_annotation, download_zip, fetch_slide_ids, get_slide_id,
+    unzip)
 
 SLIDEVIEWER_API_URL = None
 SLIDEVIEWER_CSV_FILE = None

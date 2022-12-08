@@ -1,17 +1,15 @@
-import click
 import json
 import logging
+
+import click
+import girder_client
 import requests
 
-import girder_client
-
-from luna.pathology.dsa.dsa_api_handler import (
-    get_item_uuid,
-    push_annotation_to_dsa_image,
-    system_check,
-)
-from luna.common.utils import cli_runner
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
+from luna.pathology.dsa.dsa_api_handler import (get_item_uuid,
+                                                push_annotation_to_dsa_image,
+                                                system_check)
 
 init_logger()
 logger = logging.getLogger("dsa_upload")

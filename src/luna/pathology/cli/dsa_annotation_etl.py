@@ -1,30 +1,24 @@
 # imports
-import os
-import logging
-import click
-import requests
-
-import girder_client
-import pandas as pd
-
 import json
-
-from geojson import Feature, Point, Polygon, FeatureCollection
+import logging
+import os
 from copy import deepcopy
 
-from shapely.geometry import shape
+import click
+import girder_client
+import pandas as pd
+import requests
 from dask.distributed import Client, as_completed
+from geojson import Feature, FeatureCollection, Point, Polygon
+from shapely.geometry import shape
 
-from luna.common.utils import cli_runner
 from luna.common.custom_logger import init_logger
-from luna.pathology.dsa.dsa_api_handler import (
-    dsa_authenticate,
-    get_collection_uuid,
-    get_slide_df,
-    get_annotation_uuid,
-    get_annotation_df,
-    system_check
-)
+from luna.common.utils import cli_runner
+from luna.pathology.dsa.dsa_api_handler import (dsa_authenticate,
+                                                get_annotation_df,
+                                                get_annotation_uuid,
+                                                get_collection_uuid,
+                                                get_slide_df, system_check)
 
 init_logger()
 logger = logging.getLogger("dsa_annotation_etl")
@@ -121,7 +115,7 @@ def dsa_annotation_etl(
     Returns:
         dict: metadata about function call
     """
-    #girder = girder_client.GirderClient(apiUrl=input_dsa_endpoint)
+    # girder = girder_client.GirderClient(apiUrl=input_dsa_endpoint)
     try:
         girder = girder_client.GirderClient(apiUrl=input_dsa_endpoint)
         # girder python client doesn't support turning off ssl verify.
@@ -138,7 +132,7 @@ def dsa_annotation_etl(
         logger.error(exc)
         raise RuntimeError("Error connecting to DSA API")
 
-    #dsa_authenticate(girder, username, password)
+    # dsa_authenticate(girder, username, password)
 
     collection_uuid = get_collection_uuid(girder, collection_name)
 
@@ -233,7 +227,7 @@ class DsaAnnotationProcessor:
             elif row[shape_type_col] == "point":
                 geometry = Point((x[0], y[0]))
             else:
-                continue # don't process non-polyline(regional) or point annotations
+                continue  # don't process non-polyline(regional) or point annotations
 
             logger.info(f"\tCreated geometry {str(shape(geometry)):.40s}...")
             feature = Feature(
@@ -265,16 +259,16 @@ class DsaAnnotationProcessor:
         if annotation_uuids is None:
             return None
 
-        # need to loop through annotation uuids since the same annotation name 
+        # need to loop through annotation uuids since the same annotation name
         # can coorespond to multiple uuids (a 'Regional' annotation on the same
         # slide made two days apart)
         df_annotations = []
         for annotation_uuid in annotation_uuids:
 
-       	    df_annotation = get_annotation_df(self.girder, annotation_uuid)
+            df_annotation = get_annotation_df(self.girder, annotation_uuid)
             df_annotations.append(df_annotation)
-	
-        df_annotations = pd.concat(df_annotations) 
+
+        df_annotations = pd.concat(df_annotations)
 
         # This turns the regional data into a nice geojson
         feature_collection = self.histomics_annotation_table_to_geojson(

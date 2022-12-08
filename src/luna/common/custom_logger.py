@@ -1,6 +1,7 @@
-import os
 import logging
+import os
 from logging.handlers import RotatingFileHandler
+
 from log4mongo.handlers import MongoHandler
 
 from luna.common.config import ConfigSet

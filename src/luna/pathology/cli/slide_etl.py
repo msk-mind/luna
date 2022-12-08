@@ -1,28 +1,25 @@
 # General imports
-import os
 import logging
-import click
-import openslide
-
-from pathlib import Path
-from tqdm import tqdm
-import pandas as pd
-import numpy as np
+import os
 from datetime import datetime
+from pathlib import Path
 
-from dask.distributed import Client, as_completed
-from luna.common.adapters import IOAdapter
-from luna.common.utils import rebase_schema_numeric, apply_csv_filter, generate_uuid
-from luna.pathology.common.utils import (
-    get_downscaled_thumbnail,
-    get_scale_factor_at_magnfication,
-    get_stain_vectors_macenko,
-)
-from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
-
+import click
+import numpy as np
+import openslide
+import pandas as pd
 import pyarrow.parquet as pq
+from dask.distributed import Client, as_completed
 from pyarrow import Table
+from tqdm import tqdm
+
+from luna.common.adapters import IOAdapter
+from luna.common.custom_logger import init_logger
+from luna.common.utils import (apply_csv_filter, cli_runner, generate_uuid,
+                               rebase_schema_numeric)
+from luna.pathology.common.utils import (get_downscaled_thumbnail,
+                                         get_scale_factor_at_magnfication,
+                                         get_stain_vectors_macenko)
 
 init_logger()
 logger = logging.getLogger("slide_etl")
@@ -202,8 +199,10 @@ def slide_etl(
 
     output_table = os.path.join(output_dir, f"slide_ingest_{project_name}.parquet")
 
-
-    pq.write_table( Table.from_pandas(df.drop(columns=['ingest_time', 'generation_time'])), output_table ) # Time columns causing issues in dremio
+    pq.write_table(
+        Table.from_pandas(df.drop(columns=["ingest_time", "generation_time"])),
+        output_table,
+    )  # Time columns causing issues in dremio
 
     logger.info(f"Saved table at {output_table}")
 
@@ -275,7 +274,7 @@ class SlideProcessor:
         kv.update(self.generate_properties(path))
         kv.update(self.estimate_stain_type(path))
         kv.update(self.writer.write(path, f"{self.project}/slides"))
-        kv['slide_image'] = kv['data_url']
+        kv["slide_image"] = kv["data_url"]
 
         return kv
 

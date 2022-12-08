@@ -1,15 +1,15 @@
-'''
+"""
 Created on November 04, 2020
 
 @author: pashaa@mskcc.org
-'''
+"""
 import os
 import shutil
 import subprocess
 
 import pytest
 
-'''
+"""
 NOTE: These unit tests have been deliberately commented out.
  
 To execute these unit tests, follow these steps to allow localhost rsync and then uncomment tests to run them
@@ -28,26 +28,25 @@ Now the terminal will not require a passhprase for any subsequent executions
 3. If the ssh-agent is not running, then start the ssh-agent with the command below
 
 $ ssh-agent bash
-'''
-
+"""
 
 
 @pytest.fixture(autouse=True)
 def env():
-    print('------setup------')
-    os.environ['BWLIMIT'] = '1G'
-    os.environ['HOST'] = '127.0.0.1'
-    os.environ['RAW_DATA_PATH'] = os.getcwd()+\
-                                     '/tests/luna/radiology/proxy_table/test_data/destination'
-
+    print("------setup------")
+    os.environ["BWLIMIT"] = "1G"
+    os.environ["HOST"] = "127.0.0.1"
+    os.environ["RAW_DATA_PATH"] = (
+        os.getcwd() + "/tests/luna/radiology/proxy_table/test_data/destination"
+    )
 
     yield env
 
-    print('------teardown------')
-    shutil.rmtree(os.environ.get('RAW_DATA_PATH'))
+    print("------teardown------")
+    shutil.rmtree(os.environ.get("RAW_DATA_PATH"))
 
 
-'''
+"""
 def test_transfer_files_1(env):
     #
     # Chunk file points to a files and include limits to one file types
@@ -79,10 +78,10 @@ def test_transfer_files_1(env):
     assert not os.path.exists(os.getenv('RAW_DATA_PATH')+'/test1.raw')
 
     assert not os.path.exists(os.getenv('RAW_DATA_PATH')+'/nested_dir')
-'''
+"""
 
 
-'''
+"""
 def test_transfer_files_2(env):
     #
     # Chunk file points to a dir and include limits to two file types
@@ -119,4 +118,4 @@ def test_transfer_files_2(env):
     assert os.path.exists(os.getenv('RAW_DATA_PATH') + '/source/nested_dir/double_nested_dir/test3.mha')
     assert not os.path.exists(os.getenv('RAW_DATA_PATH') + '/source/nested_dir/double_nested_dir/test3.mhd')
     assert not os.path.exists(os.getenv('RAW_DATA_PATH') + '/source/nested_dir/double_nested_dir/test3.raw')
-'''
+"""

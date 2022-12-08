@@ -1,17 +1,18 @@
-import os, logging
-from dirhash import dirhash
+import logging
+import os
+from pathlib import Path
 
+import cv2
+import itk
 import numpy as np
 import pandas as pd
-
-from PIL import Image
-import cv2
-from radiomics import featureextractor  # This module is used for interaction with pyradiomics
-from pydicom import dcmread
+from dirhash import dirhash
 from medpy.io import load, save
+from PIL import Image
+from pydicom import dcmread
+from radiomics import \
+    featureextractor  # This module is used for interaction with pyradiomics
 from skimage.transform import resize
-import itk
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ logger = logging.getLogger("radiomics.glcm")
 logger.setLevel(logging.ERROR)
 
 ## Fix for ITK snap
+
 
 def find_centroid(image, width, height):
     """
@@ -32,8 +34,8 @@ def find_centroid(image, width, height):
     """
     seg = np.array(image)
 
-    xcenter = np.argmax(np.mean(seg[:,:,0], axis=0))
-    ycenter = np.argmax(np.mean(seg[:,:,0], axis=1))
+    xcenter = np.argmax(np.mean(seg[:, :, 0], axis=0))
+    ycenter = np.argmax(np.mean(seg[:, :, 0], axis=1))
 
     return (int(xcenter), int(ycenter))
 
@@ -58,7 +60,12 @@ def crop_images(xcenter, ycenter, dicom, overlay, crop_w, crop_h, image_w, image
     width_rad = crop_w // 2
     height_rad = crop_h // 2
 
-    xmin, ymin, xmax, ymax = (xcenter - width_rad), (ycenter - height_rad), (xcenter + width_rad), (ycenter + height_rad)
+    xmin, ymin, xmax, ymax = (
+        (xcenter - width_rad),
+        (ycenter - height_rad),
+        (xcenter + width_rad),
+        (ycenter + height_rad),
+    )
 
     if xmin < 0:
         xmin = 0
@@ -103,6 +110,7 @@ def normalize(image: np.ndarray) -> np.ndarray:
 
     return normalized_image
 
+
 def slice_to_image(image_slice, width, height, normalize=False):
     """
     Normalize and create an image binary from the given 2D array.
@@ -128,7 +136,7 @@ def slice_to_image(image_slice, width, height, normalize=False):
 
     im = Image.fromarray(image_2d_scaled)
     # resize pngs to user provided width/height
-    im = im.resize( (width, height) )
+    im = im.resize((width, height))
 
     return im
 
@@ -147,9 +155,9 @@ def subset_bound_seg(src_path, output_path, start_slice, end_slice):
     start_slice = int(start_slice)
     end_slice = int(end_slice)
     try:
-        file_path = src_path.split(':')[-1]
+        file_path = src_path.split(":")[-1]
         data, header = load(file_path)
-        subset = data[:,:,start_slice:end_slice]
+        subset = data[:, :, start_slice:end_slice]
         save(subset, output_path, hdr=header)
     except Exception as err:
         print(err)
@@ -157,8 +165,17 @@ def subset_bound_seg(src_path, output_path, start_slice, end_slice):
     return output_path
 
 
-def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
-                      width, height, crop_width, crop_height, n_slices=None):
+def create_images(
+    scan_path,
+    seg_path,
+    subset_scan_path,
+    subset_seg_path,
+    width,
+    height,
+    crop_width,
+    crop_height,
+    n_slices=None,
+):
     """
     Create images from 3d segmentations.
 
@@ -177,9 +194,9 @@ def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
     from preprocess import normalize
 
     if subset_seg_path:
-        file_path = subset_seg_path.split(':')[-1]
+        file_path = subset_seg_path.split(":")[-1]
     else:
-        file_path = seg_path.split(':')[-1]
+        file_path = seg_path.split(":")[-1]
     print("Processing ", file_path)
     data, header = load(file_path)
     num_images = data.shape[2]
@@ -189,47 +206,47 @@ def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
     # from the series to identify the dicom slices that were annotated.
     slices = []
     for i in range(num_images):
-        image_slice = data[:,:,i]
+        image_slice = data[:, :, i]
 
         if np.any(image_slice):
             im = slice_to_image(image_slice, width, height)
 
             # save segmentation in red color.
-            rgb = im.convert('RGB')
+            rgb = im.convert("RGB")
             red_channel = rgb.getdata(0)
             rgb.putdata(red_channel)
 
-            slices.append( (i, rgb) )
+            slices.append((i, rgb))
 
     if len(slices) == 0:
         print("No annotation found ", file_path)
         return None
 
     slices_len = len(slices)
-    mid_idx = slices_len//2
+    mid_idx = slices_len // 2
     # find centroid using the mid segmentation and return x,y
     centroid = find_centroid(slices[mid_idx][1], width, height)
-    
+
     res = [slice + (slices_len, centroid[0], centroid[1]) for slice in slices]
 
     # if the user specified n_slices to select, then select the n_slices from the middle.
     if n_slices and n_slices < slices_len:
-        before = n_slices//2
+        before = n_slices // 2
         after = n_slices - before
-        res = res[mid_idx - before: mid_idx + after]
+        res = res[mid_idx - before : mid_idx + after]
 
     ## populate SCAN images for indices identified from SEG processing.
     if subset_scan_path:
-        file_scan_path = subset_scan_path.split(':')[-1]
+        file_scan_path = subset_scan_path.split(":")[-1]
     else:
-        file_scan_path = scan_path.split(':')[-1]
+        file_scan_path = scan_path.split(":")[-1]
     print("Processing ", file_scan_path)
     data, header = load(file_scan_path)
 
     scans = []
     for res_slice in res:
-        image_slice = data[:,:,res_slice[0]]
-        #image_slice = np.flipud(data[:,:,res_slice[0]])
+        image_slice = data[:, :, res_slice[0]]
+        # image_slice = np.flipud(data[:,:,res_slice[0]])
         if crop_width and crop_height:
             im = slice_to_image(image_slice, width, height)
         else:
@@ -246,7 +263,16 @@ def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
         overlay = Image.blend(dicom_img.convert("RGB"), seg_img, 0.3)
 
         if crop_width and crop_height:
-            dicom_binary, overlay = crop_images(res[idx][3], res[idx][4], dicom_img, overlay, crop_width, crop_height, width, height)
+            dicom_binary, overlay = crop_images(
+                res[idx][3],
+                res[idx][4],
+                dicom_img,
+                overlay,
+                crop_width,
+                crop_height,
+                width,
+                height,
+            )
         else:
             overlay = overlay.tobytes()
         images.append((res[idx][2], dicom_binary, overlay))
@@ -256,7 +282,7 @@ def create_images(scan_path, seg_path, subset_scan_path, subset_seg_path,
 
 def calculate_target_shape(volume, header, target_spacing):
     """
-    Calculates a new number of pixels along a dimension determined by multiplying the 
+    Calculates a new number of pixels along a dimension determined by multiplying the
     current dimension by a scale factor of (source spacing / target spacing)
 
     The dimension of the volume, header spacing, and target spacing must all match, but the common usecase is 3D
@@ -267,9 +293,12 @@ def calculate_target_shape(volume, header, target_spacing):
     :return: target_shape as list
     """
     src_spacing = header.get_voxel_spacing()
-    target_shape = [int(src_d * src_sp / tar_sp) for src_d, src_sp, tar_sp in
-                    zip(volume.shape, src_spacing, target_spacing)]
+    target_shape = [
+        int(src_d * src_sp / tar_sp)
+        for src_d, src_sp, tar_sp in zip(volume.shape, src_spacing, target_spacing)
+    ]
     return target_shape
+
 
 def resample_volume(volume, order, target_shape):
     """
@@ -283,10 +312,17 @@ def resample_volume(volume, order, target_shape):
     # Only anti_alias if order =/= 0
     anti_alias = False if order == 0 else True
 
-    volume = resize(volume, target_shape,
-                    order=order, clip=True, mode='edge',
-                    preserve_range=True, anti_aliasing=anti_alias)
+    volume = resize(
+        volume,
+        target_shape,
+        order=order,
+        clip=True,
+        mode="edge",
+        preserve_range=True,
+        anti_aliasing=anti_alias,
+    )
     return volume
+
 
 def interpolate_segmentation_masks(seg, target_shape):
     """
@@ -302,5 +338,3 @@ def interpolate_segmentation_masks(seg, target_shape):
         mask = resample_volume(seg == roi, 0, target_shape).astype(bool)
         new_seg[mask] = int(roi)
     return new_seg
-
-

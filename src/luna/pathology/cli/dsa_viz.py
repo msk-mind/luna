@@ -1,22 +1,21 @@
-import click
-from decimal import Decimal
-import pandas as pd
+import copy
 import json
+import logging
+import os
+import re
+from decimal import Decimal
+
+import click
 import geojson
 import ijson
-import copy
-import os
-import logging
-from PIL import Image
-import re
 import numpy as np
+import pandas as pd
+from PIL import Image
 
-from luna.pathology.dsa.utils import (
-    get_continuous_color,
-    vectorize_np_array_bitmask_by_pixel_value,
-)
-from luna.common.utils import cli_runner
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
+from luna.pathology.dsa.utils import (
+    get_continuous_color, vectorize_np_array_bitmask_by_pixel_value)
 
 init_logger()
 logger = logging.getLogger("dsa_viz")
