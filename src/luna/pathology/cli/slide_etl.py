@@ -15,11 +15,17 @@ from tqdm import tqdm
 
 from luna.common.adapters import IOAdapter
 from luna.common.custom_logger import init_logger
-from luna.common.utils import (apply_csv_filter, cli_runner, generate_uuid,
-                               rebase_schema_numeric)
-from luna.pathology.common.utils import (get_downscaled_thumbnail,
-                                         get_scale_factor_at_magnfication,
-                                         get_stain_vectors_macenko)
+from luna.common.utils import (
+    apply_csv_filter,
+    cli_runner,
+    generate_uuid,
+    rebase_schema_numeric,
+)
+from luna.pathology.common.utils import (
+    get_downscaled_thumbnail,
+    get_scale_factor_at_magnfication,
+    get_stain_vectors_macenko,
+)
 
 init_logger()
 logger = logging.getLogger("slide_etl")

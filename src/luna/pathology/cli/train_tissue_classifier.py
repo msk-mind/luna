@@ -3,9 +3,7 @@ import os
 from typing import Callable, Dict, List, Union
 
 import click
-import h5py
 import pandas as pd
-import pyarrow.parquet as pq
 import ray
 import ray.train as train
 import torch
@@ -14,16 +12,24 @@ import torch.optim as optim
 from ray import tune
 from ray.train import Trainer
 from torch.utils.data import DataLoader
-from torchmetrics import (Accuracy, ConfusionMatrix, F1Score, MetricCollection,
-                          Precision, Recall)
+from torchmetrics import (
+    Accuracy,
+    ConfusionMatrix,
+    F1Score,
+    MetricCollection,
+    Precision,
+    Recall,
+)
 from torchvision import transforms
 
 from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner, load_func
-from luna.pathology.analysis.ml import (BaseTorchClassifier,
-                                        BaseTorchTileDataset, HDF5Dataset,
-                                        TorchTileClassifierTrainer,
-                                        get_group_stratified_sampler)
+from luna.pathology.analysis.ml import (
+    BaseTorchClassifier,
+    HDF5Dataset,
+    TorchTileClassifierTrainer,
+    get_group_stratified_sampler,
+)
 
 init_logger()
 logger = logging.getLogger("train_tissue_classifier")

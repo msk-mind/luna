@@ -1,18 +1,22 @@
 # General imports
-import json
 import logging
 import os
 import sys
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from pathlib import Path
 
 import click
-import yaml
+import h5py
+import openslide
+import pandas as pd
+from tqdm import tqdm
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner, grouper
+from luna.pathology.common.utils import get_tile_from_slide
 
 init_logger()
 logger = logging.getLogger("generate_tiles")
-
-from luna.common.utils import cli_runner
 
 _params_ = [
     ("input_slide_image", str),
@@ -76,19 +80,6 @@ def cli(**cli_kwargs):
             -o 10001/tile_data
     """
     cli_runner(cli_kwargs, _params_, save_tiles)
-
-
-import itertools
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from pathlib import Path
-
-import h5py
-import openslide
-import pandas as pd
-from tqdm import tqdm
-
-from luna.common.utils import grouper
-from luna.pathology.common.utils import get_tile_from_slide
 
 
 def get_tile_array(iterrows: pd.DataFrame, input_slide_image):

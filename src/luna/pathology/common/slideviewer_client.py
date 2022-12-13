@@ -58,7 +58,7 @@ def fetch_slide_ids(
     # the file is then written to the dest directory
     new_csv_file = os.path.join(dest_dir, "project_" + str(project_id) + ".csv")
 
-    if csv_file == None or csv_file == "" or not os.path.exists(csv_file):
+    if csv_file is None or csv_file == "" or not os.path.exists(csv_file):
 
         url = url + "exportProjectCSV?pid={pid}".format(pid=str(project_id))
         res = requests.get(url)
@@ -126,7 +126,7 @@ def unzip(zipfile_path: str) -> any:
     logger.info("Unzipping " + zipfile_path)
     try:
         return zipfile.ZipFile(zipfile_path)  # returns read file pointer
-    except zipfile.BadZipFile as err:
+    except zipfile.BadZipFile:
         logger.exception("Dumping invalid Zipfile " + zipfile_path + ":")
         return None
 
@@ -145,7 +145,7 @@ def download_sv_point_annotation(url: str) -> Dict[str, any]:
     try:
         response = requests.get(url)
         data = response.json()
-    except Exception as err:
+    except Exception:
         logger.exception("General exception raised while trying " + url)
         return None
 

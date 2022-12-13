@@ -1,7 +1,5 @@
 import os
-from pathlib import Path
 
-import medpy.io
 import numpy as np
 import pandas as pd
 import yaml

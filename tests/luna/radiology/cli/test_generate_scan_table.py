@@ -4,7 +4,7 @@ import pandas as pd
 import yaml
 from click.testing import CliRunner
 
-from luna.radiology.cli.generate_scan_table import *
+from luna.radiology.cli.generate_scan_table import cli
 
 
 def test_cli(tmpdir):

@@ -1,17 +1,21 @@
-import json
 import logging
 import os
+from pathlib import Path
+from typing import List
 
 import click
+import medpy.io
+import numpy as np
+import pandas as pd
+from radiomics import (
+    featureextractor,  # This module is used for interaction with pyradiomics
+)
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
 
 init_logger()
 logger = logging.getLogger("extract_radiomics")
-
-from typing import List
-
-from luna.common.utils import cli_runner
 
 _params_ = [
     ("input_itk_volume", str),
@@ -78,15 +82,6 @@ def cli(**cli_kwargs):
                         -o ./radiomics_result/
     """
     cli_runner(cli_kwargs, _params_, extract_radiomics_multiple_labels)
-
-
-from pathlib import Path
-
-import medpy.io
-import numpy as np
-import pandas as pd
-from radiomics import \
-    featureextractor  # This module is used for interaction with pyradiomics
 
 
 def extract_radiomics_multiple_labels(

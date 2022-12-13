@@ -1,13 +1,17 @@
 import logging
+from pathlib import Path
 
 import click
+import numpy as np
+import pandas as pd
+import scipy.ndimage
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
+from luna.radiology.mirp.imageReaders import read_itk_image
 
 init_logger()
 logger = logging.getLogger("coregister_volumes")
-
-from luna.common.utils import cli_runner
 
 _params_ = [
     ("input_itk_volume", str),
@@ -75,16 +79,6 @@ def cli(**cli_kwargs):
             -o ./registered/
     """
     cli_runner(cli_kwargs, _params_, coregister_volumes)
-
-
-from pathlib import Path
-
-import numpy as np
-import pandas as pd
-import scipy.ndimage
-
-from luna.radiology.mirp.imageReaders import (read_itk_image,
-                                              read_itk_segmentation)
 
 
 def coregister_volumes(

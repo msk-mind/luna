@@ -1,14 +1,18 @@
 import logging
 import os
+from pathlib import Path
 
 import click
+import itk
+import medpy.io
+from pydicom import dcmread
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
 
 init_logger()
 logger = logging.getLogger("dicom_to_itk")
 
-from luna.common.utils import cli_runner
 
 _params_ = [
     ("input_dicom_folder", str),
@@ -66,13 +70,6 @@ def cli(**cli_kwargs):
             -o ./scans/10000/2/NRRD
     """
     cli_runner(cli_kwargs, _params_, dicom_to_itk)
-
-
-from pathlib import Path
-
-import itk
-import medpy.io
-from pydicom import dcmread
 
 
 def dicom_to_itk(

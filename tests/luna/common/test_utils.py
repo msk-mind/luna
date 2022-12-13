@@ -3,8 +3,13 @@ import os
 import pytest
 import yaml
 
-from luna.common.utils import (cli_runner, expand_inputs, generate_uuid,
-                               get_absolute_path, validate_params)
+from luna.common.utils import (
+    cli_runner,
+    expand_inputs,
+    generate_uuid,
+    get_absolute_path,
+    validate_params,
+)
 
 
 def test_generate_uuid():

@@ -1,12 +1,8 @@
-import copy
 import logging
 
 import numpy as np
-import pandas as pd
-from scipy.ndimage import binary_dilation, binary_erosion
+from scipy.ndimage import binary_dilation
 from skimage.segmentation import slic
-
-from luna.radiology.mirp.imageClass import ImageClass
 
 
 def saturate_image(img_obj, intensity_range, fill_value):
@@ -429,8 +425,7 @@ def transform_images(
 
         elif curr_filter == "laplacian_of_gaussian":
             # Laplacian of Gaussian filters
-            from mirp.imageFilters.laplacianOfGaussian import \
-                LaplacianOfGaussianFilter
+            from mirp.imageFilters.laplacianOfGaussian import LaplacianOfGaussianFilter
 
             filter_obj = LaplacianOfGaussianFilter(settings=settings)
             feat_list += filter_obj.apply_transformation(

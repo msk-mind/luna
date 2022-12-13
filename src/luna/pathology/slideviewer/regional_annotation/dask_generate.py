@@ -12,7 +12,9 @@ from luna.common.CodeTimer import CodeTimer
 from luna.common.config import ConfigSet
 from luna.common.custom_logger import init_logger
 from luna.pathology.common.annotation_utils import (
-    check_slideviewer_and_download_bmp, convert_slide_bitmap_to_geojson)
+    check_slideviewer_and_download_bmp,
+    convert_slide_bitmap_to_geojson,
+)
 from luna.pathology.common.slideviewer_client import fetch_slide_ids
 
 

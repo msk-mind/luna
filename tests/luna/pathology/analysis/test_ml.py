@@ -3,8 +3,7 @@ import pytest
 import torch
 from torch import nn
 
-from luna.pathology.analysis.ml import (BaseTorchTileClassifier,
-                                        BaseTorchTileDataset)
+from luna.pathology.analysis.ml import BaseTorchTileClassifier, BaseTorchTileDataset
 
 # we are using sample PIL data
 test_data = "tests/luna/pathology/cli/testdata/data/save_tiles/123/123.tiles.csv"

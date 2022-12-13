@@ -1,12 +1,18 @@
 import numpy as np
 import pytest
 
-import luna.common.constants as const
-from luna.common.config import ConfigSet
-from luna.pathology.common.utils import *
-from luna.pathology.common.utils import (convert_halo_xml_to_roi,
-                                         convert_xml_to_mask,
-                                         get_labelset_keys)
+from luna.pathology.common.utils import (
+    DeepZoomGenerator,
+    convert_halo_xml_to_roi,
+    convert_xml_to_mask,
+    get_downscaled_thumbnail,
+    get_full_resolution_generator,
+    get_labelset_keys,
+    get_scale_factor_at_magnfication,
+    get_tile_array,
+    get_tile_color,
+    openslide,
+)
 
 output_dir = "tests/luna/pathology/common/testdata/output-123"
 slide_path = "tests/luna/pathology/common/testdata/123.svs"
@@ -56,10 +62,10 @@ def test_get_downscaled_thumbnail():
 
 def test_get_labelset_keys():
 
-    cfg = ConfigSet(
-        name=const.DATA_CFG,
-        config_file="tests/luna/pathology/common/testdata/point_geojson_config.yaml",
-    )
+    # cfg = ConfigSet(
+    #     name=const.DATA_CFG,
+    #     config_file="tests/luna/pathology/common/testdata/point_geojson_config.yaml",
+    # )
 
     res = get_labelset_keys()
 

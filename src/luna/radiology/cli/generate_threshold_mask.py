@@ -1,14 +1,17 @@
 import logging
-import os
 
 import click
+import numpy as np
+import pandas as pd
+from scipy.ndimage import distance_transform_edt
+from skimage.morphology import remove_small_holes
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
+from luna.radiology.mirp.imageReaders import read_itk_image
 
 init_logger()
 logger = logging.getLogger("generate_threshold_mask")
-
-from luna.common.utils import cli_runner
 
 _params_ = [
     ("input_itk_volume", str),
@@ -68,16 +71,6 @@ _params_ = [
 def cli(**cli_kwargs):
     """ """
     cli_runner(cli_kwargs, _params_, generate_threshold_mask)
-
-
-import numpy as np
-import pandas as pd
-from scipy.ndimage import (binary_dilation, distance_transform_edt,
-                           generate_binary_structure)
-from skimage.morphology import area_closing, binary_erosion, remove_small_holes
-
-from luna.radiology.mirp.imageReaders import (read_itk_image,
-                                              read_itk_segmentation)
 
 
 def generate_threshold_mask(

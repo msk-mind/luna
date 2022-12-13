@@ -1,15 +1,15 @@
 import logging
+from pathlib import Path
 
 import click
+import medpy.io
+from pydicom import dcmread
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
 
 init_logger()
 logger = logging.getLogger("match_metadata")
-
-from typing import List
-
-from luna.common.utils import cli_runner
 
 _params_ = [("dicom_tree_folder", str), ("input_itk_labels", str), ("output_dir", str)]
 
@@ -44,12 +44,6 @@ def cli(**cli_kwargs):
             -o ./matched_dicoms/
     """
     cli_runner(cli_kwargs, _params_, match_metadata)
-
-
-from pathlib import Path
-
-import medpy.io
-from pydicom import dcmread
 
 
 def match_metadata(dicom_tree_folder: str, input_itk_labels: str, output_dir: str):

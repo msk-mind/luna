@@ -8,9 +8,7 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
-import shapely
-from dask.distributed import rejoin, secede
-from shapely.geometry import MultiPolygon, Polygon, mapping, shape
+from shapely.geometry import Polygon
 from skimage import measure
 
 # max amount of time for a geojson to be generated. if generation surpasses this limit, it is likely the annotation file is

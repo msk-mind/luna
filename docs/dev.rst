@@ -44,7 +44,7 @@ Build docker image::
 
     make build-docker
 
-The docker image is also available on DockerHub: `luna-dev <https://hub.docker.com/r/mskmind/luna-dev>`_.
+The docker image is also available on DockerHub: `luna <https://hub.docker.com/r/mskmind/luna>`_.
 
 This docker image includes the pre-requisites and python dependencies.
 This is primarily used for circleci testing at the moment, but can be extended based on your development needs.

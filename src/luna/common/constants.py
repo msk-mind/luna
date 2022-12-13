@@ -5,7 +5,7 @@ Created on November 16, 2020
 """
 import os
 
-#### Table Names ####
+# Table Names
 from luna.common.utils import get_absolute_path
 
 # Application Constants
@@ -23,7 +23,7 @@ SCAN_TABLE = TABLE_DIR + "scan"
 SCAN_ANNOTATION_TABLE = TABLE_DIR + "scan_annotation"
 FEATURE_TABLE = TABLE_DIR + "feature"
 
-#### Raw Data Directories ####
+# Raw Data Directories
 DICOMS = "dicoms"
 SCANS = "scans"
 SCAN_ANNOTATIONS = "scan_annotations"

@@ -7,11 +7,10 @@ import h5py
 import numpy as np
 import torch
 import torch.nn as nn
-from CLAM.datasets.dataset_h5 import (Dataset_All_Bags, Whole_Slide_Bag_FP,
-                                      eval_transforms)
+from CLAM.datasets.dataset_h5 import Dataset_All_Bags, eval_transforms
 from CLAM.models.resnet_custom import resnet50_baseline
 from CLAM.utils.file_utils import save_hdf5
-from CLAM.utils.utils import collate_features, print_network
+from CLAM.utils.utils import collate_features
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 

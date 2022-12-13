@@ -1,17 +1,30 @@
 # General imports
+import itertools
 import logging
 import os
 import sys
 from collections import defaultdict
 
 import click
+import numpy as np
+import openslide
+import pandas as pd
+import scipy.stats
+from PIL import Image
+from tqdm import tqdm
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
+from luna.pathology.common.utils import (
+    extract_patch_texture_features,
+    get_downscaled_thumbnail,
+    get_full_resolution_generator,
+    get_stain_vectors_macenko,
+)
 
 init_logger()
 logger = logging.getLogger("extract_stain_texture")
 
-from luna.common.utils import cli_runner
 
 _params_ = [
     ("input_slide_image", str),
@@ -81,20 +94,6 @@ def cli(**cli_kwargs):
     """
     cli_runner(cli_kwargs, _params_, extract_stain_texture)
 
-
-import itertools
-
-import numpy as np
-import openslide
-import pandas as pd
-import scipy.stats
-from PIL import Image
-from tqdm import tqdm
-
-from luna.pathology.common.utils import (extract_patch_texture_features,
-                                         get_downscaled_thumbnail,
-                                         get_full_resolution_generator,
-                                         get_stain_vectors_macenko)
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -176,7 +175,7 @@ def extract_stain_texture(
             plot=False,
         )
 
-        if not texture_values is None:
+        if texture_values is not None:
             for key, values in texture_values.items():
                 features[key].append(values)
         logger.info(f"Processed Tile [{n_tile} / {N_tiles}] at {address}")

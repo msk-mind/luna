@@ -14,11 +14,13 @@ from shapely.geometry import shape
 
 from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner
-from luna.pathology.dsa.dsa_api_handler import (dsa_authenticate,
-                                                get_annotation_df,
-                                                get_annotation_uuid,
-                                                get_collection_uuid,
-                                                get_slide_df, system_check)
+from luna.pathology.dsa.dsa_api_handler import (
+    get_annotation_df,
+    get_annotation_uuid,
+    get_collection_uuid,
+    get_slide_df,
+    system_check,
+)
 
 init_logger()
 logger = logging.getLogger("dsa_annotation_etl")

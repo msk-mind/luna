@@ -1,5 +1,4 @@
 import os
-import shutil
 
 import pytest
 from click.testing import CliRunner

@@ -1,33 +1,14 @@
 import copy
-import json
 import logging
 import os
-import shutil
 from datetime import datetime
-from io import BytesIO
 from typing import List, Tuple, Union
 
-import click
-import dask
 import numpy as np
-import pandas as pd
-import shapely
-import yaml
-from dask.distributed import Client, as_completed
 from filehash import FileHash
 from PIL import Image
-from skimage import measure
 
-import luna.common.constants as const
-from luna.common.CodeTimer import CodeTimer
-from luna.common.config import ConfigSet
-from luna.common.utils import get_absolute_path
-from luna.pathology.common.build_geojson import (
-    build_all_geojsons_from_default, build_default_geojson_from_annotation,
-    concatenate_regional_geojsons)
-from luna.pathology.common.slideviewer_client import (download_zip,
-                                                      fetch_slide_ids, unzip)
-from luna.pathology.common.utils import get_labelset_keys
+from luna.pathology.common.slideviewer_client import download_zip, unzip
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
@@ -151,7 +132,7 @@ def convert_bmp_to_npy(bmp_file: str, output_folder: str) -> str:
     """
     Image.MAX_IMAGE_PIXELS = None
 
-    if not ".bmp" in bmp_file:
+    if ".bmp" not in bmp_file:
         return ""
 
     new_image_name = os.path.basename(bmp_file).replace(".bmp", ".npy")

@@ -2,9 +2,11 @@ import logging
 
 import numpy as np
 
-from luna.radiology.mirp.imageProcess import (crop_image,
-                                              get_supervoxel_overlap,
-                                              get_supervoxels)
+from luna.radiology.mirp.imageProcess import (
+    crop_image,
+    get_supervoxel_overlap,
+    get_supervoxels,
+)
 from luna.radiology.mirp.utilities import extract_roi_names
 
 

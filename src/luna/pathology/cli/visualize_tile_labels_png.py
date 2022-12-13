@@ -1,20 +1,23 @@
 # General imports
-import json
 import logging
 import os
-import sys
+from typing import List
 
 import click
-import yaml
+import openslide
+import pandas as pd
+from PIL import Image
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
+from luna.pathology.common.utils import (
+    get_downscaled_thumbnail,
+    get_scale_factor_at_magnfication,
+    visualize_tiling_scores,
+)
 
 init_logger()
 logger = logging.getLogger("visualize_tiles_png")
-
-from typing import List
-
-from luna.common.utils import cli_runner
 
 _params_ = [
     ("input_slide_image", str),
@@ -77,17 +80,6 @@ def cli(**cli_kwargs):
 
     """
     cli_runner(cli_kwargs, _params_, visualize_tiles)
-
-
-from pathlib import Path
-
-import openslide
-import pandas as pd
-from PIL import Image
-
-from luna.pathology.common.utils import (get_downscaled_thumbnail,
-                                         get_scale_factor_at_magnfication,
-                                         visualize_tiling_scores)
 
 
 def visualize_tiles(

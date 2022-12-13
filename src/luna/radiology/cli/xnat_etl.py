@@ -4,9 +4,9 @@ import logging
 import os
 
 import click
-import dask.dataframe as dd
 import pandas as pd
 import pyxnat
+
 # ===========================================
 # Custom Imports
 import xmltodict

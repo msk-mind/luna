@@ -77,11 +77,11 @@ def with_event_loop(func):
         logger.info("Initializing job... getting parent worker")
         try:
             worker = get_worker()
-        except ValueError as exc:
+        except ValueError:
             logger.error("Could not get dask worker!")
             raise RuntimeError("Data-processing job called without parent dask worker")
-        except Exception as exc:
-            logger.exception(f"Unknown exception when getting dask worker")
+        except Exception:
+            logger.exception("Unknown exception when getting dask worker")
 
         logger.info(f"Successfully found worker {worker}")
         logger.info(f"Running job {func} with args: {args}, kwargs: {kwargs}")
@@ -156,11 +156,11 @@ def dask_job(job_name):
             # See if we are on a dask worker
             try:
                 worker = get_worker()
-            except ValueError as exc:
+            except ValueError:
                 logger.warning("Could not get dask worker!")
                 worker = None
-            except Exception as exc:
-                logger.exception(f"Unknown exception when getting dask worker")
+            except Exception:
+                logger.exception("Unknown exception when getting dask worker")
                 worker = None
 
             logger.info(f"Successfully found worker {worker}")

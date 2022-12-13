@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 import medpy.io
 import numpy as np

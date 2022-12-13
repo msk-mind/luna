@@ -1,14 +1,24 @@
 import logging
-import os
 
 import click
+import numpy as np
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
+from luna.radiology.mirp.imagePerturbations import randomise_roi_contours
+from luna.radiology.mirp.imageProcess import (
+    combine_all_rois,
+    combine_pertubation_rois,
+    crop_image,
+    interpolate_image,
+    interpolate_roi,
+)
+from luna.radiology.mirp.imageReaders import read_itk_image, read_itk_segmentation
+from luna.radiology.mirp.importSettings import Settings
 
 init_logger()
 logger = logging.getLogger("randomize_contours")
 
-from luna.common.utils import cli_runner
 
 _params_ = [
     ("input_itk_volume", str),
@@ -61,18 +71,6 @@ def cli(**cli_kwargs):
             -o ./mirp_results/
     """
     cli_runner(cli_kwargs, _params_, randomize_contours)
-
-
-import numpy as np
-
-from luna.radiology.mirp.imagePerturbations import randomise_roi_contours
-from luna.radiology.mirp.imageProcess import (combine_all_rois,
-                                              combine_pertubation_rois,
-                                              crop_image, interpolate_image,
-                                              interpolate_roi)
-from luna.radiology.mirp.imageReaders import (read_itk_image,
-                                              read_itk_segmentation)
-from luna.radiology.mirp.importSettings import Settings
 
 
 def randomize_contours(

@@ -74,10 +74,10 @@ def Kfunction(
     dists = cdist(p1XY, p2XY)
 
     # Turn radius into an array if it isn't one already
-    try:
-        it = iter(radius)
-    except TypeError:
-        radius = [radius]
+    # try:
+    #    it = iter(radius)
+    # except TypeError:
+    #    radius = [radius]
 
     # Define the lambdas for each K function variant
     CKfunc = lambda mask: np.sum(mask, axis=1)

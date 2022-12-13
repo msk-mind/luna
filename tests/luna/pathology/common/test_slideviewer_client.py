@@ -8,13 +8,15 @@ import shutil
 import sys
 from pathlib import Path
 
-import requests
-
 from luna.common.config import ConfigSet
-from luna.common.constants import CONFIG_LOCATION, DATA_CFG, PROJECT_LOCATION
+from luna.common.constants import DATA_CFG
 from luna.pathology.common.slideviewer_client import (
-    download_sv_point_annotation, download_zip, fetch_slide_ids, get_slide_id,
-    unzip)
+    download_sv_point_annotation,
+    download_zip,
+    fetch_slide_ids,
+    get_slide_id,
+    unzip,
+)
 
 SLIDEVIEWER_API_URL = None
 SLIDEVIEWER_CSV_FILE = None
@@ -124,7 +126,7 @@ def test_downlaod_zip(requests_mock):
     )
     download_zip(SLIDEVIEWER_API_URL, zipfile_path, chunk_size=128)
 
-    assert os.path.isfile(zipfile_path) == True
+    assert os.path.isfile(zipfile_path)
 
 
 def test_unzip():

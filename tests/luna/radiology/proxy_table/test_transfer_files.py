@@ -5,15 +5,14 @@ Created on November 04, 2020
 """
 import os
 import shutil
-import subprocess
 
 import pytest
 
 """
 NOTE: These unit tests have been deliberately commented out.
- 
+
 To execute these unit tests, follow these steps to allow localhost rsync and then uncomment tests to run them
- 
+
 1. Copy your public key (typically at ~/.ssh/is_rsa.pub) to your authorized_keys file (~/.ssh/authorized_keys)
 
 2. If your private key has a passphrase associated with it, override it using the ssh-agent, but first check if the  agent if running on your machine  with

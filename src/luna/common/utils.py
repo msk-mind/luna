@@ -2,7 +2,6 @@ import itertools
 import json
 import logging
 import os
-import shutil
 import subprocess
 import urllib
 import warnings
@@ -111,7 +110,7 @@ def generate_uuid_dict(json_str, prefix):
     :param prefix: list e.g. ["SVGEOJSON","default-label"]
     :return: v
     """
-    json_bytes = json.dumps(json_str).encode("utf-8")
+    # json_bytes = json.dumps(json_str).encode("utf-8")
     warnings.warn(
         "generate_uuid_dict() should not be used anymore, the UUIDs generated are not valid!"
     )
@@ -415,7 +414,7 @@ def get_dataset_url():
 
 
 def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
-    """Interface feature data to a parquet dataset
+    """Interface feature data to a parquet dataset.
 
     Args:
         input_feature_data (str): path to input data
@@ -484,7 +483,7 @@ def cli_runner(
     cli_function: Callable[..., dict],
     pass_keys: bool = False,
 ):
-    """For special input_* parameters, see if we should infer the input given an output/result directory
+    """For special input_* parameters, see if we should infer the input given an output/result directory.
 
     Args:
         cli_kwargs (dict): keyword arguments from the CLI call
@@ -549,7 +548,7 @@ def cli_runner(
     # Nice little log break
     logger.info(
         "-" * 60
-        + f"\n Done with transform, running post-transform functions... \n"
+        + "\n Done with transform, running post-transform functions... \n"
         + "-" * 60
     )
 
@@ -588,12 +587,12 @@ def cli_runner(
 
 
 def apply_csv_filter(input_paths, subset_csv=None):
-    """Filteres a list of input_paths based on include/exclude logic given for either the full path, filename, or filestem
+    """Filters a list of input_paths based on include/exclude logic given for either the full path, filename, or filestem.
 
     If using "include" logic, only matching entries with include=True are kept.
     If using "exclude" logic, only matching entries with exclude=True are removed.
 
-    The origional list is returned if the given subset_csv is None or empty
+    The origional list is returned if the given subset_csv is None or empty.
 
     Args:
         input_paths (list[str]): list of input paths to filter
@@ -650,7 +649,7 @@ def apply_csv_filter(input_paths, subset_csv=None):
 
 
 def load_func(dotpath: str):
-    """load function in module from a parsed yaml string
+    """Load function in module from a parsed yaml string.
 
     Args:
         dotpath (str): module/function name written as a string (ie torchvision.models.resnet34)
@@ -669,7 +668,7 @@ class LunaCliCall:
         print(" ".join(f"{x}" for x in cli_call))
 
     def run(self, step_name):
-        """Run (execute) CLI Call given a 'step_name', add step to parent CLI Client once completed
+        """Run (execute) CLI Call given a 'step_name', add step to parent CLI Client once completed.
         Args:
             step_name (str): Name of the CLI call, determines output directory, can act as inputs to other CLI steps
         """
@@ -693,7 +692,7 @@ class LunaCliCall:
 
 class LunaCliClient:
     def __init__(self, base_dir, uuid):
-        """Initialize Luna CLI Client with a base directory (the root working directory) and a UUID to track results
+        """Initialize Luna CLI Client with a base directory (the root working directory) and a UUID to track results.
 
         Args:
             base_dir (str): parent working directory
@@ -704,7 +703,7 @@ class LunaCliClient:
         self.cli_steps = {}
 
     def bootstrap(self, step_name, data_path):
-        """Add data  (boostrap a root CLI call)
+        """Add data  (boostrap a root CLI call).
 
         Args:
             step_name (str): Name of the (boostrap) CLI call, determines output directory, can act as inputs to other CLI steps
@@ -713,7 +712,7 @@ class LunaCliClient:
         self.cli_steps[step_name] = Path(data_path).expanduser()
 
     def configure(self, cli_resource, *args, **kwargs):
-        """Configure a CLI step
+        """Configure a CLI step.
 
         Args:
             cli_resource (str): CLI Resource string like
@@ -737,7 +736,7 @@ class LunaCliClient:
         return LunaCliCall(cli_call, self)
 
     def get_output_dir(self, step_name):
-        """Get output_dir based on base_dir, uuid, and step name
+        """Get output_dir based on base_dir, uuid, and step name.
 
         Args:
             step_name (str): parent working directory

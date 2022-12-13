@@ -1,17 +1,22 @@
 # General imports
-import json
 import logging
-import os
+from pathlib import Path
 
 import click
-import yaml
+import numpy as np
+import openslide
+import pandas as pd
+import tifffile
+from PIL import Image
+from skimage.measure import block_reduce
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
+from luna.pathology.common.utils import convert_xml_to_mask, get_layer_names
 
 init_logger()
 logger = logging.getLogger("generate_mask")
 
-from luna.common.utils import cli_runner
 
 _params_ = [
     ("input_slide_image", str),
@@ -59,18 +64,6 @@ def cli(**cli_kwargs):
             -o ./masks/10001/
     """
     cli_runner(cli_kwargs, _params_, generate_mask)
-
-
-from pathlib import Path
-
-import numpy as np
-import openslide
-import pandas as pd
-import tifffile
-from PIL import Image
-from skimage.measure import block_reduce
-
-from luna.pathology.common.utils import convert_xml_to_mask, get_layer_names
 
 
 def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_name):

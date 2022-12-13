@@ -1,4 +1,4 @@
-### This is just luna.pathology/common/utils.py
+# This is just luna.pathology/common/utils.py
 
 import logging
 import re
@@ -15,7 +15,6 @@ import seaborn as sns
 import SimpleITK as sitk
 from openslide.deepzoom import DeepZoomGenerator
 from PIL import Image
-from skimage.color import rgb2gray, rgba2rgb
 from skimage.draw import rectangle_perimeter
 from tqdm import tqdm
 
@@ -205,8 +204,9 @@ def get_stain_vectors_macenko(sample: np.ndarray):
         np.ndarray: the stain matrix
 
     """
-    from staintools.stain_extraction.macenko_stain_extractor import \
-        MacenkoStainExtractor
+    from staintools.stain_extraction.macenko_stain_extractor import (
+        MacenkoStainExtractor,
+    )
 
     extractor = MacenkoStainExtractor()
     vectors = extractor.get_stain_matrix(sample)
@@ -235,7 +235,7 @@ def pull_stain_channel(
     identity = np.array([[1, 0, 0], [0, 1, 0]])
     tmp = 255 * (1 - np.exp(-1 * np.dot(tile_concentrations, identity)))
     tmp = tmp.reshape(patch.shape).astype(np.uint8)
-    if not channel is None:
+    if channel is not None:
         return tmp[:, :, channel]
     else:
         return tmp
@@ -296,7 +296,7 @@ def extract_patch_texture_features(
         fts = extractor.execute(sitk_image, sitk_mask, voxelBased=True)
 
         for key in fts.keys():
-            if not "original_glcm" in key:
+            if "original_glcm" not in key:
                 continue
 
             stainomics_patch = sitk.GetArrayFromImage(fts[key]).astype(np.float32)
@@ -393,7 +393,7 @@ def address_to_coord(s: str) -> Tuple[int, int]:
         Tuple[int, int]: a tuple consisting of an x, y pair
     """
     s = str(s)
-    p = re.compile("x(\d+)_y(\d+)_z(\d+)", re.IGNORECASE)
+    p = re.compile(r"x(\d+)_y(\d+)_z(\d+)", re.IGNORECASE)
     m = p.match(s)
     x = int(m.group(1))
     y = int(m.group(2))

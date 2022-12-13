@@ -1,14 +1,17 @@
 import logging
 import os
+from pathlib import Path
 
 import click
+import medpy.io
+import numpy as np
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
 
 init_logger()
 logger = logging.getLogger("window_volume")
 
-from luna.common.utils import cli_runner
 
 _params_ = [
     ("input_itk_volume", str),
@@ -52,12 +55,6 @@ def cli(**cli_kwargs):
             -o scans/windowed/NRRDs/10001
     """
     cli_runner(cli_kwargs, _params_, window_volume)
-
-
-from pathlib import Path
-
-import medpy.io
-import numpy as np
 
 
 def window_volume(

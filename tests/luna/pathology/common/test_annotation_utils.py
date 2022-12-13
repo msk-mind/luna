@@ -1,10 +1,14 @@
 import os
-from datetime import datetime
+import shutil
 from pathlib import Path
 
 import pytest
 
-from luna.pathology.common.annotation_utils import *
+from luna.pathology.common.annotation_utils import (
+    check_slideviewer_and_download_bmp,
+    convert_bmp_to_npy,
+    get_slide_bitmap,
+)
 
 SLIDEVIEWER_API_URL = "http://test-slideviewer-url.com/"
 SLIDE_BMP_DIR = "tests/luna/pathology/common/testdata/project/regional_bmps"

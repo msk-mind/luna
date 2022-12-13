@@ -107,11 +107,11 @@ class DremioDataframeConnector:
         table_name:  Table name to load
         """
         # Get table from our dicom segments
-        flight_desc = flight.FlightDescriptor.for_command(sqlquery)
+        # flight_desc = flight.FlightDescriptor.for_command(sqlquery)
         print("[INFO] Query: ", sqlquery)
 
         options = flight.FlightCallOptions(headers=[self.bearer_token])
-        schema = self.client.get_schema(flight_desc, options)
+        # schema = self.client.get_schema(flight_desc, options)
         # print('[INFO] GetSchema was successful')
         # print('[INFO] Schema: ', schema)
 

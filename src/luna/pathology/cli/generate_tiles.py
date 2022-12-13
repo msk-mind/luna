@@ -1,18 +1,22 @@
 # General imports
-import json
+import itertools
 import logging
-import os
-import sys
+from pathlib import Path
 
 import click
-import yaml
+import openslide
+import pandas as pd
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
+from luna.pathology.common.utils import (
+    coord_to_address,
+    get_full_resolution_generator,
+    get_scale_factor_at_magnfication,
+)
 
 init_logger()
 logger = logging.getLogger("generate_tiles")
-
-from luna.common.utils import cli_runner
 
 _params_ = [
     ("input_slide_image", str),
@@ -61,17 +65,6 @@ def cli(**cli_kwargs):
             -o 10001/tiles
     """
     cli_runner(cli_kwargs, _params_, generate_tiles)
-
-
-import itertools
-from pathlib import Path
-
-import openslide
-import pandas as pd
-
-from luna.pathology.common.utils import (coord_to_address,
-                                         get_full_resolution_generator,
-                                         get_scale_factor_at_magnfication)
 
 
 def generate_tiles(input_slide_image, tile_size, requested_magnification, output_dir):

@@ -122,9 +122,7 @@ def test_get_value(cfg):
     )
 
     with pytest.raises(ValueError):
-        c3.get_value(
-            path='app_config::$.spark_application_config[:1]["doesnt.exist"]'
-        ) == None
+        c3.get_value(path='app_config::$.spark_application_config[:1]["doesnt.exist"]')
 
     with pytest.raises(ValueError):
         ConfigSet().get_value(

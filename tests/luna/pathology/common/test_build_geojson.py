@@ -5,7 +5,12 @@ import sys
 import numpy as np
 import pandas as pd
 
-from luna.pathology.common.build_geojson import *
+from luna.pathology.common.build_geojson import (
+    add_contours_for_label,
+    build_geojson_from_annotation,
+    build_geojson_from_pointclick_json,
+    concatenate_regional_geojsons,
+)
 
 npy_data_path = "tests/luna/pathology/testdata/data/test-project/pathology_annotations/regional_npys/2021_HobS21_8_123"
 

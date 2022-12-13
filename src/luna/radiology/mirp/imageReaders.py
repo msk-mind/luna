@@ -82,7 +82,7 @@ def read_itk_segmentation(path_to_seg_file):
         )
 
         roi_obj = RoiClass(
-            name=f"labeled",
+            name="labeled",
             contour=None,
             roi_mask=roi_mask_obj,
             label_value=label_value,

@@ -1,14 +1,16 @@
 import logging
 import os
+from pathlib import Path
 
 import click
+import medpy.io
+import numpy as np
 
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
 
 init_logger()
 logger = logging.getLogger("extract_voxels")
-
-from luna.common.utils import cli_runner
 
 _params_ = [("input_itk_volume", str), ("output_dir", str)]
 
@@ -44,12 +46,6 @@ def cli(**cli_kwargs):
     cli_runner(cli_kwargs, _params_, extract_voxels)
 
 
-from pathlib import Path
-
-import medpy.io
-import numpy as np
-
-
 def extract_voxels(input_itk_volume, output_dir):
     """Save a numpy file from a given ITK volume
 
@@ -61,7 +57,7 @@ def extract_voxels(input_itk_volume, output_dir):
         dict: metadata about function call
     """
     file_stem = Path(input_itk_volume).stem
-    file_ext = Path(input_itk_volume).suffix
+    # file_ext = Path(input_itk_volume).suffix
 
     outFileName = os.path.join(output_dir, file_stem + ".npy")
 

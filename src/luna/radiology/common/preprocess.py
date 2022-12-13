@@ -1,26 +1,18 @@
 import logging
-import os
-from pathlib import Path
 
 import cv2
-import itk
 import numpy as np
-import pandas as pd
-from dirhash import dirhash
 from medpy.io import load, save
 from PIL import Image
-from pydicom import dcmread
-from radiomics import \
-    featureextractor  # This module is used for interaction with pyradiomics
 from skimage.transform import resize
 
 logger = logging.getLogger(__name__)
 
-### Fix for annoying glcm message:
+# Fix for annoying glcm message:
 logger = logging.getLogger("radiomics.glcm")
 logger.setLevel(logging.ERROR)
 
-## Fix for ITK snap
+# Fix for ITK snap
 
 
 def find_centroid(image, width, height):
@@ -191,7 +183,6 @@ def create_images(
     The subset will be taken from the middle
     :return: an array of (n_tumor_slices, dicom_binary, overlay_binary) tuples
     """
-    from preprocess import normalize
 
     if subset_seg_path:
         file_path = subset_seg_path.split(":")[-1]
@@ -235,7 +226,7 @@ def create_images(
         after = n_slices - before
         res = res[mid_idx - before : mid_idx + after]
 
-    ## populate SCAN images for indices identified from SEG processing.
+    # populate SCAN images for indices identified from SEG processing.
     if subset_scan_path:
         file_scan_path = subset_scan_path.split(":")[-1]
     else:

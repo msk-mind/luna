@@ -1,7 +1,10 @@
 import numpy as np
 
 from luna.pathology.dsa.utils import (
-    get_color, get_continuous_color, vectorize_np_array_bitmask_by_pixel_value)
+    get_color,
+    get_continuous_color,
+    vectorize_np_array_bitmask_by_pixel_value,
+)
 
 
 def test_get_color():

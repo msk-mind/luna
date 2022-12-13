@@ -8,7 +8,7 @@ def test_ls():
     R = np.linspace(1, 100, 10)
     p1 = np.random.rand(41, 2)
     p2 = np.random.rand(17, 2)
-    I = np.random.rand(17)
+    # I = np.random.rand(17)
 
     F00 = Kfunction(p1, p2, r, ls=True)
     F01 = Kfunction(p1, p2, r, ls=False)
@@ -46,12 +46,12 @@ def test_intensity():
 
     p2 = np.array([[1, 1], [0, 39], [40, 40]])
 
-    I = np.array([1, 2, 3])
+    arr = np.array([1, 2, 3])
 
     r = 10
 
-    F00 = Kfunction(p1, p2, r, ls=True, count=False, intensity=I)
-    F01 = Kfunction(p1, p2, r, ls=False, count=False, intensity=I)
+    F00 = Kfunction(p1, p2, r, ls=True, count=False, intensity=arr)
+    F01 = Kfunction(p1, p2, r, ls=False, count=False, intensity=arr)
 
     assert np.array_equal(F00["intensity"], [1, 2, 0, 0])
     assert F01["intensity"] == 0.75
@@ -62,11 +62,11 @@ def test_distance():
 
     p2 = np.array([[1, 1], [0, 39], [40, 40]])
 
-    I = np.array([1, 2, 3])
+    arr = np.array([1, 2, 3])
 
     r = 10
 
-    F00 = Kfunction(p1, p2, r, ls=True, count=False, intensity=I, distance=True)
-    F01 = Kfunction(p1, p2, r, ls=False, count=False, intensity=I, distance=True)
+    # F00 = Kfunction(p1, p2, r, ls=True, count=False, intensity=arr, distance=True)
+    F01 = Kfunction(p1, p2, r, ls=False, count=False, intensity=arr, distance=True)
 
     assert F01["distance"] == 0.07159559660409909

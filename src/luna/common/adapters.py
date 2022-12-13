@@ -13,7 +13,7 @@ from minio import Minio
 def get_object_stats(client, bucket, key):
     try:
         stat_object = client.stat_object(bucket, key)
-    except:
+    except Exception:
         return -1, -1
     return stat_object.size, calendar.timegm(stat_object.last_modified.timetuple())
 
@@ -46,7 +46,7 @@ class NoWriteAdapter(WriteAdapter):
             dict: key-value pairs containing metadata about the write operation
         """
         input_path = Path(input_data)
-        filename = input_path.name
+        # filename = input_path.name
 
         if not os.path.exists(input_path):
             return {}
