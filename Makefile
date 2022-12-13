@@ -81,10 +81,18 @@ upload-pypi: ## upload wheel to pypi and publish to github
 	semantic-release publish  -v DEBUG -D upload_to_pypi=True -D repository=pypi -D upload_to_release=True
 .PHONY: upload-pypi
 
-lint: ## run LINT
-	$(CONDA_ACTIVATE) $(VENV)
-	flake8 data-processing test
-.PHONY: lint
+.PHONY: blackstyle
+blackstyle: ## check code style with black
+	black --diff src/
+
+.PHONY: flake8style
+flake8style: ## check flake8 convertions with flake8
+	flake8 src/ --per-file-ignores=__init__.py:F401 --ignore=W503,E731
+
+.PHONY: pydocstyle
+pydocstyle: ## check docstring formatting
+	pydocstyle --convention=numpy src/
+
 
 test: clean-test   ## run tests quickly with the default Python
 	$(CONDA_ACTIVATE) $(VENV)

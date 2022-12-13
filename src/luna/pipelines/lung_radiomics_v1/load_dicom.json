@@ -1,4 +1,0 @@
-{
-    "job_tag": "radiology.etl.ct",
-    "table_path": "/gpfs/mskmindhdp_emc/data/LUNG_18-193/tables/CT_20201106/"
-}
