@@ -11,4 +11,4 @@ max-line-length = 120
 select = E, F, W, C, B, B9, T4
 max_complexity=12
 # can make a more extensive exclude list as necessary
-exclude = docs
+exclude = .archive docs .venv venv dist docker .*.py

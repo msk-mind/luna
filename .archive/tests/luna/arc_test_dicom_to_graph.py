@@ -5,8 +5,6 @@ from click.testing import CliRunner
 from pytest_mock import mocker
 
 from luna.common.config import ConfigSet
-from luna.common.Neo4jConnection import Neo4jConnection
-from luna.common.sparksession import SparkConfig
 from luna.dicom_to_graph import cli, update_graph_with_scans
 
 current_dir = os.getcwd()

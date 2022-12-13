@@ -6,9 +6,7 @@ from click.testing import CliRunner
 from pytest_mock import mocker
 
 from luna.common.config import ConfigSet
-from luna.common.sparksession import SparkConfig
-from luna.preprocess_feature import (cli, generate_feature_table,
-                                     get_dmp_from_scan)
+from luna.preprocess_feature import cli, generate_feature_table, get_dmp_from_scan
 
 BASE_DIR = "./tests/luna/testdata/data/"
 DESTINATION_DIR = "./tests/luna/testdata/outputdir"

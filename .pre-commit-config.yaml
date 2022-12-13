@@ -1,11 +1,23 @@
+exclude: '.archive|docker'
 repos:
--   repo: https://github.com/psf/black.git
-    rev: 22.3.0
-    hooks:
+- repo: https://github.com/psf/black.git
+  rev: 22.10.0
+  hooks:
     - id: black
       language_version: python3.9
--   repo: https://gitlab.com/pycqa/flake8.git
-    rev: 3.9.2
-    hooks:
+- repo: https://github.com/pycqa/flake8.git
+  rev: 6.0.0
+  hooks:
     - id: flake8
+- repo: https://github.com/pycqa/isort
+  rev: 5.10.1
+  hooks:
+    - id: isort
+      name: isort (python)
+- repo: https://github.com/PyCQA/pydocstyle
+  rev: 6.1.1
+  hooks:
+    - id: pydocstyle
+      name: pydocstyle (python)
+
 
