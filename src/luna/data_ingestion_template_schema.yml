@@ -1,0 +1,51 @@
+# based on yamale syntax - see https://github.com/23andMe/Yamale
+
+REQUESTOR: any(str(required=True))
+
+REQUESTOR_DEPARTMENT: any(str(required=True))
+
+REQUESTOR_EMAIL: any(str(required=True))
+
+PROJECT: any(str(required=True))
+
+SOURCE: any(str(required=True))
+
+MODALITY: enum('clinical','radiology','pathology','genomics')
+
+DATA_TYPE: enum('diagnosis', 'medication', 'treatment', 'CT', 'MRI', 'PET', 'WSI', 'MHA', 'MHD')
+
+COMMENTS: any(str(required=False))
+
+DATE: day()
+
+DATASET_NAME: any(str(required=True))
+
+ETL_TYPE: enum('proxy', 'refined', 'feature')
+
+FILE_TYPE: enum('csv', 'dcm', 'svs', 'mha', 'mhd')
+
+FORMAT_TYPE: enum('parquet', 'delta')
+
+NUM_PARTITION: int(required=True, min=1)
+
+HOST: any(str(required=False))
+
+ROOT_PATH: any(str(required=True))
+
+SOURCE_PATH: any(str(required=True))
+
+LANDING_PATH: any(str(required=True))
+
+RAW_DATA_PATH: any(str(required=True))
+
+INCLUDE:  any(str(required=False))
+
+CHUNK_FILE: any(str(required=True))
+
+FILE_COUNT: int(required=True, min=1)
+
+DATA_SIZE: int(required=True, min=0)
+
+# The  suffixes  are  as  follows:  "K" (or "KiB") is a kibibyte (1024), "M" (or "MiB") is a mebibyte
+#  (1024*1024), and "G" (or "GiB") is a gibibyte (1024*1024*1024)
+BWLIMIT: any(regex(r'^(\d+)(K|M|G)$'))

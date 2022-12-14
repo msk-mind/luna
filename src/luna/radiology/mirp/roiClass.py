@@ -8,12 +8,14 @@ from typing import Union
 import numpy as np
 import pandas as pd
 from pydicom import FileDataset
-from scipy.ndimage import binary_dilation
 from scipy.stats import mstats
 
 from luna.radiology.mirp.imageClass import ImageClass
-from luna.radiology.mirp.imageProcess import (gaussian_preprocess_filter,
-                                              interpolate_to_new_grid)
+from luna.radiology.mirp.imageMetaData import get_pydicom_meta_tag, set_pydicom_meta_tag
+from luna.radiology.mirp.imageProcess import (
+    gaussian_preprocess_filter,
+    interpolate_to_new_grid,
+)
 
 
 class RoiClass:
@@ -428,8 +430,6 @@ class RoiClass:
         ################################################################################################################
         if bool(set(method).intersection("close_volume")):
             # Close internal volumes
-
-            from scipy.ndimage import binary_erosion, generate_binary_structure
 
             # Read minimal volume required
             max_fill_volume = settings.roi_resegment.max_fill_volume
@@ -1282,7 +1282,7 @@ class RoiClass:
 
             if not self.has_metadata(tag=(0x3006, 0x0020)):
                 raise ValueError(
-                    f"The DICOM metaheader does not contain a Structure Set ROI sequence."
+                    "The DICOM metaheader does not contain a Structure Set ROI sequence."
                 )
 
             # Iterate over roi elements in the roi sequence

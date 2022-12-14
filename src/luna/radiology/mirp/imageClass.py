@@ -3,7 +3,6 @@ USED -> IMAGE CLASS
 """
 
 import copy
-import logging
 import os
 import time
 import warnings
@@ -13,6 +12,11 @@ import numpy as np
 import pandas as pd
 from pydicom import Dataset, FileDataset, Sequence
 
+from luna.radiology.mirp.imageMetaData import (
+    create_new_uid,
+    get_pydicom_meta_tag,
+    set_pydicom_meta_tag,
+)
 from luna.radiology.mirp.utilities import get_version
 
 
@@ -278,7 +282,9 @@ class ImageClass:
     def interpolate(self, by_slice, settings):
         """Performs interpolation of the image volume"""
         from luna.radiology.mirp.imageProcess import (  # aauker: Circular import
-            gaussian_preprocess_filter, interpolate_to_new_grid)
+            gaussian_preprocess_filter,
+            interpolate_to_new_grid,
+        )
 
         # Skip for missing images
         if self.is_missing:
@@ -626,8 +632,7 @@ class ImageClass:
 
         import scipy.ndimage as ndi
 
-        from luna.radiology.mirp.featureSets.volumeMorphology import \
-            get_rotation_matrix
+        from luna.radiology.mirp.featureSets.volumeMorphology import get_rotation_matrix
 
         # Find actual output size of x-y plane
         new_z_dim = np.asmatrix([self.size[0], 0.0, 0.0]) * get_rotation_matrix(
@@ -679,7 +684,6 @@ class ImageClass:
         z_only=False,
     ):
         """ "Crop image to the provided map extent."""
-        from luna.radiology.mirp.utilities import world_to_index
 
         # Skip for missing images
         if self.is_missing:
@@ -977,7 +981,7 @@ class ImageClass:
     def write_dicom(self, file_path, file_name, bit_depth=16):
         if self.metadata is None:
             raise ValueError(
-                f"Image slice cannot be written to DICOM as metadata is missing."
+                "Image slice cannot be written to DICOM as metadata is missing."
             )
 
         # Set pixeldata
@@ -995,7 +999,7 @@ class ImageClass:
     def write_dicom_series(self, file_path, file_name="", bit_depth=16):
         if self.metadata is None:
             raise ValueError(
-                f"Image cannot be written as a DICOM series as metadata is missing."
+                "Image cannot be written as a DICOM series as metadata is missing."
             )
 
         # Check if the write folder exists
@@ -1304,8 +1308,8 @@ class ImageClass:
 
         if not self.as_parametric_map:
             raise ValueError(
-                f"Floating point representation in DICOM is only supported by parametric maps, but the image in MIRP is not marked for conversion of the metadata to"
-                f"parametric maps."
+                "Floating point representation in DICOM is only supported by parametric maps, but the image in MIRP is not marked for conversion of the metadata to"
+                "parametric maps."
             )
 
         # Set dtype for the image

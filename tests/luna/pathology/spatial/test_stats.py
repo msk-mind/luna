@@ -4,7 +4,7 @@ from luna.pathology.spatial.stats import Kfunction
 
 
 def test_ls():
-    r = 50
+    r = 50.0
     R = np.linspace(1, 100, 10)
     p1 = np.random.rand(41, 2)
     p2 = np.random.rand(17, 2)
@@ -32,7 +32,7 @@ def test_count():
 
     p2 = np.array([[0, 39], [40, 40]])
 
-    r = 10
+    r = 10.0
 
     F00 = Kfunction(p1, p2, r, ls=True, count=True)
     F01 = Kfunction(p1, p2, r, ls=False, count=True)
@@ -64,7 +64,7 @@ def test_distance():
 
     arr = np.array([1, 2, 3])
 
-    r = 10
+    r = 10.0
 
     # F00 = Kfunction(p1, p2, r, ls=True, count=False, intensity=arr, distance=True)
     F01 = Kfunction(p1, p2, r, ls=False, count=False, intensity=arr, distance=True)

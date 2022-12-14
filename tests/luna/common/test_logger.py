@@ -1,8 +1,7 @@
-import logging
 import os
 
 import pytest
-from testfixtures import LogCapture
+from testfixtures.logcapture import LogCapture
 
 from luna.common.custom_logger import init_logger
 
@@ -26,11 +25,11 @@ def test_check_level(logger):
 
 
 def test_levels(logger):
-    with LogCapture() as l:
+    with LogCapture() as log:
         logger.info("a message")
         logger.warning("a warning")
         logger.error("an error")
-        l.check(
+        log.check(
             ("root", "INFO", "a message"),
             ("root", "WARNING", "a warning"),
             ("root", "ERROR", "an error"),
@@ -38,21 +37,21 @@ def test_levels(logger):
 
 
 def test_formatting(logger):
-    with LogCapture() as l:
+    with LogCapture() as log:
         logger.info("a message with string %s", "some output")
-        l.check(("root", "INFO", "a message with string some output"))
+        log.check(("root", "INFO", "a message with string some output"))
 
 
 def test_list(logger):
-    with LogCapture() as l:
+    with LogCapture() as log:
         logger.info([1, 2, 3])
-        l.check(("root", "INFO", "[1, 2, 3]"))
+        log.check(("root", "INFO", "[1, 2, 3]"))
 
 
 def test_dict(logger):
-    with LogCapture() as l:
+    with LogCapture() as log:
         logger.info({"list": [1, 2, 3], "name": "foo"})
-        l.check(("root", "INFO", "{'list': [1, 2, 3], 'name': 'foo'}"))
+        log.check(("root", "INFO", "{'list': [1, 2, 3], 'name': 'foo'}"))
 
 
 # For some reason, this capturing no longer works

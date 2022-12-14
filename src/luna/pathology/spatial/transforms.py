@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats
 
-from luna.pathology.spatial.stats import *
+from luna.pathology.spatial.stats import Kfunction
 
 
 def generate_k_function_statistics(cell_paths, method_data, main_index=None):
@@ -74,9 +74,9 @@ def generate_k_function_statistics(cell_paths, method_data, main_index=None):
         p2XY = np.array(pheno2[["Centroid X µm", "Centroid Y µm"]])
 
         if intensity_col:
-            I = np.array(pheno2[intensity_col])
+            intensity = np.array(pheno2[intensity_col])
         else:
-            I = []
+            intensity = []
             if distance:
                 raise RuntimeError(
                     "Can't compute intensity-distance function without intensity information"
@@ -95,7 +95,13 @@ def generate_k_function_statistics(cell_paths, method_data, main_index=None):
         print(f"Running... {cell_path}")
 
         fov_k_data = Kfunction(
-            p1XY, p2XY, radius, ls=True, count=count, intensity=I, distance=distance
+            p1XY,
+            p2XY,
+            radius,
+            ls=True,
+            count=count,
+            intensity=intensity,
+            distance=distance,
         )
 
         for key in fov_k_data:
