@@ -31,7 +31,6 @@ _params_ = [
     ("input_slide_mask", str),
     ("output_dir", str),
     ("stain_sample_factor", int),
-    ("glcm_feature", str),
     ("tile_size", int),
     ("stain_channel", int),
 ]
@@ -65,12 +64,6 @@ _params_ = [
     help="downsample factor for the image used in stain vector estimation",
 )
 @click.option(
-    "-glcm",
-    "--glcm_feature",
-    required=False,
-    help="name of the glcm feature to use (e.g. Autocorrelation)",
-)
-@click.option(
     "-m",
     "--method_param_path",
     required=False,
@@ -89,8 +82,7 @@ def cli(**cli_kwargs):
     \b
     Example:
         extract_stain_texture ./slides/10001.svs ./masks/10001/tumor_mask.tif
-            -tx 500 -sc 0 -sf 10 -glcm ClusterTendency
-            -o ./stain_features/10001/
+            -tx 500 -sc 0 -sf 10 -o ./stain_features/10001/
     """
     cli_runner(cli_kwargs, _params_, extract_stain_texture)
 
@@ -104,7 +96,6 @@ def extract_stain_texture(
     stain_sample_factor,
     stain_channel,
     tile_size,
-    glcm_feature,
     output_dir,
 ):
     """Compute GLCM texture after automatically deconvolving the image into stain channels, using tile-based processing
@@ -119,7 +110,6 @@ def extract_stain_texture(
         stain_sample_factor (float): downsample factor to use for stain vector estimation
         stain_channel (int): which channel of the deconvovled image to use for texture analysis
         tile_size (int): size of tiles to use (at the requested magnification) (500-1000 recommended)
-        glcm_feature (str): name of GLCM feature to enable
 
     Returns:
         dict: metadata about function call
@@ -171,7 +161,6 @@ def extract_stain_texture(
             mask_patch,
             stain_vectors,
             stain_channel,
-            glcm_feature,
             plot=False,
         )
 
@@ -179,9 +168,9 @@ def extract_stain_texture(
             for key, values in texture_values.items():
                 features[key].append(values)
         logger.info(f"Processed Tile [{n_tile} / {N_tiles}] at {address}")
-
     for key, values in features.items():
         features[key] = np.concatenate(values).flatten()
+    print(features)
 
     hist_features = {}
     for key, values in features.items():

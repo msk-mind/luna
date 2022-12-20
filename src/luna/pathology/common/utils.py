@@ -242,7 +242,7 @@ def pull_stain_channel(
 
 
 def extract_patch_texture_features(
-    image_patch, mask_patch, stain_vectors, stain_channel, glcm_feature, plot=False
+    image_patch, mask_patch, stain_vectors, stain_channel, plot=False
 ) -> np.ndarray:
     """extact patch texture features
 
@@ -254,7 +254,6 @@ def extract_patch_texture_features(
         mask_patch (np.ndarray): input image mask
         stain_vectors (np.ndarray): stain vectors extacted from the image patch
         stain_channel (int): stain channel
-        glcm_feature (str): unused?
         plot (Optional, bool): unused?
 
     Returns:
