@@ -27,9 +27,9 @@ def test_cli(tmp_path):
     )
 
     assert result.exit_code == 0
-    assert os.path.exists(f"{tmp_path}/stainomics.csv")
+    assert os.path.exists(f"{tmp_path}/stainomics.parquet")
 
-    df = pd.read_csv(f"{tmp_path}/stainomics.csv")
+    df = pd.read_parquet(f"{tmp_path}/stainomics.parquet")
     assert set(
         [
             "pixel_original_glcm_ClusterTendency_channel_0_nobs",
