@@ -29,5 +29,5 @@ def test_cli(tmp_path):
 
     df = pd.read_parquet(f"{tmp_path}/stainomics.parquet")
 
-    assert df.notnull().values.any() is True
+    assert bool(df.notnull().values.any()) is True
     assert df.shape == (1, 216)
