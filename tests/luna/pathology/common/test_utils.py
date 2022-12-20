@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
 
+import luna.common.constants as const
+from luna.common.config import ConfigSet
 from luna.pathology.common.utils import (
     DeepZoomGenerator,
     convert_halo_xml_to_roi,
@@ -62,10 +64,10 @@ def test_get_downscaled_thumbnail():
 
 def test_get_labelset_keys():
 
-    # cfg = ConfigSet(
-    #     name=const.DATA_CFG,
-    #     config_file="tests/luna/pathology/common/testdata/point_geojson_config.yaml",
-    # )
+    ConfigSet(
+        name=const.DATA_CFG,
+        config_file="tests/luna/pathology/common/testdata/point_geojson_config.yaml",
+    )
 
     res = get_labelset_keys()
 
