@@ -657,6 +657,13 @@ def qupath_polygon_main(
     help="path to a metadata json/yaml file with method parameters to "
     "reproduce results",
 )
+@click.option(
+    "-sc",
+    "--scale_factor",
+    help="scale to match image DSA. (default 1)",
+    default=1,
+    required=False,
+)
 @cli.command()
 def bitmask_polygon(**cli_kwargs):
     """
@@ -670,6 +677,7 @@ def bitmask_polygon(**cli_kwargs):
             --image_filename 123.svs
             --line_colors '{"Other": "rgb(0,255,0)", "Lymphocyte": "rgb(255,0,0)"}'
             --fill_colors '{"Other": "rgba(0,255,0,100)", "Lymphocyte": "rgba(255,0,0,100)"}'
+            --scale_factor 1
     """
     params = [
         ("fill_colors", dict),
@@ -678,12 +686,19 @@ def bitmask_polygon(**cli_kwargs):
         ("image_filename", str),
         ("output_dir", str),
         ("input", dict),
+        ("scale_factor", int),
     ]
     cli_runner(cli_kwargs, params, bitmask_polygon_main)
 
 
 def bitmask_polygon_main(
-    input, output_dir, image_filename, annotation_name, line_colors, fill_colors
+    input,
+    output_dir,
+    image_filename,
+    annotation_name,
+    line_colors,
+    fill_colors,
+    scale_factor,
 ):
     """Build DSA annotation json from bitmask PNGs
 
@@ -699,6 +714,8 @@ def bitmask_polygon_main(
         values}
         fill_colors (map, optional): fill color map with {feature name:rgba
         values}
+        scale_factor (int, optional): scale to match the image on DSA. By
+        default, 1.
 
     Returns:
         dict: annotation file path
@@ -711,7 +728,9 @@ def bitmask_polygon_main(
         Image.MAX_IMAGE_PIXELS = 5000000000
         annotation = Image.open(bitmask_filepath)
         bitmask_np = np.array(annotation)
-        simplified_contours = vectorize_np_array_bitmask_by_pixel_value(bitmask_np)
+        simplified_contours = vectorize_np_array_bitmask_by_pixel_value(
+            bitmask_np, scale_factor=scale_factor
+        )
 
         for n, contour in enumerate(simplified_contours):
             element = copy.deepcopy(base_dsa_polygon_element)

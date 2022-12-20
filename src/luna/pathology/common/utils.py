@@ -270,7 +270,7 @@ def extract_patch_texture_features(
     stain_patch = pull_stain_channel(image_patch, stain_vectors, channel=stain_channel)
 
     original_pixels = stain_patch.astype(np.uint8)[
-        np.where(mask_patch.astype(np.bool))
+        np.where(mask_patch.astype(np.bool_))
     ].flatten()
     original_pixels_valid = original_pixels[original_pixels > 0]
     output_dict["original_pixels"] = original_pixels_valid
