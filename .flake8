@@ -1,16 +1,15 @@
 [flake8]
-# can choose to ignore more flake8 flags as necessary 
-ignore = 
-    E203 #whitespace before ‘:’ (Not PEP8 compliant, Python Black)
-    E501 # line too long (82 > 79 characters) (replaced by B950 from flake8-bugbear, 
-         #https://github.com/PyCQA/flake8-bugbear)
-    W503 # line break before binary operator (Not PEP8 compliant, Python Black)
-    E731 # Do not use a lambda expression use a def
-    F811 # redefinition of unused name (Unit tests)
-    #B950
+# can choose to ignore more flake8 flags as necessary
+# E203:  whitespace before ‘:’ (Not PEP8 compliant, Python Black)
+# E501: line too long (82 > 79 characters) (replaced by B950 from flake8-bugbear, https://github.com/PyCQA/flake8-bugbear)
+# W503: line break before binary operator (Not PEP8 compliant, Python Black)
+# E731: Do not use a lambda expression use a def
+# F811: redefinition of unused name (Unit tests)
+# C901: too complex
+ignore = E203, E501, W503, E731, F811, C901
 
 max-line-length = 120
 select = E, F, W, C, B, B9, T4
 max_complexity=12
-# can make a more extensive exclude list as necessary 
-exclude = docs
+# can make a more extensive exclude list as necessary
+exclude = .archive docs .venv venv dist docker .*.py

@@ -1,17 +1,15 @@
-import pandas as pd
-import numpy as np
-import torch
-
 import warnings
+from typing import Dict, List, Tuple
 
-from typing import Dict, Tuple, List
-
+import numpy as np
+import pandas as pd
+import torch
 from PIL import Image
 
 # from sklearn.model_selection._split import _BaseKFold, _RepeatedSplits
 from sklearn.model_selection import StratifiedGroupKFold
 from torch import nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchmetrics import MetricCollection
 
@@ -110,13 +108,13 @@ def post_transform_to_2d(input: np.array) -> np.array:
     Args:
         input (torch.tensor): tensor input of shape [B, *] where B is the batch dimension
     """
-    if type (input)== torch.tensor:
+    if type(input) == torch.tensor:
         input = input.cpu.numpy()
 
     if not len(input.shape) == 2:
         warnings.warn(f"Reshaping model output (was {input.shape}) to 2D")
         input = np.reshape(input, (input.shape[0], -1))
-    
+
     return input
 
 

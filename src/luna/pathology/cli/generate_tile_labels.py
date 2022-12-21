@@ -1,13 +1,14 @@
 # General imports
 import json
 import logging
+
 import click
 import pandas as pd
-from shapely.geometry import shape, GeometryCollection, Polygon
+from shapely.geometry import GeometryCollection, Polygon, shape
 from tqdm import tqdm
 
-from luna.common.utils import cli_runner
 from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
 
 init_logger()
 logger = logging.getLogger("generate_tile_labels")  # Add CLI tool name

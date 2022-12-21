@@ -1,21 +1,28 @@
-from pathlib import Path
-from medpy.io import save, load
-import dicom2nifti
 import os
-import click
-import pandas as pd
-import dask.dataframe as dd
-import numpy as np
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Tuple
 
-from luna.common.utils import cli_runner
+import click
+import dask.dataframe as dd
+import dicom2nifti
+import numpy as np
+import pandas as pd
+from medpy.io import load, save
+
 from luna.common.custom_logger import init_logger
-from luna.common.utils import generate_uuid
+from luna.common.utils import cli_runner, generate_uuid
 
 logger = init_logger()
 
-_params_ = [('raw_data_path', str), ('mapping_csv_path', str), ('output_dir', str),
-            ('scan_table_path', str), ('npartitions', int), ('subset', bool)]
+_params_ = [
+    ("raw_data_path", str),
+    ("mapping_csv_path", str),
+    ("output_dir", str),
+    ("scan_table_path", str),
+    ("npartitions", int),
+    ("subset", bool),
+]
+
 
 def find_z_nbound(dim: Tuple) -> Tuple[int, int]:
     """
@@ -42,7 +49,7 @@ def subset_bound(src_path: str, output_path: str, index: int):
         index (int): index to pull out from the bound 4D scan
     """
     try:
-        file_path = src_path.split(':')[-1]
+        file_path = src_path.split(":")[-1]
         data, header = load(file_path)
         subset = data[:, :, index, :]
         # re-arrange the array
@@ -81,7 +88,9 @@ def subset_series(dim: str, src_path: str) -> str:
         elif nbound > 3:
             index = 1
 
-        output_path = os.path.join(str(posix_path.parent), f"subset_{index}_" + str(posix_path.name))
+        output_path = os.path.join(
+            str(posix_path.parent), f"subset_{index}_" + str(posix_path.name)
+        )
         if not os.path.exists(output_path):
             subset_bound(src_path, output_path, index)
             logger.info("Saved ", output_path)
@@ -89,8 +98,9 @@ def subset_series(dim: str, src_path: str) -> str:
     return output_path
 
 
-def dicom_to_nifti(row: pd.DataFrame, raw_data_path: str, output_dir: str, subset=False)\
-        -> pd.DataFrame:
+def dicom_to_nifti(
+    row: pd.DataFrame, raw_data_path: str, output_dir: str, subset=False
+) -> pd.DataFrame:
     """
     Convert dicoms to nii.gz format
 
@@ -145,16 +155,36 @@ def dicom_to_nifti(row: pd.DataFrame, raw_data_path: str, output_dir: str, subse
 
 
 @click.command()
-@click.option('-r', '--raw_data_path', help="path to raw data. e.g /data/radiology/project_name/dicoms",
-              type=click.Path())
-@click.option('-c', '--mapping_csv_path', help="csv with AccessionNumber, SeriesNumber columns",
-              type=click.Path())
-@click.option('-o', '--output_dir', help="path to scan output folder")
-@click.option('-t', '--scan_table_path', help="path to save scan table")
-@click.option('-s', '--subset', help="extract first post contrast in bound series", is_flag=True)
-@click.option('-n', '--npartitions', help="npartitions for parallelization", default=20, show_default=True)
-@click.option('-m', '--method_param_path', help='path to a metadata json/yaml file with method parameters to reproduce results',
-              type=click.Path())
+@click.option(
+    "-r",
+    "--raw_data_path",
+    help="path to raw data. e.g /data/radiology/project_name/dicoms",
+    type=click.Path(),
+)
+@click.option(
+    "-c",
+    "--mapping_csv_path",
+    help="csv with AccessionNumber, SeriesNumber columns",
+    type=click.Path(),
+)
+@click.option("-o", "--output_dir", help="path to scan output folder")
+@click.option("-t", "--scan_table_path", help="path to save scan table")
+@click.option(
+    "-s", "--subset", help="extract first post contrast in bound series", is_flag=True
+)
+@click.option(
+    "-n",
+    "--npartitions",
+    help="npartitions for parallelization",
+    default=20,
+    show_default=True,
+)
+@click.option(
+    "-m",
+    "--method_param_path",
+    help="path to a metadata json/yaml file with method parameters to reproduce results",
+    type=click.Path(),
+)
 def cli(**cli_kwargs):
     """
     Convert dicoms to nii.gz format and optionally subset bound series.
@@ -164,8 +194,15 @@ def cli(**cli_kwargs):
     """
     cli_runner(cli_kwargs, _params_, generate_scan_table)
 
-def generate_scan_table(raw_data_path: str, mapping_csv_path: str, output_dir: str,
-                        scan_table_path: str, subset=False, npartitions=20):
+
+def generate_scan_table(
+    raw_data_path: str,
+    mapping_csv_path: str,
+    output_dir: str,
+    scan_table_path: str,
+    subset=False,
+    npartitions=20,
+):
     """
     Convert dicoms to nii.gz format and optionally subset bound series.
     Save scan table and method params.
@@ -182,10 +219,10 @@ def generate_scan_table(raw_data_path: str, mapping_csv_path: str, output_dir: s
 
     # load accession/series mapping csv
     scan_map = pd.read_csv(mapping_csv_path)
-    scan_map = scan_map[['AccessionNumber', 'SeriesNumber']]
-    df = scan_map \
-        .rename({'AccessionNumber': 'accession_number', 'SeriesNumber': 'series_number'}, axis=1) \
-        .astype(str)
+    scan_map = scan_map[["AccessionNumber", "SeriesNumber"]]
+    df = scan_map.rename(
+        {"AccessionNumber": "accession_number", "SeriesNumber": "series_number"}, axis=1
+    ).astype(str)
 
     # convert to nii.gz
     df["create_ts"] = pd.Timestamp.now()
@@ -195,8 +232,11 @@ def generate_scan_table(raw_data_path: str, mapping_csv_path: str, output_dir: s
     df["subset_path"] = ""
 
     ddf = dd.from_pandas(df, npartitions=npartitions)
-    df = ddf.apply(lambda x: dicom_to_nifti(x, raw_data_path, output_dir, subset=subset), axis=1,
-                   meta=ddf).compute()
+    df = ddf.apply(
+        lambda x: dicom_to_nifti(x, raw_data_path, output_dir, subset=subset),
+        axis=1,
+        meta=ddf,
+    ).compute()
     logger.info(df)
 
     # save table as parquet
@@ -204,10 +244,8 @@ def generate_scan_table(raw_data_path: str, mapping_csv_path: str, output_dir: s
     df = df.dropna(subset=["record_uuid"])
     df.to_parquet(scan_table_path)
 
-    return {
-        'table_path': scan_table_path,
-        'n_records': len(df)
-    }
+    return {"table_path": scan_table_path, "n_records": len(df)}
+
 
 if __name__ == "__main__":
     cli()

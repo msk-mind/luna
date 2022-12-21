@@ -1,6 +1,7 @@
-from click.testing import CliRunner
 import os
 from pathlib import Path
+
+from click.testing import CliRunner
 
 from luna.pathology.cli.dsa_viz import cli
 
@@ -20,8 +21,7 @@ def test_stardist_polygon():
             "stardist-polygon",
             "tests/luna/pathology/cli/testdata/test_object_classification.geojson",
             "-m",
-            "tests/luna/pathology/cli/testdata"
-            "/stardist_polygon.yml",
+            "tests/luna/pathology/cli/testdata" "/stardist_polygon.yml",
         ],
     )
 
@@ -62,16 +62,14 @@ def test_regional_polygon():
             "regional-polygon",
             "tests/luna/pathology/cli/testdata/regional_annotation.json",
             "-m",
-            "tests/luna/pathology/cli/testdata"
-            "/regional_polygon.yml",
+            "tests/luna/pathology/cli/testdata" "/regional_polygon.yml",
         ],
     )
 
     assert result.exit_code == 0
 
     output_file = (
-        "tests/luna/pathology/cli/testouts"
-        "/Slideviewer_Regional_Annotations_123.json"
+        "tests/luna/pathology/cli/testouts" "/Slideviewer_Regional_Annotations_123.json"
     )
     verify_cleanup(output_file)
 
@@ -126,9 +124,7 @@ def test_heatmap():
     )
 
     assert result.exit_code == 0
-    output_file = (
-        "tests/luna/pathology/cli/testouts" "/otsu_score_test_123.json"
-    )
+    output_file = "tests/luna/pathology/cli/testouts" "/otsu_score_test_123.json"
     verify_cleanup(output_file)
 
 
@@ -146,7 +142,6 @@ def test_qupath_polygon():
 
     assert result.exit_code == 0
     output_file = (
-        "tests/luna/pathology/cli/testouts"
-        "/Qupath_Pixel_Classifier_Polygons_123.json"
+        "tests/luna/pathology/cli/testouts" "/Qupath_Pixel_Classifier_Polygons_123.json"
     )
     verify_cleanup(output_file)

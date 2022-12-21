@@ -1,15 +1,16 @@
 # General imports
 import logging
 from typing import List
+
 import click
 import numpy as np
 import openslide
 import pandas as pd
 import tifffile
 
-from luna.pathology.common.schemas import SlideTiles
 from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner
+from luna.pathology.common.schemas import SlideTiles
 
 init_logger()
 logger = logging.getLogger("convert_tiles_to_mask")

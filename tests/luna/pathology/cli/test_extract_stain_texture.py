@@ -1,7 +1,8 @@
 import os
-from click.testing import CliRunner
 
 import pandas as pd
+from click.testing import CliRunner
+
 from luna.pathology.cli.extract_stain_texture import cli
 
 
@@ -20,25 +21,13 @@ def test_cli(tmp_path):
             0,
             "-sf",
             10,
-            "-glcm",
-            "ClusterTendency",
         ],
     )
 
     assert result.exit_code == 0
-    assert os.path.exists(f"{tmp_path}/stainomics.csv")
+    assert os.path.exists(f"{tmp_path}/stainomics.parquet")
 
-    df = pd.read_csv(f"{tmp_path}/stainomics.csv")
-    assert set(
-        [
-            "pixel_original_glcm_ClusterTendency_channel_0_nobs",
-            "pixel_original_glcm_ClusterTendency_channel_0_min",
-            "pixel_original_glcm_ClusterTendency_channel_0_max",
-            "pixel_original_glcm_ClusterTendency_channel_0_mean",
-            "pixel_original_glcm_ClusterTendency_channel_0_variance",
-            "pixel_original_glcm_ClusterTendency_channel_0_skewness",
-            "pixel_original_glcm_ClusterTendency_channel_0_kurtosis",
-            "pixel_original_glcm_ClusterTendency_channel_0_lognorm_fit_p0",
-            "pixel_original_glcm_ClusterTendency_channel_0_lognorm_fit_p2",
-        ]
-    ) == set(df.columns)
+    df = pd.read_parquet(f"{tmp_path}/stainomics.parquet")
+
+    assert bool(df.notnull().values.any()) is True
+    assert df.shape == (1, 216)

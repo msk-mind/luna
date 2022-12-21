@@ -1,9 +1,10 @@
 # General imports
-import os
 import logging
+import os
+from pathlib import Path
+
 import click
 import pandas as pd
-from pathlib import Path
 
 import luna.common.stats
 from luna.common.custom_logger import init_logger
@@ -68,7 +69,10 @@ def extract_tile_statistics(input_slide_tiles, output_dir):
         pd.read_parquet(input_slide_tiles)
         .reset_index()
         .set_index("address")
-        .drop(columns=["x_coord", "y_coord", "tile_size", 'xy_extent', 'tile_units'], errors='ignore')
+        .drop(
+            columns=["x_coord", "y_coord", "tile_size", "xy_extent", "tile_units"],
+            errors="ignore",
+        )
     )
     print(df.columns)
 

@@ -1,13 +1,8 @@
 import logging
 
-from luna.radiology.mirp.imageClass import ImageClass
-
-from skimage.segmentation import slic
-from scipy.ndimage import binary_dilation, binary_erosion
-import copy
-
 import numpy as np
-import pandas as pd
+from scipy.ndimage import binary_dilation
+from skimage.segmentation import slic
 
 
 def saturate_image(img_obj, intensity_range, fill_value):
@@ -18,7 +13,9 @@ def saturate_image(img_obj, intensity_range, fill_value):
     return img_obj
 
 
-def normalise_image(img_obj, norm_method, intensity_range=None, saturation_range=None, mask=None):
+def normalise_image(
+    img_obj, norm_method, intensity_range=None, saturation_range=None, mask=None
+):
 
     if intensity_range is None:
         intensity_range = [np.nan, np.nan]
@@ -27,10 +24,12 @@ def normalise_image(img_obj, norm_method, intensity_range=None, saturation_range
         saturation_range = [np.nan, np.nan]
 
     # Normalise intensities
-    img_obj.normalise_intensities(norm_method=norm_method,
-                                  intensity_range=intensity_range,
-                                  saturation_range=saturation_range,
-                                  mask=mask)
+    img_obj.normalise_intensities(
+        norm_method=norm_method,
+        intensity_range=intensity_range,
+        saturation_range=saturation_range,
+        mask=mask,
+    )
 
     return img_obj
 
@@ -46,10 +45,16 @@ def resegmentise(img_obj, roi_list, settings):
             roi_list[ii].generate_masks()
 
             # Skip if no resegmentation method is used
-            if settings.roi_resegment.method is None: continue
+            if settings.roi_resegment.method is None:
+                continue
 
             # Re-segment image
-            roi_list[ii].resegmentise_mask(img_obj=img_obj, by_slice=settings.general.by_slice, method=settings.roi_resegment.method, settings=settings)
+            roi_list[ii].resegmentise_mask(
+                img_obj=img_obj,
+                by_slice=settings.general.by_slice,
+                method=settings.roi_resegment.method,
+                settings=settings,
+            )
 
             # Set the roi as the union of the intensity and morphological maps
             roi_list[ii].update_roi()
@@ -83,7 +88,7 @@ def estimate_image_noise(img_obj, settings, method="chang"):
         return -1.0
 
     if method == "rank":
-        """ Estimate image noise level using the method by Rank, Lendl and Unbehauen, Estimation of image noise variance,
+        """Estimate image noise level using the method by Rank, Lendl and Unbehauen, Estimation of image noise variance,
         IEEE Proc. Vis. Image Signal Process (1999) 146:80-84"""
 
         ################################################################################################################
@@ -107,11 +112,15 @@ def estimate_image_noise(img_obj, settings, method="chang"):
 
         # Calculate local sum of squares
         sum_filter = np.array([1.0, 1.0, 1.0])
-        local_sum_square = ndi.convolve1d(np.power(filt_vox, 2.0), weights=sum_filter, axis=1)
+        local_sum_square = ndi.convolve1d(
+            np.power(filt_vox, 2.0), weights=sum_filter, axis=1
+        )
         local_sum_square = ndi.convolve1d(local_sum_square, weights=sum_filter, axis=2)
 
         # Calculate local variance
-        local_variance = 1.0 / 8.0 * (local_sum_square - 9.0 * np.power(local_means, 2.0))
+        local_variance = (
+            1.0 / 8.0 * (local_sum_square - 9.0 * np.power(local_means, 2.0))
+        )
 
         del local_means, filt_vox, local_sum_square, sum_filter
 
@@ -124,8 +133,12 @@ def estimate_image_noise(img_obj, settings, method="chang"):
         local_variance[local_variance < 0.0] = 0.0
 
         # Select robust range (within IQR)
-        local_variance = local_variance[np.logical_and(local_variance >= np.percentile(local_variance, 25),
-                                                       local_variance <= np.percentile(local_variance, 75))]
+        local_variance = local_variance[
+            np.logical_and(
+                local_variance >= np.percentile(local_variance, 25),
+                local_variance <= np.percentile(local_variance, 75),
+            )
+        ]
 
         # Calculate Gaussian noise
         est_noise = np.sqrt(np.mean(local_variance))
@@ -133,8 +146,8 @@ def estimate_image_noise(img_obj, settings, method="chang"):
         del local_variance
 
     elif method == "ikeda":
-        """ Estimate image noise level using a method by Ikeda, Makino, Imai et al., A method for estimating noise variance of CT image,
-                Comp Med Imaging Graph (2010) 34:642-650"""
+        """Estimate image noise level using a method by Ikeda, Makino, Imai et al., A method for estimating noise variance of CT image,
+        Comp Med Imaging Graph (2010) 34:642-650"""
 
         ################################################################################################################
         # Step 1: filter with a cascading difference filter to suppress original image volume
@@ -155,7 +168,7 @@ def estimate_image_noise(img_obj, settings, method="chang"):
         del filt_vox, diff_filter
 
     elif method == "chang":
-        """ Noise estimation based on wavelets used in Chang, Yu and Vetterli, Adaptive wavelet thresholding for image
+        """Noise estimation based on wavelets used in Chang, Yu and Vetterli, Adaptive wavelet thresholding for image
         denoising and compression. IEEE Trans Image Proc (2000) 9:1532-1546"""
 
         ################################################################################################################
@@ -180,7 +193,7 @@ def estimate_image_noise(img_obj, settings, method="chang"):
         del filt_vox
 
     elif method == "immerkaer":
-        """ Noise estimation based on laplacian filtering, described in Immerkaer, Fast noise variance estimation.
+        """Noise estimation based on laplacian filtering, described in Immerkaer, Fast noise variance estimation.
         Comput Vis Image Underst (1995) 64:300-302"""
 
         ################################################################################################################
@@ -188,7 +201,9 @@ def estimate_image_noise(img_obj, settings, method="chang"):
         ################################################################################################################
 
         # Create filter
-        noise_filt = np.array([[1.0, -2.0, 1.0], [-2.0, 4.0, -2.0], [1.0, -2.0, 1.0]], ndmin=3)
+        noise_filt = np.array(
+            [[1.0, -2.0, 1.0], [-2.0, 4.0, -2.0], [1.0, -2.0, 1.0]], ndmin=3
+        )
 
         # Apply filter
         filt_vox = ndi.convolve(img_obj.get_voxel_grid(), weights=noise_filt)
@@ -202,14 +217,16 @@ def estimate_image_noise(img_obj, settings, method="chang"):
         del filt_vox
 
     elif method == "zwanenburg":
-        """ Noise estimation based on blob detection for weighting immerkaer filtering """
+        """Noise estimation based on blob detection for weighting immerkaer filtering"""
 
         ################################################################################################################
         # Step 1: construct laplacian filter and filter voxel volume
         ################################################################################################################
 
         # Create filter
-        noise_filt = np.array([[1.0, -2.0, 1.0], [-2.0, 4.0, -2.0], [1.0, -2.0, 1.0]], ndmin=3)
+        noise_filt = np.array(
+            [[1.0, -2.0, 1.0], [-2.0, 4.0, -2.0], [1.0, -2.0, 1.0]], ndmin=3
+        )
 
         # Apply filter
         filt_vox = ndi.convolve(img_obj.get_voxel_grid(), weights=noise_filt)
@@ -224,10 +241,16 @@ def estimate_image_noise(img_obj, settings, method="chang"):
         gauss_filt_spacing = np.divide(gauss_filt_spacing, img_obj.spacing)
 
         # Difference of gaussians
-        weight_vox = ndi.gaussian_filter(img_obj.get_voxel_grid(), sigma=1.0 * gauss_filt_spacing) - ndi.gaussian_filter(img_obj.get_voxel_grid(), sigma=4.0 * gauss_filt_spacing)
+        weight_vox = ndi.gaussian_filter(
+            img_obj.get_voxel_grid(), sigma=1.0 * gauss_filt_spacing
+        ) - ndi.gaussian_filter(
+            img_obj.get_voxel_grid(), sigma=4.0 * gauss_filt_spacing
+        )
 
         # Smooth edge detection
-        weight_vox = ndi.gaussian_filter(np.abs(weight_vox), sigma=2.0*gauss_filt_spacing)
+        weight_vox = ndi.gaussian_filter(
+            np.abs(weight_vox), sigma=2.0 * gauss_filt_spacing
+        )
 
         # Convert to weighting scale
         weight_vox = 1.0 - weight_vox / np.max(weight_vox)
@@ -239,11 +262,15 @@ def estimate_image_noise(img_obj, settings, method="chang"):
         # Step 3: estimate noise level
         ################################################################################################################
 
-        est_noise = np.sum(np.multiply(filt_vox, weight_vox)) / (36.0 * np.sum(weight_vox))
+        est_noise = np.sum(np.multiply(filt_vox, weight_vox)) / (
+            36.0 * np.sum(weight_vox)
+        )
         est_noise = np.sqrt(est_noise)
 
     else:
-        raise ValueError("The provided noise estimation method is not implemented. Use one of \"chang\" (default), \"rank\", \"ikeda\", \"immerkaer\" or \"zwanenburg\".")
+        raise ValueError(
+            'The provided noise estimation method is not implemented. Use one of "chang" (default), "rank", "ikeda", "immerkaer" or "zwanenburg".'
+        )
 
     return est_noise
 
@@ -253,26 +280,35 @@ def get_supervoxels(img_obj, roi_obj, settings, n_segments=None):
 
     # Check if image and/or roi exist, and skip otherwise
     if img_obj.is_missing or roi_obj.roi is None:
-        print ("You tried to get supervoxel labels, however didn't pass in an image, so be careful!")
+        print(
+            "You tried to get supervoxel labels, however didn't pass in an image, so be careful!"
+        )
         return None
 
     # Get image object grid aauker: I don't think this is neccessary anymore
     img_voxel_grid = img_obj.get_voxel_grid()
-    roi_bool_mask  = roi_obj.roi.get_voxel_grid().astype(np.bool)
+    roi_bool_mask = roi_obj.roi.get_voxel_grid().astype(np.bool)
 
-    outside = binary_dilation(roi_bool_mask, iterations=int (10 // np.min(img_obj.spacing)))
+    outside = binary_dilation(
+        roi_bool_mask, iterations=int(10 // np.min(img_obj.spacing))
+    )
 
-    min_n_voxels = np.max([20.0, 100.0 / np.prod(img_obj.spacing)]) # Even smaller super voxels....
-    segment_guess =  int(np.sum(outside) / min_n_voxels)
-    print ("Starting guess: ", segment_guess)
+    min_n_voxels = np.max(
+        [20.0, 100.0 / np.prod(img_obj.spacing)]
+    )  # Even smaller super voxels....
+    segment_guess = int(np.sum(outside) / min_n_voxels)
+    print("Starting guess: ", segment_guess)
 
-    #inside  = binary_erosion(bool_mask,  iterations=10)
-    #ring_mask = np.logical_and( outside, np.invert(inside))
+    # inside  = binary_erosion(bool_mask,  iterations=10)
+    # ring_mask = np.logical_and( outside, np.invert(inside))
 
     # Calculate roi pixel grid, low-level pixels, high-level pixels
-    roi_level_pixels  = np.ma.array(img_voxel_grid, mask=np.invert(roi_bool_mask))
-    low_level, high_level = roi_level_pixels.min() - 3 * roi_level_pixels.std(), roi_level_pixels.max() + 3 * roi_level_pixels.std()
-    img_voxel_grid = np.clip( img_voxel_grid, low_level, high_level)
+    roi_level_pixels = np.ma.array(img_voxel_grid, mask=np.invert(roi_bool_mask))
+    low_level, high_level = (
+        roi_level_pixels.min() - 3 * roi_level_pixels.std(),
+        roi_level_pixels.max() + 3 * roi_level_pixels.std(),
+    )
+    img_voxel_grid = np.clip(img_voxel_grid, low_level, high_level)
 
     # Convert to float with range [0.0, 1.0]
     img_voxel_grid = (img_voxel_grid - np.min(img_voxel_grid)) / np.ptp(img_voxel_grid)
@@ -281,8 +317,19 @@ def get_supervoxels(img_obj, roi_obj, settings, n_segments=None):
     img_voxel_grid = img_voxel_grid.astype(np.float)
 
     # Create a slic segmentation of the image stack
-    img_segments = slic(image=img_voxel_grid, n_segments=segment_guess, spacing=img_obj.spacing, mask=outside, 
-                       max_iter=50, sigma=1.0, compactness=0.04, multichannel=False, convert2lab=False, enforce_connectivity=True, start_label=1)
+    img_segments = slic(
+        image=img_voxel_grid,
+        n_segments=segment_guess,
+        spacing=img_obj.spacing,
+        mask=outside,
+        max_iter=50,
+        sigma=1.0,
+        compactness=0.04,
+        multichannel=False,
+        convert2lab=False,
+        enforce_connectivity=True,
+        start_label=1,
+    )
 
     return img_segments
 
@@ -296,20 +343,33 @@ def get_supervoxel_overlap(roi_obj, img_segments, mask=None):
 
     # Check segments overlapping with the current contour
     if mask == "morphological" and roi_obj.roi_morphology is not None:
-        overlap_segment_labels, overlap_size = np.unique(np.multiply(img_segments, roi_obj.roi_morphology.get_voxel_grid()), return_counts=True)
+        overlap_segment_labels, overlap_size = np.unique(
+            np.multiply(img_segments, roi_obj.roi_morphology.get_voxel_grid()),
+            return_counts=True,
+        )
     elif mask == "intensity" and roi_obj.roi_intensity is not None:
-        overlap_segment_labels, overlap_size = np.unique(np.multiply(img_segments, roi_obj.roi_intensity.get_voxel_grid()), return_counts=True)
+        overlap_segment_labels, overlap_size = np.unique(
+            np.multiply(img_segments, roi_obj.roi_intensity.get_voxel_grid()),
+            return_counts=True,
+        )
     else:
-        overlap_segment_labels, overlap_size = np.unique(np.multiply(img_segments, roi_obj.roi.get_voxel_grid()), return_counts=True)
+        overlap_segment_labels, overlap_size = np.unique(
+            np.multiply(img_segments, roi_obj.roi.get_voxel_grid()), return_counts=True
+        )
 
     # Find super voxels with non-zero overlap with the roi
-    overlap_size           = overlap_size[overlap_segment_labels > 0]
+    overlap_size = overlap_size[overlap_segment_labels > 0]
     overlap_segment_labels = overlap_segment_labels[overlap_segment_labels > 0]
 
-    if len(overlap_size)==0: raise RuntimeError("No valid supervoxels found, this can happen if the entire grid recieved label 0 from slic, did you window out your tumor?")
+    if len(overlap_size) == 0:
+        raise RuntimeError(
+            "No valid supervoxels found, this can happen if the entire grid recieved label 0 from slic, did you window out your tumor?"
+        )
 
     # Check the actual size of the segments overlapping with the current contour
-    segment_size = list(map(lambda x: np.sum([img_segments == x]), overlap_segment_labels))
+    segment_size = list(
+        map(lambda x: np.sum([img_segments == x]), overlap_segment_labels)
+    )
 
     # Calculate the fraction of overlap
     overlap_frac = overlap_size / segment_size
@@ -317,7 +377,14 @@ def get_supervoxel_overlap(roi_obj, img_segments, mask=None):
     return overlap_segment_labels, overlap_frac, overlap_size
 
 
-def transform_images(img_obj, roi_list, settings, compute_features=False, extract_images=False, file_path=None):
+def transform_images(
+    img_obj,
+    roi_list,
+    settings,
+    compute_features=False,
+    extract_images=False,
+    file_path=None,
+):
     """
     Performs image transformations and calculates features.
     :param img_obj: image object
@@ -347,46 +414,68 @@ def transform_images(img_obj, roi_list, settings, compute_features=False, extrac
             from mirp.imageFilters.waveletFilter import WaveletFilter
 
             filter_obj = WaveletFilter(settings=settings)
-            feat_list += filter_obj.apply_transformation(img_obj=img_obj, roi_list=roi_list, settings=settings,
-                                                         compute_features=compute_features, extract_images=extract_images,
-                                                         file_path=file_path)
+            feat_list += filter_obj.apply_transformation(
+                img_obj=img_obj,
+                roi_list=roi_list,
+                settings=settings,
+                compute_features=compute_features,
+                extract_images=extract_images,
+                file_path=file_path,
+            )
 
         elif curr_filter == "laplacian_of_gaussian":
             # Laplacian of Gaussian filters
             from mirp.imageFilters.laplacianOfGaussian import LaplacianOfGaussianFilter
 
             filter_obj = LaplacianOfGaussianFilter(settings=settings)
-            feat_list += filter_obj.apply_transformation(img_obj=img_obj, roi_list=roi_list, settings=settings,
-                                                         compute_features=compute_features, extract_images=extract_images,
-                                                         file_path=file_path)
+            feat_list += filter_obj.apply_transformation(
+                img_obj=img_obj,
+                roi_list=roi_list,
+                settings=settings,
+                compute_features=compute_features,
+                extract_images=extract_images,
+                file_path=file_path,
+            )
 
         elif curr_filter == "laws":
             # Laws' kernels
             from mirp.imageFilters.lawsFilter import LawsFilter
 
             filter_obj = LawsFilter(settings=settings)
-            feat_list += filter_obj.apply_transformation(img_obj=img_obj, roi_list=roi_list, settings=settings,
-                                                         compute_features=compute_features, extract_images=extract_images,
-                                                         file_path=file_path)
+            feat_list += filter_obj.apply_transformation(
+                img_obj=img_obj,
+                roi_list=roi_list,
+                settings=settings,
+                compute_features=compute_features,
+                extract_images=extract_images,
+                file_path=file_path,
+            )
 
         elif curr_filter == "mean":
             # Mean / uniform filter
             from mirp.imageFilters.meanFilter import MeanFilter
 
             filter_obj = MeanFilter(settings=settings)
-            feat_list += filter_obj.apply_transformation(img_obj=img_obj, roi_list=roi_list, settings=settings,
-                                                         compute_features=compute_features, extract_images=extract_images,
-                                                         file_path=file_path)
+            feat_list += filter_obj.apply_transformation(
+                img_obj=img_obj,
+                roi_list=roi_list,
+                settings=settings,
+                compute_features=compute_features,
+                extract_images=extract_images,
+                file_path=file_path,
+            )
 
         else:
-            raise ValueError(f"{curr_filter} is not implemented as a spatial filter. Please use one of wavelet, laplacian_of_gaussian, mean or laws.")
+            raise ValueError(
+                f"{curr_filter} is not implemented as a spatial filter. Please use one of wavelet, laplacian_of_gaussian, mean or laws."
+            )
 
     return feat_list
 
 
 def crop_image(img_obj, roi_list=None, roi_obj=None, boundary=0.0, z_only=False):
-    """ The function is used to slice a subsection of the image so that further processing is facilitated in terms of
-     memory and computational requirements. """
+    """The function is used to slice a subsection of the image so that further processing is facilitated in terms of
+    memory and computational requirements."""
 
     ####################################################################################################################
     # Initial steps
@@ -402,7 +491,9 @@ def crop_image(img_obj, roi_list=None, roi_obj=None, boundary=0.0, z_only=False)
     ####################################################################################################################
     # Determine region of interest bounding box
     ####################################################################################################################
-    roi_ext_x = [];  roi_ext_y = []; roi_ext_z = []
+    roi_ext_x = []
+    roi_ext_y = []
+    roi_ext_z = []
 
     # Determine extent of all rois
     for roi_obj in roi_list:
@@ -428,16 +519,24 @@ def crop_image(img_obj, roi_list=None, roi_obj=None, boundary=0.0, z_only=False)
         boundary = np.ceil(boundary / img_obj.spacing).astype(np.int)
 
         # Concatenate extents for rois and add boundary to generate map extent
-        ind_ext_z = np.array([np.min(roi_ext_z) - boundary[0], np.max(roi_ext_z) + boundary[0]])
-        ind_ext_y = np.array([np.min(roi_ext_y) - boundary[1], np.max(roi_ext_y) + boundary[1]])
-        ind_ext_x = np.array([np.min(roi_ext_x) - boundary[2], np.max(roi_ext_x) + boundary[2]])
+        ind_ext_z = np.array(
+            [np.min(roi_ext_z) - boundary[0], np.max(roi_ext_z) + boundary[0]]
+        )
+        ind_ext_y = np.array(
+            [np.min(roi_ext_y) - boundary[1], np.max(roi_ext_y) + boundary[1]]
+        )
+        ind_ext_x = np.array(
+            [np.min(roi_ext_x) - boundary[2], np.max(roi_ext_x) + boundary[2]]
+        )
 
         ####################################################################################################################
         # Resect image based on roi extent
         ####################################################################################################################
 
         img_res = img_obj.copy()
-        img_res.crop(ind_ext_z=ind_ext_z, ind_ext_y=ind_ext_y, ind_ext_x=ind_ext_x, z_only=z_only)
+        img_res.crop(
+            ind_ext_z=ind_ext_z, ind_ext_y=ind_ext_y, ind_ext_x=ind_ext_x, z_only=z_only
+        )
 
         ####################################################################################################################
         # Resect rois based on roi extent
@@ -447,7 +546,15 @@ def crop_image(img_obj, roi_list=None, roi_obj=None, boundary=0.0, z_only=False)
         roi_res_list = [roi_res_obj.copy() for roi_res_obj in roi_list]
 
         # Resect in place
-        [roi_res_obj.crop(ind_ext_z=ind_ext_z, ind_ext_y=ind_ext_y, ind_ext_x=ind_ext_x, z_only=z_only) for roi_res_obj in roi_res_list]
+        [
+            roi_res_obj.crop(
+                ind_ext_z=ind_ext_z,
+                ind_ext_y=ind_ext_y,
+                ind_ext_x=ind_ext_x,
+                z_only=z_only,
+            )
+            for roi_res_obj in roi_res_list
+        ]
 
     else:
         # This happens if all rois are empty - only copies of the original image object and the roi are returned
@@ -457,20 +564,26 @@ def crop_image(img_obj, roi_list=None, roi_obj=None, boundary=0.0, z_only=False)
     ####################################################################################################################
     # Return to calling function
     ####################################################################################################################
-    
+
     if return_roi_obj:
         return img_res, roi_res_list[0]
     else:
         return img_res, roi_res_list
 
 
-def interpolate_to_new_grid(orig_dim,
-                            orig_spacing,
-                            orig_vox,
-                            sample_dim=None,
-                            sample_spacing=None,
-                            grid_origin=None,
-                            translation=np.array([0.0, 0.0, 0.0]), order=1, mode="nearest", align_to_center=True, processor="scipy"):
+def interpolate_to_new_grid(
+    orig_dim,
+    orig_spacing,
+    orig_vox,
+    sample_dim=None,
+    sample_spacing=None,
+    grid_origin=None,
+    translation=np.array([0.0, 0.0, 0.0]),
+    order=1,
+    mode="nearest",
+    align_to_center=True,
+    processor="scipy",
+):
     """
     Resamples input grid and returns the output grid.
     :param orig_dim: dimensions of the input grid
@@ -510,7 +623,10 @@ def interpolate_to_new_grid(orig_dim,
     # Set grid origin, if not provided previously
     if grid_origin is None:
         if align_to_center:
-            grid_origin = 0.5 * (np.array(orig_dim) - 1.0) - 0.5 * (np.array(sample_dim) - 1.0) * grid_spacing
+            grid_origin = (
+                0.5 * (np.array(orig_dim) - 1.0)
+                - 0.5 * (np.array(sample_dim) - 1.0) * grid_spacing
+            )
 
         else:
             grid_origin = np.array([0.0, 0.0, 0.0])
@@ -523,9 +639,10 @@ def interpolate_to_new_grid(orig_dim,
 
         # Convert sample_spacing and sample_origin to normalised original spacing (where voxel distance is 1 in each direction)
         # This is required for the use of ndi.map_coordinates, which uses the original grid as reference.
-
         # Generate interpolation map grid
-        map_z, map_y, map_x = np.mgrid[:sample_dim[0], :sample_dim[1], :sample_dim[2]]
+        map_z, map_y, map_x = np.mgrid[
+            : sample_dim[0], : sample_dim[1], : sample_dim[2]
+        ]
 
         # Transform map to normalised original space
         map_z = map_z * grid_spacing[0] + grid_origin[0]
@@ -536,20 +653,24 @@ def interpolate_to_new_grid(orig_dim,
         map_x = map_x.astype(np.float32)
 
         # Interpolate orig_vox on interpolation grid
-        map_vox = ndi.map_coordinates(input=orig_vox.astype(np.float32),
-                                      coordinates=np.array([map_z, map_y, map_x], dtype=np.float32),
-                                      order=order,
-                                      mode=mode)
+        map_vox = ndi.map_coordinates(
+            input=orig_vox.astype(np.float32),
+            coordinates=np.array([map_z, map_y, map_x], dtype=np.float32),
+            order=order,
+            mode=mode,
+        )
 
     elif processor == "sitk":
         import SimpleITK as sitk
-        sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(4)
 
+        sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(4)
 
         # Convert input voxel grid to sitk image. Note that SimpleITK expects x,y,z ordering, while we use z,y,
         # x ordering. Hence origins, spacings and sizes are inverted for both input image (sitk_orig_img) and
         # ResampleImageFilter objects.
-        sitk_orig_img = sitk.GetImageFromArray(orig_vox.astype(np.float32), isVector=False)
+        sitk_orig_img = sitk.GetImageFromArray(
+            orig_vox.astype(np.float32), isVector=False
+        )
         sitk_orig_img.SetOrigin(np.array([0.0, 0.0, 0.0]))
         sitk_orig_img.SetSpacing(np.array([1.0, 1.0, 1.0]))
 
@@ -572,13 +693,20 @@ def interpolate_to_new_grid(orig_dim,
 
         map_vox = sitk.GetArrayFromImage(interpolator.Execute(sitk_orig_img))
     else:
-        raise ValueError("The selected processor should be one of \"scipy\" or \"sitk\"")
+        raise ValueError('The selected processor should be one of "scipy" or "sitk"')
 
     # Return interpolated grid and spatial coordinates
     return sample_dim, sample_spacing, map_vox, grid_origin
 
 
-def gaussian_preprocess_filter(orig_vox, orig_spacing, sample_spacing=None, param_beta=0.93, mode="nearest", by_slice=False):
+def gaussian_preprocess_filter(
+    orig_vox,
+    orig_spacing,
+    sample_spacing=None,
+    param_beta=0.93,
+    mode="nearest",
+    by_slice=False,
+):
 
     import scipy.ndimage
 
@@ -588,7 +716,7 @@ def gaussian_preprocess_filter(orig_vox, orig_spacing, sample_spacing=None, para
 
     # Set sample spacing and orig_spacing to float
     sample_spacing = sample_spacing.astype(np.float)
-    orig_spacing   = orig_spacing.astype(np.float)
+    orig_spacing = orig_spacing.astype(np.float)
 
     # Calculate the zoom factors
     map_spacing = sample_spacing / orig_spacing
@@ -597,50 +725,58 @@ def gaussian_preprocess_filter(orig_vox, orig_spacing, sample_spacing=None, para
     # map_spacing[map_spacing<=1.0] = 0.0
 
     # Don't filter along slices if calculations are to occur within the slice only
-    if by_slice: map_spacing[0] = 0.0
+    if by_slice:
+        map_spacing[0] = 0.0
 
     # Calculate sigma
     sigma = np.sqrt(-8 * np.power(map_spacing, 2.0) * np.log(param_beta))
 
     # Apply filter
-    new_vox = scipy.ndimage.gaussian_filter(input=orig_vox.astype(np.float32), sigma=sigma, order=0, mode=mode)
+    new_vox = scipy.ndimage.gaussian_filter(
+        input=orig_vox.astype(np.float32), sigma=sigma, order=0, mode=mode
+    )
 
     return new_vox
 
 
 def combine_pertubation_rois(roi_list, settings):
     new_roi_list = []
-    for ii in np.arange(settings.vol_adapt.roi_random_rep): 
-        roi_list_by_pertubation = [roi for roi in roi_list if roi.svx_randomisation_id == ii]
+    for ii in np.arange(settings.vol_adapt.roi_random_rep):
+        roi_list_by_pertubation = [
+            roi for roi in roi_list if roi.svx_randomisation_id == ii
+        ]
         repl_roi = roi_list_by_pertubation[0].copy()
 
         roi_vox_new = np.zeros(shape=repl_roi.roi.size, dtype=np.uint8)
 
-        label_grid_mapping = { roi.label_value : roi.roi.get_voxel_grid() for roi in roi_list_by_pertubation}
+        label_grid_mapping = {
+            roi.label_value: roi.roi.get_voxel_grid() for roi in roi_list_by_pertubation
+        }
 
         for label_value in sorted(label_grid_mapping.keys(), reverse=True):
             roi_vox_new[np.where(label_grid_mapping[label_value] != 0)] = label_value
 
         repl_roi.roi.set_voxel_grid(roi_vox_new)
-        repl_roi.name += "_COMBINED"          # Adapt roi name
+        repl_roi.name += "_COMBINED"  # Adapt roi name
         new_roi_list += [repl_roi]
     return new_roi_list
+
 
 def combine_all_rois(roi_list, settings):
     repl_roi = roi_list[0].copy()
 
     roi_vox_new = np.zeros(shape=repl_roi.roi.size, dtype=np.uint8)
 
-    label_grid_mapping = { roi.label_value : roi.roi.get_voxel_grid() for roi in roi_list}
+    label_grid_mapping = {roi.label_value: roi.roi.get_voxel_grid() for roi in roi_list}
 
     for label_value in sorted(label_grid_mapping.keys(), reverse=True):
-        roi_vox_new = np.where(label_grid_mapping[label_value] != 0, label_grid_mapping[label_value], roi_vox_new)
+        roi_vox_new = np.where(
+            label_grid_mapping[label_value] != 0,
+            label_grid_mapping[label_value],
+            roi_vox_new,
+        )
         # roi_vox_new[np.where(label_grid_mapping[label_value] != 0)] = label_grid_mapping[label_value]
 
     repl_roi.roi.set_voxel_grid(roi_vox_new)
-    repl_roi.name += "_COMBINED"          # Adapt roi name
+    repl_roi.name += "_COMBINED"  # Adapt roi name
     return repl_roi
-
-
-
-                

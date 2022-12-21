@@ -1,13 +1,15 @@
+import os
+
+import pytest
+import yaml
+
 from luna.common.utils import (
+    cli_runner,
+    expand_inputs,
     generate_uuid,
     get_absolute_path,
     validate_params,
-    cli_runner,
-    expand_inputs,
 )
-import pytest
-import os
-import yaml
 
 
 def test_generate_uuid():
@@ -23,9 +25,7 @@ def test_get_absolute_path():
         __file__, "../data_ingestion_template_invalid.yml"
     )
     assert absolute_path.startswith("/")
-    assert absolute_path.endswith(
-        "tests/luna/data_ingestion_template_invalid.yml"
-    )
+    assert absolute_path.endswith("tests/luna/data_ingestion_template_invalid.yml")
 
 
 def test_validate_params__simple():

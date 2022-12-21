@@ -1,7 +1,8 @@
 import os
-from click.testing import CliRunner
 
 import pandas as pd
+from click.testing import CliRunner
+
 from luna.pathology.cli.extract_tile_statistics import cli
 
 

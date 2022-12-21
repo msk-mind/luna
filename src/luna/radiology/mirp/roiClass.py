@@ -8,32 +8,49 @@ from typing import Union
 import numpy as np
 import pandas as pd
 from pydicom import FileDataset
+from scipy.stats import mstats
 
-from luna.radiology.mirp.imageClass   import ImageClass
-from luna.radiology.mirp.imageProcess import gaussian_preprocess_filter
-from luna.radiology.mirp.imageProcess import interpolate_to_new_grid
+from luna.radiology.mirp.imageClass import ImageClass
+from luna.radiology.mirp.imageMetaData import get_pydicom_meta_tag, set_pydicom_meta_tag
+from luna.radiology.mirp.imageProcess import (
+    gaussian_preprocess_filter,
+    interpolate_to_new_grid,
+)
 
-from scipy.stats       import mstats
-from scipy.ndimage import binary_dilation
 
 class RoiClass:
     # Class for regions of interest
 
-    def __init__(self, name, contour, roi_mask=None, g_range=np.array([np.nan, np.nan]), incl_threshold=0.5, metadata=None, label_value=1):
+    def __init__(
+        self,
+        name,
+        contour,
+        roi_mask=None,
+        g_range=np.array([np.nan, np.nan]),
+        incl_threshold=0.5,
+        metadata=None,
+        label_value=1,
+    ):
 
         self.name = name
         self.label_value = int(label_value)
 
         # Fixed parameters
-        self.g_range = g_range                  # Range of allowed grey level intensities
-        self.incl_threshold = incl_threshold    # Threshold for partial volume effect
-        self.adapt_size = 0.0                   # Shrinkage and growth of roi
-        self.svx_randomisation_id = -1          # Randomisation id for supervoxel roi randomisation
+        self.g_range = g_range  # Range of allowed grey level intensities
+        self.incl_threshold = incl_threshold  # Threshold for partial volume effect
+        self.adapt_size = 0.0  # Shrinkage and growth of roi
+        self.svx_randomisation_id = (
+            -1
+        )  # Randomisation id for supervoxel roi randomisation
 
         # ROI masks
-        self.roi: Union[ImageClass, None] = roi_mask             # Union of intensity and morphology masks
-        self.roi_intensity: Union[ImageClass, None] = None       # Intensity mask of the ROI
-        self.roi_morphology: Union[ImageClass, None] = None      # Morphological mask of the ROI
+        self.roi: Union[
+            ImageClass, None
+        ] = roi_mask  # Union of intensity and morphology masks
+        self.roi_intensity: Union[ImageClass, None] = None  # Intensity mask of the ROI
+        self.roi_morphology: Union[
+            ImageClass, None
+        ] = None  # Morphological mask of the ROI
 
         # Diagnostics features
         self.diagnostic_list = []
@@ -41,18 +58,19 @@ class RoiClass:
         self.stats = {}
 
     def calculate_roi_statistics(self, img_obj, tag="none"):
-        masked_voxel_array = np.ma.array(img_obj.get_voxel_grid(), mask=~self.roi.get_voxel_grid()) # Invert binary roi grid
+        masked_voxel_array = np.ma.array(
+            img_obj.get_voxel_grid(), mask=~self.roi.get_voxel_grid()
+        )  # Invert binary roi grid
         skew = float(mstats.skew(masked_voxel_array, axis=None))
         #  Compute skew factors
         self.stats[tag] = {
-            'roi_level_mu'      : masked_voxel_array.mean(),
-            'roi_level_std'     : masked_voxel_array.std(),
-            'roi_level_range'   : masked_voxel_array.ptp(),
-            'roi_level_min'     : masked_voxel_array.min(),
-            'roi_level_max'     : masked_voxel_array.max(),
-            'roi_level_skew'    : skew,
+            "roi_level_mu": masked_voxel_array.mean(),
+            "roi_level_std": masked_voxel_array.std(),
+            "roi_level_range": masked_voxel_array.ptp(),
+            "roi_level_min": masked_voxel_array.min(),
+            "roi_level_max": masked_voxel_array.max(),
+            "roi_level_skew": skew,
         }
-
 
     def get_roi_statistics(self, tag="none"):
         return self.stats[tag]
@@ -61,7 +79,13 @@ class RoiClass:
         # Creates a new copy of the roi
         return copy.deepcopy(self)
 
-    def create_mask_from_contours(self, img_obj, draw_method="ray_cast", disconnected_segments="keep_as_is", settings=None):
+    def create_mask_from_contours(
+        self,
+        img_obj,
+        draw_method="ray_cast",
+        disconnected_segments="keep_as_is",
+        settings=None,
+    ):
         # Creates an image based on provided contours
 
         # Skip if image object is empty
@@ -82,17 +106,23 @@ class RoiClass:
 
             # Ray casting method to draw segmentation map based on polygon contour
             if draw_method == "ray_cast":
-                slice_list, mask_list = contour.contour_to_grid_ray_cast(img_obj=img_obj)
+                slice_list, mask_list = contour.contour_to_grid_ray_cast(
+                    img_obj=img_obj
+                )
                 for ii in np.arange(len(slice_list)):
                     slice_id = slice_list[ii]
-                    roi_mask[slice_id, :, :] = np.logical_or(roi_mask[slice_id, :, :], mask_list[ii])
+                    roi_mask[slice_id, :, :] = np.logical_or(
+                        roi_mask[slice_id, :, :], mask_list[ii]
+                    )
 
         if disconnected_segments == "keep_largest":
             # Check if the created roi mask consists of multiple, separate segments, and keep only the largest.
             import skimage.measure
 
             # Label regions
-            roi_label_mask, n_regions = skimage.measure.label(input=roi_mask, connectivity=2, return_num=True)
+            roi_label_mask, n_regions = skimage.measure.label(
+                input=roi_mask, connectivity=2, return_num=True
+            )
 
             # Determine size of regions
             roi_sizes = np.zeros(n_regions)
@@ -103,7 +133,12 @@ class RoiClass:
             roi_mask = roi_label_mask == np.argmax(roi_sizes) + 1
 
         # Store roi as image object
-        self.roi = ImageClass(voxel_grid=roi_mask, origin=img_obj.origin, spacing=img_obj.spacing, orientation=img_obj.orientation)
+        self.roi = ImageClass(
+            voxel_grid=roi_mask,
+            origin=img_obj.origin,
+            spacing=img_obj.spacing,
+            orientation=img_obj.orientation,
+        )
 
         # Remove contour information
         self.contour = None
@@ -125,16 +160,22 @@ class RoiClass:
 
     def interpolate(self, img_obj, settings):
 
-        print ("Resampling ROI ", self.roi.spacing, " -> ", img_obj.spacing)
+        print("Resampling ROI ", self.roi.spacing, " -> ", img_obj.spacing)
         # Skip if image and/or is missing
         if img_obj is None or self.roi is None:
             return
 
         if settings.img_interpolate.anti_aliasing:
-            self.roi.set_voxel_grid(voxel_grid=gaussian_preprocess_filter(orig_vox=self.roi.get_voxel_grid(), orig_spacing=self.roi.spacing,
-                                                                          sample_spacing=img_obj.spacing,
-                                                                          param_beta=settings.img_interpolate.smoothing_beta, mode="nearest",
-                                                                          by_slice=settings.general.by_slice))
+            self.roi.set_voxel_grid(
+                voxel_grid=gaussian_preprocess_filter(
+                    orig_vox=self.roi.get_voxel_grid(),
+                    orig_spacing=self.roi.spacing,
+                    sample_spacing=img_obj.spacing,
+                    param_beta=settings.img_interpolate.smoothing_beta,
+                    mode="nearest",
+                    by_slice=settings.general.by_slice,
+                )
+            )
 
         # Register with image
         self.register(img_obj=img_obj, settings=settings)
@@ -150,7 +191,6 @@ class RoiClass:
             roi_copy = self.copy()
             roi_copy.register(img_obj=img_obj, apply_to_self=True)
             return roi_copy
-
 
         # Skip if image and/or is missing
         if img_obj is None or self.roi is None:
@@ -172,24 +212,37 @@ class RoiClass:
             registration_required = True
 
         if not np.allclose(self.roi.orientation, img_obj.orientation):
-            raise ValueError("Cannot register segmentation and image object due to different alignments. "
-                             "Please use an external programme to transfer segmentation to the image.")
+            raise ValueError(
+                "Cannot register segmentation and image object due to different alignments. "
+                "Please use an external programme to transfer segmentation to the image."
+            )
 
         if registration_required:
             # Register roi to image; this transforms the roi grid into
-            self.roi.size, sample_spacing, voxel_grid, grid_origin = \
-                interpolate_to_new_grid(orig_dim=self.roi.size,
-                                        orig_spacing=self.roi.spacing,
-                                        orig_vox=self.roi.get_voxel_grid(),
-                                        sample_dim=img_obj.size,
-                                        sample_spacing=img_obj.spacing,
-                                        grid_origin=np.dot(self.roi.m_affine_inv, np.transpose(img_obj.origin - self.roi.origin)),
-                                        order=settings.roi_interpolate.spline_order,
-                                        mode="nearest",
-                                        align_to_center=False)
+            (
+                self.roi.size,
+                sample_spacing,
+                voxel_grid,
+                grid_origin,
+            ) = interpolate_to_new_grid(
+                orig_dim=self.roi.size,
+                orig_spacing=self.roi.spacing,
+                orig_vox=self.roi.get_voxel_grid(),
+                sample_dim=img_obj.size,
+                sample_spacing=img_obj.spacing,
+                grid_origin=np.dot(
+                    self.roi.m_affine_inv,
+                    np.transpose(img_obj.origin - self.roi.origin),
+                ),
+                order=settings.roi_interpolate.spline_order,
+                mode="nearest",
+                align_to_center=False,
+            )
 
             # Update origin before spacing, because computing the origin requires the original affine matrix.
-            self.roi.origin = self.roi.origin + np.dot(self.roi.m_affine, np.transpose(grid_origin))
+            self.roi.origin = self.roi.origin + np.dot(
+                self.roi.m_affine, np.transpose(grid_origin)
+            )
 
             # Update spacing and affine matrix.
             self.roi.set_spacing(sample_spacing)
@@ -203,10 +256,13 @@ class RoiClass:
             return
 
         if not self.roi.dtype_name == "bool":
-            self.roi.set_voxel_grid(voxel_grid=np.around(self.roi.get_voxel_grid(), 6) >= np.around(self.incl_threshold, 6))
+            self.roi.set_voxel_grid(
+                voxel_grid=np.around(self.roi.get_voxel_grid(), 6)
+                >= np.around(self.incl_threshold, 6)
+            )
 
     def generate_masks(self):
-        """"Generate roi intensity and morphology masks"""
+        """ "Generate roi intensity and morphology masks"""
 
         if self.roi is None:
             self.roi_intensity = None
@@ -218,47 +274,72 @@ class RoiClass:
     def update_roi(self):
         """Update region of interest based on intensity and morphological masks"""
 
-        if self.roi is None or self.roi_intensity is None or self.roi_morphology is None:
+        if (
+            self.roi is None
+            or self.roi_intensity is None
+            or self.roi_morphology is None
+        ):
             return
 
-        self.roi.set_voxel_grid(voxel_grid=np.logical_or(self.roi_intensity.get_voxel_grid(), self.roi_morphology.get_voxel_grid()))
+        self.roi.set_voxel_grid(
+            voxel_grid=np.logical_or(
+                self.roi_intensity.get_voxel_grid(),
+                self.roi_morphology.get_voxel_grid(),
+            )
+        )
 
-    def crop(self, ind_ext_z=None, ind_ext_y=None, ind_ext_x=None,
-             xy_only=False, z_only=False):
-        """"Resects roi"""
+    def crop(
+        self,
+        ind_ext_z=None,
+        ind_ext_y=None,
+        ind_ext_x=None,
+        xy_only=False,
+        z_only=False,
+    ):
+        """ "Resects roi"""
 
         # Resect masks
         if self.roi is not None:
-            self.roi.crop(ind_ext_z=ind_ext_z,
-                          ind_ext_y=ind_ext_y,
-                          ind_ext_x=ind_ext_x,
-                          xy_only=xy_only,
-                          z_only=z_only)
+            self.roi.crop(
+                ind_ext_z=ind_ext_z,
+                ind_ext_y=ind_ext_y,
+                ind_ext_x=ind_ext_x,
+                xy_only=xy_only,
+                z_only=z_only,
+            )
 
         if self.roi_intensity is not None:
-            self.roi_intensity.crop(ind_ext_z=ind_ext_z,
-                                    ind_ext_y=ind_ext_y,
-                                    ind_ext_x=ind_ext_x,
-                                    xy_only=xy_only,
-                                    z_only=z_only)
+            self.roi_intensity.crop(
+                ind_ext_z=ind_ext_z,
+                ind_ext_y=ind_ext_y,
+                ind_ext_x=ind_ext_x,
+                xy_only=xy_only,
+                z_only=z_only,
+            )
 
         if self.roi_morphology is not None:
-            self.roi_morphology.crop(ind_ext_z=ind_ext_z,
-                                     ind_ext_y=ind_ext_y,
-                                     ind_ext_x=ind_ext_x,
-                                     xy_only=xy_only,
-                                     z_only=z_only)
+            self.roi_morphology.crop(
+                ind_ext_z=ind_ext_z,
+                ind_ext_y=ind_ext_y,
+                ind_ext_x=ind_ext_x,
+                xy_only=xy_only,
+                z_only=z_only,
+            )
 
     def crop_to_size(self, center, crop_size, xy_only=False):
-        """"Crops roi to a pre-defined size"""
+        """ "Crops roi to a pre-defined size"""
 
         # Crop masks to size
         if self.roi is not None:
             self.roi.crop_to_size(center=center, crop_size=crop_size, xy_only=xy_only)
         if self.roi_intensity is not None:
-            self.roi_intensity.crop_to_size(center=center, crop_size=crop_size, xy_only=xy_only)
+            self.roi_intensity.crop_to_size(
+                center=center, crop_size=crop_size, xy_only=xy_only
+            )
         if self.roi_morphology is not None:
-            self.roi_morphology.crop_to_size(center=center, crop_size=crop_size, xy_only=xy_only)
+            self.roi_morphology.crop_to_size(
+                center=center, crop_size=crop_size, xy_only=xy_only
+            )
 
     def resegmentise_mask(self, img_obj, by_slice, method, settings):
         # Resegmentation of the roi map based on grey level values
@@ -267,7 +348,11 @@ class RoiClass:
         from skimage.morphology import remove_small_holes
 
         # Skip if required voxel grids are missing
-        if img_obj.is_missing or self.roi_intensity is None or self.roi_morphology is None:
+        if (
+            img_obj.is_missing
+            or self.roi_intensity is None
+            or self.roi_morphology is None
+        ):
             return
 
         ################################################################################################################
@@ -307,15 +392,19 @@ class RoiClass:
 
                 # Calculate mean and standard deviation of intensities in roi
                 mean_int = np.mean(img_voxel_grid[roi_voxel_grid])
-                sd_int   = np.std(img_voxel_grid[roi_voxel_grid])
+                sd_int = np.std(img_voxel_grid[roi_voxel_grid])
 
                 if not np.isnan(updated_range[0]):
-                    updated_range[0] = np.max([updated_range[0], mean_int - sigma * sd_int])
+                    updated_range[0] = np.max(
+                        [updated_range[0], mean_int - sigma * sd_int]
+                    )
                 else:
                     updated_range[0] = mean_int - sigma * sd_int
 
                 if not np.isnan(updated_range[1]):
-                    updated_range[1] = np.min([updated_range[1], mean_int + sigma * sd_int])
+                    updated_range[1] = np.min(
+                        [updated_range[1], mean_int + sigma * sd_int]
+                    )
                 else:
                     updated_range[1] = mean_int + sigma * sd_int
 
@@ -324,10 +413,14 @@ class RoiClass:
             roi_voxel_grid = self.roi_intensity.get_voxel_grid()
 
             if not np.isnan(updated_range[0]):
-                roi_voxel_grid = np.logical_and((img_obj.get_voxel_grid() >= updated_range[0]), roi_voxel_grid)
+                roi_voxel_grid = np.logical_and(
+                    (img_obj.get_voxel_grid() >= updated_range[0]), roi_voxel_grid
+                )
 
             if not np.isnan(updated_range[1]):
-                roi_voxel_grid = np.logical_and((img_obj.get_voxel_grid() <= updated_range[1]), roi_voxel_grid)
+                roi_voxel_grid = np.logical_and(
+                    (img_obj.get_voxel_grid() <= updated_range[1]), roi_voxel_grid
+                )
 
             # Set roi voxel volume
             self.roi_intensity.set_voxel_grid(voxel_grid=roi_voxel_grid)
@@ -338,8 +431,6 @@ class RoiClass:
         if bool(set(method).intersection("close_volume")):
             # Close internal volumes
 
-            from scipy.ndimage import generate_binary_structure, binary_erosion
-
             # Read minimal volume required
             max_fill_volume = settings.roi_resegment.max_fill_volume
 
@@ -347,15 +438,24 @@ class RoiClass:
             roi_voxel_grid = self.roi_morphology.get_voxel_grid()
 
             # Determine fill volume (in voxels); if max_fill_volume is less than 0.0, fill all holes
-            if max_fill_volume < 0.0: fill_volume = np.prod(np.array(self.roi_morphology.size)) + 1.0
-            else:                     fill_volume = np.floor(max_fill_volume / np.prod(self.roi_morphology.spacing)) + 1.0
+            if max_fill_volume < 0.0:
+                fill_volume = np.prod(np.array(self.roi_morphology.size)) + 1.0
+            else:
+                fill_volume = (
+                    np.floor(max_fill_volume / np.prod(self.roi_morphology.spacing))
+                    + 1.0
+                )
 
             # If the maximum fill volume is smaller than the minimal size of a hole
-            if fill_volume < 1.0: return None
+            if fill_volume < 1.0:
+                return None
 
             # Label all non-roi voxels and get label corresponding to voxels outside of the roi
-            non_roi_label = label(np.pad(roi_voxel_grid, 1, mode="constant", constant_values=0),
-                                  background=1, connectivity=3)
+            non_roi_label = label(
+                np.pad(roi_voxel_grid, 1, mode="constant", constant_values=0),
+                background=1,
+                connectivity=3,
+            )
             outside_label = non_roi_label[0, 0, 0]
 
             # Crop non-roi labels and determine non-roi voxels outside of the mask
@@ -366,26 +466,37 @@ class RoiClass:
             vox_not_internal = np.logical_or(roi_voxel_grid, vox_outside)
 
             # Check if there are any holes, otherwise continue
-            if not np.any(~vox_not_internal): return None
+            if not np.any(~vox_not_internal):
+                return None
 
             if by_slice:
                 # 2D approach to filling holes
 
                 for ii in np.arange(0, self.roi_morphology.size[0]):
                     # Skip operations on slides that do not contain voxels in the mask or no holes in the slice
-                    if not np.any(roi_voxel_grid[ii, :, :]): continue
-                    if not(np.any(~vox_not_internal[ii, :, :])): continue
+                    if not np.any(roi_voxel_grid[ii, :, :]):
+                        continue
+                    if not (np.any(~vox_not_internal[ii, :, :])):
+                        continue
 
                     # Fill holes up to fill_volume in voxel number
-                    vox_filled = remove_small_holes(vox_not_internal[ii, :, :], min_size=np.int(fill_volume), connectivity=2)
+                    vox_filled = remove_small_holes(
+                        vox_not_internal[ii, :, :],
+                        min_size=np.int(fill_volume),
+                        connectivity=2,
+                    )
 
                     # Update mask by removing outside voxels from the mask
-                    roi_voxel_grid[ii, :, :] = np.squeeze(np.logical_and(vox_filled, ~vox_outside[ii, :, :]))
+                    roi_voxel_grid[ii, :, :] = np.squeeze(
+                        np.logical_and(vox_filled, ~vox_outside[ii, :, :])
+                    )
             else:
                 # 3D approach to filling holes
 
                 # Fill holes up to fill_volume in voxel number
-                vox_filled = remove_small_holes(vox_not_internal, min_size=np.int(fill_volume), connectivity=3)
+                vox_filled = remove_small_holes(
+                    vox_not_internal, min_size=np.int(fill_volume), connectivity=3
+                )
 
                 # Update mask by removing outside voxels from the mask
                 roi_voxel_grid = np.logical_and(vox_filled, ~vox_outside)
@@ -397,11 +508,15 @@ class RoiClass:
             # Remove disconnected voxels
 
             # Discover prior disconnected volumes from the roi voxel grid
-            vox_disconnected = label(self.roi.get_voxel_grid(), background=0, connectivity=3)
+            vox_disconnected = label(
+                self.roi.get_voxel_grid(), background=0, connectivity=3
+            )
             vox_disconnected_labels = np.unique(vox_disconnected)
 
             # Set up an empty morphological masks
-            upd_vox_mask = np.full(shape=self.roi_morphology.size, fill_value=False, dtype=np.bool)
+            upd_vox_mask = np.full(
+                shape=self.roi_morphology.size, fill_value=False, dtype=np.bool
+            )
 
             # Get the minimum volume fraction for inclusion as voxels
             min_vol_fract = settings.roi_resegment.min_vol_fract
@@ -410,15 +525,22 @@ class RoiClass:
             for curr_volume_label in vox_disconnected_labels:
 
                 # Skip background
-                if vox_disconnected_labels == 0: continue
+                if vox_disconnected_labels == 0:
+                    continue
 
                 # Mask only current volume, skip if empty
-                curr_mask = np.logical_and(self.roi_morphology.get_voxel_grid(), vox_disconnected == curr_volume_label)
-                if not np.any(curr_mask): continue
+                curr_mask = np.logical_and(
+                    self.roi_morphology.get_voxel_grid(),
+                    vox_disconnected == curr_volume_label,
+                )
+                if not np.any(curr_mask):
+                    continue
 
                 # Find fully disconnected voxels groups and count them
                 vox_mask = label(curr_mask, background=0, connectivity=3)
-                vox_mask_labels, vox_label_count = np.unique(vox_mask, return_counts=True)
+                vox_mask_labels, vox_label_count = np.unique(
+                    vox_mask, return_counts=True
+                )
 
                 # Filter out the background counts
                 valid_label_id = np.nonzero(vox_mask_labels)
@@ -442,7 +564,7 @@ class RoiClass:
 
         # Original roi object
         if self.roi is not None:
-            n_roi_voxels     = np.int(np.sum(self.roi.get_voxel_grid()))
+            n_roi_voxels = np.int(np.sum(self.roi.get_voxel_grid()))
             if n_roi_voxels == 0:
                 return True
 
@@ -462,7 +584,7 @@ class RoiClass:
         return False
 
     def rotate(self, angle, img_obj):
-        """ Rotates roi in the y-x plane """
+        """Rotates roi in the y-x plane"""
 
         # Register with image prior to rotation
         self.register(img_obj=img_obj)
@@ -471,8 +593,8 @@ class RoiClass:
         self.roi.rotate(angle)
 
     def dilate(self, by_slice, dist=None, vox_dist=None):
-        from mirp.featureSets.utilities import rep
         import scipy.ndimage as ndi
+        from mirp.featureSets.utilities import rep
 
         # Skip if the roi does not exist
         if self.roi is None:
@@ -487,54 +609,97 @@ class RoiClass:
             raise RuntimeError("No dilation distance provided.")
 
         # Check whether voxel are isometric
-        if by_slice: spacing = self.roi.spacing[[1, 2]]
-        else:        spacing = self.roi.spacing
+        if by_slice:
+            spacing = self.roi.spacing[[1, 2]]
+        else:
+            spacing = self.roi.spacing
 
         if np.any(spacing - np.max(spacing) != 0.0):
-            raise RuntimeWarning("Non-uniform voxel spacing was detected. Roi dilation requires uniform voxel spacing.")
+            raise RuntimeWarning(
+                "Non-uniform voxel spacing was detected. Roi dilation requires uniform voxel spacing."
+            )
 
         # Derive filter extension and distance
         if dist is not None:
             base_ext: int = np.max([np.floor(dist / np.max(spacing)).astype(np.int), 0])
         else:
             base_ext: int = np.int(vox_dist)
-            dist     = vox_dist * np.max(spacing)
+            dist = vox_dist * np.max(spacing)
 
         # Check if an actual extension is required.
         if base_ext > 0:
 
             # Create displacement map
-            df_base = pd.DataFrame({"x": rep(x=np.arange(-base_ext, base_ext + 1),
-                                             each=(2 * base_ext + 1) * (2 * base_ext + 1),
-                                             times=1),
-                                    "y": rep(x=np.arange(-base_ext, base_ext + 1),
-                                             each=2 * base_ext + 1,
-                                             times=2 * base_ext + 1),
-                                    "z": rep(x=np.arange(-base_ext, base_ext + 1),
-                                             each=1,
-                                             times=(2 * base_ext + 1) * (2 * base_ext + 1))})
+            df_base = pd.DataFrame(
+                {
+                    "x": rep(
+                        x=np.arange(-base_ext, base_ext + 1),
+                        each=(2 * base_ext + 1) * (2 * base_ext + 1),
+                        times=1,
+                    ),
+                    "y": rep(
+                        x=np.arange(-base_ext, base_ext + 1),
+                        each=2 * base_ext + 1,
+                        times=2 * base_ext + 1,
+                    ),
+                    "z": rep(
+                        x=np.arange(-base_ext, base_ext + 1),
+                        each=1,
+                        times=(2 * base_ext + 1) * (2 * base_ext + 1),
+                    ),
+                }
+            )
 
             # Calculate distances for displacement map
-            df_base["dist"] = np.sqrt(np.sum(np.multiply(df_base.loc[:, ("z", "y", "x")].values, self.roi.spacing) ** 2.0, axis=1))
+            df_base["dist"] = np.sqrt(
+                np.sum(
+                    np.multiply(
+                        df_base.loc[:, ("z", "y", "x")].values, self.roi.spacing
+                    )
+                    ** 2.0,
+                    axis=1,
+                )
+            )
 
             # Identify elements in range
-            if by_slice: df_base["in_range"] = np.logical_and(df_base.dist <= dist, df_base.z == 0)
-            else:        df_base["in_range"] = df_base.dist <= dist
+            if by_slice:
+                df_base["in_range"] = np.logical_and(
+                    df_base.dist <= dist, df_base.z == 0
+                )
+            else:
+                df_base["in_range"] = df_base.dist <= dist
 
             # Update voxel coordinates to start at [0,0,0]
             df_base.loc[:, ["x", "y", "z"]] -= df_base.loc[0, ["x", "y", "z"]]
 
             # Generate geometric filter structure
-            geom_struct = np.zeros(shape=(np.max(df_base.z) + 1, np.max(df_base.y) + 1,
-                                          np.max(df_base.x) + 1), dtype=np.bool)
-            geom_struct[df_base.z.astype(np.int), df_base.y.astype(np.int), df_base.x.astype(np.int)] = df_base.in_range
+            geom_struct = np.zeros(
+                shape=(
+                    np.max(df_base.z) + 1,
+                    np.max(df_base.y) + 1,
+                    np.max(df_base.x) + 1,
+                ),
+                dtype=np.bool,
+            )
+            geom_struct[
+                df_base.z.astype(np.int),
+                df_base.y.astype(np.int),
+                df_base.x.astype(np.int),
+            ] = df_base.in_range
 
             # Dilate roi mask amd store voxel grid
-            self.roi.set_voxel_grid(voxel_grid=ndi.binary_dilation(self.roi.get_voxel_grid(), structure=geom_struct, iterations=1))
+            self.roi.set_voxel_grid(
+                voxel_grid=ndi.binary_dilation(
+                    self.roi.get_voxel_grid(), structure=geom_struct, iterations=1
+                )
+            )
 
         else:
-            print("No dilation: distance %s is too small compared to voxel spacing %s.", str(dist),
-                         str(np.max(spacing)))
+            print(
+                "No dilation: distance %s is too small compared to voxel spacing %s.",
+                str(dist),
+                str(np.max(spacing)),
+            )
 
     def adapt_volume(self, by_slice, vol_grow_fract=None):
         import scipy.ndimage
@@ -559,11 +724,14 @@ class RoiClass:
             spacing = self.roi.spacing
 
         if np.any(spacing - np.max(spacing) != 0.0):
-            raise RuntimeWarning("Non-uniform voxel spacing was detected. Roi volume adaptation requires uniform voxel spacing.")
+            raise RuntimeWarning(
+                "Non-uniform voxel spacing was detected. Roi volume adaptation requires uniform voxel spacing."
+            )
 
         # Set geometrical structure
         geom_struct = scipy.ndimage.generate_binary_structure(3, 1)
-        if by_slice: geom_struct[(0, 2), :, :] = False  # Set structures in different slices to 0
+        if by_slice:
+            geom_struct[(0, 2), :, :] = False  # Set structures in different slices to 0
 
         if not vol_grow_fract == 0.0 and not self.is_empty():
             # Determine original volume
@@ -573,40 +741,68 @@ class RoiClass:
             # Iteratively grow or shrink the volume. The loop terminates through break statements
             while True:
                 if vol_grow_fract > 0.0:
-                    updated_roi = scipy.ndimage.binary_dilation(previous_roi, structure=geom_struct, iterations=1)
+                    updated_roi = scipy.ndimage.binary_dilation(
+                        previous_roi, structure=geom_struct, iterations=1
+                    )
                 else:
-                    updated_roi = scipy.ndimage.binary_erosion(previous_roi, structure=geom_struct, iterations=1)
+                    updated_roi = scipy.ndimage.binary_erosion(
+                        previous_roi, structure=geom_struct, iterations=1
+                    )
 
                 new_volume = np.sum(updated_roi)
                 if new_volume == 0:
                     break
 
-                if vol_grow_fract > 0.0 and new_volume/orig_volume - 1.0 >= vol_grow_fract:
+                if (
+                    vol_grow_fract > 0.0
+                    and new_volume / orig_volume - 1.0 >= vol_grow_fract
+                ):
                     break
 
-                if vol_grow_fract < 0.0 and new_volume/orig_volume - 1.0 <= vol_grow_fract:
+                if (
+                    vol_grow_fract < 0.0
+                    and new_volume / orig_volume - 1.0 <= vol_grow_fract
+                ):
                     break
 
                 # Replace previous roi by the updated roi
                 previous_roi = updated_roi
 
             # Randomly add/remove border voxels until desired growth/shrinkage is achieved
-            if not new_volume/orig_volume - 1.0 == vol_grow_fract:
-                additional_vox = np.abs(int(np.floor(orig_volume * (1.0 + vol_grow_fract) - np.sum(previous_roi))))
+            if not new_volume / orig_volume - 1.0 == vol_grow_fract:
+                additional_vox = np.abs(
+                    int(
+                        np.floor(
+                            orig_volume * (1.0 + vol_grow_fract) - np.sum(previous_roi)
+                        )
+                    )
+                )
                 if additional_vox > 0:
-                    border_voxel_ind = np.array(np.where(np.logical_xor(previous_roi, updated_roi)))
-                    select_ind = np.random.choice(a=border_voxel_ind.shape[1], size=additional_vox, replace=False)
+                    border_voxel_ind = np.array(
+                        np.where(np.logical_xor(previous_roi, updated_roi))
+                    )
+                    select_ind = np.random.choice(
+                        a=border_voxel_ind.shape[1], size=additional_vox, replace=False
+                    )
                     border_voxel_ind = border_voxel_ind[:, select_ind]
                     if vol_grow_fract > 0.0:
-                        previous_roi[border_voxel_ind[0, :], border_voxel_ind[1, :], border_voxel_ind[2, :]] = True
+                        previous_roi[
+                            border_voxel_ind[0, :],
+                            border_voxel_ind[1, :],
+                            border_voxel_ind[2, :],
+                        ] = True
                     else:
-                        previous_roi[border_voxel_ind[0, :], border_voxel_ind[1, :], border_voxel_ind[2, :]] = False
+                        previous_roi[
+                            border_voxel_ind[0, :],
+                            border_voxel_ind[1, :],
+                            border_voxel_ind[2, :],
+                        ] = False
 
             # Set the new roi
             self.roi.set_voxel_grid(voxel_grid=previous_roi)
 
     def erode(self, by_slice, eroded_vol_fract=0.8, dist=None, vox_dist=None):
-        """" Erosion of the roi segment """
+        """ " Erosion of the roi segment"""
 
         import scipy.ndimage as ndi
 
@@ -616,7 +812,7 @@ class RoiClass:
 
         # Check whether voxels are booleans
         if not self.roi.dtype_name == "bool":
-            print ("Converting roi to boolean before erosion.")
+            print("Converting roi to boolean before erosion.")
             self.binarise_mask()
 
         # Check if any distance is provided for dilation
@@ -624,19 +820,26 @@ class RoiClass:
             raise RuntimeError("No erosion distance provided.")
 
         # Check whether voxel are isometric
-        if by_slice: spacing = self.roi.spacing[[1, 2]]
-        else:        spacing = self.roi.spacing
+        if by_slice:
+            spacing = self.roi.spacing[[1, 2]]
+        else:
+            spacing = self.roi.spacing
 
         if np.any(spacing - np.max(spacing) != 0.0):
-            raise RuntimeWarning("Non-uniform voxel spacing was detected. Roi erosion requires uniform voxel spacing.")
+            raise RuntimeWarning(
+                "Non-uniform voxel spacing was detected. Roi erosion requires uniform voxel spacing."
+            )
 
         # Set geometrical structure
         geom_struct = ndi.generate_binary_structure(3, 1)
-        if by_slice: geom_struct[(0, 2), :, :] = False    # Set structures in different slices to 0
+        if by_slice:
+            geom_struct[(0, 2), :, :] = False  # Set structures in different slices to 0
 
         # Set number of erosion steps
         if vox_dist is None:
-            erode_steps = np.max([np.round(np.abs(dist) / np.max(spacing)).astype(np.int), 0])
+            erode_steps = np.max(
+                [np.round(np.abs(dist) / np.max(spacing)).astype(np.int), 0]
+            )
         else:
             erode_steps = np.abs(vox_dist.astype(np.int))
             dist = vox_dist * np.max(spacing)
@@ -650,7 +853,9 @@ class RoiClass:
             for step in np.arange(0, erode_steps):
 
                 # Perform erosion
-                voxels_upd = ndi.binary_erosion(voxels_prev, structure=geom_struct, iterations=1)
+                voxels_upd = ndi.binary_erosion(
+                    voxels_prev, structure=geom_struct, iterations=1
+                )
 
                 # Calculate volume of the eroded volume
                 vol_curr = np.sum(voxels_upd)
@@ -666,7 +871,11 @@ class RoiClass:
             # Set updated voxels
             self.roi.set_voxel_grid(voxel_grid=voxels_upd)
         else:
-            print("No erosion: distance %s is too small compared to voxel spacing %s.", str(dist), str(np.max(spacing)))
+            print(
+                "No erosion: distance %s is too small compared to voxel spacing %s.",
+                str(dist),
+                str(np.max(spacing)),
+            )
 
     def decode_voxel_grid(self):
         """Converts run length encoded grids to conventional volumes"""
@@ -681,7 +890,14 @@ class RoiClass:
         if self.roi_morphology is not None:
             self.roi_morphology.decode_voxel_grid()
 
-    def as_pandas_dataframe(self, img_obj, intensity_mask=False, morphology_mask=False, distance_map=False, by_slice=False):
+    def as_pandas_dataframe(
+        self,
+        img_obj,
+        intensity_mask=False,
+        morphology_mask=False,
+        distance_map=False,
+        by_slice=False,
+    ):
         """Converts the image and roi voxel grids to a pandas dataframe for further processing"""
 
         # Return None if the image and/or ROI are missing
@@ -698,19 +914,27 @@ class RoiClass:
         img_dims = img_obj.size
         index_id = np.arange(start=0, stop=np.prod(img_dims))
         coords = np.unravel_index(indices=index_id, dims=img_dims)
-        df_img = pd.DataFrame({"index_id": index_id,
-                               "g":        np.ravel(img_obj.get_voxel_grid()),
-                               "x": coords[2],
-                               "y": coords[1],
-                               "z": coords[0]})
+        df_img = pd.DataFrame(
+            {
+                "index_id": index_id,
+                "g": np.ravel(img_obj.get_voxel_grid()),
+                "x": coords[2],
+                "y": coords[1],
+                "z": coords[0],
+            }
+        )
 
         if intensity_mask:
-            df_img["roi_int_mask"] = np.ravel(self.roi_intensity.get_voxel_grid()).astype(np.bool)
+            df_img["roi_int_mask"] = np.ravel(
+                self.roi_intensity.get_voxel_grid()
+            ).astype(np.bool)
         if morphology_mask:
-            df_img["roi_morph_mask"] = np.ravel(self.roi_morphology.get_voxel_grid()).astype(np.bool)
+            df_img["roi_morph_mask"] = np.ravel(
+                self.roi_morphology.get_voxel_grid()
+            ).astype(np.bool)
         if distance_map:
             # Calculate distance by sequential border erosion
-            from scipy.ndimage import generate_binary_structure, binary_erosion
+            from scipy.ndimage import binary_erosion, generate_binary_structure
 
             # Set up distance map and morphological voxel grid
             dist_map = np.zeros(img_dims)
@@ -751,14 +975,37 @@ class RoiClass:
         return df_img
 
     def compute_diagnostic_features(self, img_obj, append_str=""):
-        """ Creates diagnostic features for the ROI """
+        """Creates diagnostic features for the ROI"""
 
         # Set feature names
-        feat_names = ["int_map_dim_x", "int_map_dim_y", "int_map_dim_z", "int_bb_dim_x", "int_bb_dim_y", "int_bb_dim_z",
-                      "int_vox_dim_x", "int_vox_dim_y", "int_vox_dim_z", "int_vox_count", "int_mean_int", "int_min_int", "int_max_int",
-                      "mrp_map_dim_x", "mrp_map_dim_y", "mrp_map_dim_z", "mrp_bb_dim_x", "mrp_bb_dim_y", "mrp_bb_dim_z",
-                      "mrp_vox_dim_x", "mrp_vox_dim_y", "mrp_vox_dim_z", "mrp_vox_count", "mrp_mean_int", "mrp_min_int",
-                      "mrp_max_int"]
+        feat_names = [
+            "int_map_dim_x",
+            "int_map_dim_y",
+            "int_map_dim_z",
+            "int_bb_dim_x",
+            "int_bb_dim_y",
+            "int_bb_dim_z",
+            "int_vox_dim_x",
+            "int_vox_dim_y",
+            "int_vox_dim_z",
+            "int_vox_count",
+            "int_mean_int",
+            "int_min_int",
+            "int_max_int",
+            "mrp_map_dim_x",
+            "mrp_map_dim_y",
+            "mrp_map_dim_z",
+            "mrp_bb_dim_x",
+            "mrp_bb_dim_y",
+            "mrp_bb_dim_z",
+            "mrp_vox_dim_x",
+            "mrp_vox_dim_y",
+            "mrp_vox_dim_z",
+            "mrp_vox_count",
+            "mrp_mean_int",
+            "mrp_min_int",
+            "mrp_max_int",
+        ]
 
         # Create pandas dataframe with one row and feature columns
         df = pd.DataFrame(np.full(shape=(1, len(feat_names)), fill_value=np.nan))
@@ -786,8 +1033,14 @@ class RoiClass:
         mrp_voxel_grid = roi_copy.roi_morphology.get_voxel_grid()
 
         # Compute bounding boxes
-        int_bounding_box_dim = np.squeeze(np.diff(roi_copy.get_bounding_box(roi_voxel_grid=int_voxel_grid), axis=0) + 1)
-        mrp_bounding_box_dim = np.squeeze(np.diff(roi_copy.get_bounding_box(roi_voxel_grid=mrp_voxel_grid), axis=0) + 1)
+        int_bounding_box_dim = np.squeeze(
+            np.diff(roi_copy.get_bounding_box(roi_voxel_grid=int_voxel_grid), axis=0)
+            + 1
+        )
+        mrp_bounding_box_dim = np.squeeze(
+            np.diff(roi_copy.get_bounding_box(roi_voxel_grid=mrp_voxel_grid), axis=0)
+            + 1
+        )
 
         # Set intensity mask features
         df["int_map_dim_x"] = roi_copy.roi_intensity.size[2]
@@ -820,7 +1073,9 @@ class RoiClass:
         df["mrp_max_int"] = np.max(img_voxel_grid[mrp_voxel_grid])
 
         # Update column names
-        df.columns = ["_".join(["diag", feature, append_str]).strip("_") for feature in df.columns]
+        df.columns = [
+            "_".join(["diag", feature, append_str]).strip("_") for feature in df.columns
+        ]
 
         del roi_copy
 
@@ -836,7 +1091,7 @@ class RoiClass:
         return min_ind, max_ind
 
     def get_center_slice(self):
-        """ Identify location of the central slice in the roi """
+        """Identify location of the central slice in the roi"""
 
         # Return a NaN if no roi is present
         if self.roi is None:
@@ -849,7 +1104,7 @@ class RoiClass:
         return z_center
 
     def get_all_slices(self):
-        """ Identify location of all slices in the roi """
+        """Identify location of all slices in the roi"""
 
         # Return NaN in case the roi is missing
         if self.roi is None:
@@ -872,11 +1127,20 @@ class RoiClass:
 
         # Write morphological and intensity roi
         if self.roi_morphology is not None and self.roi_intensity is not None:
-            self.roi_morphology.write(file_path=file_path, file_name="_".join(roi_str_components + ["morph.nii.gz"]))
-            self.roi_intensity.write(file_path=file_path, file_name="_".join(roi_str_components + ["int.nii.gz"]))
+            self.roi_morphology.write(
+                file_path=file_path,
+                file_name="_".join(roi_str_components + ["morph.nii.gz"]),
+            )
+            self.roi_intensity.write(
+                file_path=file_path,
+                file_name="_".join(roi_str_components + ["int.nii.gz"]),
+            )
 
         elif self.roi is not None:
-            return self.roi.write(file_path=file_path, file_name="_".join(roi_str_components + ["roi.nii"]))
+            return self.roi.write(
+                file_path=file_path,
+                file_name="_".join(roi_str_components + ["roi.nii"]),
+            )
 
         else:
             return
@@ -890,12 +1154,10 @@ class RoiClass:
 
         if self.adapt_size != 0.0:
             # Volume adaptation
-            descr_list += ["vol",
-                           str(self.adapt_size)]
+            descr_list += ["vol", str(self.adapt_size)]
         if self.svx_randomisation_id != -1:
             # Contour randomisation
-            descr_list += ["svx",
-                           str(self.svx_randomisation_id)]
+            descr_list += ["svx", str(self.svx_randomisation_id)]
 
         descr_list += [self.name]
 
@@ -951,9 +1213,13 @@ class RoiClass:
             if self.roi is not None:
                 slice_roi_obj.roi = self.roi.get_slices(slice_number=slice_number)
             if self.roi_intensity is not None:
-                slice_roi_obj.roi_intensity = self.roi_intensity.get_slices(slice_number=slice_number)
+                slice_roi_obj.roi_intensity = self.roi_intensity.get_slices(
+                    slice_number=slice_number
+                )
             if self.roi_morphology is not None:
-                slice_roi_obj.roi_morphology = self.roi_morphology.get_slices(slice_number=slice_number)
+                slice_roi_obj.roi_morphology = self.roi_morphology.get_slices(
+                    slice_number=slice_number
+                )
 
             # Add to list
             roi_obj_list += [slice_roi_obj]
@@ -971,18 +1237,24 @@ class RoiClass:
 
             if os.path.isfile(file_path):
                 # Check if the write folder is a file.
-                raise IOError(f"{file_path} is an existing file, not a directory. No DICOM images were exported.")
+                raise IOError(
+                    f"{file_path} is an existing file, not a directory. No DICOM images were exported."
+                )
             else:
                 os.makedirs(file_path, exist_ok=True)
 
-        self.metadata.save_as(filename=os.path.join(file_path, file_name), write_like_original=False)
+        self.metadata.save_as(
+            filename=os.path.join(file_path, file_name), write_like_original=False
+        )
 
     def get_metadata(self, tag, tag_type, default=None):
         # Do not attempt to read the metadata if no metadata is present.
         if self.metadata is None:
             return
 
-        return get_pydicom_meta_tag(dcm_seq=self.metadata, tag=tag, tag_type=tag_type, default=default)
+        return get_pydicom_meta_tag(
+            dcm_seq=self.metadata, tag=tag, tag_type=tag_type, default=default
+        )
 
     def set_metadata(self, tag, value, force_vr=None):
 
@@ -990,7 +1262,9 @@ class RoiClass:
         if self.metadata is None:
             return None
 
-        set_pydicom_meta_tag(dcm_seq=self.metadata, tag=tag, value=value, force_vr=force_vr)
+        set_pydicom_meta_tag(
+            dcm_seq=self.metadata, tag=tag, value=value, force_vr=force_vr
+        )
 
     def has_metadata(self, tag):
 
@@ -1007,14 +1281,23 @@ class RoiClass:
             old = self.name
 
             if not self.has_metadata(tag=(0x3006, 0x0020)):
-                raise ValueError(f"The DICOM metaheader does not contain a Structure Set ROI sequence.")
+                raise ValueError(
+                    "The DICOM metaheader does not contain a Structure Set ROI sequence."
+                )
 
             # Iterate over roi elements in the roi sequence
             for ii, roi_element in enumerate(self.metadata[0x3006, 0x0020]):
 
                 # Find ROI name that matches the old name
-                if get_pydicom_meta_tag(dcm_seq=roi_element, tag=(0x3006, 0x0026), tag_type="str") == old:
-                    set_pydicom_meta_tag(dcm_seq=roi_element, tag=(0x3006, 0x0026), value=new)
+                if (
+                    get_pydicom_meta_tag(
+                        dcm_seq=roi_element, tag=(0x3006, 0x0026), tag_type="str"
+                    )
+                    == old
+                ):
+                    set_pydicom_meta_tag(
+                        dcm_seq=roi_element, tag=(0x3006, 0x0026), value=new
+                    )
 
             # Assign a new name
             self.name = new

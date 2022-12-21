@@ -4,8 +4,8 @@ Created on October 17, 2019
 
 @author: aukermaa@mskcc.org
 """
-from luna.common.config import ConfigSet
 import luna.common.constants as const
+from luna.common.config import ConfigSet
 
 
 def test_table_name():

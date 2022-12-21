@@ -1,10 +1,8 @@
+import numpy as np
 from click.testing import CliRunner
-
 from girder_client import GirderClient
 
-
 from luna.pathology.cli.dsa_annotation_etl import cli
-import numpy as np
 
 
 def test_cli(tmp_path, monkeypatch):

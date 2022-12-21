@@ -7,26 +7,43 @@ import os
 import time
 import warnings
 from typing import Union
-import logging
 
 import numpy as np
 import pandas as pd
-from pydicom import FileDataset, Sequence, Dataset
+from pydicom import Dataset, FileDataset, Sequence
 
+from luna.radiology.mirp.imageMetaData import (
+    create_new_uid,
+    get_pydicom_meta_tag,
+    set_pydicom_meta_tag,
+)
 from luna.radiology.mirp.utilities import get_version
+
 
 # Monolithic classes.....
 class ImageClass:
     # Class for image volumes
 
-    def __init__(self, voxel_grid, origin, spacing, orientation, modality=None, spat_transform="base", no_image=False,
-                 metadata=None, slice_table=None):
+    def __init__(
+        self,
+        voxel_grid,
+        origin,
+        spacing,
+        orientation,
+        modality=None,
+        spat_transform="base",
+        no_image=False,
+        metadata=None,
+        slice_table=None,
+    ):
 
         # Set details regarding voxel orientation and such
         self.origin = np.array(origin)
         self.orientation = np.array(orientation)
 
-        self.spat_transform = spat_transform        # Signifies whether the current image is a base image or not
+        self.spat_transform = (
+            spat_transform  # Signifies whether the current image is a base image or not
+        )
         self.slice_table = slice_table
 
         # The spacing, the affine matrix and its inverse are set using the set_spacing method.
@@ -85,7 +102,9 @@ class ImageClass:
         # Image modality
         if modality is None and metadata is not None:
             # Set imaging modality using metadata
-            self.modality = self.get_metadata(tag=(0x0008, 0x0060), tag_type="str")  # Imaging modality
+            self.modality = self.get_metadata(
+                tag=(0x0008, 0x0060), tag_type="str"
+            )  # Imaging modality
         elif modality is None:
             self.modality = "GENERIC"
         else:
@@ -124,19 +143,25 @@ class ImageClass:
         m_affine = np.zeros((3, 3), dtype=np.float)
 
         # z-coordinates
-        m_affine[:, 0] = self.spacing[0] * np.array([self.orientation[0], self.orientation[1], self.orientation[2]])
+        m_affine[:, 0] = self.spacing[0] * np.array(
+            [self.orientation[0], self.orientation[1], self.orientation[2]]
+        )
 
         # y-coordinates
-        m_affine[:, 1] = self.spacing[1] * np.array([self.orientation[3], self.orientation[4], self.orientation[5]])
+        m_affine[:, 1] = self.spacing[1] * np.array(
+            [self.orientation[3], self.orientation[4], self.orientation[5]]
+        )
 
         # x-coordinates
-        m_affine[:, 2] = self.spacing[2] * np.array([self.orientation[6], self.orientation[7], self.orientation[8]])
+        m_affine[:, 2] = self.spacing[2] * np.array(
+            [self.orientation[6], self.orientation[7], self.orientation[8]]
+        )
 
         self.m_affine = m_affine
         self.m_affine_inv = np.linalg.inv(self.m_affine)
 
     def set_voxel_grid(self, voxel_grid):
-        """ Sets voxel grid """
+        """Sets voxel grid"""
 
         # Determine size
         self.size = np.array(voxel_grid.shape)
@@ -147,7 +172,7 @@ class ImageClass:
 
     # Return None for missing images
     def get_voxel_grid(self) -> np.ndarray:
-        """ Return the voxel grid as a ndarray """
+        """Return the voxel grid as a ndarray"""
         if self.is_missing:
             return None
 
@@ -160,7 +185,7 @@ class ImageClass:
                 decode_zip = copy.deepcopy(self.voxel_grid)
 
                 for ii, jj in decode_zip:
-                    decoded_voxel[ii:jj + 1] = True
+                    decoded_voxel[ii : jj + 1] = True
 
             # Shape into correct form
             decoded_voxel = decoded_voxel.reshape(self.size)
@@ -176,8 +201,12 @@ class ImageClass:
         if self.dtype_name == "bool":
 
             # Run length encoding for "True"
-            rle_end = np.array(np.append(np.where(voxel_grid.ravel()[1:] != voxel_grid.ravel()[:-1]),
-                                         np.prod(self.size) - 1))
+            rle_end = np.array(
+                np.append(
+                    np.where(voxel_grid.ravel()[1:] != voxel_grid.ravel()[:-1]),
+                    np.prod(self.size) - 1,
+                )
+            )
             rle_start = np.cumsum(np.append(0, np.diff(np.append(-1, rle_end))))[:-1]
             rle_val = voxel_grid.ravel()[rle_start]
 
@@ -206,7 +235,7 @@ class ImageClass:
             if self.voxel_grid is not None:
                 decode_zip = copy.deepcopy(self.voxel_grid)
                 for ii, jj in decode_zip:
-                    decoded_voxel[ii:jj + 1] = True
+                    decoded_voxel[ii : jj + 1] = True
 
             # Set shape to original grid
             decoded_voxel = decoded_voxel.reshape(self.size)
@@ -232,13 +261,17 @@ class ImageClass:
         # Update the voxel grid
         if by_slice:
             # Drop every second pixel
-            img_voxel_grid = img_voxel_grid[:, slice(None, None, 2), slice(None, None, 2)]
+            img_voxel_grid = img_voxel_grid[
+                :, slice(None, None, 2), slice(None, None, 2)
+            ]
 
             # Update voxel spacing
             self.spacing[[1, 2]] *= 2.0
         else:
             # Drop every second voxel
-            img_voxel_grid = img_voxel_grid[slice(None, None, 2), slice(None, None, 2), slice(None, None, 2)]
+            img_voxel_grid = img_voxel_grid[
+                slice(None, None, 2), slice(None, None, 2), slice(None, None, 2)
+            ]
 
             # Update voxel spacing
             self.spacing *= 2.0
@@ -248,7 +281,10 @@ class ImageClass:
 
     def interpolate(self, by_slice, settings):
         """Performs interpolation of the image volume"""
-        from luna.radiology.mirp.imageProcess import interpolate_to_new_grid, gaussian_preprocess_filter # aauker: Circular import
+        from luna.radiology.mirp.imageProcess import (  # aauker: Circular import
+            gaussian_preprocess_filter,
+            interpolate_to_new_grid,
+        )
 
         # Skip for missing images
         if self.is_missing:
@@ -257,7 +293,9 @@ class ImageClass:
         # Local interpolation constants
         if None not in settings.img_interpolate.new_spacing:
             iso_spacing = settings.img_interpolate.new_spacing[0]
-            new_spacing = np.array([iso_spacing, iso_spacing, iso_spacing])  # Desired spacing in mm
+            new_spacing = np.array(
+                [iso_spacing, iso_spacing, iso_spacing]
+            )  # Desired spacing in mm
         elif type(settings.img_interpolate.new_non_iso_spacing) in [list, tuple]:
             if None not in settings.img_interpolate.new_non_iso_spacing:
                 non_iso_spacing = settings.img_interpolate.new_non_iso_spacing
@@ -267,19 +305,24 @@ class ImageClass:
         else:
             new_spacing = self.spacing
 
-        print (f"Interpolating main image to {new_spacing}")
+        print(f"Interpolating main image to {new_spacing}")
 
         # Read additional details
-        order            = settings.img_interpolate.spline_order   # Order of multidimensional spline filter (0=nearest neighbours, 1=linear, 3=cubic)
-        interpolate_flag = settings.img_interpolate.interpolate    # Whether to interpolate or not
+        order = (
+            settings.img_interpolate.spline_order
+        )  # Order of multidimensional spline filter (0=nearest neighbours, 1=linear, 3=cubic)
+        interpolate_flag = (
+            settings.img_interpolate.interpolate
+        )  # Whether to interpolate or not
 
         # Set spacing for interpolation across slices to the original spacing in case interpolation is only conducted within the slice
-        if by_slice:    new_spacing[0] = self.spacing[0]
+        if by_slice:
+            new_spacing[0] = self.spacing[0]
 
         # Image translation
-        translate_z = 0#settings.vol_adapt.translate_z[0]
-        translate_y = 0#settings.vol_adapt.translate_y[0]
-        translate_x = 0#settings.vol_adapt.translate_x[0]
+        translate_z = 0  # settings.vol_adapt.translate_z[0]
+        translate_y = 0  # settings.vol_adapt.translate_y[0]
+        translate_x = 0  # settings.vol_adapt.translate_x[0]
 
         # Convert to [0.0, 1.0] range
         translate_x = translate_x - np.floor(translate_x)
@@ -293,27 +336,43 @@ class ImageClass:
         self.transl_fraction_z = translate_z
 
         # Skip if translation in both directions is 0.0
-        if translate_x == 0.0 and translate_y == 0.0 and translate_z == 0.0  and not interpolate_flag: return None
+        if (
+            translate_x == 0.0
+            and translate_y == 0.0
+            and translate_z == 0.0
+            and not interpolate_flag
+        ):
+            return None
 
         # Check if pre-processing is required
         if settings.img_interpolate.anti_aliasing:
-            self.set_voxel_grid(voxel_grid=gaussian_preprocess_filter(orig_vox=self.get_voxel_grid(),
-                                                                      orig_spacing=self.spacing,
-                                                                      sample_spacing=new_spacing,
-                                                                      param_beta=settings.img_interpolate.smoothing_beta,
-                                                                      mode="nearest",
-                                                                      by_slice=by_slice))
+            self.set_voxel_grid(
+                voxel_grid=gaussian_preprocess_filter(
+                    orig_vox=self.get_voxel_grid(),
+                    orig_spacing=self.spacing,
+                    sample_spacing=new_spacing,
+                    param_beta=settings.img_interpolate.smoothing_beta,
+                    mode="nearest",
+                    by_slice=by_slice,
+                )
+            )
 
         # Interpolate image and positioning
-        self.size, sample_spacing, upd_voxel_grid, grid_origin = \
-            interpolate_to_new_grid(orig_dim=self.size,
-                                    orig_spacing=self.spacing,
-                                    orig_vox=self.get_voxel_grid(),
-                                    sample_spacing=new_spacing,
-                                    translation=trans_vec,
-                                    order=order,
-                                    mode="nearest",
-                                    align_to_center=True)
+        (
+            self.size,
+            sample_spacing,
+            upd_voxel_grid,
+            grid_origin,
+        ) = interpolate_to_new_grid(
+            orig_dim=self.size,
+            orig_spacing=self.spacing,
+            orig_vox=self.get_voxel_grid(),
+            sample_spacing=new_spacing,
+            translation=trans_vec,
+            order=order,
+            mode="nearest",
+            align_to_center=True,
+        )
 
         # Update origin before spacing, because computing the origin requires the original affine matrix.
         self.origin = self.origin + np.dot(self.m_affine, np.transpose(grid_origin))
@@ -337,19 +396,19 @@ class ImageClass:
             self.interpolation_algorithm = "lin"
         elif order > 1:
             self.interpolation_algorithm = "si" + str(order)
-        
+
         if settings.img_interpolate.bin:
             self.binned = True
             self.bin_width = settings.img_interpolate.bin_width
-            self.bins = np.arange(-1000,1000, settings.img_interpolate.bin_width )
+            self.bins = np.arange(-1000, 1000, settings.img_interpolate.bin_width)
             upd_voxel_grid = np.digitize(upd_voxel_grid, self.bins).astype(np.float)
 
         # Set voxel grid
         self.set_voxel_grid(voxel_grid=upd_voxel_grid)
 
     def add_noise(self, noise_level, noise_iter):
-        """ Adds Gaussian noise to the image volume
-         noise_level: standard deviation of image noise present """
+        """Adds Gaussian noise to the image volume
+        noise_level: standard deviation of image noise present"""
 
         # Add noise iteration number
         self.noise_iter = noise_iter
@@ -418,7 +477,9 @@ class ImageClass:
             # Set the updated voxel grid
             self.set_voxel_grid(voxel_grid=voxel_grid)
 
-    def normalise_intensities(self, norm_method="none", intensity_range=None, saturation_range=None, mask=None):
+    def normalise_intensities(
+        self, norm_method="none", intensity_range=None, saturation_range=None, mask=None
+    ):
         """
         Normalises image intensities
         :param norm_method: string defining the normalisation method. Should be one of "none", "range", "standardisation"
@@ -545,7 +606,8 @@ class ImageClass:
             sd_int = np.std(voxel_grid[mask])
 
             # Protect against invariance.
-            if sd_int == 0.0: sd_int = 1.0
+            if sd_int == 0.0:
+                sd_int = 1.0
 
             # Normalise
             voxel_grid = (voxel_grid - mean_int) / sd_int
@@ -555,7 +617,9 @@ class ImageClass:
 
             self.is_normalised = True
         else:
-            raise ValueError(f"{norm_method} is not a valid method for normalising intensity values.")
+            raise ValueError(
+                f"{norm_method} is not a valid method for normalising intensity values."
+            )
 
         self.saturate(intensity_range=saturation_range)
 
@@ -567,19 +631,36 @@ class ImageClass:
             return
 
         import scipy.ndimage as ndi
+
         from luna.radiology.mirp.featureSets.volumeMorphology import get_rotation_matrix
 
         # Find actual output size of x-y plane
-        new_z_dim = np.asmatrix([self.size[0], 0.0, 0.0]) * get_rotation_matrix(np.radians(angle), dim=3, rot_axis=0)
-        new_y_dim = np.asmatrix([0.0, self.size[1], 0.0]) * get_rotation_matrix(np.radians(angle), dim=3, rot_axis=0)
-        new_x_dim = np.asmatrix([0.0, 0.0, self.size[2]]) * get_rotation_matrix(np.radians(angle), dim=3, rot_axis=0)
-        new_dim_flt = np.squeeze(np.array(np.abs(new_z_dim)) + np.array(np.abs(new_y_dim) + np.abs(new_x_dim)))
+        new_z_dim = np.asmatrix([self.size[0], 0.0, 0.0]) * get_rotation_matrix(
+            np.radians(angle), dim=3, rot_axis=0
+        )
+        new_y_dim = np.asmatrix([0.0, self.size[1], 0.0]) * get_rotation_matrix(
+            np.radians(angle), dim=3, rot_axis=0
+        )
+        new_x_dim = np.asmatrix([0.0, 0.0, self.size[2]]) * get_rotation_matrix(
+            np.radians(angle), dim=3, rot_axis=0
+        )
+        new_dim_flt = np.squeeze(
+            np.array(np.abs(new_z_dim))
+            + np.array(np.abs(new_y_dim) + np.abs(new_x_dim))
+        )
 
         # Get voxel grid
         voxel_grid = self.get_voxel_grid()
 
         # Rotate voxels along angle in the y-x plane and find truncated output size
-        voxel_grid = ndi.rotate(voxel_grid.astype(np.float32), angle=angle, axes=(1, 2), reshape=True, order=1, mode="nearest")
+        voxel_grid = ndi.rotate(
+            voxel_grid.astype(np.float32),
+            angle=angle,
+            axes=(1, 2),
+            reshape=True,
+            order=1,
+            mode="nearest",
+        )
         new_dim_int = np.array(np.shape(voxel_grid)) * 1.0
 
         if (self.modality == "CT") and (self.spat_transform == "base"):
@@ -594,19 +675,27 @@ class ImageClass:
         # Update voxel grid with rotated voxels
         self.set_voxel_grid(voxel_grid=voxel_grid)
 
-
-    def crop(self, ind_ext_z=None, ind_ext_y=None, ind_ext_x=None,
-             xy_only=False, z_only=False):
-        """"Crop image to the provided map extent."""
-        from luna.radiology.mirp.utilities import world_to_index
+    def crop(
+        self,
+        ind_ext_z=None,
+        ind_ext_y=None,
+        ind_ext_x=None,
+        xy_only=False,
+        z_only=False,
+    ):
+        """ "Crop image to the provided map extent."""
 
         # Skip for missing images
         if self.is_missing:
             return
 
         # Determine corresponding voxel indices
-        max_ind = np.ceil(np.array((np.max(ind_ext_z), np.max(ind_ext_y), np.max(ind_ext_x)))).astype(np.int)
-        min_ind = np.floor(np.array((np.min(ind_ext_z), np.min(ind_ext_y), np.min(ind_ext_x)))).astype(np.int)
+        max_ind = np.ceil(
+            np.array((np.max(ind_ext_z), np.max(ind_ext_y), np.max(ind_ext_x)))
+        ).astype(np.int)
+        min_ind = np.floor(
+            np.array((np.min(ind_ext_z), np.min(ind_ext_y), np.min(ind_ext_x)))
+        ).astype(np.int)
 
         # Set bounding indices
         max_bound_ind = np.minimum(max_ind, self.size).astype(np.int)
@@ -617,19 +706,23 @@ class ImageClass:
 
         # Create corresponding image volumes by slicing original volume
         if z_only:
-            voxel_grid = voxel_grid[min_bound_ind[0]:max_bound_ind[0] + 1, :, :]
+            voxel_grid = voxel_grid[min_bound_ind[0] : max_bound_ind[0] + 1, :, :]
             min_bound_ind[1] = 0
             min_bound_ind[2] = 0
         elif xy_only:
-            voxel_grid = voxel_grid[:,
-                                    min_bound_ind[1]:max_bound_ind[1] + 1,
-                                    min_bound_ind[2]:max_bound_ind[2] + 1]
+            voxel_grid = voxel_grid[
+                :,
+                min_bound_ind[1] : max_bound_ind[1] + 1,
+                min_bound_ind[2] : max_bound_ind[2] + 1,
+            ]
             min_bound_ind[0] = 0
             max_bound_ind[0] = self.size[0].astype(np.int)
         else:
-            voxel_grid = voxel_grid[min_bound_ind[0]:max_bound_ind[0] + 1,
-                                    min_bound_ind[1]:max_bound_ind[1] + 1,
-                                    min_bound_ind[2]:max_bound_ind[2] + 1]
+            voxel_grid = voxel_grid[
+                min_bound_ind[0] : max_bound_ind[0] + 1,
+                min_bound_ind[1] : max_bound_ind[1] + 1,
+                min_bound_ind[2] : max_bound_ind[2] + 1,
+            ]
 
         # Update origin and z-slice position
         self.origin = self.origin + np.dot(self.m_affine, np.transpose(min_bound_ind))
@@ -670,12 +763,18 @@ class ImageClass:
         cropped_grid = np.full(crop_size.astype(np.int), fill_value=np.nan)
 
         # Get slice of voxel grid
-        voxel_grid = self.get_voxel_grid()[min_ind_orig[0]:max_ind_orig[0],
-                                           min_ind_orig[1]:max_ind_orig[1],
-                                           min_ind_orig[2]:max_ind_orig[2]]
+        voxel_grid = self.get_voxel_grid()[
+            min_ind_orig[0] : max_ind_orig[0],
+            min_ind_orig[1] : max_ind_orig[1],
+            min_ind_orig[2] : max_ind_orig[2],
+        ]
 
         # Put the voxel grid slice into the cropped grid
-        cropped_grid[min_ind_grid[0]:max_ind_grid[0], min_ind_grid[1]:max_ind_grid[1], min_ind_grid[2]:max_ind_grid[2]] = voxel_grid
+        cropped_grid[
+            min_ind_grid[0] : max_ind_grid[0],
+            min_ind_grid[1] : max_ind_grid[1],
+            min_ind_grid[2] : max_ind_grid[2],
+        ] = voxel_grid
 
         # Replace any remaining NaN values in the grid by the lowest intensity in voxel_grid
         cropped_grid[np.isnan(cropped_grid)] = np.min(voxel_grid)
@@ -698,14 +797,26 @@ class ImageClass:
             self.spat_transform = transform_method
             self.as_parametric_map = True
 
-    def compute_diagnostic_features(self, append_str: str=""):
+    def compute_diagnostic_features(self, append_str: str = ""):
         """Creates diagnostic features for the image stack"""
 
         # Set feature names
-        feat_names = ["img_dim_x", "img_dim_y", "img_dim_z", "vox_dim_x", "vox_dim_y", "vox_dim_z", "mean_int", "min_int", "max_int"]
+        feat_names = [
+            "img_dim_x",
+            "img_dim_y",
+            "img_dim_z",
+            "vox_dim_x",
+            "vox_dim_y",
+            "vox_dim_z",
+            "mean_int",
+            "min_int",
+            "max_int",
+        ]
 
         # Generate an initial table
-        feature_table = pd.DataFrame(np.full(shape=(1, len(feat_names)), fill_value=np.nan))
+        feature_table = pd.DataFrame(
+            np.full(shape=(1, len(feat_names)), fill_value=np.nan)
+        )
         feature_table.columns = feat_names
 
         if not self.is_missing:
@@ -722,7 +833,10 @@ class ImageClass:
             feature_table["max_int"] = np.max(self.get_voxel_grid())
 
             # Update column names
-        feature_table.columns = ["_".join(["diag", feature, append_str]).rstrip("_") for feature in feature_table.columns]
+        feature_table.columns = [
+            "_".join(["diag", feature, append_str]).rstrip("_")
+            for feature in feature_table.columns
+        ]
 
         return feature_table
 
@@ -743,8 +857,6 @@ class ImageClass:
         # Export image to file
         return self.write(file_path=file_path, file_name=file_name)
 
-         
-
     def get_export_descriptor(self):
         """
         Generates an image descriptor based on parameters of the image
@@ -761,10 +873,15 @@ class ImageClass:
 
         if self.interpolated:
             # Interpolation
-            descr_list += [self.interpolation_algorithm,
-                           "x", str(self.spacing[2])[:5],
-                           "y", str(self.spacing[1])[:5],
-                           "z", str(self.spacing[0])[:5]]
+            descr_list += [
+                self.interpolation_algorithm,
+                "x",
+                str(self.spacing[2])[:5],
+                "y",
+                str(self.spacing[1])[:5],
+                "z",
+                str(self.spacing[0])[:5],
+            ]
         if self.binned:
             descr_list += ["bin", str(self.bin_width)]
 
@@ -772,12 +889,21 @@ class ImageClass:
             # Rotation angle
             descr_list += ["rot", str(self.rotation_angle)[:5]]
 
-        if not (self.transl_fraction_x == 0.0 and self.transl_fraction_y == 0.0 and self.transl_fraction_z == 0.0):
+        if not (
+            self.transl_fraction_x == 0.0
+            and self.transl_fraction_y == 0.0
+            and self.transl_fraction_z == 0.0
+        ):
             # Translation fraction
-            descr_list += ["trans",
-                           "x", str(self.transl_fraction_x)[:5],
-                           "y", str(self.transl_fraction_y)[:5],
-                           "z", str(self.transl_fraction_z)[:5]]
+            descr_list += [
+                "trans",
+                "x",
+                str(self.transl_fraction_x)[:5],
+                "y",
+                str(self.transl_fraction_y)[:5],
+                "z",
+                str(self.transl_fraction_z)[:5],
+            ]
 
         if self.noise != -1.0:
             # Noise level
@@ -793,6 +919,7 @@ class ImageClass:
         This step may precede writing to file."""
 
         import SimpleITK as sitk
+
         sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(4)
 
         # Skip if the image is missing
@@ -801,29 +928,42 @@ class ImageClass:
 
         # Get image data type and set a valid data type that can be read by simple itk
         vox_dtype = self.dtype_name
-        if   vox_dtype in ["float16", "float32", "float64", "float80", "float96", "float128"]: cast_type = np.float32
-        elif vox_dtype in ["bool", "uint8"]: cast_type = np.uint8
-        else: raise RuntimeError(f"Invalid ITK value {vox_dtype}")
+        if vox_dtype in [
+            "float16",
+            "float32",
+            "float64",
+            "float80",
+            "float96",
+            "float128",
+        ]:
+            cast_type = np.float32
+        elif vox_dtype in ["bool", "uint8"]:
+            cast_type = np.uint8
+        else:
+            raise RuntimeError(f"Invalid ITK value {vox_dtype}")
 
         # Convert image voxels
-        sitk_img = sitk.GetImageFromArray(self.get_voxel_grid().astype(cast_type), isVector=False)
+        sitk_img = sitk.GetImageFromArray(
+            self.get_voxel_grid().astype(cast_type), isVector=False
+        )
         sitk_img.SetOrigin(self.origin[::-1])
         sitk_img.SetSpacing(self.spacing[::-1])
         sitk_img.SetDirection(self.orientation[::-1])
-        
+
         return sitk_img
 
     def write(self, file_path, file_name):
-        """ Writes the image to a file """
-        import SimpleITK as sitk
+        """Writes the image to a file"""
         import os
+
+        import SimpleITK as sitk
 
         sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(4)
 
-
         # Check if path exists
         file_path = os.path.normpath(file_path)
-        if not os.path.exists(file_path): os.makedirs(file_path)
+        if not os.path.exists(file_path):
+            os.makedirs(file_path)
 
         # Add file and file name
         file_path = os.path.join(file_path, file_name)
@@ -833,14 +973,16 @@ class ImageClass:
 
         # Write to file using simple itk, and the image is not missing
         if sitk_img is not None:
-            print (f"Writing to {file_path}")
+            print(f"Writing to {file_path}")
             sitk.WriteImage(sitk_img, file_path, True)
 
         return file_path
 
     def write_dicom(self, file_path, file_name, bit_depth=16):
         if self.metadata is None:
-            raise ValueError(f"Image slice cannot be written to DICOM as metadata is missing.")
+            raise ValueError(
+                "Image slice cannot be written to DICOM as metadata is missing."
+            )
 
         # Set pixeldata
         self.set_pixel_data(bit_depth=bit_depth)
@@ -850,18 +992,24 @@ class ImageClass:
             del self.metadata[filemeta_tag]
 
         # Save to file
-        self.metadata.save_as(filename=os.path.join(file_path, file_name), write_like_original=False)
+        self.metadata.save_as(
+            filename=os.path.join(file_path, file_name), write_like_original=False
+        )
 
     def write_dicom_series(self, file_path, file_name="", bit_depth=16):
         if self.metadata is None:
-            raise ValueError(f"Image cannot be written as a DICOM series as metadata is missing.")
+            raise ValueError(
+                "Image cannot be written as a DICOM series as metadata is missing."
+            )
 
         # Check if the write folder exists
         if not os.path.isdir(file_path):
 
             if os.path.isfile(file_path):
                 # Check if the write folder is a file.
-                raise IOError(f"{file_path} is an existing file, not a directory. No DICOM images were exported.")
+                raise IOError(
+                    f"{file_path} is an existing file, not a directory. No DICOM images were exported."
+                )
             else:
                 os.makedirs(file_path, exist_ok=True)
 
@@ -869,7 +1017,7 @@ class ImageClass:
             self._convert_to_parametric_map_iod()
 
         # Provide a new series UID
-        self.set_metadata(tag=(0x0020, 0x000e), value=create_new_uid(dcm=self.metadata))
+        self.set_metadata(tag=(0x0020, 0x000E), value=create_new_uid(dcm=self.metadata))
 
         if self.modality == "PT":
             # Update the number of slices attribute.
@@ -887,14 +1035,18 @@ class ImageClass:
             slice_obj.set_metadata(tag=(0x0020, 0x0013), value=ii)
 
             # Update the SOP instance UID to avoid collisions
-            slice_obj.set_metadata(tag=(0x0008, 0x0018), value=create_new_uid(dcm=slice_obj.metadata))
+            slice_obj.set_metadata(
+                tag=(0x0008, 0x0018), value=create_new_uid(dcm=slice_obj.metadata)
+            )
 
             # Update instance creation date and time
             slice_obj.set_metadata(tag=(0x0008, 0x0012), value=time.strftime("%Y%m%d"))
             slice_obj.set_metadata(tag=(0x0008, 0x0013), value=time.strftime("%H%M%S"))
 
             # Export
-            slice_obj.write_dicom(file_path=file_path, file_name=slice_file_name, bit_depth=bit_depth)
+            slice_obj.write_dicom(
+                file_path=file_path, file_name=slice_file_name, bit_depth=bit_depth
+            )
 
     def get_slices(self, slice_number=None):
 
@@ -926,7 +1078,9 @@ class ImageClass:
 
                 # Copy voxel grid without dropping dimensions.
                 if voxel_grid is not None:
-                    slice_img_obj.set_voxel_grid(voxel_grid=voxel_grid[ii:ii+1, :, :])
+                    slice_img_obj.set_voxel_grid(
+                        voxel_grid=voxel_grid[ii : ii + 1, :, :]
+                    )
 
                 # Add to list
                 img_obj_list += [slice_img_obj]
@@ -935,7 +1089,9 @@ class ImageClass:
             slice_img_obj = copy.deepcopy(base_img_obj)
 
             # Update origin and slice position
-            slice_img_obj.origin += np.dot(self.m_affine, np.array([slice_number, 0, 0]))
+            slice_img_obj.origin += np.dot(
+                self.m_affine, np.array([slice_number, 0, 0])
+            )
 
             # Update name
             if slice_img_obj.name is not None:
@@ -943,7 +1099,11 @@ class ImageClass:
 
             # Copy voxel grid without dropping dimensions.
             if not self.is_missing:
-                slice_img_obj.set_voxel_grid(voxel_grid=self.get_voxel_grid()[slice_number:slice_number+1, :, :])
+                slice_img_obj.set_voxel_grid(
+                    voxel_grid=self.get_voxel_grid()[
+                        slice_number : slice_number + 1, :, :
+                    ]
+                )
 
             # Add to list
             img_obj_list += [slice_img_obj]
@@ -960,7 +1120,9 @@ class ImageClass:
         if self.metadata is None:
             return
 
-        return get_pydicom_meta_tag(dcm_seq=self.metadata, tag=tag, tag_type=tag_type, default=default)
+        return get_pydicom_meta_tag(
+            dcm_seq=self.metadata, tag=tag, tag_type=tag_type, default=default
+        )
 
     def set_metadata(self, tag, value, force_vr=None):
 
@@ -968,7 +1130,9 @@ class ImageClass:
         if self.metadata is None:
             return None
 
-        set_pydicom_meta_tag(dcm_seq=self.metadata, tag=tag, value=value, force_vr=force_vr)
+        set_pydicom_meta_tag(
+            dcm_seq=self.metadata, tag=tag, value=value, force_vr=force_vr
+        )
 
     def has_metadata(self, tag):
 
@@ -1035,7 +1199,9 @@ class ImageClass:
             return
 
         if self.size[0] > 1:
-            warnings.warn("Cannot set pixel data for image with more than one slice.", UserWarning)
+            warnings.warn(
+                "Cannot set pixel data for image with more than one slice.", UserWarning
+            )
             return
 
         # Set samples per pixel
@@ -1045,7 +1211,7 @@ class ImageClass:
         self.set_metadata(tag=(0x0028, 0x0004), value="MONOCHROME2")
 
         # Remove the Pixel Data Provider URL attribute
-        self.delete_metadata(tag=(0x0028, 0x7fe0))
+        self.delete_metadata(tag=(0x0028, 0x7FE0))
 
         # Determine how pixel data are stored.
         if self.as_parametric_map:
@@ -1066,7 +1232,9 @@ class ImageClass:
         elif bit_depth == 64:
             pixel_type = np.int64
         else:
-            raise ValueError(f"Bit depth of DICOM images should be one of 8, 16 (default), 32, or 64., Found: {bit_depth}")
+            raise ValueError(
+                f"Bit depth of DICOM images should be one of 8, 16 (default), 32, or 64., Found: {bit_depth}"
+            )
 
         # Update metadata related to the image data
         self.update_image_plane_metadata()
@@ -1076,8 +1244,10 @@ class ImageClass:
         # Always write 16-bit data
         self.set_metadata(tag=(0x0028, 0x0100), value=bit_depth)  # Bits allocated
         self.set_metadata(tag=(0x0028, 0x0101), value=bit_depth)  # Bits stored
-        self.set_metadata(tag=(0x0028, 0x0102), value=bit_depth-1)  # High-bit
-        self.set_metadata(tag=(0x0028, 0x0103), value=1)  # Pixel representation (we assume signed integers)
+        self.set_metadata(tag=(0x0028, 0x0102), value=bit_depth - 1)  # High-bit
+        self.set_metadata(
+            tag=(0x0028, 0x0103), value=1
+        )  # Pixel representation (we assume signed integers)
 
         # Standard settings for lowest and highest pixel value
         if self.modality == "CT":
@@ -1102,11 +1272,13 @@ class ImageClass:
         pixel_grid = pixel_grid.astype(pixel_type)
 
         # Store to PixelData
-        self.set_metadata(tag=(0x7fe0, 0x0010), value=pixel_grid.tobytes(), force_vr="OW")
+        self.set_metadata(
+            tag=(0x7FE0, 0x0010), value=pixel_grid.tobytes(), force_vr="OW"
+        )
 
         # Delete other PixelData containers
-        self.delete_metadata(tag=(0x7fe0, 0x0008))  # Float pixel data
-        self.delete_metadata(tag=(0x7fe0, 0x0009))  # Double float pixel data
+        self.delete_metadata(tag=(0x7FE0, 0x0008))  # Float pixel data
+        self.delete_metadata(tag=(0x7FE0, 0x0009))  # Double float pixel data
 
         # Update rescale intercept and slope (in case of CT and PET only)
         if self.modality in ["CT", "PT"]:
@@ -1117,21 +1289,28 @@ class ImageClass:
         self.delete_metadata(tag=(0x0028, 0x3010))  # VOI LUT sequence
         self.delete_metadata(tag=(0x0028, 0x1050))  # Window center
         self.delete_metadata(tag=(0x0028, 0x1051))  # Window width
-        self.delete_metadata(tag=(0x0028, 0x1055))  # Window center and width explanation
+        self.delete_metadata(
+            tag=(0x0028, 0x1055)
+        )  # Window center and width explanation
         self.delete_metadata(tag=(0x0028, 0x1056))  # VOI LUT function
 
         # Update smallest and largest image pixel value. Cannot set more than 16 bits due to limitations of the
         # tag.
         if bit_depth <= 16:
-            self.set_metadata(tag=(0x0028, 0x0106), value=np.min(pixel_grid), force_vr="SS")
-            self.set_metadata(tag=(0x0028, 0x0107), value=np.max(pixel_grid), force_vr="SS")
-
+            self.set_metadata(
+                tag=(0x0028, 0x0106), value=np.min(pixel_grid), force_vr="SS"
+            )
+            self.set_metadata(
+                tag=(0x0028, 0x0107), value=np.max(pixel_grid), force_vr="SS"
+            )
 
     def _set_pixel_data_float(self, bit_depth):
 
         if not self.as_parametric_map:
-            raise ValueError(f"Floating point representation in DICOM is only supported by parametric maps, but the image in MIRP is not marked for conversion of the metadata to"
-                             f"parametric maps.")
+            raise ValueError(
+                "Floating point representation in DICOM is only supported by parametric maps, but the image in MIRP is not marked for conversion of the metadata to"
+                "parametric maps."
+            )
 
         # Set dtype for the image
         if bit_depth == 16:
@@ -1141,7 +1320,9 @@ class ImageClass:
         elif bit_depth == 64:
             pixel_type = np.float64
         else:
-            raise ValueError(f"Bit depth of floating point DICOM images should be 16, 32 (default), or 64. Found: {bit_depth}")
+            raise ValueError(
+                f"Bit depth of floating point DICOM images should be 16, 32 (default), or 64. Found: {bit_depth}"
+            )
 
         # Set the number of allocated bits
         self.set_metadata(tag=(0x0028, 0x0100), value=bit_depth)  # Bits allocated
@@ -1156,8 +1337,8 @@ class ImageClass:
         if bit_depth == 16:
 
             # DICOM ranges
-            dcm_range = float(2 ** bit_depth - 1)
-            dcm_min = - float(2 ** (bit_depth - 1))
+            dcm_range = float(2**bit_depth - 1)
+            dcm_min = -float(2 ** (bit_depth - 1))
             dcm_max = float(2 ** (bit_depth - 1)) - 1.0
 
             # Data ranges
@@ -1170,7 +1351,9 @@ class ImageClass:
             rescale_intercept = (value_min * dcm_max - value_max * dcm_min) / dcm_range
 
             # Inverse rescaling prior to dicom storage
-            pixel_grid = pixel_grid * (dcm_range) - value_min * dcm_max + value_max * dcm_min
+            pixel_grid = (
+                pixel_grid * (dcm_range) - value_min * dcm_max + value_max * dcm_min
+            )
             pixel_grid *= 1.0 / value_range
 
             # Round pixel values for safety
@@ -1186,46 +1369,62 @@ class ImageClass:
         # Store pixel data to the right attribute
         if bit_depth == 16:
             # Store to Pixel Data attribute
-            self.set_metadata(tag=(0x7fe0, 0x0010), value=pixel_grid.tobytes(), force_vr="OW")
+            self.set_metadata(
+                tag=(0x7FE0, 0x0010), value=pixel_grid.tobytes(), force_vr="OW"
+            )
 
             # Set Image Pixel module-specific tags
             self.set_metadata(tag=(0x0028, 0x0101), value=bit_depth)  # Bits stored
             self.set_metadata(tag=(0x0028, 0x0102), value=bit_depth - 1)  # High-bit
-            self.set_metadata(tag=(0x0028, 0x0103), value=1)  # Pixel representation (we assume signed integers)
+            self.set_metadata(
+                tag=(0x0028, 0x0103), value=1
+            )  # Pixel representation (we assume signed integers)
 
             # Update smallest and largest pixel value
-            self.set_metadata(tag=(0x0028, 0x0106), value=np.min(pixel_grid), force_vr="SS")
-            self.set_metadata(tag=(0x0028, 0x0107), value=np.max(pixel_grid), force_vr="SS")
+            self.set_metadata(
+                tag=(0x0028, 0x0106), value=np.min(pixel_grid), force_vr="SS"
+            )
+            self.set_metadata(
+                tag=(0x0028, 0x0107), value=np.max(pixel_grid), force_vr="SS"
+            )
 
             # Delete other PixelData containers
-            self.delete_metadata(tag=(0x7fe0, 0x0008))  # Float pixel data
-            self.delete_metadata(tag=(0x7fe0, 0x0009))  # Double float pixel data
+            self.delete_metadata(tag=(0x7FE0, 0x0008))  # Float pixel data
+            self.delete_metadata(tag=(0x7FE0, 0x0009))  # Double float pixel data
 
         elif bit_depth == 32:
             # Store to Float Pixel Data attribute
-            self.set_metadata(tag=(0x7fe0, 0x0008), value=np.ravel(pixel_grid).tolist(), force_vr="OF")
+            self.set_metadata(
+                tag=(0x7FE0, 0x0008), value=np.ravel(pixel_grid).tolist(), force_vr="OF"
+            )
 
             # Delete other PixelData containers
-            self.delete_metadata(tag=(0x7fe0, 0x0009))  # Double float pixel data
-            self.delete_metadata(tag=(0x7fe0, 0x0010))  # Integer type data
+            self.delete_metadata(tag=(0x7FE0, 0x0009))  # Double float pixel data
+            self.delete_metadata(tag=(0x7FE0, 0x0010))  # Integer type data
 
         elif bit_depth == 64:
             # Store to Double Float Pixel Data attribute
-            self.set_metadata(tag=(0x7fe0, 0x0009), value=np.ravel(pixel_grid).tolist(), force_vr="OD")
+            self.set_metadata(
+                tag=(0x7FE0, 0x0009), value=np.ravel(pixel_grid).tolist(), force_vr="OD"
+            )
 
             # Delete other PixelData containers
-            self.delete_metadata(tag=(0x7fe0, 0x0008))  # Float pixel data
-            self.delete_metadata(tag=(0x7fe0, 0x0010))  # Integer type data
+            self.delete_metadata(tag=(0x7FE0, 0x0008))  # Float pixel data
+            self.delete_metadata(tag=(0x7FE0, 0x0010))  # Integer type data
 
         # Reset rescale intercept and slope attributes to default values for parametric maps.
-        self.set_metadata(tag=(0x0028, 0x1052), value=rescale_intercept)  # Rescale intercept
+        self.set_metadata(
+            tag=(0x0028, 0x1052), value=rescale_intercept
+        )  # Rescale intercept
         self.set_metadata(tag=(0x0028, 0x1053), value=rescale_slope)  # Rescale slope
 
         # Remove elements of the VOI LUT module
         self.delete_metadata(tag=(0x0028, 0x3010))  # VOI LUT sequence
         self.delete_metadata(tag=(0x0028, 0x1050))  # Window center
         self.delete_metadata(tag=(0x0028, 0x1051))  # Window width
-        self.delete_metadata(tag=(0x0028, 0x1055))  # Window center and width explanation
+        self.delete_metadata(
+            tag=(0x0028, 0x1055)
+        )  # Window center and width explanation
         self.delete_metadata(tag=(0x0028, 0x1056))  # VOI LUT function
 
         # Number of frames
@@ -1243,7 +1442,9 @@ class ImageClass:
         self.set_metadata(tag=(0x0008, 0x0016), value="1.2.840.10008.5.1.4.1.1.30")
 
         # Update the image type attribute
-        image_type = self.get_metadata(tag=(0x0008, 0x0008), tag_type="mult_str", default=[])
+        image_type = self.get_metadata(
+            tag=(0x0008, 0x0008), tag_type="mult_str", default=[]
+        )
         image_type = [image_type[ii] if ii < len(image_type) else "" for ii in range(4)]
         image_type[0] = "DERIVED"
         image_type[1] = "PRIMARY"
@@ -1253,20 +1454,39 @@ class ImageClass:
         self.set_metadata(tag=(0x0008, 0x0008), value=image_type)
 
         # Parametric Map Image module attributes that may be missing.
-        self.cond_set_metadata(tag=(0x2050, 0x0020), value="IDENTITY")  # Presentation LUT shape
-        self.cond_set_metadata(tag=(0x0018, 0x9004), value="RESEARCH")  # Content qualification
+        self.cond_set_metadata(
+            tag=(0x2050, 0x0020), value="IDENTITY"
+        )  # Presentation LUT shape
+        self.cond_set_metadata(
+            tag=(0x0018, 0x9004), value="RESEARCH"
+        )  # Content qualification
         self.cond_set_metadata(tag=(0x0028, 0x0301), value="NO")  # Burned-in Annotation
-        self.cond_set_metadata(tag=(0x0028, 0x0302), value="YES")  # Recognisable facial features
-        self.cond_set_metadata(tag=(0x0070, 0x0080), value=self.get_export_descriptor().upper().strip()[:15])  # Content label
-        self.cond_set_metadata(tag=(0x0070, 0x0081), value=self.get_export_descriptor()[:63])  # Content description
+        self.cond_set_metadata(
+            tag=(0x0028, 0x0302), value="YES"
+        )  # Recognisable facial features
+        self.cond_set_metadata(
+            tag=(0x0070, 0x0080),
+            value=self.get_export_descriptor().upper().strip()[:15],
+        )  # Content label
+        self.cond_set_metadata(
+            tag=(0x0070, 0x0081), value=self.get_export_descriptor()[:63]
+        )  # Content description
         self.cond_set_metadata(tag=(0x0070, 0x0084), value="Doe^John")
 
         # Set the source instance sequence
         source_instance_list = []
         for reference_instance_sop_uid in self.slice_table.sop_instance_uid:
             ref_inst = Dataset()
-            set_pydicom_meta_tag(dcm_seq=ref_inst, tag=(0x0008, 0x1150), value=get_pydicom_meta_tag(dcm_seq=old_dcm, tag=(0x0008, 0x0016), tag_type="str"))
-            set_pydicom_meta_tag(dcm_seq=ref_inst, tag=(0x0008, 0x1155), value=reference_instance_sop_uid)
+            set_pydicom_meta_tag(
+                dcm_seq=ref_inst,
+                tag=(0x0008, 0x1150),
+                value=get_pydicom_meta_tag(
+                    dcm_seq=old_dcm, tag=(0x0008, 0x0016), tag_type="str"
+                ),
+            )
+            set_pydicom_meta_tag(
+                dcm_seq=ref_inst, tag=(0x0008, 0x1155), value=reference_instance_sop_uid
+            )
 
             source_instance_list += [ref_inst]
 
@@ -1275,22 +1495,38 @@ class ImageClass:
         # Attributes from the enhanced general equipment module may be missing.
         self.cond_set_metadata(tag=(0x0008, 0x0070), value="unknown")  # Manufacturer
         self.cond_set_metadata(tag=(0x0008, 0x1090), value="unknown")  # Model name
-        self.cond_set_metadata(tag=(0x0018, 0x1000), value="unknown")  # Device Serial Number
+        self.cond_set_metadata(
+            tag=(0x0018, 0x1000), value="unknown"
+        )  # Device Serial Number
         self.set_metadata(tag=(0x0018, 0x1020), value="MIRP " + get_version())
 
         # Items from multi-frame function groups may be missing. We currently only use a single frame.
-        self.set_metadata(tag=(0x5200, 0x9229), value=Sequence())  # Shared functional groups sequence
-        self.set_metadata(tag=(0x5200, 0x9230), value=Sequence())  # Per-frame functional groups sequence
+        self.set_metadata(
+            tag=(0x5200, 0x9229), value=Sequence()
+        )  # Shared functional groups sequence
+        self.set_metadata(
+            tag=(0x5200, 0x9230), value=Sequence()
+        )  # Per-frame functional groups sequence
 
         # Multi-frame Dimension module
 
         # Dimension organisation sequence. We copy the frame of reference as UID.
         dim_org_seq_elem = Dataset()
-        set_pydicom_meta_tag(dim_org_seq_elem, tag=(0x0020, 0x9164), value=self.get_metadata(tag=(0x0020, 0x0052), tag_type="str"))  # Dimension organisation UID
+        set_pydicom_meta_tag(
+            dim_org_seq_elem,
+            tag=(0x0020, 0x9164),
+            value=self.get_metadata(tag=(0x0020, 0x0052), tag_type="str"),
+        )  # Dimension organisation UID
         self.set_metadata(tag=(0x0020, 0x9221), value=Sequence([dim_org_seq_elem]))
 
         # Dimension Index sequence. We point to the instance number.
         dim_index_seq_elem = Dataset()
-        set_pydicom_meta_tag(dim_index_seq_elem, tag=(0x0020, 0x9165), value=(0x0020, 0x0013))  # Dimension index pointer
-        set_pydicom_meta_tag(dim_index_seq_elem, tag=(0x0020, 0x9164), value=self.get_metadata(tag=(0x00200052), tag_type="str"))  # Dimension organisation UID
+        set_pydicom_meta_tag(
+            dim_index_seq_elem, tag=(0x0020, 0x9165), value=(0x0020, 0x0013)
+        )  # Dimension index pointer
+        set_pydicom_meta_tag(
+            dim_index_seq_elem,
+            tag=(0x0020, 0x9164),
+            value=self.get_metadata(tag=(0x00200052), tag_type="str"),
+        )  # Dimension organisation UID
         self.set_metadata(tag=(0x0020, 0x9222), value=Sequence([dim_index_seq_elem]))

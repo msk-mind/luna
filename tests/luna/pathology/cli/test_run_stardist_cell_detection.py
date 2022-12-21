@@ -1,13 +1,12 @@
 import io
 import os
-import docker
 
 from click.testing import CliRunner
+
+import docker
 from luna.pathology.cli.run_stardist_cell_detection import cli
 
-tmppath = (
-    "tests/luna/pathology/cli/testdata/data/stardist_cell_detection"
-)
+tmppath = "tests/luna/pathology/cli/testdata/data/stardist_cell_detection"
 
 
 class MockContainer(object):

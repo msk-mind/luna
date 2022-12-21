@@ -1,19 +1,25 @@
-import os, pytest
+import os
+import shutil
 from pathlib import Path
-from datetime import datetime
 
-from luna.pathology.common.annotation_utils import *
+import pytest
+
+from luna.pathology.common.annotation_utils import (
+    check_slideviewer_and_download_bmp,
+    convert_bmp_to_npy,
+    get_slide_bitmap,
+)
 
 SLIDEVIEWER_API_URL = "http://test-slideviewer-url.com/"
 SLIDE_BMP_DIR = "tests/luna/pathology/common/testdata/project/regional_bmps"
 SLIDE_NPY_DIR = "tests/luna/pathology/common/testdata/project/regional_npys"
 TMP_ZIP_DIR = "tests/luna/pathology/common/testdata/project/regional_tmp"
-BMP_FILE_PATH= "tests/luna/pathology/common/testdata/project/regional_bmps/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.bmp"
+BMP_FILE_PATH = "tests/luna/pathology/common/testdata/project/regional_bmps/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.bmp"
 NPY_FILE_PATH = "tests/luna/pathology/common/testdata/project/regional_npys/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.npy"
 SLIDE_STORE_DIR = "tests/luna/pathology/common/testdata/project/slides"
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def clean_after_all_Tests():
     yield
     # Will be executed after the last test
@@ -22,10 +28,16 @@ def clean_after_all_Tests():
 
 
 def test_get_slide_bitmap(requests_mock):
-    requests_mock.get("http://test-slideviewer-url.com/slides/user@mskcc.org/projects;1;1;123.svs/getLabelFileBMP",
-                      content=Path('tests/luna/pathology/common/testdata/input/label.zip').read_bytes())
+    requests_mock.get(
+        "http://test-slideviewer-url.com/slides/user@mskcc.org/projects;1;1;123.svs/getLabelFileBMP",
+        content=Path(
+            "tests/luna/pathology/common/testdata/input/label.zip"
+        ).read_bytes(),
+    )
 
-    res = get_slide_bitmap("1;123.svs", "user", "123", SLIDE_BMP_DIR, SLIDEVIEWER_API_URL, TMP_ZIP_DIR, '1')
+    res = get_slide_bitmap(
+        "1;123.svs", "user", "123", SLIDE_BMP_DIR, SLIDEVIEWER_API_URL, TMP_ZIP_DIR, "1"
+    )
 
     assert os.path.exists(res[1])
     assert BMP_FILE_PATH == res[1]
@@ -38,13 +50,24 @@ def test_convert_bmp_to_npy():
 
 
 def test_check_slideviewer_and_download_bmp(requests_mock):
-    requests_mock.get("http://test-slideviewer-url.com/slides/user@mskcc.org/projects;1;1;123.svs/getLabelFileBMP",
-                      content=Path('tests/luna/pathology/common/testdata/input/label.zip').read_bytes())
+    requests_mock.get(
+        "http://test-slideviewer-url.com/slides/user@mskcc.org/projects;1;1;123.svs/getLabelFileBMP",
+        content=Path(
+            "tests/luna/pathology/common/testdata/input/label.zip"
+        ).read_bytes(),
+    )
 
-    res = check_slideviewer_and_download_bmp('1', '1;123.svs', '123', ['user'], SLIDE_BMP_DIR,
-                                           SLIDEVIEWER_API_URL, TMP_ZIP_DIR)
+    res = check_slideviewer_and_download_bmp(
+        "1",
+        "1;123.svs",
+        "123",
+        ["user"],
+        SLIDE_BMP_DIR,
+        SLIDEVIEWER_API_URL,
+        TMP_ZIP_DIR,
+    )
     assert len(res) == 2
-    assert res[1]['bmp_filepath'] == BMP_FILE_PATH
+    assert res[1]["bmp_filepath"] == BMP_FILE_PATH
 
 
 # def test_convert_slide_bitmap_to_geojson():

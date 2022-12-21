@@ -1,22 +1,23 @@
-import click
-from decimal import Decimal
-import pandas as pd
+import copy
 import json
+import logging
+import os
+import re
+from decimal import Decimal
+
+import click
 import geojson
 import ijson
-import copy
-import os
-import logging
-from PIL import Image
-import re
 import numpy as np
+import pandas as pd
+from PIL import Image
 
+from luna.common.custom_logger import init_logger
+from luna.common.utils import cli_runner
 from luna.pathology.dsa.utils import (
     get_continuous_color,
     vectorize_np_array_bitmask_by_pixel_value,
 )
-from luna.common.utils import cli_runner
-from luna.common.custom_logger import init_logger
 
 init_logger()
 logger = logging.getLogger("dsa_viz")
@@ -656,6 +657,13 @@ def qupath_polygon_main(
     help="path to a metadata json/yaml file with method parameters to "
     "reproduce results",
 )
+@click.option(
+    "-sc",
+    "--scale_factor",
+    help="scale to match image DSA. (default 1)",
+    default=1,
+    required=False,
+)
 @cli.command()
 def bitmask_polygon(**cli_kwargs):
     """
@@ -669,6 +677,7 @@ def bitmask_polygon(**cli_kwargs):
             --image_filename 123.svs
             --line_colors '{"Other": "rgb(0,255,0)", "Lymphocyte": "rgb(255,0,0)"}'
             --fill_colors '{"Other": "rgba(0,255,0,100)", "Lymphocyte": "rgba(255,0,0,100)"}'
+            --scale_factor 1
     """
     params = [
         ("fill_colors", dict),
@@ -677,12 +686,19 @@ def bitmask_polygon(**cli_kwargs):
         ("image_filename", str),
         ("output_dir", str),
         ("input", dict),
+        ("scale_factor", int),
     ]
     cli_runner(cli_kwargs, params, bitmask_polygon_main)
 
 
 def bitmask_polygon_main(
-    input, output_dir, image_filename, annotation_name, line_colors, fill_colors
+    input,
+    output_dir,
+    image_filename,
+    annotation_name,
+    line_colors,
+    fill_colors,
+    scale_factor,
 ):
     """Build DSA annotation json from bitmask PNGs
 
@@ -698,6 +714,8 @@ def bitmask_polygon_main(
         values}
         fill_colors (map, optional): fill color map with {feature name:rgba
         values}
+        scale_factor (int, optional): scale to match the image on DSA. By
+        default, 1.
 
     Returns:
         dict: annotation file path
@@ -710,7 +728,9 @@ def bitmask_polygon_main(
         Image.MAX_IMAGE_PIXELS = 5000000000
         annotation = Image.open(bitmask_filepath)
         bitmask_np = np.array(annotation)
-        simplified_contours = vectorize_np_array_bitmask_by_pixel_value(bitmask_np)
+        simplified_contours = vectorize_np_array_bitmask_by_pixel_value(
+            bitmask_np, scale_factor=scale_factor
+        )
 
         for n, contour in enumerate(simplified_contours):
             element = copy.deepcopy(base_dsa_polygon_element)

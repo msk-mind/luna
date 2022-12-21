@@ -1,14 +1,12 @@
 class GeneralSettingsClass:
-
     def __init__(self):
         self.by_slice = None
         self.config_str = ""
         self.divide_disconnected_roi = "combine"
         self.no_approximation = False
 
+
 class ImageInterpolationSettingsClass:
-
-
     def __init__(self):
         self.interpolate = True
         self.spline_order = 3
@@ -19,14 +17,14 @@ class ImageInterpolationSettingsClass:
         self.bin = False
         self.bin_width = 10
 
-class RoiInterpolationSettingsClass:
 
+class RoiInterpolationSettingsClass:
     def __init__(self):
         self.spline_order = 5
         self.incl_threshold = None
 
-class ImagePerturbationSettingsClass:
 
+class ImagePerturbationSettingsClass:
     def __init__(self):
 
         self.roi_adapt_size = [0.0]
@@ -49,17 +47,18 @@ class ImagePerturbationSettingsClass:
 
         # Selection of heterogeneous supervoxels
         self.heterogeneous_svx_count = 0.0
-        self.heterogeneity_features  = ["rlm_sre"]
-        self.heterogen_low_values    = [False]
+        self.heterogeneity_features = ["rlm_sre"]
+        self.heterogen_low_values = [False]
 
         # Initially local variables
         self.translate_x = None
         self.translate_y = None
 
-class Settings():
+
+class Settings:
     def __init__(self):
         self.name = "MainSettings"
         self.vol_adapt = ImagePerturbationSettingsClass()
-        self.general   = GeneralSettingsClass()
+        self.general = GeneralSettingsClass()
         self.img_interpolate = ImageInterpolationSettingsClass()
         self.roi_interpolate = RoiInterpolationSettingsClass()
