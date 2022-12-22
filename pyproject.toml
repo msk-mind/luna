@@ -1,9 +1,150 @@
-[build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
+[tool.poetry]
+name = "luna"
+version = "0.3.3"
+description = "Transformation functions and services for multi-modal oncology data"
+authors = ["msk-mind <CompOncBST@mskcc.org>"]
+license = "Apache License version 2.0"
+readme = "README.md"
+documentation = "https://pyluna.readthedocs.io"
+repository = "https://github.com/msk-mind/luna"
+keywords = ["radiology", "pathology", "clinical"]
+classifiers = [
+    "Framework :: Pytest",
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
-build-backend = "setuptools.build_meta"
+include = ["HISTORY.md"]
 
-[tool.black]
-line-length = 120
+[tool.poetry.dependencies]
+python = "^3.9"
+minio = "^7.1.12"
+requests = "^2.28.1"
+filehash = "^0.2.dev1"
+joblib = "^1.2.0"
+dirhash = "^0.2.1"
+log4mongo = "^1.7.0"
+checksumdir = "^1.2.0"
+staintools = "^2.1.2"
+pandas = "^1.5.1"
+pyradiomics = "^3.0.1"
+itk = "^5.2.1"
+shapely = "^1.8.5"
+ijson = "^3.1.4"
+geojson = "^2.5.0"
+orjson = "^3.8.1"
+scikit-learn = "^1.1.3"
+scikit-image = "^0.19.3"
+opencv-python = "^4.6.0"
+girder-client = "^3.1.15"
+h5py = "^3.7.0"
+docker = "^6.0.1"
+MedPy = "^0.4.0"
+pydicom = "^2.3.0"
+dicom2nifti = "^2.4.5"
+dask = {extras = ["complete"], version = "^2022.10.2"}
+numpy = "1.23.5"
+pyarrow = "^10.0.0"
+PyYAML = "^6.0"
+jsonpath-ng = "^1.5.3"
+yamale = "^4.0.4"
+ray = {extras = ["tune"], version = "^2.1.0"}
+Flask = "^2.2.2"
+flask-restx = "^1.0.3"
+seaborn = "^0.12.1"
+torch = "1.12.1"
+torchmetrics = "0.10.2"
+torchvision = "0.13.1"
+openslide-python = "^1.2.0"
+neo4j = "^5.2.0"
+scipy = "^1.9.3"
+xmltodict = "^0.13.0"
+pyxnat = "^1.5"
+Pillow = "^9.3.0"
+PyWavelets = "^1.4.1"
+histomicstk = "^1.2.3"
+spams = "^2.6.5"
+CLAM = "^3.1.8"
+tqdm = "^4.64.1"
+poetry = "1.1.15"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.2.0"
+pytest-cov = "^4.0.0"
+pytest-mock = "^3.10.0"
+pytest-runner = "^6.0.0"
+testfixtures = "^7.0.3"
+requests-mock = "^1.10.0"
+mock = "^4.0.3"
+m2r2 = "^0.3.3"
+pre-commit = "^2.20.0"
+ipython = "^8.6.0"
+distributed = "^2022.10.2"
+deltalake = "^0.6.3"
+wheel = "^0.38.4"
+sphinx-click = "^4.3.0"
+nbsphinx = "^0.8.9"
+ipykernel = "^6.17.1"
+toml-cli = "^0.3.1"
+python-semantic-release = "^7.32.2"
+deptry = "^0.6.5"
+jupyter = "^1.0.0"
+s3fs = "^2022.11.0"
+python-docs-theme = "^2022.1"
+myst-parser = "^0.18.1"
+pandoc = "^2.2"
+Sphinx = "^5.1.1"
+isort = "^5.10.1"
+black = "^22.10.0"
+flake8 = "^6.0.0"
+pydocstyle = "^6.1.1"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# paths to executables
+[tool.poetry.scripts]
+dsa = 'luna.pathology.cli.dsa_viz:cli'
+dsa_upload = 'luna.pathology.cli.dsa_upload:cli'
+dsa_annotation = 'luna.pathology.cli.dsa_annotation_etl:cli'
+slide_etl = 'luna.pathology.cli.slide_etl:cli'
+generate_tiles = 'luna.pathology.cli.generate_tiles:cli'
+detect_tissue = 'luna.pathology.cli.run_tissue_detection:cli'
+save_tiles = 'luna.pathology.cli.save_tiles:cli'
+generate_mask = 'luna.pathology.cli.generate_mask:cli'
+extract_stain_texture = 'luna.pathology.cli.extract_stain_texture:cli'
+label_tiles = 'luna.pathology.cli.generate_tile_labels:cli'
+infer_tiles = 'luna.pathology.cli.infer_tile_labels:cli'
+load_slide = 'luna.pathology.cli.load_slide:cli'
+visualize_tiles_png = 'luna.pathology.cli.visualize_tile_labels_png:cli'
+train_tissue_classifier = 'luna.pathology.cli.train_tissue_classifier:cli'
+generate_tile_mask = 'luna.pathology.cli.generate_tile_mask:cli'
+extract_shape_features = 'luna.pathology.cli.extract_shape_features:cli'
+run_stardist_cell_detection = 'luna.pathology.cli.run_stardist_cell_detection:cli'
+mrad_proxy = 'luna.radiology.proxy_table.generate:cli'
+
+
+[tool.semantic_release]
+version_variable = [
+    "pyproject.toml:version"
+]
+branch = "main"
+upload_to_pypi = false
+upload_to_release = true
+build_command = "pip install poetry && poetry build"
+
+[tool.pyright]
+include = ["src"]
+venv = "luna"
+venvPath = ".venv"
+pythonVersion = "3.9"
+

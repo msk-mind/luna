@@ -9,40 +9,22 @@ See below for installation instructions
 1. Pre-requisites
 -----------------
 
-- `Java <https://adoptopenjdk.net/installation.html>`_
-- `Python3 <https://www.python.org/downloads>`_
-- `Openslide <https://openslide.org/download>`_
+- `mamba <https://mamba.readthedocs.io/en/latest/installation.html>`_:
+  Follow in the instructions for installing `Mambaforge
+  <https://github.com/conda-forge/miniforge#mambaforge>`_
+- `GNU Make <https://www.gnu.org/software/make/>`_:
+  Version > 3.81 required. (Default version on macos is 3.81)
 
-On Ubuntu, you could install the pre-reqs with::
+2. Create luna virtual environment and install packages
+-------------------------------------------------------
 
-    apt-get install -y openslide-tools python-openslide default-jre
+At the command line::
 
+    make venv
 
-2. Install with Pip
--------------------
+Activate the luna virtual environment::
 
-First, update your pip and install numpy (pyradiomics installation fails if numpy is not installed)::
-
-    pip install --upgrade pip
-    pip install numpy
-
-To install luna and its basic functionality, run this command in your terminal::
-
-    pip install pyluna
-
-To install luna subpackages, with more features specify a subpackage {common, radiology, pathology} or install all with ``pyluna[all]``.
-For example, to install luna pathology, run this command::
-
-    pip install pyluna[pathology]
-
-
-This is the preferred method to install luna, as it will always install the most recent stable release.
-
-If you don't have `pip`_ installed, this `Python installation guide`_ can guide
-you through the process.
-
-.. _pip: https://pip.pypa.io
-.. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
+    conda activate .venv/luna
 
 
 3. Setup LUNA_HOME and Configurations
@@ -54,7 +36,7 @@ you through the process.
 
     export LUNA_HOME=<path/to/your/workspace>
 
-2. Prepare configuration files and place them at ``$LUNA_HOME/conf`
+2. Prepare configuration files and place them at ``$LUNA_HOME/conf``
 Example configurations files are at `Luna repo <https://github.com/msk-mind/luna/tree/dev/conf>`_
 
 Currently, we have two configuration files.

@@ -23,7 +23,7 @@ services:
         - GROUP_NAME=${GROUP_NAME}
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8081:8080"
     volumes:
       - ${PWD}/vmount/assetstore:/home/${USER_NAME}/vmount/assetstore
       - ${PWD}/vmount:/home/${USER_NAME}/vmount
@@ -40,8 +40,8 @@ services:
     image: ${USER_NAME}_luna_tutorial_main:v0.0.1
     container_name: ${USER_NAME}_luna_tutorial
     build:
-      context: .
-      dockerfile: dockerfile_luna_tutorial
+      context: ../..
+      dockerfile: docker/luna_tutorial/dockerfile_luna_tutorial
       args:
         - USER_ID=${USER_ID}
         - GROUP_ID=${GROUP_ID}
@@ -53,19 +53,19 @@ services:
     user: ${USER_ID}
     restart: unless-stopped
     ports:
-      - "8888:8888"
-      - "6006:6006"
+      - "8889:8888"
+      - "6007:6006"
     command: |
-      bash -c "jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount >>~/vmount/logs/tutorial.log 2>&1"
+      bash -c "jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount >> ~/vmount/logs/tutorial.log 2>&1"
     volumes:
       - ${PWD}/vmount:/home/${USER_NAME}/vmount
   minio:
     image: minio/minio:RELEASE.2022-05-04T07-45-27Z
     container_name: ${USER_NAME}_minio
-    command: server /data --console-address ":9001"  
+    command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"
-      - "9500:9001"
+      - "9001:9000"
+      - "9501:9001"
     environment:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: password1
@@ -76,7 +76,7 @@ services:
     image: mskmind/luna-waystation
     container_name: ${USER_NAME}_way_station
     environment:
-      S3_ROOT_URL: http://minio:9500/datasets 
+      S3_ROOT_URL: http://minio:9000/datasets
       S3_ACCESS_KEY: admin
       S3_SECRET_KEY: password1
 
@@ -84,9 +84,9 @@ services:
     image: dremio/dremio-oss:21.1
     container_name: ${USER_NAME}_dremio
     ports:
-      - "9047:9047"
-      - "31010:31010"
-      - "45678:45678"
+      - "9048:9047"
+      - "31011:31010"
+      - "45679:45678"
     volumes:
     - ${PWD}/vmount:/data
-    
+

@@ -12,10 +12,13 @@ tests/data_mock/
 # *.cfg # ignores setup.cfg
 **dask-worker-space**
 **/.ipynb_checkpoints
+.venv
+dist/
 
 # docs
 docs/tutorials
 docs/img
+docs/_build
 
 # docker luna_tutorial
 docker/luna_tutorial/vmount/PRO-12-123

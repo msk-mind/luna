@@ -22,14 +22,10 @@ app = Flask(__name__)
 logger = init_logger("flask-mind-server.log")
 
 ### swagger specific ###
-SWAGGER_URL = '/mind/api/v1/docs'
-API_URL = '/static/swagger.json'
+SWAGGER_URL = "/mind/api/v1/docs"
+API_URL = "/static/swagger.json"
 SWAGGERUI_BLUEPRINT = get_swaggerui_blueprint(
-    SWAGGER_URL,
-    API_URL,
-    config={
-        'app_name': "buildRadiologyProxyTables"
-    }
+    SWAGGER_URL, API_URL, config={"app_name": "buildRadiologyProxyTables"}
 )
 app.register_blueprint(SWAGGERUI_BLUEPRINT, url_prefix=SWAGGER_URL)
 ### end swagger specific ###
@@ -39,7 +35,7 @@ app.register_blueprint(SWAGGERUI_BLUEPRINT, url_prefix=SWAGGER_URL)
 # ==================================================================================================
 def setup_environment_from_yaml(template_file):
     # read template_file yaml and set environmental variables for subprocesses
-    with open(template_file, 'r') as template_file_stream:
+    with open(template_file, "r") as template_file_stream:
         template_dict = yaml.safe_load(template_file_stream)
 
     logger.info("Setting up environment:")
@@ -49,9 +45,10 @@ def setup_environment_from_yaml(template_file):
     for var in template_dict:
         os.environ[var] = str(template_dict[var]).strip()
 
+
 def teardown_environment_from_yaml(template_file):
     # read template_file yaml and set environmental variables for subprocesses
-    with open(template_file, 'r') as template_file_stream:
+    with open(template_file, "r") as template_file_stream:
         template_dict = yaml.safe_load(template_file_stream)
 
     logger.info("Tearing down enviornment")
@@ -59,6 +56,7 @@ def teardown_environment_from_yaml(template_file):
     # delete all fields from template as env variables
     for var in template_dict:
         del os.environ[var]
+
 
 # ==================================================================================================
 # Routes
@@ -71,14 +69,17 @@ curl \
 --data '{"TEMPLATE":"path/to/template.yaml"}' \
   http://<server>:5000/mind/api/v1/transferFiles
 """
-@app.route('//mind/api/v1/transferFiles', methods=['POST'])
+
+
+@app.route("//mind/api/v1/transferFiles", methods=["POST"])
 def transferFiles():
     data = request.json
-    if not "TEMPLATE" in data.keys(): return "You must supply a template file."
+    if not "TEMPLATE" in data.keys():
+        return "You must supply a template file."
     transfer_cmd = ["time", "./luna/radiology/proxy_table/transfer_files.sh"]
 
     setup_environment_from_yaml(data["TEMPLATE"])
-    with CodeTimer(logger, 'setup proxy table'):
+    with CodeTimer(logger, "setup proxy table"):
         try:
             exit_code = subprocess.call(transfer_cmd)
         except Exception as err:
@@ -86,14 +87,19 @@ def transferFiles():
             return "Script failed"
     teardown_environment_from_yaml(data["TEMPLATE"])
 
-
     if exit_code != 0:
-        logger.error(("Some errors occured with transfering files, non-zero exit code: " + str(exit_code)))
-        return "Some errors occured with transfering files, non-zero exit code: " + str(exit_code)
-
+        logger.error(
+            (
+                "Some errors occured with transfering files, non-zero exit code: "
+                + str(exit_code)
+            )
+        )
+        return "Some errors occured with transfering files, non-zero exit code: " + str(
+            exit_code
+        )
 
     return "Radiology files transfer is successful"
 
 
-if __name__ == '__main__':
-    app.run(host=os.environ['HOSTNAME'],port=5000, debug=True)
+if __name__ == "__main__":
+    app.run(host=os.environ["HOSTNAME"], port=5000, debug=True)

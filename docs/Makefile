@@ -4,9 +4,12 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = python -msphinx
-SPHINXPROJ    = pyluna-common pyluna-pathology pyluna_radiology
+SPHINXPROJ    = luna
 SOURCEDIR     = .
 BUILDDIR      = _build
+
+LUNA_HOME := ${PWD}/..
+export LUNA_HOME
 
 # Put it first so that "make" without argument is like "make help".
 help:

@@ -1,0 +1,54 @@
+name: luna build
+run-name: ${{ github.actor }} build
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    container:
+      image: mambaorg/micromamba:1.0.0
+      options: --user root
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install required packages
+        run: |
+          apt-get update
+          apt-get install -y build-essential libgdal-dev liblapack-dev libblas-dev gfortran libgl1 git curl make
+
+      - uses: actions/cache@v3
+        id: cache
+        with:
+          path: ./venv
+          key: ${{ runner.os }}-${{ hashFiles('environment.yml poetry.lock pyproject.toml')}}
+
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          micromamba create -y -p ./venv -f environment.yml
+          . ./venv/bin/activate
+          poetry export --without-hashes -f requirements.txt --dev | SETUPTOOLS_USE_DISTUTILS=stdlib pip install --no-deps -r /dev/stdin
+
+      - name: Build project
+        run: |
+          . ./venv/bin/activate
+          poetry config virtualenvs.create false
+          poetry build
+          pip install --no-deps dist/*.whl
+      - name: Lint with flake8
+        run: |
+          . ./venv/bin/activate
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Test with pytest
+        run: |
+          . ./venv/bin/activate
+          export LUNA_HOME=$PWD
+          cp conf/logging.default.yml conf/logging.cfg
+          pytest -v --capture=tee-sys --show-capture=all tests --cov-report=xml --junitxml=./luna-tests/results.xml
+

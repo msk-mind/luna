@@ -36,19 +36,32 @@ import luna.common.constants as const
 
 from pyspark import SQLContext, SparkContext
 from pyspark.sql import functions as F
-from pyspark.sql.types import StringType,StructType,StructField
+from pyspark.sql.types import StringType, StructType, StructField
 
 logger = init_logger()
 logger.info("Starting process_scan_job.py")
 
-APP_CFG='APP_CFG'
+APP_CFG = "APP_CFG"
+
 
 @click.command()
-@click.option('-s', '--spark_master_uri', help='spark master uri e.g. spark://master-ip:7077 or local[*]', required=True)
-@click.option('-g', '--graph_uri', help='spark master uri e.g. bolt://localhost:7883', required=True)
-@click.option('-h', '--hdfs_uri', help='hdfs URI uri e.g. hdfs://localhost:8020', required=True)
-@click.option('-f', '--config_file', default = 'config.yaml', help="config file")
-def cli(spark_master_uri, hdfs_uri, graph_uri, config_file) :
+@click.option(
+    "-s",
+    "--spark_master_uri",
+    help="spark master uri e.g. spark://master-ip:7077 or local[*]",
+    required=True,
+)
+@click.option(
+    "-g",
+    "--graph_uri",
+    help="spark master uri e.g. bolt://localhost:7883",
+    required=True,
+)
+@click.option(
+    "-h", "--hdfs_uri", help="hdfs URI uri e.g. hdfs://localhost:8020", required=True
+)
+@click.option("-f", "--config_file", default="config.yaml", help="config file")
+def cli(spark_master_uri, hdfs_uri, graph_uri, config_file):
     """
     This module groups dicom images via SeriesInstanceUID, calls a script to generate volumetric images, and interfaces outputs to an IO service.
     
@@ -60,42 +73,52 @@ def cli(spark_master_uri, hdfs_uri, graph_uri, config_file) :
         --hdfs_uri file:// 
     """
     # Setup Spark context
-    with CodeTimer(logger, 'convert dicom to graph'):
+    with CodeTimer(logger, "convert dicom to graph"):
         ConfigSet(name=APP_CFG, config_file=config_file)
-        spark = SparkConfig().spark_session(config_name=APP_CFG, app_name="dicom-to-graph")
+        spark = SparkConfig().spark_session(
+            config_name=APP_CFG, app_name="dicom-to-graph"
+        )
         update_graph_with_scans(spark, graph_uri, hdfs_uri)
 
 
 def update_graph_with_scans(spark, graph_uri, hdfs_uri):
-    hdfs_db_root    = os.environ["MIND_ROOT_DIR"]
-    logger.info (f"hdfs_db_root={hdfs_db_root}")
+    hdfs_db_root = os.environ["MIND_ROOT_DIR"]
+    logger.info(f"hdfs_db_root={hdfs_db_root}")
 
     # Open a connection to the ID graph database
-    logger.info (f'''Conncting to uri={graph_uri}, user="neo4j", pwd="password" ''')
+    logger.info(f"""Conncting to uri={graph_uri}, user="neo4j", pwd="password" """)
     conn = Neo4jConnection(uri=graph_uri, user="neo4j", pwd="password")
 
-    logger.info ("-------------------------------------- SETUP COMPLETE -------------------------------------------")
+    logger.info(
+        "-------------------------------------- SETUP COMPLETE -------------------------------------------"
+    )
     job_start_time = time.time()
 
     # Reading dicom and opdata
-    df_dcmdata = spark.read.format("delta").load( hdfs_uri + os.path.join(hdfs_db_root, const.DICOM_TABLE))
-    logger.info (" >>> Loaded dicom DB")
+    df_dcmdata = spark.read.format("delta").load(
+        hdfs_uri + os.path.join(hdfs_db_root, const.DICOM_TABLE)
+    )
+    logger.info(" >>> Loaded dicom DB")
 
-    tuple_to_add = df_dcmdata.select("PatientName", "SeriesInstanceUID")\
-	.groupBy("PatientName", "SeriesInstanceUID")\
-	.count()\
-	.withColumnRenamed("PatientName", "xnat_patient_id")\
-	.toPandas()
+    tuple_to_add = (
+        df_dcmdata.select("PatientName", "SeriesInstanceUID")
+        .groupBy("PatientName", "SeriesInstanceUID")
+        .count()
+        .withColumnRenamed("PatientName", "xnat_patient_id")
+        .toPandas()
+    )
 
     id_1 = "xnat_patient_id"
     id_2 = "SeriesInstanceUID"
     link = "HAS_SCAN"
 
     for index, row in tuple_to_add.iterrows():
-        query ='''MERGE (id1:{0} {{value: "{1}"}}) MERGE (id2:{2} {{value: "{3}"}}) MERGE (id1)-[r:{4}]->(id2)'''.format(id_1, row[id_1], id_2, row[id_2], link)
-        logger.info (query)
+        query = """MERGE (id1:{0} {{value: "{1}"}}) MERGE (id2:{2} {{value: "{3}"}}) MERGE (id1)-[r:{4}]->(id2)""".format(
+            id_1, row[id_1], id_2, row[id_2], link
+        )
+        logger.info(query)
         conn.query(query, db="neo4j")
-    logger.info (" >>> Jobs done")
+    logger.info(" >>> Jobs done")
     logger.info("--- Execute in %s seconds ---" % (time.time() - job_start_time))
 
 

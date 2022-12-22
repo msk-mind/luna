@@ -7,7 +7,7 @@
    quickstart
    installation
    user
-   modules
+   source/modules
    dev
    about
    publications
