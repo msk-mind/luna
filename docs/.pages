@@ -1,0 +1,14 @@
+nav:
+  - Home: 'index.md'
+  - About: 'about.md'
+  - Quick Start: 'quickstart.md'
+  - Installation: 'installation.md'
+  - User Guide: 'user.md'
+  - tutorials
+  - cli_reference
+  - reference
+  - Developers:
+    - Development Guide: 'dev.md'
+    - Contributing: 'contributing.md'
+  - Publications: 'publications.md'
+  - Release History: 'history.md'
