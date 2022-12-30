@@ -11,18 +11,7 @@ Luna serves as the core computational library for multi-modality oncology data a
 
 ## Features
 
-* pathology, radiology and clinical data workflows
+* Pathology, radiology and clinical data workflows
 * A microservice-driven architecture allowing for integrations with other open-source
   libraries
 * Tools for building data visualizations and statistical models
-
-## Install
-
-Luna is available on [PyPI](http://pypi.python.org/pypi/pyluna), and can be installed via ``pip install
-pyluna``.
-
-
-## Support
-
-For additional support and more information about installation and setup, see
-the [Documentation](https://pyluna.readthedocs.io/en/stable/installation.html).

@@ -1,0 +1,84 @@
+---
+title: Development Guide
+---
+
+A comprehensive guide for those interested in making contributions or
+supporting the development of Luna.
+
+**Warning:** This documentation is still a work in progress
+
+# Development Setup Instructions
+
+Follow the instructions below to install the latest version of Luna and
+setup a development environment.
+
+## Development Installation
+
+Developers interested in using the newest features of Luna, or are
+actively contributing to Luna should install the latest version
+available via:
+
+    git clone git@github.com:msk-mind/luna.git
+
+The `Makefile` has a number of relevant targets. (Note: GNU
+Make 3.82 or higher is required.)
+
+See all targets:
+
+    make help
+
+Install virtual environment:
+
+    make venv
+
+OR use`setup_local.sh` to setup your python paths and `LUNA_HOME`
+config:
+
+    source ./setup_local.sh
+
+## Development with Docker
+
+Build docker image:
+
+    make build-docker
+
+The docker image is also available on DockerHub:
+[luna](https://hub.docker.com/r/mskmind/luna).
+
+This docker image includes the pre-requisites and python dependencies.
+This is primarily used for circleci testing at the moment, but can be
+extended based on your development needs.
+
+Once we have a stable release, docker images that includes pyluna
+packages can be made available.
+
+## Documentation Generation
+
+API documentation in Luna is generated via `mkdocs`. Docstrings
+are written according to the [Google Python Style
+Guide](https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html).
+
+In order to generate the documentation:
+
+    # generate docs
+    make docs
+
+    # activate the virtual env
+    conda activate .venv/luna
+
+    # clean _build directory
+    make clean
+
+# Technical Architecture
+
+Here we provide an overview of the Luna technical architecture and
+design methodologies.
+
+# Resources
+
+Here are some links to useful developer resources:
+
+-   [Markdown](http://docutils.sourceforge.net/rst.html) for
+    [MkDocs](http://www.mkdocs.org/)
+-   [pytest](https://docs.pytest.org/)
+-   [docker](https://www.docker.com/)

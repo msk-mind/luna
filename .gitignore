@@ -16,6 +16,7 @@ tests/data_mock/
 dist/
 
 # docs
+site/
 docs/tutorials
 docs/img
 docs/_build

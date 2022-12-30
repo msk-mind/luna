@@ -52,7 +52,7 @@ pyarrow = "^10.0.0"
 PyYAML = "^6.0"
 jsonpath-ng = "^1.5.3"
 yamale = "^4.0.4"
-ray = {extras = ["tune"], version = "^2.1.0"}
+ray = {extras = ["train"], version = "^2.2.0"}
 Flask = "^2.2.2"
 flask-restx = "^1.0.3"
 seaborn = "^0.12.1"
@@ -86,8 +86,6 @@ ipython = "^8.6.0"
 distributed = "^2022.10.2"
 deltalake = "^0.6.3"
 wheel = "^0.38.4"
-sphinx-click = "^4.3.0"
-nbsphinx = "^0.8.9"
 ipykernel = "^6.17.1"
 toml-cli = "^0.3.1"
 python-semantic-release = "^7.32.2"
@@ -97,11 +95,19 @@ s3fs = "^2022.11.0"
 python-docs-theme = "^2022.1"
 myst-parser = "^0.18.1"
 pandoc = "^2.2"
-Sphinx = "^5.1.1"
 isort = "^5.10.1"
 black = "^22.10.0"
 flake8 = "^6.0.0"
 pydocstyle = "^6.1.1"
+mkdocs = "^1.4.2"
+Pygments = "^2.13.0"
+mkdocs-gitbook = "^0.0.1"
+mkdocstrings = "^0.19.1"
+mkdocs-click = "^0.8.0"
+mkdocstrings-python = "^0.8.2"
+mkdocs-awesome-pages-plugin = "^2.8.0"
+mkdocs-jupyter = "^0.22.0"
+mkdocs-material = "^8.5.11"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
@@ -113,6 +119,8 @@ build-backend = "poetry.core.masonry.api"
 
 # paths to executables
 [tool.poetry.scripts]
+
+# pathology
 dsa = 'luna.pathology.cli.dsa_viz:cli'
 dsa_upload = 'luna.pathology.cli.dsa_upload:cli'
 dsa_annotation = 'luna.pathology.cli.dsa_annotation_etl:cli'
@@ -130,7 +138,18 @@ train_tissue_classifier = 'luna.pathology.cli.train_tissue_classifier:cli'
 generate_tile_mask = 'luna.pathology.cli.generate_tile_mask:cli'
 extract_shape_features = 'luna.pathology.cli.extract_shape_features:cli'
 run_stardist_cell_detection = 'luna.pathology.cli.run_stardist_cell_detection:cli'
-mrad_proxy = 'luna.radiology.proxy_table.generate:cli'
+
+# radiology
+coregister_volumes = 'luna.radiology.cli.coregister_volumes:cli'
+dicom_to_itk = 'luna.radiology.cli.dicom_to_itk:cli'
+extract_radiomics = 'luna.radiology.cli.extract_radiomics:cli'
+extract_voxels = 'luna.radiology.cli.extract_voxels:cli'
+generate_scan_table = 'luna.radiology.cli.generate_scan_table:cli'
+generate_threshold_mask = 'luna.radiology.cli.generate_threshold_mask:cli'
+match_metadata = 'luna.radiology.cli.match_metadata:cli'
+randomize_contours = 'luna.radiology.cli.randomize_contours:cli'
+window_volume = 'luna.radiology.cli.window_volume:cli'
+xnat_etl = 'luna.radiology.cli.xnat_etl:cli'
 
 
 [tool.semantic_release]
