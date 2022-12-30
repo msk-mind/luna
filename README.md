@@ -25,4 +25,4 @@ pyluna``.
 ## Support
 
 For additional support and more information about installation and setup, see
-the [Documentation](https://pyluna.readthedocs.io/en/stable/installation.html).
+the [Documentation](https://msk-mind.github.io/luna).

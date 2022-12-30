@@ -61,13 +61,13 @@ Guide](https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html).
 In order to generate the documentation:
 
     # generate docs
-    make docs
+    make build-docs
 
-    # activate the virtual env
-    conda activate .venv/luna
+    # serve docs locally
+    make serve-docs
 
-    # clean _build directory
-    make clean
+When a branch is pushed to `master`, the documents are built and deployed to
+the github pages site via [Github Actions](https://docs.github.com/en/actions).
 
 # Technical Architecture
 
@@ -82,3 +82,4 @@ Here are some links to useful developer resources:
     [MkDocs](http://www.mkdocs.org/)
 -   [pytest](https://docs.pytest.org/)
 -   [docker](https://www.docker.com/)
+-   [Github Actions](https://docs.github.com/en/actions)

@@ -14,7 +14,7 @@ This document is a quick guide to contributing.
 
 ## Setting up local environment
 
-Refer to the [development setup guide](https://pyluna.readthedocs.io/en/latest/dev.html#development-setup-instructions)
+Refer to the [development setup guide](dev.md#development-setup-instructions)
 to:
 - Get the latest code from git
 - Setup environment with `make venv`
@@ -40,25 +40,11 @@ Create your branch with the naming convention `IssueNumber-Description` (e.g. 12
    will be installed with `mamba` or `conda`. If that package is also
    managed by `poetry`, add it to the `pyproject.toml` using `poetry add
    --lock` with the same version added by `mamba` or `conda`.
-5. The circleci tests depend on the docker image defined in
-   `docker/Dockerfile`. To update the docker, you need to trigger the docker
-   workflow in circleci. To trigger this workflow using circleci API, first
-   create a [circleci personal
-   token](https://circleci.com/docs/2.0/managing-api-tokens/#creating-a-personal-api-token).
-   In your terminal, send the POST request to the circlcie API with your
-   branch, circle-token.:
-```
-curl --request POST \
-  --url https://circleci.com/api/v2/project/gh/msk-mind/luna/pipeline \
-  --header 'Circle-Token: <REPLACE_WITH_YOUR_CIRCLECI_TOKEN>' \
-  --header 'content-type: application/json' \
-  --data '{"branch": "<REPLACE_WITH_YOUR_BRANCH>", "parameters" : {"run_workflow_test": false, "run_workflow_docker":  true }}'
-```
-6. Aim for 85% test coverage for new modules and ensure these tests pass.
-7. Apply meaningful log statements.
-8. Check that no sensitive information (credentials, hostnames, author info) is accidentally committed.
-9. Add or update the tutorials in the documentation site.
-  Refer to [Sphinx documenation generation guide](https://pyluna.readthedocs.io/en/latest/dev.html#documentation-generation)
+5. Aim for 85% test coverage for new modules and ensure these tests pass.
+6. Apply meaningful log statements.
+7. Check that no sensitive information (credentials, hostnames, author info) is accidentally committed.
+8. Add or update the tutorials in the documentation site.
+  Refer to [Sphinx documenation generation guide](dev.md#documentation-generation)
 
 ### Unit tests
 Luna uses [pytest](https://docs.pytest.org) for testing. Each code contribution
@@ -85,7 +71,7 @@ pytest -s path/to/test_file.py::test_method
 
 ### Creating PR
 
-Once you are done (see [development guide](#development-guide)) with the changes in your branch, create a PR to merge your branch into the default **dev** branch.
+Once you are done (see [development guide](dev.md)) with the changes in your branch, create a PR to merge your branch into the default **dev** branch.
 
 1. Luna uses semantic release for version management. The PR title must start with one of these types specified in the [commit guidelines](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#-git-commit-guidelines).
 Additionally, provide Luna subpackage and a brief description of the PR in the title.
@@ -100,7 +86,7 @@ For example, `perf: pathology – improve inference speed`
 
 If you are assigned as a reviewer, add your comments based on these guidelines.
 
-1. Check that the PR follows the [development guide](#development-guide).
+1. Check that the PR follows the [development guide](dev.md).
 2. Is there any code/documentation update that is missed in the PR?
 
 We encourage the author and reviewer to engage in active conversations to ensure all suggestions are clearly understood
@@ -110,7 +96,7 @@ and to improve the code quality of the overall library.
 
 PRs should be merged by the author who created the PR.
 In order to merge a PR to **dev** branch, the PR should have
-- All checks (circleci tests, readthedocs) passed
+- All unit tests passed (via Github Actions)
 - At least 1 approval from a reviewer
 - No merge conflicts
 
