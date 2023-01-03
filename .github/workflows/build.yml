@@ -36,7 +36,7 @@ jobs:
           . ./venv/bin/activate
           poetry config virtualenvs.create false
           poetry build
-          pip install --no-deps dist/*.whl
+          pip install --no-deps --force-reinstall dist/*.whl
 
       - name: Lint with flake8
         run: |
@@ -56,6 +56,7 @@ jobs:
       - name: Build mkdocs
         run: |
           . ./venv/bin/activate
+          export LUNA_HOME=$PWD
           mkdocs build
 
   release:
@@ -121,5 +122,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: release
     steps:
-      - run: mkdocs gh-deploy --force
+      - name: Deploy docs
+        run: |
+          . ./venv/bin/activate
+          export LUNA_HOME=$PWD
+          mkdocs gh-deploy --force
 
