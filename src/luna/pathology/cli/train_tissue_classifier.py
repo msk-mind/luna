@@ -10,7 +10,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from ray import tune
-from ray.train import Trainer
+from ray.air.config import RunConfig, ScalingConfig
+from ray.train.torch import TorchTrainer
 from torch.utils.data import DataLoader
 from torchmetrics import (
     Accuracy,
@@ -396,15 +397,21 @@ def train_model(
         f"Instantiating Ray Trainer with: num_cpus_per_worker={num_cpus_per_worker}, num_gpus_per_worker={num_gpus_per_worker}"
     )
 
-    trainer = Trainer(
-        backend="torch",
-        num_workers=num_workers,
-        # use_gpu=use_gpu,
-        logdir=output_dir,
-        resources_per_worker={
-            "CPU": num_cpus_per_worker,
-            "GPU": num_gpus_per_worker,
-        },
+    trainer = TorchTrainer(
+        run_config=RunConfig(
+            local_dir=output_dir,
+            log_to_file=(
+                f"{output_dir}/trainer.stdout",
+                f"{output_dir}/trainer.stderr",
+            ),
+        ),
+        scaling_config=ScalingConfig(
+            resources_per_worker={
+                "CPU": num_cpus_per_worker,
+                "GPU": num_gpus_per_worker,
+            },
+            num_workers=num_workers,
+        ),
     )
 
     batch_size = ray.tune.choice(batch_size)
