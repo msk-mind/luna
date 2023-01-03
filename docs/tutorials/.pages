@@ -1,0 +1,12 @@
+title: Tutorials
+nav:
+    - index.md
+    - Dataset Preparation: '1_dataset-prep.ipynb'
+    - Tiling Generation (File Edition): '2_tiling-file.ipynb'
+    - Tiling Generation (Waystation Edition): '2_tiling-waystation.ipynb'
+    - Model Training: '3_model-training.ipynb'
+    - Inference and Visualization: '4_inference-and-visualization.ipynb'
+    - Snakemake: '5_end-to-end-pipeline.ipynb'
+    - Digital Slide Archive (DSA) Visualization: '6_dsa-tools.ipynb'
+    - DSA Annotation: '7_dsa-annotation.ipynb'
+
