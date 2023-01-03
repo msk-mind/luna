@@ -37,6 +37,7 @@ jobs:
           poetry config virtualenvs.create false
           poetry build
           pip install --no-deps dist/*.whl
+
       - name: Lint with flake8
         run: |
           . ./venv/bin/activate
@@ -51,6 +52,11 @@ jobs:
           export LUNA_HOME=$PWD
           cp conf/logging.default.yml conf/logging.cfg
           pytest -v --capture=tee-sys --show-capture=all tests --cov-report=xml --junitxml=./luna-tests/results.xml
+
+      - name: Build mkdocs
+        run: |
+          . ./venv/bin/activate
+          mkdocs build
 
   release:
     runs-on: ubuntu-latest
