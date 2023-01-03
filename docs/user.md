@@ -17,7 +17,7 @@ identifier of something like a slide. `method_config.yaml` are the
 parameters that are passed to the underlying python function call.
 
 To see examples of various CLI calls, take a look at some of the various
-[Tutorials](tutorials.md) for our pathology workflows.
+[Tutorials](tutorials/index.md) for our pathology workflows.
 
 # API Use
 
