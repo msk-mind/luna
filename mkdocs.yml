@@ -29,7 +29,6 @@ plugins:
   - mkdocs-jupyter:
       execute: false
       allow_errors: true
-      no_input: true
 
 markdown_extensions:
   - pymdownx.highlight:
