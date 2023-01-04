@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/msk-mind/luna/raw/1169-readme/docs/img/luna_logo.png" width="500"><br>
+  <img src="luna_logo.png" width="500"><br>
 </div>
 
 [![MSK-MIND](https://github.com/msk-mind/luna/actions/workflows/build.yml/badge.svg)](https://github.com/msk-mind/luna/actions/workflows/build.yml)
