@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="_static/media/luna_logo.png" width="500"><br>
+  <img src="https://github.com/msk-mind/luna/raw/1169-readme/docs/img/luna_logo.png" width="500"><br>
 </div>
 
 [![MSK-MIND](https://github.com/msk-mind/luna/actions/workflows/build.yml/badge.svg)](https://github.com/msk-mind/luna/actions/workflows/build.yml)
@@ -14,4 +14,4 @@ Luna serves as the core computational library for multi-modality oncology data a
 * Pathology, radiology and clinical data workflows
 * A microservice-driven architecture allowing for integrations with other open-source
   libraries
-* Tools for building data visualizations and statistical models
+* [Tools](Tools) for building data visualizations and statistical models
