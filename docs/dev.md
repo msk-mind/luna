@@ -31,10 +31,24 @@ Install virtual environment:
 
     make venv
 
-OR use`setup_local.sh` to setup your python paths and `LUNA_HOME`
+OR use `setup_local.sh` to setup your python paths and `LUNA_HOME`
 config:
 
     source ./setup_local.sh
+
+### Troubleshooting
+
+If the install process hangs on installing packages with poetry, you may have
+to clear out your cache.
+
+On MacOS:
+
+    rm -rf ~/Library/Caches/pypoetry/cache/*
+
+On Linux:
+
+    rm -rf ~/.cache/pypoetry/*
+
 
 ## Development with Docker
 
