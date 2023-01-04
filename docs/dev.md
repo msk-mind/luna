@@ -52,8 +52,11 @@ packages can be made available.
 
 ## Documentation Generation
 
-API documentation in Luna is generated via `mkdocs`. Docstrings
-are written according to the [Google Python Style
+Documentation in Luna is generated via `mkdocs`. See the `mkdocs.yml` file for
+specific configuration details. Note that the `awesome-pages` plugin is
+installed and navigation is specified in `.pages` files.
+
+Docstrings are written according to the [Google Python Style
 Guide](https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html).
 
 In order to generate the documentation:
@@ -76,7 +79,7 @@ design methodologies.
 
 Here are some links to useful developer resources:
 
--   [Markdown](http://docutils.sourceforge.net/rst.html) for
+-   [Markdown Guide](https://www.markdownguide.org/) for
     [MkDocs](http://www.mkdocs.org/)
 -   [pytest](https://docs.pytest.org/)
 -   [docker](https://www.docker.com/)
