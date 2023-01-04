@@ -2,7 +2,7 @@
   <img src="_static/media/luna_logo.png" width="500"><br>
 </div>
 
-[![MSK-MIND](https://circleci.com/gh/msk-mind/luna.svg?style=shield)](https://circleci.com/gh/msk-mind/luna)
+[![MSK-MIND](https://github.com/msk-mind/luna/actions/workflows/build.yml/badge.svg)](https://github.com/msk-mind/luna/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/msk-mind/luna/branch/master/graph/badge.svg)](https://app.codecov.io/gh/msk-mind/luna)
 [![license](https://img.shields.io/github/license/msk-mind/luna)](https://github.com/msk-mind/luna/blob/master/LICENSE)
 [![style](https://img.shields.io/badge/code%20style-black-black)](https://img.shields.io/badge/code%20style-black-black)

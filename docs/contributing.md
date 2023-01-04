@@ -44,7 +44,7 @@ Create your branch with the naming convention `IssueNumber-Description` (e.g. 12
 6. Apply meaningful log statements.
 7. Check that no sensitive information (credentials, hostnames, author info) is accidentally committed.
 8. Add or update the tutorials in the documentation site.
-  Refer to [Sphinx documenation generation guide](dev.md#documentation-generation)
+  Refer to [mkdocs documentation generation guide](dev.md#documentation-generation)
 
 ### Unit tests
 Luna uses [pytest](https://docs.pytest.org) for testing. Each code contribution
@@ -123,7 +123,7 @@ Do not use squash and merge, as it will only make the release commit available f
 Release is automated via Github actions from the master branch. During the release:
 -	Semantic release determines the new version and updates the version
 -	Github tag/release is created with specification fo the new changes.
--	Pyluna and its subpackages are pushed to [pypi](https://pypi.org/project/pyluna/).
+-	Pyluna is pushed to [pypi](https://pypi.org/project/pyluna/).
 
 ### Useful Links
 - [Github pull requests docs](https://docs.github.com/en/pull-requests)

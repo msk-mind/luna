@@ -46,8 +46,6 @@ The docker image is also available on DockerHub:
 [luna](https://hub.docker.com/r/mskmind/luna).
 
 This docker image includes the pre-requisites and python dependencies.
-This is primarily used for circleci testing at the moment, but can be
-extended based on your development needs.
 
 Once we have a stable release, docker images that includes pyluna
 packages can be made available.
