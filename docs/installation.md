@@ -9,6 +9,7 @@ See below for installation instructions
 -   [mamba](https://mamba.readthedocs.io/en/latest/installation.html):
     Follow the instructions for installing
     [Mambaforge](https://github.com/conda-forge/miniforge#mambaforge)
+    - Last known working: mamba==0.27.0 and conda==22.9.0
 -   [GNU Make](https://www.gnu.org/software/make/): Version \> 3.81
     required. (Default version on macos is 3.81)
 
