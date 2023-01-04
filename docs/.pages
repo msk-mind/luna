@@ -10,5 +10,5 @@ nav:
   - Developers:
     - Development Guide: 'dev.md'
     - Contributing: 'contributing.md'
-  - Publication: 'publications.md'
+  - Publications: 'publications.md'
   - Release History: 'history.md'
