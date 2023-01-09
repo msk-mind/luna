@@ -11,11 +11,11 @@ def test_cli(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/save_tiles/123/",
+            "tests/testdata/pathology/save_tiles/123/",
             "-o",
             tmp_path,
             "-rn",
-            "tests/luna/pathology/cli/testdata/data/testhub",
+            "tests/testdata/pathology/testhub",
             "-mn",
             "test_custom_model",
         ],
@@ -41,11 +41,11 @@ def test_cli_kwargs(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/save_tiles/123/",
+            "tests/testdata/pathology/save_tiles/123/",
             "-o",
             tmp_path,
             "-rn",
-            "tests/luna/pathology/cli/testdata/data/testhub",
+            "tests/testdata/pathology/testhub",
             "-mn",
             "test_custom_model",
             "-kw",
@@ -69,11 +69,11 @@ def test_cli_resnet(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/save_tiles/123/",
+            "tests/testdata/pathology/save_tiles/123/",
             "-o",
             tmp_path,
             "-rn",
-            "tests/luna/pathology/cli/testdata/data/testhub",
+            "tests/testdata/pathology/testhub",
             "-mn",
             "test_resnet",
             "-kw",

@@ -11,7 +11,7 @@ def test_cli(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/test_tile_stats.parquet",
+            "tests/testdata/pathology/test_tile_stats.parquet",
             "-o",
             tmp_path,
             "-il",

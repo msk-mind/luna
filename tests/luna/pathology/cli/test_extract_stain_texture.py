@@ -11,8 +11,8 @@ def test_cli(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/123.svs",
-            "tests/luna/pathology/cli/testdata/data/generate_mask/mask_full_res.tif",
+            "tests/testdata/pathology/123.svs",
+            "tests/testdata/pathology/generate_mask/mask_full_res.tif",
             "-o",
             tmp_path,
             "-tx",

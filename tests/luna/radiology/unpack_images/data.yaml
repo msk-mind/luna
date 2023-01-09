@@ -1,7 +1,7 @@
 # path to table
-TABLE_PATH: tests/luna/radiology/testdata/test-project/tables/FEATURE_unpack
+TABLE_PATH: tests/testdata/radiology/test-project/tables/FEATURE_unpack
 
-DESTINATION_PATH: tests/luna/radiology/testdata/unpacked_pngs
+DESTINATION_PATH: tests/testdata/radiology/unpacked_pngs
 
 # field to unpack dicom or overlay
 COLUMN_NAME: dicom

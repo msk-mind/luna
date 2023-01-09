@@ -12,8 +12,8 @@ def test_cli_generate_mask(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/123.svs",
-            "tests/luna/pathology/cli/testdata/data/infer_tumor_background/123/",
+            "tests/testdata/pathology/123.svs",
+            "tests/testdata/pathology/infer_tumor_background/123/",
             "-o",
             tmp_path,
             "-lc",

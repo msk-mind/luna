@@ -1,0 +1,9 @@
+batch_size: 16
+input_slide_image: tests/testdata/pathology/123.svs
+input_slide_tiles: tests/testdata/pathology/generate_tiles/123/123.tiles.csv
+num_cores: 1
+output_dir: tests/testdata/pathology/save_tiles/123
+slide_tiles: tests/testdata/pathology/save_tiles/123/123.tiles.parquet
+total_tiles: 12
+segment_keys: 
+    slide_id: '123'

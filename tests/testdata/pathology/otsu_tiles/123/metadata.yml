@@ -1,0 +1,8 @@
+filter_query: otsu_score > 0.5
+input_slide_image: tests/testdata/pathology/123.svs
+input_slide_tiles: tests/testdata/pathology/generate_tiles/123/123.tiles.csv
+num_cores: 1
+output_dir: tests/testdata/pathology/otsu_tiles/123
+requested_magnification: 5.0
+slide_tiles: tests/testdata/pathology/otsu_tiles/123/123-filtered-otsu_score_0.5.tiles.csv
+total_tiles: 4

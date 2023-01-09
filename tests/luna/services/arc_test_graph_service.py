@@ -30,7 +30,7 @@ def test_cli_dicom_table(mocker):
         update_graph,
         [
             "-d",
-            "tests/luna/services/testdata/dicom-config.yaml",
+            "tests/testdata/services/dicom-config.yaml",
             "-a",
             "tests/test_config.yml",
         ],
@@ -49,7 +49,7 @@ def test_cli_mha_table(mocker):
         update_graph,
         [
             "-d",
-            "tests/luna/services/testdata/mha-config.yaml",
+            "tests/testdata/services/mha-config.yaml",
             "-a",
             "tests/test_config.yml",
         ],
@@ -68,7 +68,7 @@ def test_cli_mhd_table(mocker):
         update_graph,
         [
             "-d",
-            "tests/luna/services/testdata/mhd-config.yaml",
+            "tests/testdata/services/mhd-config.yaml",
             "-a",
             "tests/test_config.yml",
         ],
@@ -87,7 +87,7 @@ def test_cli_png_table(mocker):
         update_graph,
         [
             "-d",
-            "tests/luna/services/testdata/png-config.yaml",
+            "tests/testdata/services/png-config.yaml",
             "-a",
             "tests/test_config.yml",
         ],
@@ -106,7 +106,7 @@ def test_cli_feature_table(mocker):
         update_graph,
         [
             "-d",
-            "tests/luna/services/testdata/feature-config.yaml",
+            "tests/testdata/services/feature-config.yaml",
             "-a",
             "tests/test_config.yml",
         ],
@@ -125,7 +125,7 @@ def test_cli_regional_bitmask_table(mocker):
         update_graph,
         [
             "-d",
-            "tests/luna/services/testdata/regional_bitmask-config.yaml",
+            "tests/testdata/services/regional_bitmask-config.yaml",
             "-a",
             "tests/test_config.yml",
         ],
@@ -144,7 +144,7 @@ def test_cli_regional_geojson_table(mocker):
         update_graph,
         [
             "-d",
-            "tests/luna/services/testdata/regional_geojson-config.yaml",
+            "tests/testdata/services/regional_geojson-config.yaml",
             "-a",
             "tests/test_config.yml",
         ],
@@ -163,7 +163,7 @@ def test_cli_point_raw_json_table(mocker):
         update_graph,
         [
             "-d",
-            "tests/luna/services/testdata/point_json-config.yaml",
+            "tests/testdata/services/point_json-config.yaml",
             "-a",
             "tests/test_config.yml",
         ],
@@ -182,7 +182,7 @@ def test_cli_point_geojson_table(mocker):
         update_graph,
         [
             "-d",
-            "tests/luna/services/testdata/point_geojson-config.yaml",
+            "tests/testdata/services/point_geojson-config.yaml",
             "-a",
             "tests/test_config.yml",
         ],

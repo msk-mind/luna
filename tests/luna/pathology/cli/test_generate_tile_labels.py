@@ -10,8 +10,8 @@ def test_cli(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/dsa_annots/",
-            "tests/luna/pathology/cli/testdata/data/save_tiles/123/",
+            "tests/testdata/pathology/dsa_annots/",
+            "tests/testdata/pathology/save_tiles/123/",
             "-o",
             tmp_path,
         ],

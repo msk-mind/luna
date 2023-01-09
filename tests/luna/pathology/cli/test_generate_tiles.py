@@ -11,7 +11,7 @@ def test_cli(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/123.svs",
+            "tests/testdata/pathology/123.svs",
             "-o",
             tmp_path,
             "-rts",
@@ -33,7 +33,7 @@ def test_cli_bad_mag(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/123.svs",
+            "tests/testdata/pathology/123.svs",
             "-o",
             tmp_path,
             "-rts",
