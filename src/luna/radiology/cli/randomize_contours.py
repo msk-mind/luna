@@ -65,7 +65,7 @@ def cli(**cli_kwargs):
         mirp_supervoxels
     \b
     Example:
-        extract_radiomics ct_image.mhd, ct_lesions.mha
+        randomize_contours ct_image.mhd, ct_lesions.mha
             -rps 1.5
             -rsb 0.9
             -o ./mirp_results/

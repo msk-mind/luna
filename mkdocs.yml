@@ -1,0 +1,44 @@
+site_name: "luna: Multi-modality Oncology Data Analysis in Python"
+site_url: "https://msk-mind.github.io/luna"
+repo_name: "msk-mind/luna"
+repo_url: "https://github.com/msk-mind/luna"
+
+docs_dir: 'docs/'
+
+theme:
+  name: material
+  features:
+    - navigation.indexes
+    - instant
+    - tabs
+  laguage: en
+
+watch:
+  - src
+
+plugins:
+  - search
+  - autorefs
+  - awesome-pages
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_submodules: true
+  - mkdocs-jupyter:
+      execute: false
+      allow_errors: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - mkdocs-click
+  - toc:
+      permalink: True
+
+extra_css:
+  - stylesheets/extra.css

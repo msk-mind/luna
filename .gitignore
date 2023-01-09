@@ -16,9 +16,7 @@ tests/data_mock/
 dist/
 
 # docs
-docs/tutorials
-docs/img
-docs/_build
+site/
 
 # docker luna_tutorial
 docker/luna_tutorial/vmount/PRO-12-123
@@ -29,3 +27,8 @@ docker/luna_tutorial/.minio_api_port
 docker/luna_tutorial/.minio_web_port
 docker/luna_tutorial/vmount/.minio.sys
 docker/luna_tutorial/vmount/assetstore
+# conda smithy ci-skeleton start
+*.pyc
+
+build_artifacts
+# conda smithy ci-skeleton end

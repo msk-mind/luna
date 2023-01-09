@@ -22,7 +22,7 @@ help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 .PHONY: help
 
-clean: clean-api-docs clean-test ## remove all artifacts
+clean: clean-test ## remove all artifacts
 	rm -fr build/
 	rm -fr dist/
 	rm -fr *.egg-info
@@ -38,10 +38,6 @@ clean-test: ## remove test and coverage artifacts
 	rm -f .coverage
 	rm -fr htmlcov/
 .PHONY: clean-test
-
-clean-api-docs: ## clean api docs
-	rm docs/source/*
-.PHONY: clean-api-docs
 
 venv: ## create conda environment and install luna
 	mamba env update --prefix $(VENV) --prune -f environment.yml
@@ -114,8 +110,14 @@ coverage: ## pytest test coverage
 	open htmlcov/index.html
 .PHONY: coverage
 
-api-docs: ## make sphinx api docs
+build-docs: ## mkdocs build
 	$(CONDA_ACTIVATE) $(VENV)
-	sphinx-apidoc --implicit-namespaces -o docs/source src/luna
-.PHONY: api-docs
+	mkdocs build
 
+serve-docs: ## serve docs locally
+	$(CONDA_ACTIVATE) $(VENV)
+	mkdocs serve --dirtyreload
+
+deploy-docs: ## deploy docs
+	$(CONDA_ACTIVATE) $(VENV)
+	mkdocs gh-deploy
