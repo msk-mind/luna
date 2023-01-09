@@ -11,7 +11,7 @@ from luna.common.config import ConfigSet
 def test_table_name():
     c1 = ConfigSet(
         name=const.DATA_CFG,
-        config_file="tests/luna/common/testdata/data_ingestion_template_valid.yml",
+        config_file="tests/testdata/common/data_ingestion_template_valid.yml",
     )
 
     assert const.TABLE_NAME(c1) == "CT_OV_16-158_CT_20201028"
@@ -20,7 +20,7 @@ def test_table_name():
 def test_table_location():
     c1 = ConfigSet(
         name=const.DATA_CFG,
-        config_file="tests/luna/common/testdata/data_ingestion_template_valid.yml",
+        config_file="tests/testdata/common/data_ingestion_template_valid.yml",
     )
 
     assert (
@@ -32,7 +32,7 @@ def test_table_location():
 def test_table_location_emptystring():
     c1 = ConfigSet(
         name=const.DATA_CFG,
-        config_file="tests/luna/common/testdata/data_ingestion_template_valid_empty_dataset.yml",
+        config_file="tests/testdata/common/data_ingestion_template_valid_empty_dataset.yml",
     )
 
     assert (
@@ -44,7 +44,7 @@ def test_table_location_emptystring():
 def test_table_location_none():
     c1 = ConfigSet(
         name=const.DATA_CFG,
-        config_file="tests/luna/common/testdata/data_ingestion_template_valid_empty_dataset_2.yml",
+        config_file="tests/testdata/common/data_ingestion_template_valid_empty_dataset_2.yml",
     )
 
     assert (
@@ -56,7 +56,7 @@ def test_table_location_none():
 def test_project_location():
     c1 = ConfigSet(
         name=const.DATA_CFG,
-        config_file="tests/luna/common/testdata/data_ingestion_template_valid.yml",
+        config_file="tests/testdata/common/data_ingestion_template_valid.yml",
     )
 
     assert (

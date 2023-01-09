@@ -6,7 +6,7 @@ from click.testing import CliRunner
 import docker
 from luna.pathology.cli.run_stardist_cell_detection import cli
 
-tmppath = "tests/luna/pathology/cli/testdata/data/stardist_cell_detection"
+tmppath = "tests/testdata/pathology/stardist_cell_detection"
 
 
 class MockContainer(object):
@@ -48,7 +48,7 @@ def test_cli(monkeypatch):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/123.svs",
+            "tests/testdata/pathology/123.svs",
             "-o",
             tmppath,
             "-cs",

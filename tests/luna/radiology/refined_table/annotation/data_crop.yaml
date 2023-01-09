@@ -1,14 +1,14 @@
 
-ROOT_PATH: tests/luna/radiology/testdata
+ROOT_PATH: tests/testdata/radiology
 
 PROJECT: test-project
 
 DATASET_NAME: dsn
 
-LABEL_TABLE_PATH: tests/luna/radiology/testdata/test-project/tables/MHA_dsn
+LABEL_TABLE_PATH: tests/testdata/radiology/test-project/tables/MHA_dsn
 
 # to be updated with data type standardization
-SCAN_TABLE_PATH: tests/luna/radiology/testdata/test-project/tables/SCAN_dsn
+SCAN_TABLE_PATH: tests/testdata/radiology/test-project/tables/SCAN_dsn
 
 DATA_TYPE: PNG
 

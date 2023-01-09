@@ -1,0 +1,9 @@
+annotation_name: Tumor
+input_slide_image: tests/testdata/pathology/123.svs
+input_slide_roi: tests/testdata/pathology/test-project/pathology_annotations/123456_annotation_from_halo.xml
+mask_size:
+- 2967
+- 2220
+output_dir: tests/testdata/pathology/generate_mask
+segment_keys: {}
+slide_mask: tests/testdata/pathology/generate_mask/mask_full_res.tif
