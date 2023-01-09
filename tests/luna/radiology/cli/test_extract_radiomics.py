@@ -14,8 +14,8 @@ def test_cli_extract_radiomics(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/testdata/data/2.000000-CTAC-24716/volumes/image.mhd",
-            "tests/luna/testdata/data/2.000000-CTAC-24716/volumes/label.mha",
+            "tests/testdata/2.000000-CTAC-24716/volumes/image.mhd",
+            "tests/testdata/2.000000-CTAC-24716/volumes/label.mha",
             "-idx",
             "1",
             "--pyradiomics_config",

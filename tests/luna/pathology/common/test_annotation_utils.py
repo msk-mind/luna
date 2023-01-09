@@ -11,12 +11,12 @@ from luna.pathology.common.annotation_utils import (
 )
 
 SLIDEVIEWER_API_URL = "http://test-slideviewer-url.com/"
-SLIDE_BMP_DIR = "tests/luna/pathology/common/testdata/project/regional_bmps"
-SLIDE_NPY_DIR = "tests/luna/pathology/common/testdata/project/regional_npys"
-TMP_ZIP_DIR = "tests/luna/pathology/common/testdata/project/regional_tmp"
-BMP_FILE_PATH = "tests/luna/pathology/common/testdata/project/regional_bmps/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.bmp"
-NPY_FILE_PATH = "tests/luna/pathology/common/testdata/project/regional_npys/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.npy"
-SLIDE_STORE_DIR = "tests/luna/pathology/common/testdata/project/slides"
+SLIDE_BMP_DIR = "tests/testdata/pathology/project/regional_bmps"
+SLIDE_NPY_DIR = "tests/testdata/pathology/project/regional_npys"
+TMP_ZIP_DIR = "tests/testdata/pathology/project/regional_tmp"
+BMP_FILE_PATH = "tests/testdata/pathology/project/regional_bmps/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.bmp"
+NPY_FILE_PATH = "tests/testdata/pathology/project/regional_npys/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.npy"
+SLIDE_STORE_DIR = "tests/testdata/pathology/project/slides"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -30,9 +30,7 @@ def clean_after_all_Tests():
 def test_get_slide_bitmap(requests_mock):
     requests_mock.get(
         "http://test-slideviewer-url.com/slides/user@mskcc.org/projects;1;1;123.svs/getLabelFileBMP",
-        content=Path(
-            "tests/luna/pathology/common/testdata/input/label.zip"
-        ).read_bytes(),
+        content=Path("tests/testdata/pathology/input/label.zip").read_bytes(),
     )
 
     res = get_slide_bitmap(
@@ -52,9 +50,7 @@ def test_convert_bmp_to_npy():
 def test_check_slideviewer_and_download_bmp(requests_mock):
     requests_mock.get(
         "http://test-slideviewer-url.com/slides/user@mskcc.org/projects;1;1;123.svs/getLabelFileBMP",
-        content=Path(
-            "tests/luna/pathology/common/testdata/input/label.zip"
-        ).read_bytes(),
+        content=Path("tests/testdata/pathology/input/label.zip").read_bytes(),
     )
 
     res = check_slideviewer_and_download_bmp(
@@ -75,8 +71,8 @@ def test_check_slideviewer_and_download_bmp(requests_mock):
 #         {'sv_project_id': '1', 'slideviewer_path': '1;123.svs', 'slide_id': '123', 'user': 'n/a',
 #          'bmp_filepath': 'n/a', 'npy_filepath': 'n/a', 'geojson': 'n/a', 'geojson_path': 'n/a', 'date': datetime(2021, 7, 28, 10, 23, 27, 816088)},
 #         {'sv_project_id': '1', 'slideviewer_path': '1;123.svs', 'slide_id': '123', 'user': 'user',
-#          'bmp_filepath': 'tests/luna/pathology/common/testdata/project/regional_bmps/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.bmp',
-#          'npy_filepath': 'tests/luna/pathology/common/testdata/project/regional_npys/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.npy',
+#          'bmp_filepath': 'tests/testdata/pathology/project/regional_bmps/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.bmp',
+#          'npy_filepath': 'tests/testdata/pathology/project/regional_npys/1_123/123_user_SVBMP-01c9ea8d50971412600b83d4918d3888818b77792f4c40a66861bbd586ae5d51_annot.npy',
 #          'geojson': 'n/a', 'geojson_path': 'n/a', 'date': datetime(2021, 7, 28, 10, 23, 27, 816088)}]
 #
 #     labelset = {"DEFAULT_LABELS": {1:'tumor', 2:'stroma', 3:'lymphocytes', 4:'adipocytes'}}

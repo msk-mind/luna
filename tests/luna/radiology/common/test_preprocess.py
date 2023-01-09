@@ -14,7 +14,7 @@ from luna.radiology.common.preprocess import (
 
 cwd = os.getcwd()
 
-data_dir = "tests/luna/testdata/data"
+data_dir = "tests/testdata"
 dicom_path = f"{data_dir}/2.000000-CTAC-24716/dicoms/1-01.dcm"
 image_path = f"{data_dir}/2.000000-CTAC-24716/volumes/image.mhd"
 label_path = f"{data_dir}/2.000000-CTAC-24716/volumes/label.mha"

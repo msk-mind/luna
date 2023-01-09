@@ -13,7 +13,7 @@ def test_cli_voxels(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/testdata/data/2.000000-CTAC-24716/volumes/image.mhd",
+            "tests/testdata/2.000000-CTAC-24716/volumes/image.mhd",
             "-o",
             tmp_path,
         ],

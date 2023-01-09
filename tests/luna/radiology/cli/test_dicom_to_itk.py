@@ -15,7 +15,7 @@ def test_cli_nii(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/testdata/data/2.000000-CTAC-24716/dicoms/",
+            "tests/testdata/2.000000-CTAC-24716/dicoms/",
             "-o",
             tmp_path,
             "--itk_c_type",
@@ -42,7 +42,7 @@ def test_cli_mhd(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/testdata/data/2.000000-CTAC-24716/dicoms/",
+            "tests/testdata/2.000000-CTAC-24716/dicoms/",
             "-o",
             tmp_path,
             "--itk_c_type",

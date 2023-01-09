@@ -19,9 +19,9 @@ def test_stardist_polygon():
         cli,
         [
             "stardist-polygon",
-            "tests/luna/pathology/cli/testdata/test_object_classification.geojson",
+            "tests/testdata/pathology/test_object_classification.geojson",
             "-m",
-            "tests/luna/pathology/cli/testdata" "/stardist_polygon.yml",
+            "tests/testdata/pathology" "/stardist_polygon.yml",
         ],
     )
 
@@ -39,9 +39,9 @@ def test_stardist_cell():
         cli,
         [
             "stardist-cell",
-            "tests/luna/pathology/cli/testdata/test_object_detection.tsv",
+            "tests/testdata/pathology/test_object_detection.tsv",
             "-m",
-            "tests/luna/pathology/cli/testdata" "/stardist_cell.yml",
+            "tests/testdata/pathology" "/stardist_cell.yml",
         ],
     )
 
@@ -60,9 +60,9 @@ def test_regional_polygon():
         cli,
         [
             "regional-polygon",
-            "tests/luna/pathology/cli/testdata/regional_annotation.json",
+            "tests/testdata/pathology/regional_annotation.json",
             "-m",
-            "tests/luna/pathology/cli/testdata" "/regional_polygon.yml",
+            "tests/testdata/pathology" "/regional_polygon.yml",
         ],
     )
 
@@ -82,7 +82,7 @@ def test_bitmask_polygon_invalid():
             "bitmask-polygon",
             '{"Tumor": "non/existing/path/to/png.png"}',
             "-m",
-            "tests/luna/pathology/cli/testdata" "/bitmask_polygon.yml",
+            "tests/testdata/pathology" "/bitmask_polygon.yml",
         ],
     )
     assert isinstance(result.exception, ValueError)
@@ -96,7 +96,7 @@ def test_bitmask_polygon():
         [
             "bitmask-polygon",
             "-m",
-            "tests/luna/pathology/cli/testdata"
+            "tests/testdata/pathology"
             "/bitmask_polygon.yml",
         ],
     )
@@ -117,9 +117,9 @@ def test_heatmap():
         cli,
         [
             "heatmap",
-            "tests/luna/pathology/cli/testdata/tile_scores.csv",
+            "tests/testdata/pathology/tile_scores.csv",
             "-m",
-            "tests/luna/pathology/cli/testdata" "/heatmap_config.yml",
+            "tests/testdata/pathology" "/heatmap_config.yml",
         ],
     )
 
@@ -134,9 +134,9 @@ def test_qupath_polygon():
         cli,
         [
             "qupath-polygon",
-            "tests/luna/pathology/cli/testdata/region_annotation_results.geojson",
+            "tests/testdata/pathology/region_annotation_results.geojson",
             "-m",
-            "tests/luna/pathology/cli/testdata" "/qupath_polygon.yml",
+            "tests/testdata/pathology" "/qupath_polygon.yml",
         ],
     )
 
