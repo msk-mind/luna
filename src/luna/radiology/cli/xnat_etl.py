@@ -30,7 +30,7 @@ _params_ = [
 ]
 
 
-@click.command()
+@click.command(context_settings={"auto_envvar_prefix": "XNAT"})
 @click.argument("input_xnat_url", nargs=1)
 @click.option(
     "-u",
@@ -217,4 +217,4 @@ def get_patient_scans(s, output_dir):
 
 
 if __name__ == "__main__":
-    cli(auto_envvar_prefix="XNAT")
+    cli()

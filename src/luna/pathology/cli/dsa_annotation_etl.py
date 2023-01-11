@@ -36,7 +36,7 @@ _params_ = [
 ]
 
 
-@click.command()
+@click.command(context_settings={"auto_envvar_prefix": "DSA"})
 @click.argument("input_dsa_endpoint", nargs=1)
 @click.option(
     "-o",
@@ -318,5 +318,4 @@ class DsaAnnotationProcessor:
 
 
 if __name__ == "__main__":
-    # auto_envvar_prefix - for username and passwords
-    cli(auto_envvar_prefix="DSA")
+    cli()
