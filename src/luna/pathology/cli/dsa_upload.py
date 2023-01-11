@@ -17,7 +17,7 @@ init_logger()
 logger = logging.getLogger("dsa_upload")
 
 
-@click.command()
+@click.command(context_settings={"auto_envvar_prefix": "DSA"})
 @click.argument("dsa_endpoint", nargs=1)
 @click.option(
     "-c",
@@ -129,4 +129,4 @@ def upload_annotation_to_dsa(
 
 
 if __name__ == "__main__":
-    cli(auto_envvar_prefix="DSA")
+    cli()
