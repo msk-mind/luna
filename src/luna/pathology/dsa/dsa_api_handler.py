@@ -98,7 +98,7 @@ def get_item_uuid(gc, image_name: str, collection_name: str) -> Optional[str]:
     image_id = Path(image_name).stem
 
     try:
-        uuid_response = gc.get(f"/item?text={image_id}")
+        uuid_response = gc.get(f'/item?text="{image_id}"')
 
     except requests.exceptions.HTTPError as err:
         logger.error(
