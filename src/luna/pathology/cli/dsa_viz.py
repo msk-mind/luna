@@ -775,7 +775,6 @@ def bitmask_polygon_main(
     "--column",
     help="column(s) to visualize e.g. tile_score. if multiple are specified, annotate the tile with the label with maximum score.",
     multiple=True,
-    required=True,
 )
 @click.option(
     "-fc",

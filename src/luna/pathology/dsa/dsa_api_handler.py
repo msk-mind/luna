@@ -106,7 +106,7 @@ def get_item_uuid(gc, image_name: str, collection_name: str) -> Optional[str]:
         )
         return None
 
-    if len(uuid_response) > 0:
+    if uuid_response is not None and len(uuid_response) > 0:
         # multiple entries can come up based on substring matches, return the correct item id by checking name field in dictionary.
         for uuid_response_dict in uuid_response:
             if "name" in uuid_response_dict and "_id" in uuid_response_dict:

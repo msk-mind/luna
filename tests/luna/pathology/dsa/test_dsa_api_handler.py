@@ -63,7 +63,7 @@ def test_get_item_uuid(monkeypatch):
     monkeypatch.setattr(GirderClient, "listCollection", mock_listCollection)
 
     def mock_get(*args, **kwargs):
-        if args[1] == "/item?text=123":
+        if args[1] == '/item?text="123"':
             return [
                 {
                     "name": "123.svs",
@@ -115,7 +115,7 @@ def test_get_slide_annotation(monkeypatch):
     monkeypatch.setattr(GirderClient, "listCollection", mock_listCollection)
 
     def mock_get(*args, **kwargs):
-        if args[1] == "/item?text=123":
+        if args[1] == '/item?text="123"':
             return [
                 {
                     "name": "123.svs",

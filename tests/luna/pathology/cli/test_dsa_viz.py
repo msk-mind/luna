@@ -118,6 +118,8 @@ def test_heatmap():
         [
             "heatmap",
             "tests/luna/pathology/cli/testdata/tile_scores.csv",
+            "-c",
+            "otsu_score",
             "-m",
             "tests/luna/pathology/cli/testdata" "/heatmap_config.yml",
         ],
