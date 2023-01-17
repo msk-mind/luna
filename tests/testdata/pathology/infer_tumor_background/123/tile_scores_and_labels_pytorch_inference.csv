@@ -1,0 +1,13 @@
+address,x_coord,y_coord,xy_extent,tile_size,tile_units,tile_store,Background,Tumor
+x1_y1_z10.0,512,512,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.24591124,0.17408329
+x1_y2_z10.0,512,1024,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.22912003,0.16569732
+x1_y3_z10.0,512,1536,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.22193168,0.16277155
+x1_y4_z10.0,512,2048,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.20223579,0.15498066
+x2_y1_z10.0,1024,512,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.1361861,0.14067592
+x2_y2_z10.0,1024,1024,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.12513715,0.138444
+x2_y3_z10.0,1024,1536,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.12299979,0.13907911
+x2_y4_z10.0,1024,2048,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.15902935,0.13828115
+x3_y1_z10.0,1536,512,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.23824792,0.17522989
+x3_y2_z10.0,1536,1024,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.20137788,0.16565537
+x3_y3_z10.0,1536,1536,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.2308989,0.1712579
+x3_y4_z10.0,1536,2048,512,256,px,tests/testdata/pathology/save_tiles/123/123.tiles.h5,-0.20029011,0.1536094

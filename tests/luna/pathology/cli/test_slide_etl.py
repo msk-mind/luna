@@ -25,7 +25,7 @@ def test_slide_etl(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/testdata/data/test-project" "" "/wsi",
+            "tests/testdata/pathology/test-project" "" "/wsi",
             "-o",
             table_location,
             "--store_url",
@@ -74,7 +74,7 @@ def test_slide_etl_subset(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/testdata/data/test-project" "" "/wsi",
+            "tests/testdata/pathology/test-project" "" "/wsi",
             "-o",
             table_location,
             "--store_url",
@@ -86,7 +86,7 @@ def test_slide_etl_subset(tmp_path):
             "--comment",
             "Test ingestion",
             "--subset-csv",
-            "tests/luna/pathology/cli/testdata" "/slide_etl_subset.csv",
+            "tests/testdata/pathology" "/slide_etl_subset.csv",
         ],
     )
 

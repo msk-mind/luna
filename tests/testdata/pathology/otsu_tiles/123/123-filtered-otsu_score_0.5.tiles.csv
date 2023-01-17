@@ -1,0 +1,5 @@
+address,x_coord,y_coord,tile_image_file,tile_size,tile_units,otsu_score
+x2_y1_z10.0,1024.0,512.0,tests/testdata/pathology/generate_tiles/123//123.tiles.h5,512.0,px,0.7647247314453125
+x2_y2_z10.0,1024.0,1024.0,tests/testdata/pathology/generate_tiles/123//123.tiles.h5,512.0,px,0.7828826904296875
+x2_y3_z10.0,1024.0,1536.0,tests/testdata/pathology/generate_tiles/123//123.tiles.h5,512.0,px,0.7934417724609375
+x2_y4_z10.0,1024.0,2048.0,tests/testdata/pathology/generate_tiles/123//123.tiles.h5,512.0,px,0.76910400390625

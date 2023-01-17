@@ -1,0 +1,12 @@
+cell_expansion_size: 8.0
+cell_objects: tests/testdata/pathology/stardist_cell_detection/123_cell_objects.parquet
+debug_opts: ''
+feature_data: tests/testdata/pathology/stardist_cell_detection/123_cell_objects.parquet
+image_type: BRIGHTFIELD_H_DAB
+input_slide_image: /Users/limr/repos/luna/tests/testdata/pathology/123.svs
+num_cores: 4
+output_dir: tests/testdata/pathology/stardist_cell_detection
+segment_keys:
+  slide_id: '123'
+spatial: true
+total_cells: 9

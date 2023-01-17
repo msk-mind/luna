@@ -10,8 +10,8 @@ def test_otsu(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/123.svs",
-            "tests/luna/pathology/cli/testdata/data/generate_tiles/123/123.tiles.parquet",
+            "tests/testdata/pathology/123.svs",
+            "tests/testdata/pathology/generate_tiles/123/123.tiles.parquet",
             "-o",
             tmp_path,
             "-rmg",
@@ -33,8 +33,8 @@ def test_stain(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/123.svs",
-            "tests/luna/pathology/cli/testdata/data/generate_tiles/123/123.tiles.parquet",
+            "tests/testdata/pathology/123.svs",
+            "tests/testdata/pathology/generate_tiles/123/123.tiles.parquet",
             "-o",
             tmp_path,
             "-rmg",

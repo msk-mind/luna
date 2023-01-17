@@ -11,8 +11,8 @@ def test_cli(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/123.svs",
-            "tests/luna/pathology/testdata/data/test-project/pathology_annotations/123456_annotation_from_halo.xml",
+            "tests/testdata/pathology/123.svs",
+            "tests/testdata/pathology/test-project/pathology_annotations/123456_annotation_from_halo.xml",
             "-o",
             tmp_path,
             "-an",
