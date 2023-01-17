@@ -96,7 +96,7 @@ def test_validate_params_dict():
 
 def test_expand_inputs_explicit():
     given_params = {
-        "input_text_file": "tests/luna/common/testdata/simple_output_directory/result.txt",
+        "input_text_file": "tests/testdata/common/simple_output_directory/result.txt",
         "threshold": "Five",
         "extra": 1,
     }
@@ -105,14 +105,14 @@ def test_expand_inputs_explicit():
 
     assert (
         kwargs["input_text_file"]
-        == "tests/luna/common/testdata/simple_output_directory/result.txt"
+        == "tests/testdata/common/simple_output_directory/result.txt"
     )
 
 
 def test_expand_inputs_implicit():
 
     given_params = {
-        "input_text_file": "tests/luna/common/testdata/simple_output_directory/",
+        "input_text_file": "tests/testdata/common/simple_output_directory/",
         "threshold": "Five",
         "extra": 1,
     }
@@ -121,14 +121,14 @@ def test_expand_inputs_implicit():
 
     assert (
         kwargs["input_text_file"]
-        == "tests/luna/common/testdata/simple_output_directory/result.txt"
+        == "tests/testdata/common/simple_output_directory/result.txt"
     )
 
 
 def test_expand_inputs_implicit_but_missing():
     with pytest.raises(RuntimeError):
         given_params = {
-            "input_csv_file": "tests/luna/common/testdata/simple_output_directory/",
+            "input_csv_file": "tests/testdata/common/simple_output_directory/",
             "threshold": "Five",
             "extra": 1,
         }
@@ -152,7 +152,7 @@ def test_cli_runner(tmp_path):
         return properties
 
     cli_kwargs = {
-        "input_text_file": "tests/luna/common/testdata/simple_output_directory/result.txt",
+        "input_text_file": "tests/testdata/common/simple_output_directory/result.txt",
         "output_dir": tmp_path,
         "message": "Hello to you too!",
         "username": "my-user",
@@ -190,7 +190,7 @@ def test_cli_runner_reruns(tmp_path):
         return properties
 
     cli_kwargs = {
-        "input_text_file": "tests/luna/common/testdata/simple_output_directory/result.txt",
+        "input_text_file": "tests/testdata/common/simple_output_directory/result.txt",
         "output_dir": tmp_path,
         "message": "Hello to you too!",
     }

@@ -12,7 +12,7 @@ from luna.pathology.common.build_geojson import (
     concatenate_regional_geojsons,
 )
 
-npy_data_path = "tests/luna/pathology/testdata/data/test-project/pathology_annotations/regional_npys/2021_HobS21_8_123"
+npy_data_path = "tests/testdata/pathology/test-project/pathology_annotations/regional_npys/2021_HobS21_8_123"
 
 
 def test_add_contours_for_label():

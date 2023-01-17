@@ -13,6 +13,6 @@ method_data = {
 def test():
 
     output = generate_k_function_statistics(
-        "tests/luna/testdata/data/spatial/example_cell_data.csv", method_data, "PX-001"
+        "tests/testdata/pathology/spatial/example_cell_data.csv", method_data, "PX-001"
     )
     assert output.index[0] == "PX-001"

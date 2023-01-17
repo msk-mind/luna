@@ -8,9 +8,7 @@ from luna.pathology.cli.visualize_tile_labels_png import cli
 
 
 def test_viz(tmp_path):
-    df = pd.read_csv(
-        "tests/luna/pathology/cli/testdata/data/generate_tiles/123/123.tiles.csv"
-    )
+    df = pd.read_csv("tests/testdata/pathology/generate_tiles/123/123.tiles.csv")
     df["random"] = np.random.rand(len(df))
     df.to_parquet(f"{tmp_path}/input_tiles.parquet")
 
@@ -18,7 +16,7 @@ def test_viz(tmp_path):
     result = runner.invoke(
         cli,
         [
-            "tests/luna/pathology/cli/testdata/data/123.svs",
+            "tests/testdata/pathology/123.svs",
             f"{tmp_path}/input_tiles.parquet",
             "-o",
             tmp_path,

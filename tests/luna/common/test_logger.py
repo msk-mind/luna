@@ -8,7 +8,7 @@ from luna.common.custom_logger import init_logger
 
 @pytest.fixture()
 def logger():
-    os.environ["LUNA_HOME"] = "tests/luna/common/testdata/"
+    os.environ["LUNA_HOME"] = "tests/testdata/common/"
     logger = init_logger()
     yield logger
 

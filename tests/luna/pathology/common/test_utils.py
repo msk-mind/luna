@@ -16,11 +16,9 @@ from luna.pathology.common.utils import (
     openslide,
 )
 
-output_dir = "tests/luna/pathology/common/testdata/output-123"
-slide_path = "tests/luna/pathology/common/testdata/123.svs"
-scores_csv_path = (
-    "tests/luna/pathology/common/testdata/input/tile_scores_and_labels.csv"
-)
+output_dir = "tests/testdata/pathology/output-123"
+slide_path = "tests/testdata/pathology/123.svs"
+scores_csv_path = "tests/testdata/pathology/input/tile_scores_and_labels.csv"
 slide = openslide.OpenSlide(slide_path)
 img_arr = get_downscaled_thumbnail(slide, 10)
 
@@ -66,7 +64,7 @@ def test_get_labelset_keys():
 
     ConfigSet(
         name=const.DATA_CFG,
-        config_file="tests/luna/pathology/common/testdata/point_geojson_config.yaml",
+        config_file="tests/testdata/pathology/point_geojson_config.yaml",
     )
 
     res = get_labelset_keys()
@@ -75,7 +73,7 @@ def test_get_labelset_keys():
     assert "LYMPHOCYTE_DETECTION_LABELSET" == res[0]
 
 
-xml_data_path = "tests/luna/pathology/testdata/data/test-project/pathology_annotations/123456_annotation_from_halo.xml"
+xml_data_path = "tests/testdata/pathology/test-project/pathology_annotations/123456_annotation_from_halo.xml"
 
 
 def test_convert_halo_xml_to_roi():
@@ -98,7 +96,7 @@ def test_get_tile_array():
     df = pd.DataFrame(
         {
             "address": ["x4_y6_z20.0"],
-            "tile_store": "tests/luna/pathology/common/testdata/123.tiles.h5",
+            "tile_store": "tests/testdata/pathology/123.tiles.h5",
         }
     ).set_index("address")
 

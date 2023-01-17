@@ -32,7 +32,7 @@ def setup_module(module):
     """setup any state specific to the execution of the given module."""
     ConfigSet(
         name=DATA_CFG,
-        config_file="tests/luna/pathology/common/testdata/data_config_with_slideviewer_csv.yaml",
+        config_file="tests/testdata/pathology/data_config_with_slideviewer_csv.yaml",
     )
     cfg = ConfigSet()
     module.SLIDEVIEWER_API_URL = cfg.get_value(path=DATA_CFG + "::SLIDEVIEWER_API_URL")
@@ -73,7 +73,7 @@ def test_fetch_slide_ids_with_csv(monkeypatch):
     # pretend like data config has value for SLIDEVIEWER_CSV_FILE
     def mock_get_value(*args, **kwargs):
         if kwargs["path"] == "DATA_CFG::SLIDEVIEWER_CSV_FILE":
-            return "tests/luna/pathology/common/testdata/input/slideviewer.csv"
+            return "tests/testdata/pathology/input/slideviewer.csv"
         else:
             return "no_value"
 
@@ -120,9 +120,7 @@ def test_downlaod_zip(requests_mock):
 
     requests_mock.get(
         SLIDEVIEWER_API_URL,
-        content=Path(
-            "tests/luna/pathology/common/testdata/input/label.zip"
-        ).read_bytes(),
+        content=Path("tests/testdata/pathology/input/label.zip").read_bytes(),
     )
     download_zip(SLIDEVIEWER_API_URL, zipfile_path, chunk_size=128)
 
@@ -131,7 +129,7 @@ def test_downlaod_zip(requests_mock):
 
 def test_unzip():
     shutil.copyfile(
-        "tests/luna/pathology/common/testdata/input/label.zip",
+        "tests/testdata/pathology/input/label.zip",
         zipfile_path,
     )
 

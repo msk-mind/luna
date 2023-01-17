@@ -4,7 +4,7 @@ FILE_TYPE:
   - "*.mha"
 
 # path to data directory
-ROOT_PATH: tests/luna/radiology/testdata
+ROOT_PATH: tests/testdata/radiology
 
 # annotation data type - used to create table names
 DATA_TYPE: RADIOLOGY_ANNOTATION
@@ -16,7 +16,7 @@ PROJECT: test-project
 DATASET_NAME: datasetname
 
 # path to annotation metadata csv including AccessionNumber, SeriesNumber
-METADATA_CSV: tests/luna/radiology/testdata/metadata.csv
+METADATA_CSV: tests/testdata/radiology/metadata.csv
 
 # columns to include from csv
 METADATA_COLUMNS:
@@ -28,7 +28,7 @@ METADATA_COLUMNS:
 METADATA_JOIN_ON: accession_number
 
 # path for the annotation data on the data lake
-RAW_DATA_PATH: tests/luna/radiology/testdata/test-project/scan_annotations
+RAW_DATA_PATH: tests/testdata/radiology/test-project/scan_annotations
 
 # number of partitions for delta table
 NUM_PARTITION: 20

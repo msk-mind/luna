@@ -1,6 +1,0 @@
-input: tests/luna/pathology/cli/testdata/tile_scores.csv
-image_filename: 123.svs
-output_dir: tests/luna/pathology/cli/testouts
-annotation_name: test
-tile_size: 128
-scale_factor: 8

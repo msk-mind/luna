@@ -15,9 +15,9 @@ def test_cli(tmpdir):
         cli,
         [
             "--raw_data_path",
-            "tests/luna/radiology/cli/testdata/",
+            "tests/testdata/radiology/",
             "--mapping_csv_path",
-            "tests/luna/radiology/cli/testdata/series_mapping.csv",
+            "tests/testdata/radiology/series_mapping.csv",
             "--output_dir",
             tmpdir,
             "--scan_table_path",
