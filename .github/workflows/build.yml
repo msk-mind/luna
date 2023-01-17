@@ -1,4 +1,4 @@
-name: luna build
+name: luna build and deploy
 run-name: ${{ github.actor }} build
 on: [push]
 
@@ -59,24 +59,31 @@ jobs:
           export LUNA_HOME=$PWD
           mkdocs build
 
-  deploy-mkdocs:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
-    needs: build
-    steps:
-      - name: Deploy docs
+      - name: Deploy mkdocs
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
         run: |
           . ./venv/bin/activate
           export LUNA_HOME=$PWD
           mkdocs gh-deploy --force
 
-  release:
-    runs-on: ubuntu-latest
+  deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    needs: build
-    concurrency: release
+    runs-on: ubuntu-latest
+
+    container:
+      image: mambaorg/micromamba:1.0.0
+      options: --user root
 
     steps:
+      - uses: actions/checkout@v3
+
+      - name: Build project
+        run: |
+          micromamba create -y -p ./venv -f environment.yml
+          . ./venv/bin/activate
+          poetry config virtualenvs.create false
+          poetry build
+
       # temporarily turn branch protection off for semantic release
       - name: Branch protection OFF
         uses: octokit/request-action@v2.x
@@ -93,6 +100,7 @@ jobs:
             null
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_ADMIN_TOKEN }}
+
       # create a git release
       - name: Release pyluna
         uses: relekang/python-semantic-release@master
@@ -117,11 +125,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_ADMIN_TOKEN }}
 
-  push-to-pypi:
-    runs-on: ubuntu-latest
-    needs: release
-
-    steps:
       - name: Publish pyluna to PyPI
         uses: pypa/gh-action-pypi-publish@master
         with:
