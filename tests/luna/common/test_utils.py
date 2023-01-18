@@ -60,23 +60,6 @@ def test_validate_params__casting():
     }
 
 
-def test_validate_params__missing_value():
-    with pytest.raises(RuntimeError):
-
-        params_list = [("input", str), ("threshold", float)]
-
-        given_params = {
-            "threshold": 0.5,  # Cast string
-            "extra": 1,
-        }
-        out_params = validate_params(given_params, params_list)
-
-        assert out_params == {
-            "input": "data.json",
-            "threshold": 0.5,
-        }
-
-
 def test_validate_params__wrong_value():
     with pytest.raises(RuntimeError):
 

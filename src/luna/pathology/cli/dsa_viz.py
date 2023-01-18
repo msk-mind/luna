@@ -773,7 +773,19 @@ def bitmask_polygon_main(
 @click.option(
     "-c",
     "--column",
-    help="column to visualize e.g. tile_score",
+    help="column(s) to visualize e.g. tile_score. if multiple are specified, annotate the tile with the label with maximum score.",
+    multiple=True,
+)
+@click.option(
+    "-fc",
+    "--fill_colors",
+    help="user-provided line color map with {feature name:rgba values}",
+    required=False,
+)
+@click.option(
+    "-lc",
+    "--line_colors",
+    help="user-provided line color map with {feature name:rgb values}",
     required=False,
 )
 @click.option(
@@ -810,21 +822,43 @@ def heatmap(**cli_kwargs):
             --tile_size 256
             --column tumor
             --scale_factor 1
+
+        \b
+        dsa heatmap
+            score.csv
+            --output_dir ../dsa_annotations/heatmap
+            --annotation_name heatmap
+            --image_filename 123.svs
+            --tile_size 256
+            --column tumor --column stroma
+            --line_colors '{"tumor": "rgb(0,255,0)", "stroma": "rgb(255,0,0)"}'
+            --fill_colors '{"tumor": "rgba(0,255,0,100)", "stroma": "rgba(255,0,0,100)"}'
+            --scale_factor 1
     """
     params = [
-        ("column", str),
+        ("column", list),
         ("tile_size", int),
         ("annotation_name", str),
         ("image_filename", str),
         ("output_dir", str),
         ("input", str),
         ("scale_factor", int),
+        ("fill_colors", dict),
+        ("line_colors", dict),
     ]
     cli_runner(cli_kwargs, params, heatmap_main)
 
 
 def heatmap_main(
-    input, output_dir, image_filename, annotation_name, column, tile_size, scale_factor
+    input,
+    output_dir,
+    image_filename,
+    annotation_name,
+    column,
+    tile_size,
+    scale_factor,
+    fill_colors,
+    line_colors,
 ):
     """Generate heatmap based on the tile scores
 
@@ -841,6 +875,10 @@ def heatmap_main(
         column (string): column to visualize e.g. tile_score
         tile_size (int): size of tiles
         scale_factor (int, optional): scale to match the image on DSA. By
+        line_colors (map, optional): line color map with {feature name:rgb
+        values}
+        fill_colors (map, optional): fill color map with {feature name:rgba
+        values}
         default, 1.
 
     Returns:
@@ -852,13 +890,19 @@ def heatmap_main(
     elements = []
     for _, row in df.iterrows():
         element = copy.deepcopy(base_dsa_polygon_element)
-        label_value = row[column]
-        element["label"]["value"] = str(label_value)
 
         # get label specific color and add to elements
-        line_colors, fill_colors = get_continuous_color(label_value)
-        element["fillColor"] = fill_colors
-        element["lineColor"] = line_colors
+        if len(column) == 1:
+            label_value = row[column[0]]
+            element["label"]["value"] = str(label_value)
+            line_colors, fill_colors = get_continuous_color(label_value)
+            element["fillColor"] = fill_colors
+            element["lineColor"] = line_colors
+        else:
+            label = pd.to_numeric(row[column]).idxmax()
+            element["label"]["value"] = str(label)
+            element["fillColor"] = fill_colors[label]
+            element["lineColor"] = line_colors[label]
 
         # convert coordinate string to tuple using eval
         x, y = eval(row["coordinates"])
@@ -878,7 +922,8 @@ def heatmap_main(
         element["points"] = coords
         elements.append(element)
 
-    annotation_name = column + "_" + annotation_name
+    if len(column) == 1:
+        annotation_name = column[0] + "_" + annotation_name
 
     annotatation_filepath = save_dsa_annotation(
         base_dsa_annotation, elements, annotation_name, output_dir, image_filename

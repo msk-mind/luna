@@ -118,6 +118,8 @@ def test_heatmap():
         [
             "heatmap",
             "tests/testdata/pathology/tile_scores.csv",
+            "-c",
+            "otsu_score",
             "-m",
             "tests/testdata/pathology" "/heatmap_config.yml",
         ],
