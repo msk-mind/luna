@@ -578,7 +578,8 @@ def qupath_polygon_main(
         pixel_clf_polygons = geojson.load(regional_file)
 
     elements = []
-    for polygon in pixel_clf_polygons:
+
+    for polygon in pixel_clf_polygons.features:
 
         props = polygon.properties
         if "classification" not in props:
