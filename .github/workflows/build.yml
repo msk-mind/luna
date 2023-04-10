@@ -61,10 +61,11 @@ jobs:
           mkdocs build
 
       - name: Deploy mkdocs
-        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        #if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
         run: |
           . ./venv/bin/activate
           export LUNA_HOME=$PWD
+          git config --global --add safe.directory .
           mkdocs gh-deploy --force
 
   deploy:
