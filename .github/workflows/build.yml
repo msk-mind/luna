@@ -65,6 +65,8 @@ jobs:
         run: |
           . ./venv/bin/activate
           export LUNA_HOME=$PWD
+          # added to fix: detected dubious ownership in repository at '/__w/luna/luna'
+          git config --global --add safe.directory /__w/luna/luna
           mkdocs gh-deploy --force
 
   deploy:
