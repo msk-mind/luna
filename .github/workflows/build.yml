@@ -61,12 +61,17 @@ jobs:
           mkdocs build
 
       - name: Deploy mkdocs
-        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        #if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
         run: |
           . ./venv/bin/activate
           export LUNA_HOME=$PWD
+<<<<<<< HEAD
           # added to fix: detected dubious ownership in repository at '/__w/luna/luna'
           git config --global --add safe.directory /__w/luna/luna
+||||||| caa0d0c
+=======
+          git config --global --add safe.directory .
+>>>>>>> 012d5d53a015389f93e960f4ae75ee634cde9b9a
           mkdocs gh-deploy --force
 
   deploy:
