@@ -14,12 +14,9 @@ from CLAM.utils.utils import collate_features
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
 from luna.pathology.common.utils import address_to_coord
-
-init_logger()
-logger = logging.getLogger("extract_feature_vectors")
 
 _params_ = [
     ("csv_path", str),

@@ -7,12 +7,10 @@ import click
 import pandas as pd
 import tifffile
 from skimage import measure
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner
 
-init_logger()
-logger = logging.getLogger("extract_shape_features")
 
 _params_ = [("input_slide_mask", str), ("output_dir", str), ("label_cols", List[str])]
 

@@ -8,11 +8,9 @@ import dicom2nifti
 import numpy as np
 import pandas as pd
 from medpy.io import load, save
-
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner, generate_uuid
 
-logger = init_logger()
 
 _params_ = [
     ("raw_data_path", str),

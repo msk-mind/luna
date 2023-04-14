@@ -5,11 +5,7 @@ import os
 
 import click
 import yaml
-
-from luna.common.custom_logger import init_logger
-
-init_logger()
-logger = logging.getLogger()  ### Add CLI tool name
+from loguru import logger
 
 from luna.common.utils import cli_runner
 

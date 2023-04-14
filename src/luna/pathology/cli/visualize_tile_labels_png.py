@@ -8,16 +8,13 @@ import openslide
 import pandas as pd
 from PIL import Image
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
 from luna.pathology.common.utils import (
     get_downscaled_thumbnail,
     get_scale_factor_at_magnfication,
     visualize_tiling_scores,
 )
-
-init_logger()
-logger = logging.getLogger("visualize_tiles_png")
 
 _params_ = [
     ("input_slide_image", str),

@@ -13,7 +13,7 @@ from skimage.color import rgb2gray
 from skimage.filters import threshold_otsu
 from tqdm import tqdm
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
 from luna.pathology.common.utils import (
     get_downscaled_thumbnail,
@@ -22,9 +22,6 @@ from luna.pathology.common.utils import (
     get_tile_from_slide,
     pull_stain_channel,
 )
-
-init_logger()
-logger = logging.getLogger("detect_tissue")
 
 _params_ = [
     ("input_slide_image", str),

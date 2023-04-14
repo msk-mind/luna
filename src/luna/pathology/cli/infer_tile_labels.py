@@ -9,16 +9,13 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
 from luna.pathology.analysis.ml import (
     HDF5Dataset,
     TorchTransformModel,
     post_transform_to_2d,
 )
-
-init_logger()
-logger = logging.getLogger("infer_tile_labels")
 
 
 _params_ = [

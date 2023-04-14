@@ -9,6 +9,8 @@ from urllib.parse import urlparse
 
 from minio import Minio
 
+from loguru import logger
+
 
 def get_object_stats(client, bucket, key):
     try:
@@ -79,11 +81,11 @@ class FileWriteAdatper(WriteAdapter):
 
         # Define base URL
         self.base_url = f"file://{Path(self.store_path)}"
-        print("Configured FileAdatper with base URL=" + self.base_url)
+        logger.info("Configured FileAdatper with base URL=" + self.base_url)
 
-        print("Available buckets:")
+        logger.info("Available buckets:")
         for x in os.listdir(self.store_path):
-            print(f" - {x}")
+            logger.info(f" - {x}")
 
     def write(self, input_data, prefix) -> dict:
         """Perform write operation to a posix file system
@@ -164,13 +166,13 @@ class MinioWriteAdatper(WriteAdapter):
         )
 
         self.base_url = os.path.join(f"s3://{self.store_hostname}:{self.store_port}")
-        print("Configured MinioAdatper with base URL=" + self.base_url)
+        logger.info("Configured MinioAdatper with base URL=" + self.base_url)
 
         client = self.client_init()
 
-        print("Available buckets:")
+        logger.info("Available buckets:")
         for x in client.list_buckets():
-            print(f" - {x.name}")
+            logger.info(f" - {x.name}")
 
     def write(self, input_data, prefix) -> dict:
         """Perform write operation to a s3 file system

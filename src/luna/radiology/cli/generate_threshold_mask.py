@@ -6,12 +6,10 @@ import pandas as pd
 from scipy.ndimage import distance_transform_edt
 from skimage.morphology import remove_small_holes
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
 from luna.radiology.mirp.imageReaders import read_itk_image
 
-init_logger()
-logger = logging.getLogger("generate_threshold_mask")
 
 _params_ = [
     ("input_itk_volume", str),

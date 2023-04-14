@@ -7,11 +7,8 @@ import click
 import pandas as pd
 
 import docker
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
-
-init_logger()
-logger = logging.getLogger("run_stardist_cell_detection")
 
 
 _params_ = [

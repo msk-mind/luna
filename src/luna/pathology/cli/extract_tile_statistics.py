@@ -7,11 +7,9 @@ import click
 import pandas as pd
 
 import luna.common.stats
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
 
-init_logger()
-logger = logging.getLogger("extract_tile_statistics")  # Add CLI tool name
 
 _params_ = [("input_slide_tiles", str), ("output_dir", str)]
 

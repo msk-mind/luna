@@ -6,12 +6,10 @@ import numpy as np
 import pandas as pd
 import scipy.ndimage
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
 from luna.radiology.mirp.imageReaders import read_itk_image
 
-init_logger()
-logger = logging.getLogger("coregister_volumes")
 
 _params_ = [
     ("input_itk_volume", str),

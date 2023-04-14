@@ -6,11 +6,8 @@ import click
 import medpy.io
 import numpy as np
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
-
-init_logger()
-logger = logging.getLogger("window_volume")
 
 
 _params_ = [

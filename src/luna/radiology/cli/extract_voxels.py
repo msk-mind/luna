@@ -5,12 +5,9 @@ from pathlib import Path
 import click
 import medpy.io
 import numpy as np
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner
-
-init_logger()
-logger = logging.getLogger("extract_voxels")
 
 _params_ = [("input_itk_volume", str), ("output_dir", str)]
 

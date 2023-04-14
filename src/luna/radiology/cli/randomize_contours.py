@@ -2,8 +2,8 @@ import logging
 
 import click
 import numpy as np
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner
 from luna.radiology.mirp.imagePerturbations import randomise_roi_contours
 from luna.radiology.mirp.imageProcess import (
@@ -16,8 +16,6 @@ from luna.radiology.mirp.imageProcess import (
 from luna.radiology.mirp.imageReaders import read_itk_image, read_itk_segmentation
 from luna.radiology.mirp.importSettings import Settings
 
-init_logger()
-logger = logging.getLogger("randomize_contours")
 
 
 _params_ = [

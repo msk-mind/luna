@@ -1,6 +1,5 @@
 import itertools
 import json
-import logging
 import os
 import subprocess
 import urllib
@@ -11,6 +10,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Callable, List
 
+from loguru import logger
 import pandas as pd
 import requests
 import yaml
@@ -18,7 +18,6 @@ from filehash import FileHash
 
 from luna.common.CodeTimer import CodeTimer
 
-logger = logging.getLogger(__name__)
 
 # Distinct types that are actually the same (effectively)
 TYPE_ALIASES = {"itk_geometry": "itk_volume"}

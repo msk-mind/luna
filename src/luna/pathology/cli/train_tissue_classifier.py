@@ -24,7 +24,7 @@ from torchmetrics import (
 )
 from torchvision import transforms
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner, load_func
 from luna.pathology.analysis.ml import (
     BaseTorchClassifier,
@@ -32,9 +32,6 @@ from luna.pathology.analysis.ml import (
     TorchTileClassifierTrainer,
     get_group_stratified_sampler,
 )
-
-init_logger()
-logger = logging.getLogger("train_tissue_classifier")
 
 
 _params_ = [

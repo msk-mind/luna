@@ -8,12 +8,10 @@ import openslide
 import pandas as pd
 import tifffile
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
 from luna.pathology.common.schemas import SlideTiles
 
-init_logger()
-logger = logging.getLogger("convert_tiles_to_mask")
 
 _params_ = [
     ("input_slide_image", str),
@@ -118,7 +116,7 @@ def convert_tiles_to_mask(
 
     slide_mask = f"{output_dir}/tile_mask.tif"
     logger.info(f"Saving output mask to {slide_mask}")
-    tifffile.imsave(slide_mask, mask_arr)
+    tifffile.imwrite(slide_mask, mask_arr)
 
     properties = {
         "slide_mask": slide_mask,

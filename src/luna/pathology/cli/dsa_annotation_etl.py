@@ -11,8 +11,8 @@ import requests
 from dask.distributed import Client, as_completed
 from geojson import Feature, FeatureCollection, Point, Polygon
 from shapely.geometry import shape
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner
 from luna.pathology.dsa.dsa_api_handler import (
     get_annotation_df,
@@ -21,9 +21,6 @@ from luna.pathology.dsa.dsa_api_handler import (
     get_slide_df,
     system_check,
 )
-
-init_logger()
-logger = logging.getLogger("dsa_annotation_etl")
 
 _params_ = [
     ("input_dsa_endpoint", str),

@@ -14,7 +14,7 @@ from pyarrow import Table
 from tqdm import tqdm
 
 from luna.common.adapters import IOAdapter
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import (
     apply_csv_filter,
     cli_runner,
@@ -27,8 +27,6 @@ from luna.pathology.common.utils import (
     get_stain_vectors_macenko,
 )
 
-init_logger()
-logger = logging.getLogger("slide_etl")
 
 
 _params_ = [

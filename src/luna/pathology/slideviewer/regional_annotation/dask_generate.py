@@ -10,7 +10,7 @@ from dask.distributed import Client, as_completed
 import luna.common.constants as const
 from luna.common.CodeTimer import CodeTimer
 from luna.common.config import ConfigSet
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.pathology.common.annotation_utils import (
     check_slideviewer_and_download_bmp,
     convert_slide_bitmap_to_geojson,
@@ -65,7 +65,6 @@ def cli(data_config_file, app_config_file):
 
     - labelset:
     """
-    logger = init_logger()
 
     # load configs
     cfg = ConfigSet(name="DATA_CFG", config_file=data_config_file)
@@ -101,13 +100,11 @@ def create_geojson_table():
     Returns:
         list: list of slide ids that failed
     """
-    logger = logging.getLogger(__name__)
 
     failed = []
     # get application and data config variables
     cfg = ConfigSet()
     client = Client(n_workers=25, threads_per_worker=1, memory_limit=0.1)
-    client.run(init_logger)
     logger.info(client)
 
     SLIDEVIEWER_API_URL = cfg.get_value("DATA_CFG::SLIDEVIEWER_API_URL")

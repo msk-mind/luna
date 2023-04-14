@@ -1,5 +1,3 @@
-# ===========================================
-# Usual Imports
 import logging
 import os
 
@@ -7,17 +5,13 @@ import click
 import pandas as pd
 import pyxnat
 
-# ===========================================
-# Custom Imports
 import xmltodict
 from dask.delayed import delayed
 from dask.distributed import Client
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner
 
-init_logger()
-logger = logging.getLogger("xnat_etl")
 
 _params_ = [
     ("input_xnat_url", str),

@@ -1,6 +1,5 @@
 # General imports
 import itertools
-import logging
 import os
 import sys
 from collections import defaultdict
@@ -13,7 +12,7 @@ import scipy.stats
 from PIL import Image
 from tqdm import tqdm
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
 from luna.pathology.common.utils import (
     extract_patch_texture_features,
@@ -22,8 +21,6 @@ from luna.pathology.common.utils import (
     get_stain_vectors_macenko,
 )
 
-init_logger()
-logger = logging.getLogger("extract_stain_texture")
 
 
 _params_ = [

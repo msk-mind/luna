@@ -11,11 +11,9 @@ from radiomics import (
     featureextractor,  # This module is used for interaction with pyradiomics
 )
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
 
-init_logger()
-logger = logging.getLogger("extract_radiomics")
 
 _params_ = [
     ("input_itk_volume", str),

@@ -7,11 +7,8 @@ import pandas as pd
 from shapely.geometry import GeometryCollection, Polygon, shape
 from tqdm import tqdm
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
-
-init_logger()
-logger = logging.getLogger("generate_tile_labels")  # Add CLI tool name
 
 _params_ = [
     ("input_slide_annotation_dataset", str),

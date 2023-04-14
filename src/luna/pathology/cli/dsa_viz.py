@@ -11,16 +11,13 @@ import ijson
 import numpy as np
 import pandas as pd
 from PIL import Image
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner
 from luna.pathology.dsa.utils import (
     get_continuous_color,
     vectorize_np_array_bitmask_by_pixel_value,
 )
-
-init_logger()
-logger = logging.getLogger("dsa_viz")
 
 # Base DSA jsons
 base_dsa_polygon_element = {

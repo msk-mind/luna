@@ -10,12 +10,9 @@ import tifffile
 from PIL import Image
 from skimage.measure import block_reduce
 
-from luna.common.custom_logger import init_logger
+from loguru import logger
 from luna.common.utils import cli_runner
 from luna.pathology.common.utils import convert_xml_to_mask, get_layer_names
-
-init_logger()
-logger = logging.getLogger("generate_mask")
 
 
 _params_ = [

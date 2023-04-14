@@ -6,8 +6,8 @@ from pathlib import Path
 import click
 import openslide
 import pandas as pd
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import cli_runner
 from luna.pathology.common.utils import (
     coord_to_address,
@@ -15,8 +15,6 @@ from luna.pathology.common.utils import (
     get_scale_factor_at_magnfication,
 )
 
-init_logger()
-logger = logging.getLogger("generate_tiles")
 
 _params_ = [
     ("input_slide_image", str),
