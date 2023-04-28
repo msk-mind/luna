@@ -1,8 +1,8 @@
-input:
+input_map:
   Tumor: tests/testdata/pathology/Tumor.png
 image_filename: 123.svs
 annotation_name: Full Res Tile-Based Pixel Classifier Inference
-output_dir: tests/luna/pathology/cli/testouts
+output_urlpath: tests/luna/pathology/cli/testouts
 line_colors:
   Tumor: rgb(0,255,0)
 fill_colors:

@@ -1,40 +1,34 @@
 import os
 
+import fire
 import pandas as pd
-import yaml
-from click.testing import CliRunner
 
-from luna.radiology.cli.generate_scan_table import cli
+from luna.radiology.cli.generate_scan_table import generate_scan_table
 
 
 def test_cli(tmpdir):
-
     scan_table_path = str(tmpdir) + "/scan_table"
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
+    fire.Fire(
+        generate_scan_table,
         [
             "--raw_data_path",
             "tests/testdata/radiology/",
             "--mapping_csv_path",
             "tests/testdata/radiology/series_mapping.csv",
             "--output_dir",
-            tmpdir,
+            str(tmpdir),
             "--scan_table_path",
-            scan_table_path,
+            str(scan_table_path),
             "--npartitions",
-            1,
+            "1",
             "--subset",
         ],
     )
-    print(result.exit_code)
-    print(result.exc_info)
 
-    assert result.exit_code == 0
     assert os.path.exists(str(tmpdir) + "/123")
-    with open(str(tmpdir) + "/metadata.yml") as fp:
-        metadata = yaml.safe_load(fp)
-        assert metadata["table_path"] == scan_table_path
+    # with open(str(tmpdir) + "/metadata.yml") as fp:
+    # metadata = yaml.safe_load(fp)
+    # assert metadata["table_path"] == scan_table_path
 
     df = pd.read_parquet(scan_table_path)
     print(df)

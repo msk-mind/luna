@@ -1,80 +1,98 @@
 # General imports
 import json
 import logging
+from pathlib import Path
 
-import click
+import fire
+import fsspec
 import pandas as pd
+from fsspec import open
 from shapely.geometry import GeometryCollection, Polygon, shape
 from tqdm import tqdm
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
+from luna.common.utils import get_config, save_metadata, timed
 
 init_logger()
 logger = logging.getLogger("generate_tile_labels")  # Add CLI tool name
 
-_params_ = [
-    ("input_slide_annotation_dataset", str),
-    ("input_slide_tiles", str),
-    ("output_dir", str),
-]
 
-
-@click.command()
-@click.argument("input_slide_annotation_dataset", nargs=1)
-@click.argument("input_slide_tiles", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-# Additional options
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
-    """A cli tool
-
-    \b
-    Inputs:
-        input_slide_annotation_dataset: annotation dataset containing metadata about geojsons
-        input_slide_tiles: path to tile images (.tiles.parquet)
-    \b
-    Outputs:
-        slide_tiles
-    \b
-    Example:
-        generate_tile_labels ./annotations/ tiles/slide-100012/tiles
-            -o ./labeled_tiles/10001/
-    """
-    cli_runner(cli_kwargs, _params_, generate_tile_labels, pass_keys=True)
-
-
-# Transform imports
-def generate_tile_labels(
-    input_slide_annotation_dataset, input_slide_tiles, output_dir, keys
+@timed
+@save_metadata
+def cli(
+    annotation_urlpath: str = "???",
+    tiles_urlpath: str = "???",
+    slide_id: str = "???",
+    output_urlpath: str = "???",
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+    local_config: str = "",
 ):
     """Queries the dataset at input_slide_annotation_dataset for a slide_id matching input_slide_tiles
 
     Adds regional_label, intersection_area columns to slide tiles, where the former is the annotation label, and the latter the fraction of intersecting area between the tile and annotation regions
 
     Args:
-        input_slide_annotation_dataset (str): path to parquet annotation dataset
-        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.parquet)
-        output_dir (str): output/working directory
-        keys (dict): segment keys (this function needs 'slide_id')
+        annotation_urlpath (str): url/path to parquet annotation dataset
+        tiles_urlpath (str): url/path to a slide-tile manifest file (.tiles.parquet)
+        slide_id (str): slide ID
+        output_urlpath (str): output url/path prefix
+        storage_options (dict): options to pass to reading functions
+        output_storage_options (dict): options to pass to writing functions
+        local_config (str): url/path to local config YAML file
     Returns:
-        dict: metadata about function call
+        dict: metadata
     """
-    slide_id = keys.get("slide_id", None)
+    config = get_config(vars())
 
+    df_tiles = generate_tile_labels(
+        config["annotation_urlpath"],
+        config["tiles_urlpath"],
+        config["slide_id"],
+        config["storage_options"],
+    )
+
+    fs, output_urlpath_prefix = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+    output_header_file = (
+        Path(output_urlpath_prefix)
+        / f"{config['slide_id']}.regional_label.tiles.parquet"
+    )
+    with fs.open(output_header_file, "wb") as of:
+        df_tiles.to_parquet(of)
+
+    properties = {
+        "slide_tiles": output_header_file,  # "Tiles" are the metadata that describe them
+    }
+
+    return properties
+
+
+# Transform imports
+def generate_tile_labels(
+    annotation_urlpath: str,
+    tiles_urlpath: str,
+    slide_id: str,
+    storage_options: dict = {},
+):
+    """Queries the dataset at input_slide_annotation_dataset for a slide_id matching input_slide_tiles
+
+    Adds regional_label, intersection_area columns to slide tiles, where the former is the annotation label, and the latter the fraction of intersecting area between the tile and annotation regions
+
+    Args:
+        annotation_urlpath (str): url/path to parquet annotation dataset
+        tiles_urlpath (str): url/path to a slide-tile manifest file (.tiles.parquet)
+        slide_id (str): slide ID
+        storage_options (dict): options to pass to reading functions
+    Returns:
+        pd.DataFrame: tile dataframe with regional_label, and intersection_area columns
+    """
+    slide_id = str(slide_id)
     logger.info(f"slide_id={slide_id}")
 
-    df_annotation = pd.read_parquet(input_slide_annotation_dataset)
+    with open(annotation_urlpath, **storage_options) as of:
+        df_annotation = pd.read_parquet(of)
 
     if slide_id not in df_annotation.index:
         raise RuntimeError("No matching annotations found for slide!")
@@ -108,7 +126,8 @@ def generate_tile_labels(
     for label in d_collections.keys():
         d_collections[label] = GeometryCollection(d_collections[label])
 
-    df_tiles = pd.read_parquet(input_slide_tiles).reset_index().set_index("address")
+    with open(tiles_urlpath, **storage_options) as of:
+        df_tiles = pd.read_parquet(of).reset_index().set_index("address")
     l_regional_labels = []
     l_intersection_areas = []
 
@@ -141,15 +160,8 @@ def generate_tile_labels(
 
     logger.info(df_tiles.loc[df_tiles.intersection_area > 0])
 
-    output_header_file = f"{output_dir}/{slide_id}.regional_label.tiles.parquet"
-    df_tiles.to_parquet(output_header_file)
-
-    properties = {
-        "slide_tiles": output_header_file,  # "Tiles" are the metadata that describe them
-    }
-
-    return properties
+    return df_tiles
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(cli)

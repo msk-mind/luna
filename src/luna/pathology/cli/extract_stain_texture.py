@@ -1,20 +1,22 @@
 # General imports
 import itertools
 import logging
-import os
 import sys
 from collections import defaultdict
+from pathlib import Path
 
-import click
+import fire
+import fsspec
 import numpy as np
-import openslide
 import pandas as pd
 import scipy.stats
+import tiffslide
+from fsspec import open
 from PIL import Image
 from tqdm import tqdm
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
+from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import (
     extract_patch_texture_features,
     get_downscaled_thumbnail,
@@ -26,77 +28,72 @@ init_logger()
 logger = logging.getLogger("extract_stain_texture")
 
 
-_params_ = [
-    ("input_slide_image", str),
-    ("input_slide_mask", str),
-    ("output_dir", str),
-    ("stain_sample_factor", int),
-    ("tile_size", int),
-    ("stain_channel", int),
-]
-
-
-@click.command()
-@click.argument("input_slide_image", nargs=1)
-@click.argument("input_slide_mask", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-tx",
-    "--tile_size",
-    required=False,
-    help="size of tiles to use as inputs to the glcm calculation",
-)
-@click.option(
-    "-sc",
-    "--stain_channel",
-    required=False,
-    help="which stain channel to use for texture features",
-)
-@click.option(
-    "-sf",
-    "--stain_sample_factor",
-    required=False,
-    help="downsample factor for the image used in stain vector estimation",
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
+@timed
+@save_metadata
+def cli(
+    slide_image_urlpath: str = "???",
+    slide_mask_urlpath: str = "???",
+    stain_sample_factor: float = "???",  # type: ignore
+    stain_channel: int = "???",  # type: ignore
+    tile_size: int = "???",  # type: ignore
+    output_urlpath: str = ".",
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+    local_config: str = "",
+):
     """Compute GLCM texture features on a de-convolved slide image
 
-    \b
-    Inputs:
-        input_slide_image: slide image (.svs)
-        input_slide_mask: whole-slide mask image (.tif)
-    \b
-    Outputs:
-        feature_csv
-    \b
-    Example:
-        extract_stain_texture ./slides/10001.svs ./masks/10001/tumor_mask.tif
-            -tx 500 -sc 0 -sf 10 -o ./stain_features/10001/
+    Args:
+        slide_image_urlpath (str): url/path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        slide_mask_urlpath (str): url/path to slide mask (.tif)
+        stain_sample_factor (float): downsample factor to use for stain vector estimation
+        stain_channel (int): which channel of the deconvovled image to use for texture analysis
+        tile_size (int): size of tiles to use (at the requested magnification) (500-1000 recommended)
+        output_urlpath (str): output/working directory
+
+    Returns:
+        dict: metadata about function call
+
     """
-    cli_runner(cli_kwargs, _params_, extract_stain_texture)
+    config = get_config(vars())
+    df_result = extract_stain_texture(
+        config["slide_image_urlpath"],
+        config["slide_mask_urlpath"],
+        config["stain_sample_factor"],
+        config["stain_channel"],
+        config["tile_size"],
+        config["output_urlpath"],
+        config["storage_options"],
+        config["output_storage_options"],
+    )
+
+    fs, urlpath_prefix = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+    output_filename = Path(urlpath_prefix) / "stainomics.parquet"
+    with fs.open(output_filename, "wb") as of:
+        df_result.to_parquet(of, index=False)
+
+    properties = {
+        # "num_pixel_observations": n,
+        "feature_data": output_filename,
+    }
+
+    return properties
 
 
 Image.MAX_IMAGE_PIXELS = None
 
 
 def extract_stain_texture(
-    input_slide_image,
-    input_slide_mask,
-    stain_sample_factor,
-    stain_channel,
-    tile_size,
-    output_dir,
+    slide_image_urlpath: str,
+    slide_mask_urlpath: str,
+    stain_sample_factor: float,
+    stain_channel: int,
+    tile_size: int,
+    output_urlpath: str,
+    storage_options: dict,
+    output_storage_options: dict,
 ):
     """Compute GLCM texture after automatically deconvolving the image into stain channels, using tile-based processing
 
@@ -105,33 +102,38 @@ def extract_stain_texture(
     Save a feature csv file at the output directory.
 
     Args:
-        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        output_dir (str): output/working directory
+        slide_image_urlpath (str): url/path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        slide_mask_urlpath (str): url/path to slide mask (.tif)
         stain_sample_factor (float): downsample factor to use for stain vector estimation
         stain_channel (int): which channel of the deconvovled image to use for texture analysis
         tile_size (int): size of tiles to use (at the requested magnification) (500-1000 recommended)
+        output_urlpath (str): output/working URL/path prefix
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
 
     Returns:
         dict: metadata about function call
     """
-    slide = openslide.OpenSlide(input_slide_image)
-    mask = openslide.ImageSlide(input_slide_mask)
+    slide_file = open(slide_image_urlpath, "rb", **storage_options)
+    slide = tiffslide.TiffSlide(slide_file)
+    # oslide = openslide.OpenSlide(slide_image_urlpath)
 
-    logger.info(
-        f"Slide dimensions {slide.dimensions}, Mask dimensions {mask.dimensions}"
+    logger.info(f"Slide dimensions {slide.dimensions}")
+    sample_arr = get_downscaled_thumbnail(slide, stain_sample_factor)
+    slide_full_generator, slide_full_level = get_full_resolution_generator(
+        slide_file, tile_size=tile_size
     )
 
-    sample_arr = get_downscaled_thumbnail(slide, stain_sample_factor)
+    mask_file = open(slide_mask_urlpath, "rb", **storage_options)
+    mask = tiffslide.TiffSlide(mask_file)
+    logger.info(f"Mask dimensions {mask.dimensions}")
+    mask_full_generator, mask_full_level = get_full_resolution_generator(
+        mask_file, tile_size=tile_size
+    )
+
     stain_vectors = get_stain_vectors_macenko(sample_arr)
 
     logger.info(f"Stain vectors={stain_vectors}")
-
-    slide_full_generator, slide_full_level = get_full_resolution_generator(
-        slide, tile_size=tile_size
-    )
-    mask_full_generator, mask_full_level = get_full_resolution_generator(
-        mask, tile_size=tile_size
-    )
 
     tile_x_count, tile_y_count = slide_full_generator.level_tiles[slide_full_level]
     logger.info("Tiles x %s, Tiles y %s", tile_x_count, tile_y_count)
@@ -147,9 +149,7 @@ def extract_stain_texture(
 
     N_tiles = len(address_raster)
     for n_tile, address in tqdm(enumerate(address_raster), file=sys.stdout):
-        mask_patch = np.array(mask_full_generator.get_tile(mask_full_level, address))[
-            :, :, 0
-        ]
+        mask_patch = np.array(mask_full_generator.get_tile(mask_full_level, address))
 
         if not np.count_nonzero(mask_patch) > 1:
             continue
@@ -173,8 +173,13 @@ def extract_stain_texture(
     print(features)
 
     hist_features = {}
+    fs, output_urlpath_prefix = fsspec.core.url_to_fs(
+        output_urlpath, **output_storage_options
+    )
     for key, values in features.items():
-        np.save(os.path.join(output_dir, f"feature_vector_{key}.npy"), values)
+        output_path = Path(output_urlpath_prefix) / f"feature_vector_{key}.npy"
+        with fs.open(output_path, "wb") as of:
+            np.save(of, values)
 
         if not len(values) > 0:
             continue
@@ -208,18 +213,11 @@ def extract_stain_texture(
         .astype(float)
     )
     logger.info(df_result)
+    slide_file.close()
+    mask_file.close()
 
-    output_filename = os.path.join(output_dir, "stainomics.parquet")
-
-    df_result.to_parquet(output_filename, index=False)
-
-    properties = {
-        "num_pixel_observations": n,
-        "feature_data": output_filename,
-    }
-
-    return properties
+    return df_result
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(cli)

@@ -60,7 +60,6 @@ def test_build_geojson_from_bitmap():
 
 
 def test_concatenate_regional_geojsons():
-
     geojson_list = [
         '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"label_num":"1","label_name":"tissue_1"},"geometry":{"type":"Polygon","coordinates":[[1261,2140],[1236,2140],[1222,2134],[1222,2132],[1216,2125]]}}]}',
         '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"label_num":"3","label_name":"tissue_3"},"geometry":{"type":"Polygon","coordinates":[[1117,844],[1074,844],[1062,836],[1056,830],[1054,825]]}}]}',
@@ -73,7 +72,6 @@ def test_concatenate_regional_geojsons():
 
 
 def test_concatenate_regional_geojsons_one_geojson():
-
     geojson_list = [
         '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"label_num":"1","label_name":"tissue_1"},"geometry":{"type":"Polygon","coordinates":[[1261,2140],[1236,2140],[1222,2134],[1222,2132],[1216,2125]]}}]}'
     ]
@@ -84,7 +82,6 @@ def test_concatenate_regional_geojsons_one_geojson():
 
 
 def test_build_geojson_from_pointclick_json():
-
     res = build_geojson_from_pointclick_json(
         "{'DEFAULT_LABELS': {0: 'tissue_1', 2: 'tissue_2', 3: 'tissue_3', 4: 'tissue_4', 5: 'tissue_5'}}",
         "DEFAULT_LABELS",

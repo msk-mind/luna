@@ -36,7 +36,6 @@ class ImageClass:
         metadata=None,
         slice_table=None,
     ):
-
         # Set details regarding voxel orientation and such
         self.origin = np.array(origin)
         self.orientation = np.array(orientation)
@@ -135,7 +134,6 @@ class ImageClass:
         self.origin = new_origin
 
     def set_spacing(self, new_spacing):
-
         # Update spacing
         self.spacing: np.ndarray = new_spacing
 
@@ -199,7 +197,6 @@ class ImageClass:
 
         # Determine whether the voxel grid should be encoded (only True for boolean data types; typically roi)
         if self.dtype_name == "bool":
-
             # Run length encoding for "True"
             rle_end = np.array(
                 np.append(
@@ -429,7 +426,6 @@ class ImageClass:
 
         # Check for corrections due to image modality
         if self.spat_transform == "base":
-
             # Round CT values to the nearest integer
             if self.modality == "CT":
                 voxel_grid = np.round(a=voxel_grid, decimals=0)
@@ -789,7 +785,6 @@ class ImageClass:
         self.set_voxel_grid(voxel_grid=cropped_grid)
 
     def set_spatial_transform(self, transform_method: str):
-
         if transform_method == "base":
             self.spat_transform = "base"
 
@@ -820,7 +815,6 @@ class ImageClass:
         feature_table.columns = feat_names
 
         if not self.is_missing:
-
             # Update columns with actual values
             feature_table["img_dim_x"] = self.size[2]
             feature_table["img_dim_y"] = self.size[1]
@@ -1004,7 +998,6 @@ class ImageClass:
 
         # Check if the write folder exists
         if not os.path.isdir(file_path):
-
             if os.path.isfile(file_path):
                 # Check if the write folder is a file.
                 raise IOError(
@@ -1049,7 +1042,6 @@ class ImageClass:
             )
 
     def get_slices(self, slice_number=None):
-
         img_obj_list = []
 
         # Create a copy of the current object
@@ -1062,7 +1054,6 @@ class ImageClass:
         base_img_obj.dtype_name = None
 
         if slice_number is None:
-
             voxel_grid = self.get_voxel_grid()
 
             # Iterate over slices
@@ -1125,7 +1116,6 @@ class ImageClass:
         )
 
     def set_metadata(self, tag, value, force_vr=None):
-
         # Do not update the metadata if no metadata is present.
         if self.metadata is None:
             return None
@@ -1135,7 +1125,6 @@ class ImageClass:
         )
 
     def has_metadata(self, tag):
-
         if self.metadata is None:
             return None
 
@@ -1221,7 +1210,6 @@ class ImageClass:
             self._set_pixel_data_int(bit_depth=16)
 
     def _set_pixel_data_int(self, bit_depth):
-
         # Set dtype for the image
         if bit_depth == 8:
             pixel_type = np.int8
@@ -1305,7 +1293,6 @@ class ImageClass:
             )
 
     def _set_pixel_data_float(self, bit_depth):
-
         if not self.as_parametric_map:
             raise ValueError(
                 "Floating point representation in DICOM is only supported by parametric maps, but the image in MIRP is not marked for conversion of the metadata to"
@@ -1335,7 +1322,6 @@ class ImageClass:
 
         # Define rescale intercept and slope
         if bit_depth == 16:
-
             # DICOM ranges
             dcm_range = float(2**bit_depth - 1)
             dcm_min = -float(2 ** (bit_depth - 1))
@@ -1359,7 +1345,6 @@ class ImageClass:
             # Round pixel values for safety
             pixel_grid = np.round(pixel_grid)
         else:
-
             rescale_intercept = 0.0
             rescale_slope = 1.0
 
@@ -1431,7 +1416,6 @@ class ImageClass:
         self.set_metadata(tag=(0x0028, 0x0008), value=1)
 
     def _convert_to_parametric_map_iod(self):
-
         if self.metadata is None:
             return None
 

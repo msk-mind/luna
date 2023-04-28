@@ -31,7 +31,6 @@ class RoiClass:
         metadata=None,
         label_value=1,
     ):
-
         self.name = name
         self.label_value = int(label_value)
 
@@ -159,7 +158,6 @@ class RoiClass:
             self.roi_morphology.decimate(by_slice=by_slice)
 
     def interpolate(self, img_obj, settings):
-
         print("Resampling ROI ", self.roi.spacing, " -> ", img_obj.spacing)
         # Skip if image and/or is missing
         if img_obj is None or self.roi is None:
@@ -251,7 +249,6 @@ class RoiClass:
             self.roi.set_voxel_grid(voxel_grid=voxel_grid)
 
     def binarise_mask(self):
-
         if self.roi is None:
             return
 
@@ -389,7 +386,6 @@ class RoiClass:
 
             # Check if the voxel grid is not empty
             if np.any(roi_voxel_grid):
-
                 # Calculate mean and standard deviation of intensities in roi
                 mean_int = np.mean(img_voxel_grid[roi_voxel_grid])
                 sd_int = np.std(img_voxel_grid[roi_voxel_grid])
@@ -523,7 +519,6 @@ class RoiClass:
 
             # Iterate over disconnected labels
             for curr_volume_label in vox_disconnected_labels:
-
                 # Skip background
                 if vox_disconnected_labels == 0:
                     continue
@@ -628,7 +623,6 @@ class RoiClass:
 
         # Check if an actual extension is required.
         if base_ext > 0:
-
             # Create displacement map
             df_base = pd.DataFrame(
                 {
@@ -851,7 +845,6 @@ class RoiClass:
 
             # Iterate over erosion steps
             for step in np.arange(0, erode_steps):
-
                 # Perform erosion
                 voxels_upd = ndi.binary_erosion(
                     voxels_prev, structure=geom_struct, iterations=1
@@ -1234,7 +1227,6 @@ class RoiClass:
 
         # Check if the write folder exists
         if not os.path.isdir(file_path):
-
             if os.path.isfile(file_path):
                 # Check if the write folder is a file.
                 raise IOError(
@@ -1257,7 +1249,6 @@ class RoiClass:
         )
 
     def set_metadata(self, tag, value, force_vr=None):
-
         # Do not update the metadata if no metadata is present.
         if self.metadata is None:
             return None
@@ -1267,7 +1258,6 @@ class RoiClass:
         )
 
     def has_metadata(self, tag):
-
         if self.metadata is None:
             return None
 
@@ -1275,7 +1265,6 @@ class RoiClass:
             return get_pydicom_meta_tag(dcm_seq=self.metadata, tag=tag, test_tag=True)
 
     def rename(self, new):
-
         if self.metadata is not None:
             # Obtain the old name
             old = self.name
@@ -1287,7 +1276,6 @@ class RoiClass:
 
             # Iterate over roi elements in the roi sequence
             for ii, roi_element in enumerate(self.metadata[0x3006, 0x0020]):
-
                 # Find ROI name that matches the old name
                 if (
                     get_pydicom_meta_tag(

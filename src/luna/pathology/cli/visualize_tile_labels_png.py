@@ -1,151 +1,155 @@
 # General imports
 import logging
-import os
-from typing import List
+from pathlib import Path
+from typing import List, Optional
 
-import click
-import openslide
+import fire
+import fsspec
 import pandas as pd
+import tiffslide
+from fsspec import open
 from PIL import Image
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
+from luna.common.utils import get_config, save_metadata, timed
+from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import (
     get_downscaled_thumbnail,
-    get_scale_factor_at_magnfication,
+    get_scale_factor_at_magnification,
     visualize_tiling_scores,
 )
 
 init_logger()
 logger = logging.getLogger("visualize_tiles_png")
 
-_params_ = [
-    ("input_slide_image", str),
-    ("input_slide_tiles", str),
-    ("mpp_units", bool),
-    ("plot_labels", List[str]),
-    ("requested_magnification", float),
-    ("output_dir", str),
-]
 
-
-@click.command()
-@click.argument("input_slide_image", nargs=1)
-@click.argument("input_slide_tiles", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-pl",
-    "--plot_labels",
-    required=False,
-    help="Label names (as column labels) to plot",
-)
-@click.option(
-    "-rmg",
-    "--requested_magnification",
-    required=False,
-    help="Magnificiation scale at which to generate thumbnail/png images (recommended <= 1)",
-)
-@click.option(
-    "--mpp-units",
-    is_flag=True,
-    help="Set this flag if input coordinates are in µm, not pixels",
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
-    """Generate nice tile markup images with continuous or discrete tile scores
-
-    \b
-    Inputs:
-        input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        input_slide_tiles: slide tiles (manifest tile files, .tiles.csv)
-    \b
-    Outputs:
-        markups: markup images
-    \b
-    Example:
-        visualize_tiles_png 10001.svs 10001/tiles/10001.tiles.csv
-            -o 10001/markups
-            -pl Tumor,Stroma,TILs,otsu_score
-            -rmg 0.5
-
-    """
-    cli_runner(cli_kwargs, _params_, visualize_tiles)
-
-
-def visualize_tiles(
-    input_slide_image,
-    input_slide_tiles,
-    requested_magnification,
-    mpp_units,
-    plot_labels,
-    output_dir,
+@timed
+@save_metadata
+def cli(
+    slide_urlpath: str = "???",
+    tiles_urlpath: str = "",
+    mpp_units: bool = False,
+    plot_labels: List[str] = "???",  # type: ignore
+    output_urlpath: str = ".",
+    requested_magnification: Optional[int] = None,
+    tile_size: Optional[int] = None,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+    local_config: str = "",
 ):
     """Generate nice tile markup images with continuous or discrete tile scores
 
     Args:
-        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
-        requested_magnification (float): Magnification scale at which to perform computation
-        plot_labels (List[str]): labels to plot
-        output_dir (str): output/working directory
+        slide_urlpath (str): url/path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        tiles_urlpath (str): url/path to a slide-tile manifest file (.tiles.csv)
         mpp_units (bool): if true, additional rescaling is applied to match micro-meter and pixel coordinate systems
+        plot_labels (List[str]): labels to plot
+        output_urlpath (str): output url/path prefix
+        requested_magnification (int): Magnification scale at which to perform computation
+        tile_size (int): tile size
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
+        local_config (str): url/path to local config YAML file
 
     Returns:
         dict: metadata about function call
     """
-    slide = openslide.OpenSlide(input_slide_image)
+    config = get_config(vars())
 
-    to_mag_scale_factor = get_scale_factor_at_magnfication(
-        slide, requested_magnification=requested_magnification
+    if not config["tile_size"] and not config["tiles_urlpath"]:
+        raise fire.core.FireError("Specify either tiles_urlpath or tile_size")
+
+    thumbnails_overlayed = visualize_tiles(
+        config["slide_urlpath"],
+        config["tiles_urlpath"],
+        config["mpp_units"],
+        config["plot_labels"],
+        config["requested_magnification"],
+        config["tile_size"],
+        config["storage_options"],
     )
 
-    # Create thumbnail image for scoring
-    sample_arr = get_downscaled_thumbnail(slide, to_mag_scale_factor)
+    fs, output_path_prefix = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
 
-    # See if we need to adjust scale_factor to account for different units
-    if mpp_units:
-        unit_sf = float(slide.properties["openslide.mpp-x"])
-        to_mag_scale_factor *= unit_sf
+    for score_type, thumbnail_overlayed in thumbnails_overlayed.items():
+        output_file = (
+            Path(output_path_prefix)
+            / f"tile_scores_and_labels_visualization_{score_type}.png"
+        )
+        thumbnail_overlayed = Image.fromarray(thumbnail_overlayed)
+        with fs.open(output_file, "wb") as of:
+            thumbnail_overlayed.save(of)
+        logger.info(f"Saved {score_type} visualization at {output_file}")
+
+    properties = {"data": fs.unstrip_protocol(output_path_prefix)}
+
+    return properties
+
+
+def visualize_tiles(
+    slide_urlpath: str,
+    tiles_urlpath: str,
+    mpp_units: bool,
+    plot_labels: List[str],
+    requested_magnification: Optional[int] = None,
+    tile_size: Optional[int] = None,
+    storage_options: dict = {},
+):
+    """Generate nice tile markup images with continuous or discrete tile scores
+
+    Args:
+        slide_urlpath (str): url/path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        tiles_urlpath (str): url/path to a slide-tile manifest file (.tiles.csv)
+        mpp_units (bool): if true, additional rescaling is applied to match micro-meter and pixel coordinate systems
+        plot_labels (List[str]): labels to plot
+        requested_magnification (int): Magnification scale at which to perform computation
+        tile_size (int): tile size
+        storage_options (dict): storage options to pass to reading functions
+
+    Returns:
+        dict[str,np.ndarray]: score type to numpy array representation of overlayed thumbnail
+    """
+    if type(plot_labels) == str:
+        plot_labels = [plot_labels]
 
     # Get tiles
-    df = pd.read_parquet(input_slide_tiles).reset_index().set_index("address")
+    if tiles_urlpath:
+        with open(tiles_urlpath, **storage_options) as of:
+            df = pd.read_parquet(of).reset_index().set_index("address")
+    elif type(tile_size) == int:
+        df = generate_tiles(
+            slide_urlpath, tile_size, storage_options, requested_magnification
+        )
+    else:
+        raise RuntimeError("Specify tile size or url/path to tiling data")
+
+    with open(slide_urlpath, **storage_options) as of:
+        slide = tiffslide.TiffSlide(of)
+        to_mag_scale_factor = get_scale_factor_at_magnification(
+            slide, requested_magnification=requested_magnification
+        )
+        # Create thumbnail image for scoring
+        sample_arr = get_downscaled_thumbnail(slide, to_mag_scale_factor)
+
+        # See if we need to adjust scale_factor to account for different units
+        if mpp_units:
+            unit_sf = float(slide.properties["openslide.mpp-x"])
+            to_mag_scale_factor *= unit_sf
 
     # only visualize tile scores that were able to be computed
     all_score_types = set(plot_labels)
     score_types_to_visualize = set(list(df.columns)).intersection(all_score_types)
 
-    for score_type_to_visualize in score_types_to_visualize:
-        output_file = os.path.join(
-            output_dir,
-            "tile_scores_and_labels_visualization_{}.png".format(
-                score_type_to_visualize
-            ),
+    thumbnails_overlayed = {}  # type: Dict[str,np.ndarray]
+    for score_type in score_types_to_visualize:
+        thumbnails_overlayed[score_type] = visualize_tiling_scores(
+            df, sample_arr, to_mag_scale_factor, score_type
         )
 
-        thumbnail_overlayed = visualize_tiling_scores(
-            df, sample_arr, to_mag_scale_factor, score_type_to_visualize
-        )
-        thumbnail_overlayed = Image.fromarray(thumbnail_overlayed)
-        thumbnail_overlayed.save(output_file)
-
-        logger.info(
-            "Saved %s visualization at %s", score_type_to_visualize, output_file
-        )
-
-    properties = {"data": output_dir}
-
-    return properties
+    return thumbnails_overlayed
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(cli)
