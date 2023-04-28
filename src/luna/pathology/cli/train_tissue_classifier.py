@@ -300,7 +300,6 @@ def train_func(config: Dict[str, any]):
     logger.info("Starting training procedure")
 
     for ii in range(epochs):
-
         train_results = classifier_trainer.train_epoch(train_loader, train_metrics)
         val_results = classifier_trainer.validate_epoch(validation_loader, val_metrics)
 
@@ -431,21 +430,21 @@ def train_model(
 
     cli_reporter = CustomReporter(max_report_frequency=180)
     tuner = ray.tune.Tuner(
-            trainable=trainer,
-            run_config=RunConfig(
-                local_dir=output_dir,
-                progress_reporter=cli_reporter,
-                ),
-            param_space={
-                "scaling_config": ScalingConfig(
-                    resources_per_worker={
-                        "CPU": num_cpus_per_worker,
-                        "GPU": num_gpus_per_worker,
-                        },
-                    num_workers=num_workers,
-                    )
-                }
+        trainable=trainer,
+        run_config=RunConfig(
+            local_dir=output_dir,
+            progress_reporter=cli_reporter,
+        ),
+        param_space={
+            "scaling_config": ScalingConfig(
+                resources_per_worker={
+                    "CPU": num_cpus_per_worker,
+                    "GPU": num_gpus_per_worker,
+                },
+                num_workers=num_workers,
             )
+        },
+    )
     # run distributed model training
 
     analysis = tuner.fit()
@@ -455,8 +454,7 @@ def train_model(
     # collect results from Ray
     # analysis interface currently in beta, interface is highly variable between Ray releases
     # can probably imporve output results once ray-train is non-beta.
-    best_trial = analysis.get_best_result(metric='accuracy',
-                                          mode='max')
+    best_trial = analysis.get_best_result(metric="accuracy", mode="max")
     trial_df = analysis.get_dataframe()
     logger.info(trial_df)
 
@@ -473,7 +471,6 @@ def train_model(
 
 
 if __name__ == "__main__":
-
     cli()
 
     pass

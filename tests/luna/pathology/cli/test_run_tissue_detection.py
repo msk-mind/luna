@@ -14,8 +14,6 @@ def test_otsu(tmp_path):
             "tests/testdata/pathology/generate_tiles/123/123.tiles.parquet",
             "-o",
             tmp_path,
-            "-rmg",
-            5,
             "-nc",
             1,
             "-fq",

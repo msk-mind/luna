@@ -160,7 +160,6 @@ def experiment_scans_to_df(s, experiment_id, output_dir):
     df_scans["experiment_id"] = experiment_id
 
     for scan_id in df_scans["@ID"]:
-
         df_scan = df_scans.loc[df_scans["@ID"] == scan_id]
 
         dest_dir = os.path.join(output_dir, experiment_id, scan_id)

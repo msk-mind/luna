@@ -1,30 +1,70 @@
 import itertools
 import json
-import logging
 import os
 import subprocess
+import time
 import urllib
 import warnings
-from functools import partial
+from functools import wraps
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
-from typing import Callable, List
+from urllib.parse import urlparse
 
+import fire
+import fsspec  # type: ignore
 import pandas as pd
 import requests
 import yaml
-from filehash import FileHash
-
-from luna.common.CodeTimer import CodeTimer
-
-logger = logging.getLogger(__name__)
+from fsspec import open  # type: ignore
+from loguru import logger
+from omegaconf import MissingMandatoryValue, OmegaConf
 
 # Distinct types that are actually the same (effectively)
 TYPE_ALIASES = {"itk_geometry": "itk_volume"}
 
 # Sensitive cli inputs
 MASK_KEYS = ["username", "user", "password", "pw"]
+
+
+def _get_args_dict(fn, args, kwargs):
+    args_names = fn.__code__.co_varnames[: fn.__code__.co_argcount]
+    return {**dict(zip(args_names, args)), **kwargs}
+
+
+def save_metadata(func):
+    """This decorator saves metadata in output_url"""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        metadata = get_config(_get_args_dict(func, args, kwargs))
+        result = func(*args, **kwargs)
+        if result is not None:
+            metadata = metadata | result
+            if "output_url" in metadata:
+                o = urlparse(str(metadata["output_url"]))
+                fs = fsspec.filesystem(
+                    o.scheme, **metadata.get("output_storage_options", {})
+                )
+                with fs.open(Path(o.netloc + o.path) / "metadata.yml", "w") as f:
+                    yaml.dump(metadata, f)
+        return result
+
+    return wrapper
+
+
+def timed(func):
+    """This decorator prints the execution time for the decorated function."""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        logger.debug("{} ran in {}s".format(func.__name__, round(end - start, 2)))
+        return result
+
+    return wrapper
 
 
 def to_sql_field(s):
@@ -52,16 +92,15 @@ def clean_nested_colname(s):
     return s[s.find(".") + 1 :]
 
 
-def generate_uuid(path, prefix):
+def generate_uuid(filesystem: fsspec.spec.AbstractFileSystem, path: str, prefix):
     """
     Returns hash of the file given path, preceded by the prefix.
     :param path: file path e.g. file:/path/to/file
     :param prefix: list e.g. ["SVGEOJSON","default-label"]
     :return: string uuid
     """
-    posix_file_path = path.split(":")[-1]
 
-    rec_hash = FileHash("sha256", chunk_size=65536).hash_file(posix_file_path)
+    rec_hash = str(filesystem.checksum(path))
     prefix.append(rec_hash)
     return "-".join(prefix)
 
@@ -235,169 +274,6 @@ def get_absolute_path(module_path, relative_path):
     return os.path.realpath(path)
 
 
-def validate_params(given_params: dict, params_list: List[tuple]):
-    """Ensure that a dictonary of params or keyword arguments is correct given a parameter list
-
-    Checks that neccessary parameters exist, and that their type can be casted corretly. There's special logic for list and dictonary types.
-    JSON arguments are parsed as dict types.
-
-    Args:
-        given_params (dict): keyword arguments to check types
-        params_list (List[tuple]): param list, where each element is the parameter (param, type)
-
-    Returns:
-        dict: Validated and casted keyword argument dictonary
-    """
-    logger.info("Validating params...")
-
-    d_params = {}
-    for param, dtype in params_list:
-        if given_params.get(param, None) is None:
-            d_params[param] = None
-            continue
-        try:
-            if "List" in str(dtype):
-                if type(given_params[param]) == list:
-                    d_params[param] = given_params[param]
-                else:
-                    d_params[param] = [
-                        dtype.__args__[0](s) for s in given_params[param].split(",")
-                    ]
-            elif dtype == dict:
-                if type(given_params[param]) == dict:
-                    d_params[param] = given_params[param]
-                else:
-                    d_params[param] = eval(str(given_params[param]))
-            elif type(dtype) == type:
-                d_params[param] = dtype(given_params[param])
-            else:
-                raise RuntimeError(f"Type {type(dtype)} invalid!")
-
-        except ValueError as exc:
-            raise RuntimeError(f"Param {param} could not be cast to {dtype} - {exc}")
-
-        except RuntimeError as e:
-            raise e
-
-        if param in MASK_KEYS:
-            logger.info(f" -> Set {param} ({dtype}) = *****")
-        else:
-            logger.info(f" -> Set {param} ({dtype}) = {d_params[param]}")
-
-    return d_params
-
-
-def resolve_paths(given_params: dict):
-    d_params = {}
-    for param, param_value in given_params.items():
-        if (
-            "input_" in param and "s3:/" in param_value
-        ):  # We want to treat input_ params a bit differently
-            raise NotImplementedError("S3 inputs are not currently supported yet!")
-
-        elif (
-            "input_" in param and "http:/" in param_value
-        ):  # We want to treat input_ params a bit differently
-            d_params[param] = param_value
-
-        elif (
-            "input_" in param and "https:/" in param_value
-        ):  # We want to treat input_ params a bit differently
-            d_params[param] = param_value
-
-        elif "input_" in param:  # We want to treat input_ params a bit differently
-            if "~" in param_value:
-                logger.warning("Resolving a user directory, be careful!")
-            resolved_input = (
-                Path(param_value.replace("file:", "")).expanduser().resolve().as_posix()
-            )
-            logger.info(f"Resolved input:\n -> {param_value}\n -> {resolved_input}")
-
-            d_params[param] = resolved_input
-
-        else:
-            d_params[param] = param_value
-    return d_params
-
-
-def expand_inputs(given_params: dict):
-    """
-    Implements the Input/Output Manager function.
-
-    For special input_* parameters, see if we should infer the input given an output/result directory
-
-    Args:
-        given_params (dict): keyword arguments to check types
-
-    Returns:
-        dict: Input- expanded keyword argument dictonary
-    """
-    d_params = {}
-    d_keys = {}
-
-    logger.info("Expanding inputs...")
-
-    for param, param_value in given_params.items():
-        if "input_" in param:  # We want to treat input_ params a bit differently
-
-            # For some inputs, they may be defined as a directory, where metadata about them is at the provided directory path
-            expected_metadata = os.path.join(param_value, "metadata.yml")
-            logger.info(f"Attempting to read metadata at {expected_metadata}")
-
-            if os.path.isdir(param_value) and os.path.exists(
-                expected_metadata
-            ):  # Check for this metadata file
-                # We supplied an inferred input from some previous output, so figure it out from the metadata of this output fold
-
-                with open(expected_metadata, "r") as yaml_file:
-                    metadata = yaml.safe_load(yaml_file)
-
-                # Output names/slots are same as input names/slots, just without input_ prefix
-                input_type = param.replace("input_", "")
-
-                # Alias flag
-                alias = input_type in TYPE_ALIASES.keys()
-
-                # Convert any known type aliases
-                input_type = TYPE_ALIASES.get(input_type, input_type)
-
-                # Query the metadata dictionary for that type
-                expanded_input = metadata.get(input_type, None)
-
-                # Tree output_directories should never be passed to functions which cannot accept them
-                if expanded_input is None:
-                    raise RuntimeError(
-                        f"No matching output slot of type [{param.replace('input_', '')}] at given input directory"
-                    )
-
-                logger.info(f"Expanded input:\n -> {param_value}\n -> {expanded_input}")
-                d_params[param] = expanded_input
-
-                # Only propagate keys from non-aliases
-                if not alias:
-                    # Query any keys:
-                    segment_keys = metadata.get("segment_keys", {})
-                    logger.info(f"Found segment keys: {segment_keys}")
-
-                    for key in segment_keys.keys():
-                        if (
-                            key in d_keys.keys()
-                            and not segment_keys[key] == d_keys[key]
-                        ):
-                            raise RuntimeError(
-                                f"Key mismatch for '{key}', found {segment_keys[key]} and {d_keys[key]}, cannot resolve!!"
-                            )
-
-                    d_keys.update(segment_keys)
-
-            else:
-                d_params[param] = param_value
-        else:
-            d_params[param] = param_value
-
-    return d_params, d_keys
-
-
 def get_dataset_url():
     """Retrieve a "dataset URL" from the environment, may look like http://localhost:6077 or file:///absolute/path/to/dataset/dir"""
     dataset_url = os.environ.get("DATASET_URL", None)
@@ -476,113 +352,43 @@ def post_to_dataset(input_feature_data, waystation_url, dataset_id, keys):
         logger.warning("Unrecognized scheme: {parsed_url.scheme}, skipping!")
 
 
-def cli_runner(
-    cli_kwargs: dict,
-    cli_params: List[tuple],
-    cli_function: Callable[..., dict],
-    pass_keys: bool = False,
-):
-    """For special input_* parameters, see if we should infer the input given an output/result directory.
+def get_config(cli_kwargs: dict):
+    """Get the config with merged OmegaConf files
 
     Args:
-        cli_kwargs (dict): keyword arguments from the CLI call
-        cli_params (List[tuple]): param list, where each element is the parameter (name, type) ::kvps?::
-        cli_function (Callable[..., dict]): cli_function entry point, should accept exactly the arguments given by cli_params
-        pass_keys (bool): will pass found segment keys from manifest file to transform function as 'keys' kwarg ::not_clear, what are segment keys?::
-
-    Returns:
-        None
-
+        cli_kwargs (dict): CLI keyword arguments
     """
-    logger.info(f"Started CLI Runner wtih {cli_function}")
-    logger.debug(f"cli_kwargs={cli_kwargs}")
-    logger.debug(f"cli_params={cli_params}")
-    logger.debug(f"pass_keys={pass_keys}")
+    configs = []  # type: List[Union[ListConfig, DictConfig]]
 
-    # transform method keywords
-    trm_kwargs = {}
-
-    # if "output_dir" not in cli_kwargs.keys():
-    #    raise RuntimeError("CLI Runners assume an output directory")
+    cli_conf = OmegaConf.create(cli_kwargs)
+    configs.append(cli_conf)
 
     # Get params from param file
-    if cli_kwargs.get("method_param_path"):
-        with open(cli_kwargs.get("method_param_path"), "r") as yaml_file:
-            yaml_kwargs = yaml.safe_load(yaml_file)
-        trm_kwargs.update(yaml_kwargs)  # Fill from json
+    if cli_conf.get("local_config"):
+        with open(cli_conf.local_config, "r", **cli_conf.storage_options) as f:
+            local_conf = OmegaConf.load(f)
+            configs.insert(0, local_conf)
 
-    for key in list(cli_kwargs.keys()):
-        if cli_kwargs[key] is None:
-            del cli_kwargs[key]
+    try:
+        merged_conf = OmegaConf.to_container(
+            OmegaConf.merge(*configs), resolve=True, throw_on_missing=True
+        )
+    except MissingMandatoryValue as e:
+        raise fire.core.FireError(e)
 
-    # Override with CLI arguments
-    trm_kwargs.update(cli_kwargs)
+    if merged_conf.get("output_url"):
+        o = urlparse(str(merged_conf.get("output_dir")))
+        merged_conf["output_filesystem"] = "file"
+        if o.scheme != "":
+            merged_conf["output_filesystem"] = o.scheme
+        merged_conf["output_storage_options"] = merged_conf.get("storage_options", {})
+        if (
+            merged_conf["output_filesystem"] == "file"
+            and merged_conf["output_storage_options"] == {}
+        ):
+            merged_conf["output_storage_options"] = {"auto_mkdir": True}
 
-    # param schema validation
-    trm_kwargs = validate_params(trm_kwargs, cli_params)
-
-    if "output_dir" in trm_kwargs:
-        output_dir = trm_kwargs["output_dir"]
-        os.makedirs(output_dir, exist_ok=True)
-
-    # Expand implied inputs
-    trm_kwargs, keys = expand_inputs(trm_kwargs)
-
-    # Nicely resolve sometimes messy input paths
-    trm_kwargs = resolve_paths(trm_kwargs)
-
-    logger.info(f"Full segment key set: {keys}")
-
-    # Nice little log break
-    logger.info(
-        "-" * 60 + f"\n Starting transform::{cli_function.__name__} \n" + "-" * 60
-    )
-
-    with CodeTimer(logger, name=f"transform::{cli_function.__name__}"):
-        if pass_keys:
-            cli_function = partial(cli_function, keys=keys)
-
-        result = cli_function(**trm_kwargs)
-
-    # Nice little log break
-    logger.info(
-        "-" * 60
-        + "\n Done with transform, running post-transform functions... \n"
-        + "-" * 60
-    )
-
-    trm_kwargs.update(result)
-
-    # filter out kwargs with sensitive data
-    for key in MASK_KEYS:
-        trm_kwargs.pop(key, None)
-
-    # propagate keys (ID/Key Manager)
-    if trm_kwargs.get("segment_keys", None):
-        trm_kwargs["segment_keys"].update(keys)
-    else:
-        trm_kwargs["segment_keys"] = keys
-
-    # Save metadata on disk
-    if "output_dir" in trm_kwargs:
-        with open(os.path.join(output_dir, "metadata.yml"), "w") as fp:
-            yaml.dump(trm_kwargs, fp)
-
-    # Save feature data in parquet if indicated: (Dataset Manager)
-    if "dataset_id" in cli_kwargs and "feature_data" in trm_kwargs:
-        dataset_id = cli_kwargs.get("dataset_id")
-        feature_data = trm_kwargs.get("feature_data")
-
-        logger.info(f"Adding feature segment {feature_data} to {dataset_id}")
-
-        dataset_url = get_dataset_url()
-
-        if dataset_url is not None:
-            post_to_dataset(
-                feature_data, dataset_url, dataset_id, keys=trm_kwargs["segment_keys"]
-            )
-
-    logger.info("Done.")
+    return merged_conf
 
 
 def apply_csv_filter(input_paths, subset_csv=None):

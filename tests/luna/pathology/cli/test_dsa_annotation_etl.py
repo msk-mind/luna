@@ -1,5 +1,6 @@
+import fire
 import numpy as np
-from click.testing import CliRunner
+from dask.distributed import Client
 from girder_client import GirderClient
 
 from luna.pathology.cli.dsa_annotation_etl import cli
@@ -7,7 +8,6 @@ from luna.pathology.cli.dsa_annotation_etl import cli
 
 def test_cli(tmp_path, monkeypatch):
     def mock_get(*args, **kwargs):
-
         if args[1] == "/system/check":
             return {}
 
@@ -28,14 +28,12 @@ def test_cli(tmp_path, monkeypatch):
         pass
 
     def mock_put(*args, **kwargs):
-
         if args == "/annotation?itemId=None":
             return {}
 
         pass
 
     def mock_auth(*args, **kwargs):
-
         if args[1] == "myuser" and args[2] == "mypassword":
             return 0  # success
         else:
@@ -62,23 +60,21 @@ def test_cli(tmp_path, monkeypatch):
     monkeypatch.setattr(GirderClient, "listCollection", mock_listCollection)
     monkeypatch.setattr(GirderClient, "listResource", mock_listResource)
 
-    runner = CliRunner()
-
-    result = runner.invoke(
+    Client()
+    fire.Fire(
         cli,
         [
+            "--dsa_endpoint",
             "http://localhost:8080/api/v1",
-            "-u",
+            "--username",
             "username",
-            "-p",
+            "--password",
             "password",
-            "-c",
+            "--collection_name",
             "test-collection",
-            "-a",
+            "--annotation_name",
             "test-annotation",
-            "-o",
-            tmp_path,
+            "--output_url",
+            str(tmp_path),
         ],
     )
-
-    assert result.exit_code == 0

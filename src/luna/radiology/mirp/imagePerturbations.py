@@ -134,7 +134,6 @@ def randomise_roi_contours(img_obj, roi_list, settings):
 
         # Iteratively create randomised regions of interest
         for ii in np.arange(settings.vol_adapt.roi_random_rep):
-
             # Draw random numbers between 0.0 and 1.0
             # Use numpy rng for deterministic behavior (updated)
             random_incl = np.random.default_rng(ii).random(size=len(overlap_fract))

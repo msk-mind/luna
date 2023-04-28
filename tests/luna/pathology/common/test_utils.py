@@ -36,19 +36,16 @@ def test_get_scale_factor_at_magnification_error():
 
 
 def test_get_tile_color():
-
     res = get_tile_color(0.1)
     assert 3 == len(res)
 
 
 def test_get_tile_color_str():
-
     res = get_tile_color("blue")
     assert 3 == len(res)
 
 
 def test_get_full_resolution_generator():
-
     generator, level = get_full_resolution_generator(slide, 128)
     assert isinstance(generator, DeepZoomGenerator)
     assert 12 == level
@@ -61,7 +58,6 @@ def test_get_downscaled_thumbnail():
 
 
 def test_get_labelset_keys():
-
     ConfigSet(
         name=const.DATA_CFG,
         config_file="tests/testdata/pathology/point_geojson_config.yaml",

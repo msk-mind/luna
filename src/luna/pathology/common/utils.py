@@ -1,52 +1,50 @@
 # This is just luna.pathology/common/utils.py
 
-import logging
 import re
 import xml.etree.ElementTree as et
-from typing import List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-import cv2
-import h5py
+import cv2  # type: ignore
+import h5py  # type: ignore
 import numpy as np
-import openslide
+import numpy.typing as npt
 import pandas as pd
-import radiomics
-import seaborn as sns
+import radiomics  # type: ignore
+import seaborn as sns  # type: ignore
 import SimpleITK as sitk
-from openslide.deepzoom import DeepZoomGenerator
+from loguru import logger
+from openslide.deepzoom import DeepZoomGenerator  # type: ignore
 from PIL import Image
-from skimage.draw import rectangle_perimeter
+from skimage.draw import rectangle_perimeter  # type: ignore
+from tiffslide import TiffSlide
 from tqdm import tqdm
 
-import luna.common.constants as const
-from luna.common.config import ConfigSet
+from luna.common.utils import timed
 
 palette = sns.color_palette("viridis", as_cmap=True)
 categorial = sns.color_palette("Set1", 8)
-categorical_colors = {}
-
-logger = logging.getLogger(__name__)
+categorical_colors = {}  # type: Dict[str, npt.ArrayLike]
 
 
-def get_labelset_keys():
-    """get labelset keys
-
-    Given DATA_CFG, return slideviewer labelsets
-
-    Args:
-        none
-
-    Returns:
-        list: a list of labelset names
-    """
-    cfg = ConfigSet()
-    label_config = cfg.get_value(path=const.DATA_CFG + "::LABEL_SETS")
-    labelsets = [cfg.get_value(path=const.DATA_CFG + "::USE_LABELSET")]
-
-    if cfg.get_value(path=const.DATA_CFG + "::USE_ALL_LABELSETS"):
-        labelsets = list(label_config.keys())
-
-    return labelsets
+# def get_labelset_keys():
+#    """get labelset keys
+#
+#    Given DATA_CFG, return slideviewer labelsets
+#
+#    Args:
+#        none
+#
+#    Returns:
+#        list: a list of labelset names
+#    """
+#    cfg = ConfigSet()
+#    label_config = cfg.get_value(path=const.DATA_CFG + "::LABEL_SETS")
+#    labelsets = [cfg.get_value(path=const.DATA_CFG + "::USE_LABELSET")]
+#
+#    if cfg.get_value(path=const.DATA_CFG + "::USE_ALL_LABELSETS"):
+#        labelsets = list(label_config.keys())
+#
+#    return labelsets
 
 
 def get_layer_names(xml_fn):
@@ -69,7 +67,9 @@ def get_layer_names(xml_fn):
     return names
 
 
-def convert_xml_to_mask(xml_fn: str, shape: list, annotation_name: str) -> np.ndarray:
+def convert_xml_to_mask(
+    xml_fn: str, shape: list, annotation_name: str
+) -> Optional[Tuple[np.ndarray, Dict[str, Any]]]:
     """convert xml to bitmask
 
     Converts a sparse halo XML annotation file (polygons) to a dense bitmask
@@ -80,12 +80,10 @@ def convert_xml_to_mask(xml_fn: str, shape: list, annotation_name: str) -> np.nd
         annotation_name (str): name of annotation
 
     Returns:
-        np.ndarray: annotation bitmask of specified shape
+        Optional[Tuple[np.ndarray, Dict[str, Any]]]: annotation bitmask of specified shape
     """
 
     ret = None
-    board_pos = None
-    board_neg = None
     # Annotations >>
     e = et.parse(xml_fn).getroot()
     e = e.findall("Annotation")
@@ -105,7 +103,6 @@ def convert_xml_to_mask(xml_fn: str, shape: list, annotation_name: str) -> np.nd
         rs = regions[0].findall("Region")
 
         for i, r in enumerate(rs):
-
             negative_flag = int(r.get("NegativeROA"))
             assert negative_flag == 0 or negative_flag == 1
             negative_flag = bool(negative_flag)
@@ -135,16 +132,18 @@ def convert_xml_to_mask(xml_fn: str, shape: list, annotation_name: str) -> np.nd
 
         ret = (board_pos > 0) * (board_neg == 0)
 
-    mask = ret.astype(np.uint8)
+    if ret:
+        mask = ret.astype(np.uint8)
 
-    properties = {
-        "n_regions": n_regions,
-        "n_positive_pixels": np.where(mask > 0, 1, 0).sum(),
-    }
-    return mask, properties
+        properties = {
+            "n_regions": n_regions,
+            "n_positive_pixels": np.where(mask > 0, 1, 0).sum(),
+        }
+        return mask, properties
+    return None
 
 
-def convert_halo_xml_to_roi(xml_fn: str) -> Tuple[List, List]:
+def convert_halo_xml_to_roi(xml_fn: str) -> Optional[Tuple[List, List]]:
     """get roi from halo XML file
 
     Read the rectangle ROI of a halo XML annotation file
@@ -163,7 +162,6 @@ def convert_halo_xml_to_roi(xml_fn: str) -> Tuple[List, List]:
     print("Converting to ROI:", xml_fn)
     e = et.parse(xml_fn).getroot()
     for ann in e.findall("Annotation"):
-
         regions = ann.findall("Regions")[0]
         if len(regions) == 0:
             continue
@@ -180,8 +178,8 @@ def convert_halo_xml_to_roi(xml_fn: str) -> Tuple[List, List]:
                 xlist.append(x)
 
     if xlist == [] or ylist == []:
-        logger.warning("No Rectangle found, returning None, None!")
-        return None, None
+        logger.warning("No Rectangle found, returning None!")
+        return None
 
     if min(xlist) < 0:
         logger.warning("Somehow a negative x rectangle coordinate!")
@@ -193,7 +191,7 @@ def convert_halo_xml_to_roi(xml_fn: str) -> Tuple[List, List]:
     return xlist, ylist
 
 
-def get_stain_vectors_macenko(sample: np.ndarray):
+def get_stain_vectors_macenko(sample: np.ndarray) -> np.ndarray:
     """get_stain_vectors
 
     Uses the staintools MacenkoStainExtractor to extract stain vectors
@@ -205,7 +203,7 @@ def get_stain_vectors_macenko(sample: np.ndarray):
 
     """
     from staintools.stain_extraction.macenko_stain_extractor import (
-        MacenkoStainExtractor,
+        MacenkoStainExtractor,  # type: ignore
     )
 
     extractor = MacenkoStainExtractor()
@@ -214,7 +212,7 @@ def get_stain_vectors_macenko(sample: np.ndarray):
 
 
 def pull_stain_channel(
-    patch: np.ndarray, vectors: np.ndarray, channel: int = None
+    patch: np.ndarray, vectors: np.ndarray, channel: Optional[int] = None
 ) -> np.ndarray:
     """pull stain channel
 
@@ -229,7 +227,9 @@ def pull_stain_channel(
         np.ndarray: the input image patch with an added stain channel
     """
 
-    from staintools.miscellaneous.get_concentrations import get_concentrations
+    from staintools.miscellaneous.get_concentrations import (
+        get_concentrations,  # type: ignore
+    )
 
     tile_concentrations = get_concentrations(patch, vectors)
     identity = np.array([[1, 0, 0], [0, 1, 0]])
@@ -243,7 +243,7 @@ def pull_stain_channel(
 
 def extract_patch_texture_features(
     image_patch, mask_patch, stain_vectors, stain_channel, plot=False
-) -> np.ndarray:
+) -> Optional[Dict[str, np.ndarray]]:
     """extact patch texture features
 
     Runs patch-wise extraction from an image_patch, mask_patch pair given a stain
@@ -257,15 +257,15 @@ def extract_patch_texture_features(
         plot (Optional, bool): unused?
 
     Returns:
-        np.ndarray: texture features from image patch
+        Optional[Dict[str, np.ndarray]]: texture features from image patch
 
     """
 
-    logging.getLogger("radiomics.featureextractor").setLevel(logging.WARNING)
+    # logging.getLogger("radiomics.featureextractor").setLevel(logging.WARNING)
     if not (len(np.unique(mask_patch)) > 1 and np.count_nonzero(mask_patch) > 1):
         return None
 
-    output_dict = {}
+    output_dict = {}  # type: Dict[str, Any]
 
     stain_patch = pull_stain_channel(image_patch, stain_vectors, channel=stain_channel)
 
@@ -307,12 +307,35 @@ def extract_patch_texture_features(
         return output_dict
 
 
-def get_tile_from_slide(tile_row, slide, size=None):
-    x, y, extent = int(tile_row.x_coord), int(tile_row.y_coord), int(tile_row.xy_extent)
+def get_array_from_tile(tile, slide, size=None):
+    x, y, extent = tile.x_coord, tile.y_coord, tile.xy_extent
     if size is None:
-        size = (tile_row.tile_size, tile_row.tile_size)
-    tile = np.array(
+        size = (tile.size, tile.size)
+    arr = np.array(
         slide.read_region((x, y), 0, (extent, extent)).resize(size, Image.NEAREST)
+    )[:, :, :3]
+    return arr
+
+
+def get_tile_from_slide(
+    address: Tuple[int, int],
+    full_resolution_tile_size: int,
+    tile_size: int,
+    slide: TiffSlide,
+    resize_size: Optional[int] = None,
+):
+    x, y = (
+        address[0] * full_resolution_tile_size,
+        address[1] * full_resolution_tile_size,
+    )
+    if resize_size is None:
+        resize_size = (tile_size, tile_size)
+    else:
+        resize_size = (resize_size, resize_size)
+    tile = np.array(
+        slide.read_region(
+            (x, y), 0, (full_resolution_tile_size, full_resolution_tile_size)
+        ).resize(resize_size, Image.NEAREST)
     )[:, :, :3]
     return tile
 
@@ -322,7 +345,7 @@ def get_tile_arrays(
     input_slide_image: str,
     full_resolution_tile_size: int,
     tile_size: int,
-) -> np.ndarray:
+) -> List[Tuple[int, np.ndarray]]:
     """
     Get tile arrays for the tile indices
 
@@ -335,7 +358,7 @@ def get_tile_arrays(
     Returns:
         a list of tuples (index, tile array) for given indices
     """
-    slide = openslide.OpenSlide(str(input_slide_image))
+    slide = TiffSlide(str(input_slide_image))
     full_generator, full_level = get_full_resolution_generator(
         slide, tile_size=full_resolution_tile_size
     )
@@ -343,9 +366,9 @@ def get_tile_arrays(
         (
             index,
             np.array(
-                full_generator.get_tile(full_level, address_to_coord(index)).resize(
-                    (tile_size, tile_size)
-                )
+                full_generator.get_tile(
+                    full_level, address_to_coord(str(index))
+                ).resize((tile_size, tile_size))
             ),
         )
         for index in indices
@@ -365,7 +388,7 @@ def get_tile_array(row: pd.DataFrame) -> np.ndarray:
 
 
 # USED -> utils
-def coord_to_address(s: Tuple[int, int], magnification: int) -> str:
+def coord_to_address(s: Tuple[int, int], magnification: Optional[int]) -> str:
     """converts coordinate to address
 
     Args:
@@ -378,11 +401,14 @@ def coord_to_address(s: Tuple[int, int], magnification: int) -> str:
 
     x = s[0]
     y = s[1]
-    return f"x{x}_y{y}_z{magnification}"
+    address = f"x{x}_y{y}"
+    if magnification:
+        address += f"_z{magnification}"
+    return address
 
 
 # USED -> utils
-def address_to_coord(s: str) -> Tuple[int, int]:
+def address_to_coord(s: str) -> Optional[Tuple[int, int]]:
     """converts address into coordinates
 
     Args:
@@ -392,22 +418,25 @@ def address_to_coord(s: str) -> Tuple[int, int]:
         Tuple[int, int]: a tuple consisting of an x, y pair
     """
     s = str(s)
-    p = re.compile(r"x(\d+)_y(\d+)_z(\d+)", re.IGNORECASE)
+    p = re.compile(r"x(\d+)_y(\d+)", re.IGNORECASE)
     m = p.match(s)
-    x = int(m.group(1))
-    y = int(m.group(2))
-    return (x, y)
+    if m:
+        x = int(m.group(1))
+        y = int(m.group(2))
+        return (x, y)
+    return None
 
 
+@timed
 def get_downscaled_thumbnail(
-    slide: openslide.OpenSlide, scale_factor: int
+    slide: TiffSlide, scale_factor: Union[int, float]
 ) -> np.ndarray:
     """get downscaled thumbnail
 
     yields a thumbnail image of a whole slide rescaled by a specified scale factor
 
     Args:
-        slide (openslide.OpenSlide): slide object
+        slide (TiffSlide): slide object
         scale_factor (int): integer scaling factor to resize the whole slide by
 
     Returns:
@@ -415,25 +444,23 @@ def get_downscaled_thumbnail(
     """
     new_width = slide.dimensions[0] // scale_factor
     new_height = slide.dimensions[1] // scale_factor
-    img = slide.get_thumbnail((new_width, new_height))
+    img = slide.get_thumbnail((int(new_width), int(new_height)))
     return np.array(img)
 
 
 def get_full_resolution_generator(
-    slide: openslide.OpenSlide, tile_size: int
+    slide: TiffSlide, tile_size: int
 ) -> Tuple[DeepZoomGenerator, int]:
     """Return DeepZoomGenerator and generator level
 
     Args:
-        slide (openslide.OpenSlide): slide object
+        slide (TiffSlide): slide object
         tile_size (int): width and height of a single tile for the DeepZoomGenerator
 
     Returns:
         Tuple[DeepZoomGenerator, int]
     """
-    assert isinstance(slide, openslide.OpenSlide) or isinstance(
-        slide, openslide.ImageSlide
-    )
+    assert isinstance(slide, TiffSlide) or isinstance(slide, TiffSlide)
     generator = DeepZoomGenerator(
         slide, overlap=0, tile_size=tile_size, limit_bounds=False
     )
@@ -443,17 +470,17 @@ def get_full_resolution_generator(
 
 
 # USED -> utils
-def get_scale_factor_at_magnfication(
-    slide: openslide.OpenSlide, requested_magnification: int
-) -> int:
+def get_scale_factor_at_magnification(
+    slide: TiffSlide, requested_magnification: Optional[int]
+) -> float:
     """get scale factor at magnification
 
     Return a scale factor if slide scanned magnification and
     requested magnification are different.
 
     Args:
-        slide (openslide.OpenSlide): slide object
-        requested_magnification (int): requested magnification
+        slide (TiffSlide): slide object
+        requested_magnification (Optional[int]): requested magnification
 
     Returns:
         int: scale factor required to achieve requested magnification
@@ -463,7 +490,7 @@ def get_scale_factor_at_magnfication(
     mag_value = float(slide.properties["aperio.AppMag"])
 
     # Then convert to integer
-    scanned_magnfication = int(mag_value)
+    scanned_magnification = int(mag_value)
 
     # # Make sure we don't have non-integer magnifications
     if not int(mag_value) == mag_value:
@@ -472,17 +499,17 @@ def get_scale_factor_at_magnfication(
         )
 
     # Verify magnification valid
-    scale_factor = 1
-    if scanned_magnfication != requested_magnification:
-        if scanned_magnfication < requested_magnification:
+    scale_factor = 1.0
+    if requested_magnification and scanned_magnification != requested_magnification:
+        if scanned_magnification < requested_magnification:
             raise ValueError(
-                f"Expected magnification <={scanned_magnfication} but got {requested_magnification}"
+                f"Expected magnification <={scanned_magnification} but got {requested_magnification}"
             )
-        elif (scanned_magnfication % requested_magnification) == 0:
-            scale_factor = scanned_magnfication // requested_magnification
+        elif (scanned_magnification % requested_magnification) == 0:
+            scale_factor = scanned_magnification // requested_magnification
         else:
             logger.warning("Scale factor is not an integer, be careful!")
-            scale_factor = scanned_magnfication / requested_magnification
+            scale_factor = scanned_magnification / requested_magnification
 
     return scale_factor
 
@@ -517,7 +544,6 @@ def visualize_tiling_scores(
         ) / np.ptp(df[score_type_to_visualize])
 
     for _, row in tqdm(df.iterrows(), total=len(df)):
-
         if "regional_label" in row and pd.isna(row.regional_label):
             continue
 
@@ -540,7 +566,7 @@ def visualize_tiling_scores(
     return thumbnail_img
 
 
-def get_tile_color(score: Union[str, float]) -> Union[float, None]:
+def get_tile_color(score: Union[str, float]) -> Optional[npt.ArrayLike]:
     """get tile color
 
     uses deafult color palette to return color of tile based on score
@@ -564,7 +590,7 @@ def get_tile_color(score: Union[str, float]) -> Union[float, None]:
 
     # float, expected to be value from [0,1]
     elif isinstance(score, float) and score <= 1.0 and score >= 0.0:
-        tile_color = [int(255 * i) for i in palette(score)[:3]]
+        tile_color = np.array([int(255 * i) for i in palette(score)[:3]])
         return tile_color
 
     else:

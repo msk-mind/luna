@@ -1,102 +1,40 @@
 # General imports
-import logging
-import os
-from datetime import datetime
+import uuid
 from pathlib import Path
 
-import click
-import numpy as np
-import openslide
+import fire
+import fsspec
 import pandas as pd
-import pyarrow.parquet as pq
-from dask.distributed import Client, as_completed
-from pyarrow import Table
-from tqdm import tqdm
+from dask.distributed import Client, get_client, progress
+from fsspec import open  # type: ignore
+from loguru import logger
+from multimethod import multimethod
+from pandera.typing import DataFrame
+from tiffslide import TiffSlide
 
-from luna.common.adapters import IOAdapter
-from luna.common.custom_logger import init_logger
-from luna.common.utils import (
-    apply_csv_filter,
-    cli_runner,
-    generate_uuid,
-    rebase_schema_numeric,
-)
+from luna.common.models import Slide, SlideSchema
+from luna.common.utils import apply_csv_filter, get_config, timed
 from luna.pathology.common.utils import (
     get_downscaled_thumbnail,
-    get_scale_factor_at_magnfication,
+    get_scale_factor_at_magnification,
     get_stain_vectors_macenko,
 )
-
-init_logger()
-logger = logging.getLogger("slide_etl")
-
-
-_params_ = [
-    ("input_slide_folder", str),
-    ("comment", str),
-    ("no_write", bool),
-    ("subset_csv", str),
-    ("debug_limit", int),
-    ("num_cores", int),
-    ("store_url", str),
-    ("project_name", str),
-    ("output_dir", str),
-]
 
 VALID_SLIDE_EXTENSIONS = [".svs", ".scn", ".tif"]
 
 
-@click.command()
-@click.argument("input_slide_folder", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-s",
-    "--store_url",
-    required=False,
-    help="Where to store all slides in URL format (use file:///path/folder for local, s3://www.host:9000/ for s3)",
-)
-@click.option(
-    "-p",
-    "--project_name",
-    required=False,
-    help="project name to which slides are assigned or associated",
-)
-@click.option(
-    "-c",
-    "--comment",
-    required=False,
-    help="description/comments on the dataset (wrap in quotes)",
-)
-@click.option(
-    "-sc",
-    "--subset-csv",
-    required=False,
-    default="",
-    help="path to a csv file with [string, include] schema to subset ingest data",
-)
-@click.option(
-    "-dl",
-    "--debug-limit",
-    required=False,
-    default=-1,
-    help="limit number of slides process, for debugging, no_write is automatically enabled",
-)
-@click.option(
-    "-nc", "--num_cores", required=False, help="Number of cores to use", default=4
-)
-@click.option("--no-write", is_flag=True, help="Disables write adapters")
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
+@timed
+def cli(
+    slide_dir: str = "???",
+    project_name: str = "",
+    comment: str = "",
+    subset_csv: str = "",
+    debug_limit: int = 0,
+    output_url: str = "",
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+    local_config: str = "",
+):
     """Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
 
     Output schema follows [ slide_id (str), slide_uuid (str), readable (bool), comment, project, ingest_time (UTC), generation_date (UTC), <store data | data_url >, <openslide data>, <stain data> ]
@@ -118,175 +56,185 @@ def cli(**cli_kwargs):
             --num_cores 8
             -o /data/PATH-123-45/table
     """
-    cli_runner(cli_kwargs, _params_, slide_etl)
+    config = get_config(vars())
+    filesystem, urlpath = fsspec.core.url_to_fs(
+        config["slide_dir"], **config["storage_options"]
+    )
+    slide_urlpaths = []  # type: list[str]
+    for ext in VALID_SLIDE_EXTENSIONS:
+        slide_urlpaths += filesystem.glob(f"{urlpath}/*{ext}")
+    if config["subset_csv"]:
+        slide_urlpaths = apply_csv_filter(slide_urlpaths, config["subset_csv"])
+    if config["debug_limit"] > 0:
+        slide_urlpaths = slide_urlpaths[: config["debug_limit"]]
+
+    if len(slide_urlpaths) == 0:
+        return None
+
+    slide_urls = [
+        filesystem.unstrip_protocol(slide_urlpath) for slide_urlpath in slide_urlpaths
+    ]
+
+    df = slide_etl(
+        slide_urls,
+        config["project_name"],
+        config["comment"],
+        config["storage_options"],
+        config["output_url"],
+        config["output_storage_options"],
+    )
+
+    # rebase_schema_numeric(df)
+
+    logger.info(df)
+
+    if config["output_url"]:
+        output_filesystem, output_urlpath_prefix = fsspec.core.url_to_fs(
+            config["output_url"], **config["output_storage_options"]
+        )
+        with output_filesystem.open(
+            Path(output_urlpath_prefix)
+            / f"slide_ingest_{config['project_name']}.parquet"
+        ) as of:
+            df.to_parquet(of)
+
+    return df
 
 
+@multimethod
 def slide_etl(
-    input_slide_folder,
-    project_name,
-    subset_csv,
-    num_cores,
-    no_write,
-    debug_limit,
-    store_url,
-    comment,
-    output_dir,
-):
-    """Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
+    slide_urls: list[str],
+    project_name: str,
+    comment: str = "",
+    storage_options: dict = {},
+    output_url_prefix: str = "",
+    output_storage_options: dict = {},
+) -> DataFrame:
+    client = get_client()
+    sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
 
-    Saves parquet table
+    futures = [
+        client.submit(
+            sb.get_slide,
+            url,
+            output_url_prefix,
+            project_name=project_name,
+            comment=comment,
+        )
+        for url in slide_urls
+    ]
+    progress(futures)
+    return DataFrame[SlideSchema](
+        pd.json_normalize([x.__dict__ for x in client.gather(futures)])
+    )
+
+
+@multimethod
+def slide_etl(
+    slide_url: str,
+    project_name: str,
+    comment: str = "",
+    storage_options: dict = {},
+    output_url_prefix: str = "",
+    output_storage_options: dict = {},
+) -> Slide:
+    """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
+
 
     Args:
-        input_slide_folder (str): path to parent directory containing slide images
+        slide_urlpath (str): path to slide image
         project_name (str): project name underwhich the slides should reside
-        subset_csv (str): csv with filename and include/exclude criteria
-            indicated by 1 or 0.
         comment (str): comment and description of dataset
-        num_cores (int): number of cores (interfaced to dask)
         debug_limit (int): cap number fo slides to process below this number (for debugging, testing, no_write is automatically enabled)
-        no_write (bool): don't actually generate or copy any data on disk, print outputs
         output_dir (str): path to output table
 
 
     Returns:
-        dict: metadata about function call
+        slide (Slide): slide object
     """
-    slide_paths = []
 
-    for path, _, files in os.walk(input_slide_folder):
-        for file in files:
-            file = os.path.join(path, file)
+    sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
 
-            if not Path(file).suffix in VALID_SLIDE_EXTENSIONS:
-                continue
+    slide = sb.get_slide(
+        slide_url, output_url_prefix, project_name=project_name, comment=comment
+    )
+    return slide
 
-            slide_paths.append(file)
 
-    slide_paths = apply_csv_filter(slide_paths, subset_csv)
+class SlideBuilder:
+    def __init__(self, storage_options: dict = {}, output_storage_options: dict = {}):
+        self.storage_options = storage_options
+        self.output_storage_options = output_storage_options
 
-    if debug_limit > 0:
-        slide_paths = slide_paths[:debug_limit]
+    def __generate_properties(self, slide, url):
+        with open(url, **self.storage_options) as f:
+            slide.properties = TiffSlide(f).properties
+        return slide
 
-    if no_write:
-        logger.info("Note, this is a dry run!!!")
-
-    logger.info(f"Going to ingest {len(slide_paths)} slides!")
-
-    write_adapter = IOAdapter(no_write=no_write).writer(store_url, bucket="pathology")
-
-    sp = SlideProcessor(writer=write_adapter, project=project_name)
-
-    with Client(
-        host=os.environ["HOSTNAME"],
-        n_workers=((num_cores + 1) // 2),
-        threads_per_worker=2,
-    ) as client:
-        logger.info("Dashboard: " + client.dashboard_link)
-        df = pd.DataFrame(
-            [
-                x.result()
-                for x in tqdm(
-                    as_completed(client.map(sp.run, slide_paths)),
-                    smoothing=0.01,
-                    total=len(slide_paths),
+    def __estimate_stain_type(self, slide, url):
+        try:
+            with open(url, **self.storage_options) as f:
+                s = TiffSlide(f)
+                to_mag_scale_factor = get_scale_factor_at_magnification(
+                    s, requested_magnification=1
                 )
-            ]
-        ).set_index("slide_id")
-
-    df = df[df.index.notnull()]
-
-    rebase_schema_numeric(df)
-
-    df.loc[:, "project_name"] = project_name
-    df.loc[:, "comment"] = comment
-    df.loc[:, "generation_time"] = datetime.today()
-
-    logger.info(df)
-
-    output_table = os.path.join(output_dir, f"slide_ingest_{project_name}.parquet")
-
-    pq.write_table(
-        Table.from_pandas(df.drop(columns=["ingest_time", "generation_time"])),
-        output_table,
-    )  # Time columns causing issues in dremio
-
-    logger.info(f"Saved table at {output_table}")
-
-    properties = {"slide_table": output_table}
-
-    return properties
-
-
-class SlideProcessor:
-    def __init__(self, writer, project):
-        self.writer = writer
-        self.project = project
-
-    def check_slide(self, path) -> dict:
-        try:
-            openslide.OpenSlide(path)
-            return {"slide_id": str(Path(path).stem), "valid_slide": True}
-        except Exception:
-            logger.warning(f"Couldn't open slide: {path}")
-            return {"slide_id": np.nan, "valid_slide": False}
-
-    def generate_properties(self, path) -> dict:
-        try:
-            slide = openslide.OpenSlide(path)
-            kv = dict(slide.properties)
-            kv["slide_uuid"] = generate_uuid(path, ["WSI"])
-            return kv
+                sample_arr = get_downscaled_thumbnail(s, to_mag_scale_factor)
+                stain_vectors = get_stain_vectors_macenko(sample_arr)
+                slide.channel0_R = stain_vectors[0, 0]
+                slide.channel0_G = stain_vectors[0, 1]
+                slide.channel0_B = stain_vectors[0, 2]
+                slide.channel1_R = stain_vectors[1, 0]
+                slide.channel1_G = stain_vectors[1, 1]
+                slide.channel1_B = stain_vectors[1, 2]
         except Exception as err:
-            logger.warning(f"Couldn't process slide: {path} - {err}")
+            logger.warning(f"Couldn't get stain vectors: {url} - {err}")
             return {}
 
-    def estimate_stain_type(self, path) -> dict:
-        try:
-            slide = openslide.OpenSlide(path)
-            to_mag_scale_factor = get_scale_factor_at_magnfication(
-                slide, requested_magnification=1
-            )
-            sample_arr = get_downscaled_thumbnail(slide, to_mag_scale_factor)
-            stain_vectors = get_stain_vectors_macenko(sample_arr)
-            return {
-                "channel0_R": stain_vectors[0, 0],
-                "channel0_G": stain_vectors[0, 1],
-                "channel0_B": stain_vectors[0, 2],
-                "channel1_R": stain_vectors[1, 0],
-                "channel1_G": stain_vectors[1, 1],
-                "channel1_B": stain_vectors[1, 2],
-            }
-        except Exception as err:
-            logger.warning(f"Couldn't get stain vectors: {path} - {err}")
-            return {}
-
-    def run(self, path):
+    def get_slide(
+        self, url, output_url_prefix, project_name="", comment="", chunksize=50000000
+    ) -> Slide:
         """Extract openslide properties and write slide to storage location
 
         Args:
             path (string): path to slide image
 
         Returns:
-            dict: slide metadata
+            slide (Slide): slide object
         """
 
-        kv = {}
+        fs, urlpath = fsspec.core.url_to_fs(url, **self.storage_options)
 
-        kv.update(self.check_slide(path))
+        id = Path(urlpath).stem
+        size = fs.du(urlpath)
+        slide = Slide(
+            id=id,
+            project_name=project_name,
+            comment=comment,
+            size=size,
+            url=url,
+            uuid=uuid.uuid3(uuid.NAMESPACE_URL, url),
+        )
 
-        if not kv["valid_slide"]:
-            return kv
+        self.__estimate_stain_type(slide, url)
+        self.__generate_properties(slide, url)
 
-        kv.update(self.generate_properties(path))
-        kv.update(self.estimate_stain_type(path))
-        kv.update(self.writer.write(path, f"{self.project}/slides"))
-        kv["slide_image"] = kv["data_url"]
+        if output_url_prefix:
+            output_url = output_url_prefix + id
+            with fs.open(urlpath) as f1:
+                with open(output_url, **self.output_storage_options) as f2:
+                    while True:
+                        data = f1.read(chunksize)
+                        if not data:
+                            break
+                        f2.write(data)
+            slide.url = output_url
 
-        return kv
+        return slide
 
     # Eventually it might be nice to automatically detect the stain type (at least H&E vs. DAB vs. Other)
     # def estimate_stain(self, slide):
 
 
 if __name__ == "__main__":
-    cli()
+    client = Client()
+    fire.Fire(cli)

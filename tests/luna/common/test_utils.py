@@ -62,7 +62,6 @@ def test_validate_params__casting():
 
 def test_validate_params__wrong_value():
     with pytest.raises(RuntimeError):
-
         params_list = [("input", str), ("threshold", float)]
 
         given_params = {
@@ -110,7 +109,6 @@ def test_expand_inputs_explicit():
 
 
 def test_expand_inputs_implicit():
-
     given_params = {
         "input_text_file": "tests/testdata/common/simple_output_directory/",
         "threshold": "Five",

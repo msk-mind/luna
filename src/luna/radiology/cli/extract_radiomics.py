@@ -143,7 +143,6 @@ def extract_radiomics_multiple_labels(
     df_result = pd.DataFrame()
 
     for lesion_index in available_labels.intersection(lesion_indicies):
-
         extractor = featureextractor.RadiomicsFeatureExtractor(
             label=lesion_index, **pyradiomics_config
         )
@@ -152,7 +151,6 @@ def extract_radiomics_multiple_labels(
             extractor.enableAllImageTypes()
 
         for label_path in label_path_list:
-
             result = extractor.execute(input_itk_volume, label_path)
 
             result["lesion_index"] = lesion_index

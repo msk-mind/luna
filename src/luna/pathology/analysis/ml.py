@@ -341,7 +341,6 @@ class TorchTileClassifierTrainer(object):
 
         self.network.train()
         for epoch_iter, (inputs, labels) in enumerate(dataloader):
-
             # compute forward pass
             preds = self.network(inputs)
 
@@ -384,7 +383,6 @@ class TorchTileClassifierTrainer(object):
 
         with torch.no_grad():
             for epoch_iter, (inputs, labels) in enumerate(dataloader):
-
                 # forward pass
                 preds = self.network(inputs)
 
@@ -434,7 +432,6 @@ def get_group_stratified_sampler(
     for fold_idx, (train_indices, val_indices) in enumerate(
         cv.split(df_nh, classes, groups)
     ):
-
         # check integrity. asserts that same group (ie patients) aren't in both
         # train and validation splits
         train_groups, val_groups = groups[train_indices], groups[val_indices]

@@ -1,4 +1,5 @@
 from random import randint
+from typing import Tuple
 
 import numpy as np
 import seaborn as sns
@@ -26,7 +27,9 @@ def get_color(name, line_colors={}, fill_colors={}, alpha=100):
     return line_colors[name], fill_colors[name]
 
 
-def get_continuous_color(value, outline_color="same_as_fill", alpha=100):
+def get_continuous_color(
+    value, outline_color="same_as_fill", alpha=100
+) -> Tuple[str, str]:
     """Get RGBA line and fill colors for value.
 
     Use color palette `viridis` to set a fill value - the color ranges from purple to yellow,
@@ -73,6 +76,8 @@ def vectorize_np_array_bitmask_by_pixel_value(
     Returns:
         list: simplified approximated contours
     """
+    if not scale_factor:
+        scale_factor = 1
     mask = np.where(bitmask_np == label_num, 1, 0).astype(np.int8)
     contours = measure.find_contours(mask, level=contour_level)
     simplified_contours = [
