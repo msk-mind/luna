@@ -2,52 +2,36 @@
 import logging
 from pathlib import Path
 
-import click
+import fire
+import fsspec
 import numpy as np
 import openslide
 import pandas as pd
 import tifffile
+import tiffslide
+from fsspec import open
 from PIL import Image
 from skimage.measure import block_reduce
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
+from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import convert_xml_to_mask, get_layer_names
 
 init_logger()
 logger = logging.getLogger("generate_mask")
 
 
-_params_ = [
-    ("input_slide_image", str),
-    ("input_slide_roi", str),
-    ("output_dir", str),
-    ("annotation_name", str),
-]
-
-
-@click.command()
-@click.argument("input_slide_image", nargs=1)
-@click.argument("input_slide_roi", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-an",
-    "--annotation_name",
-    required=False,
-    help="annotation layer name to use (e.g. Tumor, Tissue)",
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
+@timed
+@save_metadata
+def cli(
+    slide_urlpath: str = "???",
+    roi_urlpath: str = "???",
+    output_urlpath: str = "???",
+    annotation_name: str = "???",
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+    local_config: str = "",
+):
     """Generate a full resolution mask image (.tif) from vector annotations (polygons, shapes)
 
     \b
@@ -63,28 +47,67 @@ def cli(**cli_kwargs):
             -an Tumor
             -o ./masks/10001/
     """
-    cli_runner(cli_kwargs, _params_, generate_mask)
+    config = get_config(vars())
+    df = generate_mask(
+        config["slide_urlpath"],
+        config["roi_urlpath"],
+        config["output_urlpath"],
+        config["annotation_name"],
+        config["storage_options"],
+        config["output_storage_options"],
+    )
+
+    fs, output_urlpath_prefix = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+    output_filename = Path(output_urlpath_prefix) / "mask_data.parquet"
+    with fs.open(output_filename, "wb") as of:
+        df.to_parquet(of)
+
+    slide_id = Path(config["roi_urlpath"]).stem
+    properties = {
+        "slide_mask": Path(output_urlpath_prefix) / "mask_full_res.tif",
+        "feature_data": output_filename,
+        "mask_size": df["mask_size"].tolist(),
+        "segment_keys": {"slide_id": slide_id},
+    }
+
+    return properties
 
 
-def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_name):
+def generate_mask(
+    slide_urlpath: str,
+    roi_urlpath: str,
+    output_urlpath: str,
+    annotation_name: str,
+    storage_options: dict,
+    output_storage_options: dict,
+):
     """Generate a full resolution mask image (.tif) from vector annotations (polygons, shapes)
 
     Take into account positive and negative spaces.  Essentially rasterizes a polygon file.
 
     Args:
-        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        input_slide_roi (str): path to a halo or other polygonal annotation file (.xml, .geojson)
-        output_dir (str): output/working directory
+        slide_urlpath (str): slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...) absolute or relative path. prefix with scheme to use alternative file systems.
+        roi_urlpath (str):  halo or other polygonal annotation file (.xml, .geojson) absolute or relative path. prefix with scheme to use alternative file systems.
+        output_urlpath (str): output/working absolute or relative path. prefix with scheme to use alternative file systems.
         annotation_name (str): name of annotation layer to use
+        storage_options (dict): storage options that make sense for the file storage used
 
     Returns:
-        dict: metadata about function call
+        DataFrame: mask properties
     """
     mask_properties = {}
 
-    slide = openslide.OpenSlide(input_slide_image)
-    slide.get_thumbnail((1000, 1000)).save(f"{output_dir}/slide_thumbnail.png")
-    slide_id = Path(input_slide_image).stem
+    with open(slide_urlpath, **storage_options) as of:
+        slide = tiffslide.TiffSlide(of)
+        thumbnail = slide.get_thumbnail((1000, 1000))
+
+    fs, output_urlpath_prefix = fsspec.core.url_to_fs(
+        output_urlpath, **output_storage_options
+    )
+    with fs.open(Path(output_urlpath_prefix) / "slide_thumbnail.png", "wb") as of:
+        thumbnail.save(of)
 
     wsi_shape = (
         slide.dimensions[1],
@@ -92,40 +115,34 @@ def generate_mask(input_slide_image, input_slide_roi, output_dir, annotation_nam
     )  # Annotation file has flipped dimensions w.r.t openslide conventions
     logger.info(f"Slide shape={wsi_shape}")
 
-    layer_names = get_layer_names(input_slide_roi)
+    layer_names = get_layer_names(roi_urlpath, storage_options)
     logger.info(f"Available layer names={layer_names}")
 
     mask_properties["layer_names"] = list(layer_names)
     mask_properties["mask_size"] = list(wsi_shape)
 
     mask_arr, xml_region_properties = convert_xml_to_mask(
-        input_slide_roi, wsi_shape, annotation_name
+        roi_urlpath, wsi_shape, annotation_name, storage_options=storage_options
     )
 
     mask_properties.update(xml_region_properties)
 
     logger.info(f"Generating mask thumbnail, mask size={mask_arr.shape}")
-    openslide.ImageSlide(
+    mask_thumbnail = openslide.ImageSlide(
         Image.fromarray(
             255 * block_reduce(mask_arr, block_size=(10, 10), func=np.mean, cval=0.0)
         )
-    ).get_thumbnail((1000, 1000)).save(f"{output_dir}/mask_thumbnail.png")
+    ).get_thumbnail((1000, 1000))
 
-    slide_mask = f"{output_dir}/mask_full_res.tif"
-    tifffile.imwrite(slide_mask, mask_arr)
+    with fs.open(Path(output_urlpath_prefix) / "mask_thumbnail.png", "wb") as of:
+        mask_thumbnail.save(of)
 
-    output_filename = f"{output_dir}/mask_data.parquet"
-    pd.DataFrame([mask_properties]).to_parquet(output_filename)
+    slide_mask_file = Path(output_urlpath_prefix) / "mask_full_res.tif"
+    with fs.open(slide_mask_file, "wb") as of:
+        tifffile.imwrite(of, mask_arr)
 
-    properties = {
-        "slide_mask": slide_mask,
-        "feature_data": output_filename,
-        "mask_size": list(wsi_shape),
-        "segment_keys": {"slide_id": slide_id},
-    }
-
-    return properties
+    return pd.DataFrame(mask_properties)
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(cli)

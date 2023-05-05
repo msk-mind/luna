@@ -5,10 +5,12 @@ import subprocess
 import time
 import urllib
 import warnings
+from contextlib import ExitStack
 from functools import wraps
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
+from typing import Callable
 from urllib.parse import urlparse
 
 import fire
@@ -32,7 +34,7 @@ def _get_args_dict(fn, args, kwargs):
     return {**dict(zip(args_names, args)), **kwargs}
 
 
-def save_metadata(func):
+def save_metadata(func, output_urlpath_key="output_urlpath"):
     """This decorator saves metadata in output_url"""
 
     @wraps(func)
@@ -41,14 +43,45 @@ def save_metadata(func):
         result = func(*args, **kwargs)
         if result is not None:
             metadata = metadata | result
-            if "output_url" in metadata:
-                o = urlparse(str(metadata["output_url"]))
+            if output_urlpath_key in metadata:
+                o = urlparse(str(metadata[output_urlpath_key]))
                 fs = fsspec.filesystem(
                     o.scheme, **metadata.get("output_storage_options", {})
                 )
                 with fs.open(Path(o.netloc + o.path) / "metadata.yml", "w") as f:
                     yaml.dump(metadata, f)
-        return result
+        return
+
+    return wrapper
+
+
+def local_cache_urlpath(func: Callable, urlpath_write_mode: dict[str, str]):
+    """Decorator for caching url/paths locally"""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        storage_options = kwargs.get("storage_options", {})
+        output_storage_options = kwargs.get("output_storage_options", {})
+        protocol = None
+        with ExitStack() as stack:
+            for urlpath_name, write_mode in urlpath_write_mode:
+                if "w" in urlpath_write_mode:
+                    so = output_storage_options
+                else:
+                    so = storage_options
+                fs, path = fsspec.core.url_to_fs(kwargs[urlpath_name], **so)
+                if protocol and fs.protocol != protocol:
+                    raise RuntimeError("Only one filesystem protocol supported")
+                protocol = fs.protocol
+
+                simplecache_fs = fsspec.filesystem(
+                    "simplecache", target_protocol=protocol
+                )
+
+                of = simplecache_fs.open(path, write_mode)
+                stack.enter_context(of)
+                kwargs[urlpath_name] = of.name
+            return func(*args, **kwargs)
 
     return wrapper
 

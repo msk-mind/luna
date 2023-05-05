@@ -1,6 +1,6 @@
-input_url: tests/testdata/pathology/tile_scores.csv
+input_urlpath: tests/testdata/pathology/tile_scores.csv
 image_filename: 123.svs
-output_url: tests/luna/pathology/cli/testouts
+output_urlpath: tests/luna/pathology/cli/testouts
 annotation_name: test
 tile_size: 128
 scale_factor: 8

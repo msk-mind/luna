@@ -30,18 +30,17 @@ from luna.pathology.common.utils import (
 
 
 def compute_otsu_score(
-    tile: Tile, otsu_threshold: float, slide_url: str, storage_options: dict
+    tile: Tile, slide_urlpath: str, otsu_threshold: float, storage_options: dict
 ) -> float:
     """
     Return otsu score for the tile.
     Args:
         row (pd.Series): row with tile metadata
-        slide_url (str): path to slide
+        slide_urlpath (str): path to slide
         otsu_threshold (float): otsu threshold value
     """
-    with open(slide_url, **storage_options) as f:
-        tile_arr = get_array_from_tile(tile, TiffSlide(f), size=(10, 10))
-        score = np.mean((rgb2gray(tile_arr) < otsu_threshold).astype(int))
+    tile_arr = get_array_from_tile(tile, slide_urlpath, 10, storage_options)
+    score = np.mean((rgb2gray(tile_arr) < otsu_threshold).astype(int))
     return score
 
 
@@ -51,21 +50,22 @@ def get_purple_score(x):
     return score
 
 
-def compute_purple_score(tile: Tile, slide_url: str, storage_options: dict) -> float:
+def compute_purple_score(
+    tile: Tile, slide_urlpath: str, storage_options: dict
+) -> float:
     """
     Return purple score for the tile.
     Args:
         row (pd.Series): row with tile metadata
         slide_url (str): path to slide
     """
-    with open(slide_url, **storage_options) as f:
-        tile_arr = get_array_from_tile(tile, TiffSlide(f), size=(10, 10))
+    tile_arr = get_array_from_tile(tile, slide_urlpath, 10, storage_options)
     return get_purple_score(tile_arr)
 
 
 def compute_stain_score(
     tile: Tile,
-    slide_url: str,
+    slide_urlpath: str,
     vectors,
     channel,
     stain_threshold: float,
@@ -80,9 +80,7 @@ def compute_stain_score(
         channel (int): stain channel
         stain_threshold (float): stain threshold value
     """
-
-    with open(slide_url, **storage_options) as f:
-        tile_arr = get_array_from_tile(tile, TiffSlide(f), size=(10, 10))
+    tile_arr = get_array_from_tile(tile, slide_urlpath, 10, storage_options)
     stain = pull_stain_channel(tile_arr, vectors=vectors, channel=channel)
     score = np.mean(stain > stain_threshold)
     return score
@@ -91,22 +89,23 @@ def compute_stain_score(
 @timed
 @save_metadata
 def cli(
-    slide: str = "???",
+    slide_urlpath: str = "???",
+    tiles_urlpath: str = "",
     filter_query: str = "???",
-    tile_size: int = "???",
+    tile_size: Optional[int] = None,
     requested_magnification: Optional[int] = None,
-    output_url: str = ".",
+    output_urlpath: str = ".",
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
 ) -> dict:
     """Run simple/deterministic tissue detection algorithms based on a filter query, to reduce tiles to those (likely) to contain actual tissue
     Args:
-        slide (str): url to slide image (virtual slide formats compatible with pyvips, .svs, .tif, .scn, ...)
+        slide_urlpath (str): url/path to slide image (virtual slide formats compatible with pyvips, .svs, .tif, .scn, ...)
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
         tile_size (int): size of tiles to use (at the requested magnification)
         requested_magnification (Optional[int]): Magnification scale at which to perform computation
-        output_url (str): Output url prefix
+        output_urlpath (str): Output url/path prefix
         num_cores (int): Number of cores to use for CPU parallelization
         storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
@@ -117,20 +116,26 @@ def cli(
     """
     config = get_config(vars())
 
-    output_filesystem, output_urlpath = fsspec.core.url_to_fs(
-        config["output_url"], **config["output_storage_options"]
+    if not config["tile_size"] and not config["tiles_urlpath"]:
+        raise fire.core.FireError("Specify either tiles_urlpath or tile_size")
+
+    output_filesystem, output_urlpath_prefix = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
     )
 
-    slide_id = Path(urlparse(config["slide"]).path).stem
-    output_header_file = Path(output_urlpath) / f"{slide_id}-filtered.tiles.parquet"
+    slide_id = Path(urlparse(config["slide_urlpath"]).path).stem
+    output_header_file = (
+        Path(output_urlpath_prefix) / f"{slide_id}-filtered.tiles.parquet"
+    )
 
     df = detect_tissue(
-        config["slide"],
+        config["slide_urlpath"],
+        config["tiles_urlpath"],
         config["tile_size"],
         config["requested_magnification"],
         config["filter_query"],
         config["storage_options"],
-        config["output_url"],
+        config["output_urlpath"],
         config["output_storage_options"],
     )
     with open(output_header_file, "wb", **config["output_storage_options"]) as of:
@@ -151,19 +156,19 @@ def detect_tissue(
     requested_magnification: Optional[int] = None,
     filter_query: str = "",
     storage_options: dict = {},
-    output_url_prefix: str = "",
+    output_urlpath_prefix: str = "",
     output_storage_options: dict = {},
 ):
     slide_manifest = SlideSchema(slide_manifest)
     dfs = []
     for row in slide_manifest.itertuples():
-        df = __detect_tissue(
+        df = detect_tissue(
             row.url,
             tile_size,
             requested_magnification,
             filter_query,
             storage_options,
-            output_url_prefix,
+            output_urlpath_prefix,
             output_storage_options,
         )
         df["id"] = row.id
@@ -181,7 +186,7 @@ def detect_tissue(
 #                                  requested_magnification,
 #                                  filter_query,
 #                                  storage_options,
-#                                  output_url_prefix,
+#                                  output_urlpath_prefix,
 #                                  output_storage_options,
 #                                  ) for row in slide_manifest.itertuples()
 #            }
@@ -195,50 +200,53 @@ def detect_tissue(
 
 @multimethod
 def detect_tissue(
-    slide_urls: Union[str, list[str]],
+    slide_urlpaths: Union[str, list[str]],
     tile_size: int,
     requested_magnification: Optional[int] = None,
     filter_query: str = "",
     storage_options: dict = {},
-    output_url_prefix: str = "",
+    output_urlpath_prefix: str = "",
     output_storage_options: dict = {},
 ) -> pd.DataFrame:
-    if type(slide_urls) == str:
-        slide_urls = [slide_urls]
+    if type(slide_urlpaths) == str:
+        slide_urlpaths = [slide_urlpaths]
     dfs = []
-    for slide_url in slide_urls:
-        df = __detect_tissue(
-            slide_url,
+    for slide_urlpath in slide_urlpaths:
+        df = detect_tissue(
+            slide_urlpath,
+            "",
             tile_size,
             requested_magnification,
             filter_query,
             storage_options,
-            output_url_prefix,
+            output_urlpath_prefix,
             output_storage_options,
         )
-        o = urlparse(slide_url)
+        o = urlparse(slide_urlpath)
         df["id"] = Path(o.path).stem
         dfs.append(df)
     return pd.concat(dfs)
 
 
-def __detect_tissue(
-    slide_url: str,
-    tile_size: int,
+@multimethod
+def detect_tissue(
+    slide_urlpath: str,
+    tiles_urlpath: str = "",
+    tile_size: Optional[int] = None,
     requested_magnification: Optional[int] = None,
     filter_query: str = "",
     storage_options: dict = {},
-    output_url_prefix: str = "",
+    output_urlpath_prefix: str = "",
     output_storage_options: dict = {},
 ) -> pd.DataFrame:
     """Run simple/deterministic tissue detection algorithms based on a filter query, to reduce tiles to those (likely) to contain actual tissue
     Args:
-        slide_url (str): slide url
+        slide_urlpath (str): slide url/path
         tile_size (int): size of tiles to use (at the requested magnification)
         requested_magnification (Optional[int]): Magnification scale at which to perform computation
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
         storage_options (dict): storage options to pass to reading functions
-        output_url_prefix (str): output url prefix
+        output_urlpath_prefix (str): output url/path prefix
         output_storage_options (dict): output storage optoins
     Returns:
         pd.DataFrame
@@ -246,11 +254,17 @@ def __detect_tissue(
 
     client = get_client()
 
-    tiles_df = generate_tiles(
-        slide_url, tile_size, storage_options, requested_magnification
-    )
+    if tiles_urlpath:
+        with open(tiles_urlpath, **storage_options) as of:
+            tiles_df = pd.read_parquet(of)
+    elif type(tile_size) == int:
+        tiles_df = generate_tiles(
+            slide_urlpath, tile_size, storage_options, requested_magnification
+        )
+    else:
+        raise RuntimeError("Specify tile_size or tile_urlpath")
 
-    with open(slide_url, "rb", **storage_options) as f:
+    with open(slide_urlpath, "rb", **storage_options) as f:
         slide = TiffSlide(f)
         logger.info(f"Slide dimensions {slide.dimensions}")
         to_mag_scale_factor = get_scale_factor_at_magnification(
@@ -261,9 +275,9 @@ def __detect_tissue(
         sample_arr = get_downscaled_thumbnail(slide, to_mag_scale_factor)
         logger.info(f"Sample array size: {sample_arr.shape}")
 
-    if output_url_prefix:
+    if output_urlpath_prefix:
         with open(
-            output_url_prefix + "/sample_arr.png", "wb", **output_storage_options
+            output_urlpath_prefix + "/sample_arr.png", "wb", **output_storage_options
         ) as f:
             Image.fromarray(sample_arr).save(f, format="png")
 
@@ -271,9 +285,9 @@ def __detect_tissue(
     enhanced_sample_img = ImageEnhance.Contrast(
         ImageEnhance.Color(Image.fromarray(sample_arr)).enhance(10)
     ).enhance(10)
-    if output_url_prefix:
+    if output_urlpath_prefix:
         with open(
-            output_url_prefix + "/enhanced_sample_arr.png",
+            output_urlpath_prefix + "/enhanced_sample_arr.png",
             "wb",
             **output_storage_options,
         ) as f:
@@ -281,17 +295,19 @@ def __detect_tissue(
 
     # Look at HSV space
     hsv_sample_arr = np.array(enhanced_sample_img.convert("HSV"))
-    if output_url_prefix:
+    if output_urlpath_prefix:
         with open(
-            output_url_prefix + "/hsv_sample_arr.png", "wb", **output_storage_options
+            output_urlpath_prefix + "/hsv_sample_arr.png",
+            "wb",
+            **output_storage_options,
         ) as f:
             Image.fromarray(np.array(hsv_sample_arr)).save(f, "png")
 
     # Look at max of saturation and value
     hsv_max_sample_arr = np.max(hsv_sample_arr[:, :, 1:3], axis=2)
-    if output_url_prefix:
+    if output_urlpath_prefix:
         with open(
-            output_url_prefix + "/hsv_max_sample_arr.png",
+            output_urlpath_prefix + "/hsv_max_sample_arr.png",
             "wb",
             **output_storage_options,
         ) as f:
@@ -299,9 +315,9 @@ def __detect_tissue(
 
     # Get shadow mask and filter it out before other estimations
     shadow_mask = np.where(np.max(hsv_sample_arr, axis=2) < 10, 255, 0).astype(np.uint8)
-    if output_url_prefix:
+    if output_urlpath_prefix:
         with open(
-            output_url_prefix + "/shadow_mask.png", "wb", **output_storage_options
+            output_urlpath_prefix + "/shadow_mask.png", "wb", **output_storage_options
         ) as f:
             Image.fromarray(shadow_mask).save(f, "png")
 
@@ -309,9 +325,9 @@ def __detect_tissue(
     sample_arr_filtered = np.where(
         np.expand_dims(shadow_mask, 2) == 0, sample_arr, np.full(sample_arr.shape, 255)
     ).astype(np.uint8)
-    if output_url_prefix:
+    if output_urlpath_prefix:
         with open(
-            output_url_prefix + "/sample_arr_filtered.png",
+            output_urlpath_prefix + "/sample_arr_filtered.png",
             "wb",
             **output_storage_options,
         ) as f:
@@ -336,21 +352,21 @@ def __detect_tissue(
     )
 
     # Get the otsu mask
-    if output_url_prefix:
+    if output_urlpath_prefix:
         otsu_mask = np.where(rgb2gray(sample_arr_filtered) < threshold, 255, 0).astype(
             np.uint8
         )
         with open(
-            output_url_prefix + "/otsu_mask.png", "wb", **output_storage_options
+            output_urlpath_prefix + "/otsu_mask.png", "wb", **output_storage_options
         ) as f:
             Image.fromarray(otsu_mask).save(f, "png")
 
-    if output_url_prefix:
+    if output_urlpath_prefix:
         # Get stain thumnail image
         deconv_sample_arr = pull_stain_channel(
             sample_arr_filtered, vectors=stain_vectors
         )
-        with open(output_url_prefix + "/deconv_sample_arr.png", "wb") as f:
+        with open(output_urlpath_prefix + "/deconv_sample_arr.png", "wb") as f:
             Image.fromarray(deconv_sample_arr).save(f, "png", **output_storage_options)
 
         # Get the stain masks
@@ -361,11 +377,11 @@ def __detect_tissue(
             deconv_sample_arr[..., 1] > threshold_stain1, 255, 0
         ).astype(np.uint8)
         with open(
-            output_url_prefix + "/stain0_mask.png", "wb", **output_storage_options
+            output_urlpath_prefix + "/stain0_mask.png", "wb", **output_storage_options
         ) as f:
             Image.fromarray(stain0_mask).save(f, "png")
         with open(
-            output_url_prefix + "/stain1_mask.png", "wb", **output_storage_options
+            output_urlpath_prefix + "/stain1_mask.png", "wb", **output_storage_options
         ) as f:
             Image.fromarray(stain1_mask).save(f, "png")
 
@@ -375,8 +391,8 @@ def __detect_tissue(
             otsu_score_futures = [
                 client.submit(
                     compute_otsu_score,
-                    row,
-                    slide_url=slide_url,
+                    tile=row,
+                    slide_urlpath=slide_urlpath,
                     storage_options=storage_options,
                     otsu_threshold=threshold,
                 )
@@ -389,8 +405,8 @@ def __detect_tissue(
             purple_futures = [
                 client.submit(
                     compute_purple_score,
-                    row,
-                    slide_url=slide_url,
+                    tile=row,
+                    slide_urlpath=slide_urlpath,
                     storage_options=storage_options,
                 )
                 for row in tiles_df.itertuples(name="Tile")
@@ -404,8 +420,8 @@ def __detect_tissue(
             stain0_futures = [
                 client.submit(
                     compute_stain_score,
-                    row,
-                    slide_url=slide_url,
+                    tile=row,
+                    slide_urlpath=slide_urlpath,
                     storage_options=storage_options,
                     vectors=stain_vectors,
                     channel=0,
@@ -422,8 +438,8 @@ def __detect_tissue(
             stain1_futures = [
                 client.submit(
                     compute_stain_score,
-                    row,
-                    slide_url=slide_url,
+                    tile=row,
+                    slide_urlpath=slide_urlpath,
                     storage_options=storage_options,
                     vectors=stain_vectors,
                     channel=1,

@@ -10,7 +10,6 @@ import girder_client
 import pandas as pd
 import requests
 from dask.distributed import Client, as_completed, get_client
-from fsspec import open  # type: ignore
 from geojson import Feature, FeatureCollection, Point, Polygon
 from shapely.geometry import shape
 
@@ -37,7 +36,7 @@ def cli(
     username: str = "???",
     password: str = "???",
     local_config: str = "",
-    output_url: str = ".",
+    output_urlpath: str = ".",
     storage_options: dict = {},
 ):
     """A cli tool
@@ -65,23 +64,21 @@ def cli(
         config["annotation_name"],
         config["username"],
         config["password"],
-        config["output_url"],
+        config["output_urlpath"],
         config["storage_options"],
     )
 
-    output_fs, output_urlpath = fsspec.core.url_to_fs(
-        config["output_url"], **config["storage_options"]
+    output_fs, output_path = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["storage_options"]
     )
 
     slide_annotation_dataset_path = (
-        Path(output_urlpath)
-        / f"slide_annotation_dataset_{collection_name}_{annotation_name}.parquet"
+        Path(output_path)
+        / f"slide_annotation_dataset_{config['collection_name']}_{config['annotation_name']}.parquet"
     )
 
     if len(df_full_annotation_data) > 0:
-        with open(
-            slide_annotation_dataset_path, "wb", **config["storage_options"]
-        ) as of:
+        with output_fs.open(slide_annotation_dataset_path, "wb") as of:
             df_full_annotation_data.to_parquet(of)
 
         properties = {
@@ -100,14 +97,14 @@ def dsa_annotation_etl(
     annotation_name: str,
     username: str,
     password: str,
-    output_url: str,
+    output_urlpath: str,
     storage_options: dict,
 ):
     """Take
 
     Args:
         dsa_endpoint (str): path to input data
-        output_url (str): output/working directory
+        output_urlpath (str): output/working url/path prefix
 
     Returns:
         pd.DataFrame: metadata about function call
@@ -141,7 +138,9 @@ def dsa_annotation_etl(
         return {}
 
     # Initialize the DsaAnnotationProcessor
-    dap = DsaAnnotationProcessor(girder, annotation_name, output_url)
+    dap = DsaAnnotationProcessor(
+        girder, annotation_name, output_urlpath, storage_options
+    )
 
     logger.info("Dashboard: " + client.dashboard_link)
     df_polygon_data = pd.concat(
@@ -183,10 +182,10 @@ def dsa_annotation_etl(
 
 
 class DsaAnnotationProcessor:
-    def __init__(self, girder, annotation_name, output_url, storage_options):
+    def __init__(self, girder, annotation_name, output_urlpath, storage_options):
         self.girder = girder
         self.annotation_name = annotation_name
-        self.output_url = output_url
+        self.output_urlpath = output_urlpath
         self.storage_options = storage_options
 
     def histomics_annotation_table_to_geojson(
@@ -261,7 +260,7 @@ class DsaAnnotationProcessor:
             y_col="y_coords",
         )
 
-        fs, urlpath = fsspec.core.url_to_fs(self.output_url, **self.storage_options)
+        fs, urlpath = fsspec.core.url_to_fs(self.output_urlpath, **self.storage_options)
 
         slide_geojson_path = Path(urlpath) / f"{slide_id}.annotation.geojson"
         with fs.open(slide_geojson_path, "w") as fp:

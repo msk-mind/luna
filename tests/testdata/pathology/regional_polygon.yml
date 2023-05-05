@@ -1,6 +1,6 @@
-input_url: tests/testdata/pathology/regional_annotation.json
+input_urlpath: tests/testdata/pathology/regional_annotation.json
 image_filename: 123.svs
-output_url: tests/luna/pathology/cli/testouts
+output_urlpath: tests/luna/pathology/cli/testouts
 annotation_name: Slideviewer Regional Annotations
 line_colors:
   invasive_carcinoma: rgb(0,191,255)

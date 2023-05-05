@@ -122,18 +122,17 @@ def get_dsa_annotation(elements: list, annotation_name: str, description: str = 
 
 def save_dsa_annotation(
     dsa_annotation: dict,
-    output_url_prefix: str,
+    output_urlpath: str,
     image_filename: str,
     storage_options: dict,
 ):
     """Helper function to save annotation elements to a json file.
 
     Args:
-        base_annotation (dict): base annotation structure for DSA
-        elements (list): list of annotation elements
-        annotation_name (string): annotation name for HistomicsUI
-        output_dir (string): path to a directory to save the annotation file
+        dsa_annotation (dict): DSA annotations
+        output_urlpath (string): url/path to a directory to save the annotation file
         image_filename (string): name of the image in DSA e.g. 123.svs
+        storage_options (dict): options for storage functions
 
     Returns:
         string: annotation file path. None if error in writing the file.
@@ -147,9 +146,7 @@ def save_dsa_annotation(
 
     annotation_name_replaced = dsa_annotation["name"].replace(" ", "_")
 
-    fs, output_urlpath_prefix = fsspec.core.url_to_fs(
-        output_url_prefix, **storage_options
-    )
+    fs, output_urlpath_prefix = fsspec.core.url_to_fs(output_urlpath, **storage_options)
     output_url = (
         Path(output_urlpath_prefix) / f"{annotation_name_replaced}_{image_id}.json"
     )
@@ -166,10 +163,10 @@ def save_dsa_annotation(
 @timed
 @save_metadata
 def stardist_polygon(
-    input_url: str = "???",
+    input_urlpath: str = "???",
     image_filename: str = "???",
     annotation_name: str = "???",
-    output_url: str = "???",
+    output_urlpath: str = "???",
     line_colors: dict[str, str] = {},
     fill_colors: dict[str, str] = {},
     storage_options: dict = {},
@@ -178,10 +175,10 @@ def stardist_polygon(
     """Build DSA annotation json from stardist geojson classification results
 
     Args:
-        input_url (string): url to stardist geojson classification results json
+        input_urlpath (string): URL/path to stardist geojson classification results json
         image_filename (string): name of the image file in DSA e.g. 123.svs
         annotation_name (string): name of the annotation to be displayed in DSA
-        output_url (string): URL prefix to save annotations
+        output_urlpath (string): URL/path prefix to save annotations
         line_colors (dict): user-provided line color map with {
         feature name:rgb values}
         fill_colors (dict): user-provided fill color map with {
@@ -197,8 +194,8 @@ def stardist_polygon(
 
         \b
         dsa stardist-polygon
-            --input_url ../dsa_input/test_object_classification.geojson
-            --output_url ../dsa_annotations/stardist_polygon
+            --input_urlpath ../dsa_input/test_object_classification.geojson
+            --output_urlpath ../dsa_annotations/stardist_polygon
             --annotation_name stardist_polygon_segmentations
             --image_filename 123.svs
             --line_colors '{"Other": "rgb(0,255,0)", "Lymphocyte": "rgb(255,0,0)"}'
@@ -206,7 +203,7 @@ def stardist_polygon(
     """
     config = get_config(vars())
     dsa_annotation = stardist_polygon_main(
-        config["input_url"],
+        config["input_urlpath"],
         config["annotation_name"],
         config["line_colors"],
         config["fill_colors"],
@@ -214,7 +211,7 @@ def stardist_polygon(
     )
     annotatation_filepath = save_dsa_annotation(
         dsa_annotation,
-        config["output_url"],
+        config["output_urlpath"],
         config["image_filename"],
         config["storage_options"],
     )
@@ -222,7 +219,7 @@ def stardist_polygon(
 
 
 def stardist_polygon_main(
-    input_url: str,
+    input_urlpath: str,
     annotation_name: str,
     line_colors: dict[str, str],
     fill_colors: dict[str, str],
@@ -231,7 +228,7 @@ def stardist_polygon_main(
     """Build DSA annotation from stardist geojson classification results
 
     Args:
-        input_url (string): URL to stardist geojson classification results
+        input_urlpath (string): URL/path to stardist geojson classification results
         json
         annotation_name (string): name of the annotation to be displayed in DSA
         line_colors (dict): user-provided line color map with {
@@ -246,7 +243,7 @@ def stardist_polygon_main(
     # can't handle NaNs for vectors, do this to replace all NaNs
     # for now: https://stackoverflow.com/questions/17140886/how-to-search
     # -and-replace-text-in-a-file
-    with open(input_url, "r", **storage_options).open() as input_file:
+    with open(input_urlpath, "r", **storage_options).open() as input_file:
         filedata = input_file.read()
     newdata = filedata.replace("NaN", "-1")
 
@@ -281,8 +278,8 @@ def stardist_polygon_main(
 @timed
 @save_metadata
 def stardist_cell(
-    input_url: str = "???",
-    output_url: str = "???",
+    input_urlpath: str = "???",
+    output_urlpath: str = "???",
     image_filename: str = "???",
     annotation_name: str = "???",
     line_colors: Optional[dict[str, str]] = None,
@@ -298,8 +295,8 @@ def stardist_cell(
     as annotation elements.
 
     Args:
-        input_url (string): path to TSV classification data generated by stardist
-        output_url (string): URL prefix for saving dsa annotation json
+        input_urlpath (string): URL/path to TSV classification data generated by stardist
+        output_urlpath (string): URL/path prefix for saving dsa annotation json
         image_filename (string): name of the image file in DSA e.g. 123.svs
         annotation_name (string): name of the annotation to be displayed in DSA
         line_colors (dict, optional): line color map with {feature name:rgb
@@ -314,7 +311,7 @@ def stardist_cell(
     """
     config = get_config(vars())
     dsa_annotation = stardist_cell_main(
-        config["input_url"],
+        config["input_urlpath"],
         config["image_filename"],
         config["annotation_name"],
         config["line_colors"],
@@ -323,7 +320,7 @@ def stardist_cell(
     )
     annotatation_filepath = save_dsa_annotation(
         dsa_annotation,
-        config["output_url"],
+        config["output_urlpath"],
         config["image_filename"],
         config["storage_options"],
     )
@@ -331,7 +328,7 @@ def stardist_cell(
 
 
 def stardist_cell_main(
-    input_url: str,
+    input_urlpath: str,
     image_filename: str,
     annotation_name: str,
     line_colors: Optional[dict[str, str]],
@@ -346,7 +343,7 @@ def stardist_cell_main(
     as annotation elements.
 
     Args:
-        input_url (string): url to TSV classification data generated by stardist
+        input_urlpath (string): url/path to TSV classification data generated by stardist
         image_filename (string): name of the image file in DSA e.g. 123.svs
         annotation_name (string): name of the annotation to be displayed in DSA
         line_colors (dict, optional): line color map with {feature name:rgb
@@ -371,7 +368,7 @@ def stardist_cell_main(
         "Parent",
     ]
     df = pd.read_csv(
-        input_url,
+        input_urlpath,
         sep="\t",
         usecols=cols_to_load,
         index_col=False,
@@ -412,8 +409,8 @@ def stardist_cell_main(
 @timed
 @save_metadata
 def regional_polygon(
-    input_url: str = "???",
-    output_url: str = "???",
+    input_urlpath: str = "???",
+    output_urlpath: str = "???",
     image_filename: str = "???",
     annotation_name: str = "???",
     line_colors: Optional[dict[str, str]] = None,
@@ -424,8 +421,8 @@ def regional_polygon(
     """Build DSA annotation json from regional annotation geojson
 
     Args:
-        input_url (string): url of to regional annotation geojson
-        output_url (string): URL prefix for saving dsa annotation json
+        input_urlpath (string): URL/path of to regional annotation geojson
+        output_urlpath (string): URL/path prefix for saving dsa annotation json
         annotation_name (string): name of the annotation to be displayed in DSA
         line_colors (dict, optional): line color map with {feature name:rgb
         values}
@@ -441,7 +438,7 @@ def regional_polygon(
     config = get_config(vars())
 
     dsa_annotation = regional_polygon_main(
-        config["input_url"],
+        config["input_urlpath"],
         config["annotation_name"],
         config["line_colors"],
         config["fill_colors"],
@@ -450,7 +447,7 @@ def regional_polygon(
 
     annotatation_filepath = save_dsa_annotation(
         dsa_annotation,
-        config["output_url"],
+        config["output_urlpath"],
         config["image_filename"],
         config["storage_options"],
     )
@@ -458,7 +455,7 @@ def regional_polygon(
 
 
 def regional_polygon_main(
-    input_url: str,
+    input_urlpath: str,
     annotation_name: str,
     line_colors: Optional[dict[str, str]],
     fill_colors: Optional[dict[str, str]],
@@ -478,7 +475,7 @@ def regional_polygon_main(
     Returns:
         dict: DSA annotation
     """
-    with open(input_url, **storage_options).open() as regional_file:
+    with open(input_urlpath, **storage_options).open() as regional_file:
         regional_annotation = geojson.loads(geojson.load(regional_file))
 
     elements = []
@@ -510,8 +507,8 @@ def regional_polygon_main(
 @timed
 @save_metadata
 def qupath_polygon(
-    input_url: str = "???",
-    output_url: str = "???",
+    input_urlpath: str = "???",
+    output_urlpath: str = "???",
     image_filename: str = "???",
     annotation_name: str = "???",
     classes_to_include: list = "???",  # type: ignore
@@ -523,8 +520,8 @@ def qupath_polygon(
     """Build DSA annotation json from Qupath polygon geojson
 
     Args:
-        input_url (string): URL of Qupath polygon geojson
-        output_url (string): URL prefix for saving the DSA compatible annotation
+        input_urlpath (string): URL/path of Qupath polygon geojson
+        output_urlpath (string): URL/path prefix for saving the DSA compatible annotation
         json
         image_filename (string): name of the image file in DSA e.g. 123.svs
         annotation_name (string): name of the annotation to be displayed in DSA
@@ -542,7 +539,7 @@ def qupath_polygon(
     """
     config = get_config(vars())
     dsa_annotation = qupath_polygon_main(
-        config["input_url"],
+        config["input_urlpath"],
         config["annotation_name"],
         config["classes_to_include"],
         config["line_colors"],
@@ -552,7 +549,7 @@ def qupath_polygon(
 
     annotatation_filepath = save_dsa_annotation(
         dsa_annotation,
-        config["output_url"],
+        config["output_urlpath"],
         config["image_filename"],
         config["storage_options"],
     )
@@ -560,7 +557,7 @@ def qupath_polygon(
 
 
 def qupath_polygon_main(
-    input_url: str,
+    input_urlpath: str,
     annotation_name: str,
     classes_to_include: list,
     line_colors: Optional[dict[str, str]],
@@ -570,7 +567,7 @@ def qupath_polygon_main(
     """Build DSA annotation json from Qupath polygon geojson
 
     Args:
-        input_url (string): url of Qupath polygon geojson
+        input_urlpath (string): url/path of Qupath polygon geojson
         annotation_name (string): name of the annotation to be displayed in DSA
         classes_to_include (list): list of classification labels to visualize
         e.g. ["Tumor", "Stroma", ...]
@@ -583,7 +580,7 @@ def qupath_polygon_main(
     Returns:
         dict: dsa annotation
     """
-    regional_file = open(input_url, "r", **storage_options)
+    regional_file = open(input_urlpath, "r", **storage_options)
     with regional_file.open() as of:
         pixel_clf_polygons = geojson.load(of)
 
@@ -633,7 +630,7 @@ def qupath_polygon_main(
 @save_metadata
 def bitmask_polygon(
     input_map: dict[str, str] = "???",  # type: ignore
-    output_url: str = "???",
+    output_urlpath: str = "???",
     image_filename: str = "???",
     annotation_name: str = "???",
     line_colors: Optional[dict[str, str]] = None,
@@ -674,7 +671,7 @@ def bitmask_polygon(
     )
     annotatation_filepath = save_dsa_annotation(
         dsa_annotation,
-        config["output_url"],
+        config["output_urlpath"],
         config["image_filename"],
         config["storage_options"],
     )
@@ -694,7 +691,7 @@ def bitmask_polygon_main(
     Vectorizes and simplifies contours from the bitmask.
 
     Args:
-        input (map): map of {label:url_to_bitmask_png}
+        input (map): map of {label:urlpath_to_bitmask_png}
         annotation_name (string): name of the annotation to be displayed in DSA
         line_colors (dict, optional): line color map with {feature name:rgb
         values}
@@ -740,8 +737,8 @@ def bitmask_polygon_main(
 @timed
 @save_metadata
 def heatmap(
-    input_url: str = "???",
-    output_url: str = "???",
+    input_urlpath: str = "???",
+    output_urlpath: str = "???",
     image_filename: str = "???",
     annotation_name: str = "???",
     column: str = "???",
@@ -759,8 +756,8 @@ def heatmap(
     - the color ranges from purple to yellow, for scores from 0 to 1.
 
     Args:
-        input_url (string): URL to CSV with tile scores
-        output_url (string): URL prefix to save the DSA compatible annotation
+        input_urlpath (string): URL/path to CSV with tile scores
+        output_urlpath (string): URL/path prefix to save the DSA compatible annotation
         json
         image_filename (string): name of the image file in DSA e.g. 123.svs
         annotation_name (string): name of the annotation to be displayed in DSA
@@ -779,7 +776,7 @@ def heatmap(
     """
     config = get_config(vars())
     dsa_annotation = heatmap_main(
-        config["input_url"],
+        config["input_urlpath"],
         config["annotation_name"],
         config["column"],
         config["tile_size"],
@@ -790,7 +787,7 @@ def heatmap(
     )
     annotatation_filepath = save_dsa_annotation(
         dsa_annotation,
-        config["output_url"],
+        config["output_urlpath"],
         config["image_filename"],
         config["storage_options"],
     )
@@ -798,7 +795,7 @@ def heatmap(
 
 
 def heatmap_main(
-    input_url: str,
+    input_urlpath: str,
     annotation_name: str,
     column: list[str],
     tile_size: int,
@@ -814,10 +811,7 @@ def heatmap_main(
     - the color ranges from purple to yellow, for scores from 0 to 1.
 
     Args:
-        input (string): path to CSV with tile scores
-        output_dir (string): directory to save the DSA compatible annotation
-        json
-        image_filename (string): name of the image file in DSA e.g. 123.svs
+        input_urlpath (string): url/path to CSV with tile scores
         annotation_name (string): name of the annotation to be displayed in DSA
         column (list[string]): columns to visualize e.g. tile_score
         tile_size (int): size of tiles
@@ -834,7 +828,7 @@ def heatmap_main(
     if type(column) == str:
         column = [column]
 
-    df = pd.read_csv(input_url, storage_options=storage_options)
+    df = pd.read_csv(input_urlpath, storage_options=storage_options)
     scaled_tile_size = int(tile_size * int(scale_factor if scale_factor else 1))
 
     elements = []
@@ -885,8 +879,8 @@ def heatmap_main(
 @timed
 @save_metadata
 def bmp_polygon(
-    input_url: str = "???",
-    output_url: str = "???",
+    input_urlpath: str = "???",
+    output_urlpath: str = "???",
     label_map: dict[int, str] = "???",  # type: ignore
     image_filename: str = "???",
     annotation_name: str = "???",
@@ -901,8 +895,8 @@ def bmp_polygon(
     Vectorizes and simplifies contours per label.
 
     Args:
-        input_url (string): path to bmp file
-        output_url (string): url prefix to save the DSA compatible annotation
+        input_urlpath (string): url/path to bmp file
+        output_urlpath (string): url/path prefix to save the DSA compatible annotation
         json
         label_map (dict[int,str]): map of label number to label name
         image_filename (string): name of the image file in DSA e.g. 123.svs
@@ -919,7 +913,7 @@ def bmp_polygon(
     """
     config = get_config(vars())
     dsa_annotation = bmp_polygon_main(
-        config["input_url"],
+        config["input_urlpath"],
         config["label_map"],
         config["annotation_name"],
         config["line_colors"],
@@ -929,7 +923,7 @@ def bmp_polygon(
 
     annotatation_filepath = save_dsa_annotation(
         dsa_annotation,
-        config["output_url"],
+        config["output_urlpath"],
         config["image_filename"],
         config["storage_options"],
     )
@@ -937,7 +931,7 @@ def bmp_polygon(
 
 
 def bmp_polygon_main(
-    input_url: str,
+    input_urlpath: str,
     label_map: dict[int, str],
     annotation_name: str,
     line_colors: Optional[dict[str, str]],
@@ -950,7 +944,7 @@ def bmp_polygon_main(
     Vectorizes and simplifies contours per label.
 
     Args:
-        input_url (string): path to bmp file
+        input_urlpath (string): url/path to bmp file
         label_map (dict[int,str]): map of label number to label name
         annotation_name (string): name of the annotation to be displayed in DSA
         line_colors (dict[str,str], optional): line color map with {feature name:rgb
@@ -965,7 +959,7 @@ def bmp_polygon_main(
     """
     elements = []
     Image.MAX_IMAGE_PIXELS = 5000000000
-    with open(input_url, **storage_options).open() as of:
+    with open(input_urlpath, **storage_options).open() as of:
         annotation = Image.open(of)
     arr = np.array(annotation)
 

@@ -25,12 +25,12 @@ VALID_SLIDE_EXTENSIONS = [".svs", ".scn", ".tif"]
 
 @timed
 def cli(
-    slide_dir: str = "???",
+    slide_urlpath: str = "???",
     project_name: str = "",
     comment: str = "",
     subset_csv: str = "",
     debug_limit: int = 0,
-    output_url: str = "",
+    output_urlpath: str = "",
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
@@ -57,48 +57,45 @@ def cli(
             -o /data/PATH-123-45/table
     """
     config = get_config(vars())
-    filesystem, urlpath = fsspec.core.url_to_fs(
-        config["slide_dir"], **config["storage_options"]
+    filesystem, slide_path = fsspec.core.url_to_fs(
+        config["slide_urlpath"], **config["storage_options"]
     )
-    slide_urlpaths = []  # type: list[str]
-    for ext in VALID_SLIDE_EXTENSIONS:
-        slide_urlpaths += filesystem.glob(f"{urlpath}/*{ext}")
-    if config["subset_csv"]:
-        slide_urlpaths = apply_csv_filter(slide_urlpaths, config["subset_csv"])
-    if config["debug_limit"] > 0:
-        slide_urlpaths = slide_urlpaths[: config["debug_limit"]]
+    slide_paths = []  # type: list[str]
+    if any([slide_path.endswith(ext) for ext in VALID_SLIDE_EXTENSIONS]):
+        slide_paths += slide_path
+    else:
+        for ext in VALID_SLIDE_EXTENSIONS:
+            slide_paths += filesystem.glob(f"{slide_path}/*{ext}")
 
-    if len(slide_urlpaths) == 0:
+    if config["subset_csv"]:
+        slide_paths = apply_csv_filter(slide_paths, config["subset_csv"])
+    if config["debug_limit"] > 0:
+        slide_paths = slide_paths[: config["debug_limit"]]
+
+    if len(slide_paths) == 0:
         return None
 
-    slide_urls = [
-        filesystem.unstrip_protocol(slide_urlpath) for slide_urlpath in slide_urlpaths
-    ]
+    slide_urls = [filesystem.unstrip_protocol(slide_path) for slide_path in slide_paths]
 
     df = slide_etl(
         slide_urls,
         config["project_name"],
         config["comment"],
         config["storage_options"],
-        config["output_url"],
+        config["output_urlpath"],
         config["output_storage_options"],
     )
 
     # rebase_schema_numeric(df)
 
     logger.info(df)
-
-    if config["output_url"]:
-        output_filesystem, output_urlpath_prefix = fsspec.core.url_to_fs(
-            config["output_url"], **config["output_storage_options"]
+    if config["output_urlpath"]:
+        output_filesystem, output_path = fsspec.core.url_to_fs(
+            config["output_urlpath"], **config["output_storage_options"]
         )
-        with output_filesystem.open(
-            Path(output_urlpath_prefix)
-            / f"slide_ingest_{config['project_name']}.parquet"
-        ) as of:
+        f = Path(output_path) / f"slide_ingest_{config['project_name']}.parquet"
+        with output_filesystem.open(f, "wb") as of:
             df.to_parquet(of)
-
-    return df
 
 
 @multimethod
@@ -107,7 +104,7 @@ def slide_etl(
     project_name: str,
     comment: str = "",
     storage_options: dict = {},
-    output_url_prefix: str = "",
+    output_urlpath: str = "",
     output_storage_options: dict = {},
 ) -> DataFrame:
     client = get_client()
@@ -117,13 +114,22 @@ def slide_etl(
         client.submit(
             sb.get_slide,
             url,
-            output_url_prefix,
             project_name=project_name,
             comment=comment,
         )
         for url in slide_urls
     ]
     progress(futures)
+    slides = client.gather(futures)
+    if output_urlpath:
+        futures = [
+            client.submit(
+                sb.copy_slide,
+                slide,
+                output_urlpath,
+            )
+            for slide in slides
+        ]
     return DataFrame[SlideSchema](
         pd.json_normalize([x.__dict__ for x in client.gather(futures)])
     )
@@ -135,7 +141,7 @@ def slide_etl(
     project_name: str,
     comment: str = "",
     storage_options: dict = {},
-    output_url_prefix: str = "",
+    output_urlpath: str = "",
     output_storage_options: dict = {},
 ) -> Slide:
     """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
@@ -155,9 +161,9 @@ def slide_etl(
 
     sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
 
-    slide = sb.get_slide(
-        slide_url, output_url_prefix, project_name=project_name, comment=comment
-    )
+    slide = sb.get_slide(slide_url, project_name=project_name, comment=comment)
+    if output_urlpath:
+        slide = sb.copy_slide(slide, output_urlpath)
     return slide
 
 
@@ -168,13 +174,9 @@ class SlideBuilder:
 
     def __generate_properties(self, slide, url):
         with open(url, **self.storage_options) as f:
-            slide.properties = TiffSlide(f).properties
-        return slide
-
-    def __estimate_stain_type(self, slide, url):
-        try:
-            with open(url, **self.storage_options) as f:
-                s = TiffSlide(f)
+            s = TiffSlide(f)
+            slide.properties = s.properties
+            try:
                 to_mag_scale_factor = get_scale_factor_at_magnification(
                     s, requested_magnification=1
                 )
@@ -186,13 +188,27 @@ class SlideBuilder:
                 slide.channel1_R = stain_vectors[1, 0]
                 slide.channel1_G = stain_vectors[1, 1]
                 slide.channel1_B = stain_vectors[1, 2]
-        except Exception as err:
-            logger.warning(f"Couldn't get stain vectors: {url} - {err}")
-            return {}
+            except Exception as err:
+                logger.warning(f"Couldn't get stain vectors: {url} - {err}")
 
-    def get_slide(
-        self, url, output_url_prefix, project_name="", comment="", chunksize=50000000
-    ) -> Slide:
+    def copy_slide(self, slide, output_urlpath, chunksize=50000000):
+        new_slide = slide.copy()
+        name = Path(slide.url).name
+        fs, output_path = fsspec.core.url_to_fs(
+            output_urlpath, **self.output_storage_options
+        )
+        p = Path(output_path) / name
+        with open(slide.url, "rb", **self.storage_options) as f1:
+            with fs.open(p, "wb") as f2:
+                while True:
+                    data = f1.read(chunksize)
+                    if not data:
+                        break
+                    f2.write(data)
+        new_slide.url = fs.unstrip_protocol(str(p))
+        return new_slide
+
+    def get_slide(self, url, project_name="", comment="") -> Slide:
         """Extract openslide properties and write slide to storage location
 
         Args:
@@ -202,32 +218,20 @@ class SlideBuilder:
             slide (Slide): slide object
         """
 
-        fs, urlpath = fsspec.core.url_to_fs(url, **self.storage_options)
+        fs, path = fsspec.core.url_to_fs(url, **self.storage_options)
 
-        id = Path(urlpath).stem
-        size = fs.du(urlpath)
+        id = Path(path).stem
+        size = fs.du(path)
         slide = Slide(
             id=id,
             project_name=project_name,
             comment=comment,
-            size=size,
+            slide_size=size,
             url=url,
-            uuid=uuid.uuid3(uuid.NAMESPACE_URL, url),
+            uuid=str(uuid.uuid3(uuid.NAMESPACE_URL, url)),
         )
 
-        self.__estimate_stain_type(slide, url)
         self.__generate_properties(slide, url)
-
-        if output_url_prefix:
-            output_url = output_url_prefix + id
-            with fs.open(urlpath) as f1:
-                with open(output_url, **self.output_storage_options) as f2:
-                    while True:
-                        data = f1.read(chunksize)
-                        if not data:
-                            break
-                        f2.write(data)
-            slide.url = output_url
 
         return slide
 

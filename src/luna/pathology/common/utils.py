@@ -5,6 +5,7 @@ import xml.etree.ElementTree as et
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cv2  # type: ignore
+import fsspec
 import h5py  # type: ignore
 import numpy as np
 import numpy.typing as npt
@@ -12,14 +13,16 @@ import pandas as pd
 import radiomics  # type: ignore
 import seaborn as sns  # type: ignore
 import SimpleITK as sitk
+from fsspec import open
 from loguru import logger
-from openslide.deepzoom import DeepZoomGenerator  # type: ignore
 from PIL import Image
 from skimage.draw import rectangle_perimeter  # type: ignore
 from tiffslide import TiffSlide
 from tqdm import tqdm
 
+from luna.common.models import Tile
 from luna.common.utils import timed
+from luna.pathology.common.deepzoom import DeepZoomGenerator
 
 palette = sns.color_palette("viridis", as_cmap=True)
 categorial = sns.color_palette("Set1", 8)
@@ -47,18 +50,19 @@ categorical_colors = {}  # type: Dict[str, npt.ArrayLike]
 #    return labelsets
 
 
-def get_layer_names(xml_fn):
+def get_layer_names(xml_urlpath, storage_options={}):
     """get available layer names
 
     Finds all possible annotation layer names from a Halo generated xml ROI file
 
     Args:
-        xml_fn (str): file path to input halo XML file
+        xml_urlpath (str): absolute or relativefile path to input halo XML file. prefix scheme to use alternative filesystems.
 
     Returns:
         set: Available region names
     """  # Annotations >>
-    e = et.parse(xml_fn).getroot()
+    with open(xml_urlpath, "r", **storage_options) as of:
+        e = et.parse(of).getroot()
     e = e.findall("Annotation")
     names = set()
 
@@ -68,14 +72,17 @@ def get_layer_names(xml_fn):
 
 
 def convert_xml_to_mask(
-    xml_fn: str, shape: list, annotation_name: str
+    xml_urlpath: str,
+    shape: list,
+    annotation_name: str,
+    storage_options: dict = {},
 ) -> Optional[Tuple[np.ndarray, Dict[str, Any]]]:
     """convert xml to bitmask
 
     Converts a sparse halo XML annotation file (polygons) to a dense bitmask
 
     Args:
-        xml_fn (str): file path to input halo XML file
+        xml_urlpath (str): file path to input halo XML file
         shape (list): desired polygon shape
         annotation_name (str): name of annotation
 
@@ -85,7 +92,8 @@ def convert_xml_to_mask(
 
     ret = None
     # Annotations >>
-    e = et.parse(xml_fn).getroot()
+    with open(xml_urlpath, **storage_options) as of:
+        e = et.parse(of).getroot()
     e = e.findall("Annotation")
     n_regions = 0
     for ann in e:
@@ -132,7 +140,7 @@ def convert_xml_to_mask(
 
         ret = (board_pos > 0) * (board_neg == 0)
 
-    if ret:
+    if ret.any():
         mask = ret.astype(np.uint8)
 
         properties = {
@@ -307,14 +315,25 @@ def extract_patch_texture_features(
         return output_dict
 
 
-def get_array_from_tile(tile, slide, size=None):
+def get_array_from_tile(
+    tile: Tile,
+    slide_urlpath: str,
+    size: Optional[int] = None,
+    storage_options: dict = {},
+):
     x, y, extent = tile.x_coord, tile.y_coord, tile.xy_extent
     if size is None:
-        size = (tile.size, tile.size)
-    arr = np.array(
-        slide.read_region((x, y), 0, (extent, extent)).resize(size, Image.NEAREST)
-    )[:, :, :3]
-    return arr
+        resize_size = (tile.tile_size, tile.tile_size)
+    else:
+        resize_size = (size, size)
+    with open(slide_urlpath, **storage_options) as of:
+        slide = TiffSlide(of)
+        arr = np.array(
+            slide.read_region((x, y), 0, (extent, extent)).resize(
+                resize_size, Image.NEAREST
+            )
+        )[:, :, :3]
+        return arr
 
 
 def get_tile_from_slide(
@@ -343,7 +362,6 @@ def get_tile_from_slide(
 def get_tile_arrays(
     indices: List[int],
     input_slide_image: str,
-    full_resolution_tile_size: int,
     tile_size: int,
 ) -> List[Tuple[int, np.ndarray]]:
     """
@@ -352,15 +370,13 @@ def get_tile_arrays(
     Args:
         indices (List[int]): list of integers to return as tiles
         input_slide_image (str): path to WSI
-        full_resolution_tile_size (int): tile_size * to_mag_scale_factor
         tile_size (int): width, height of generated tile
 
     Returns:
         a list of tuples (index, tile array) for given indices
     """
-    slide = TiffSlide(str(input_slide_image))
     full_generator, full_level = get_full_resolution_generator(
-        slide, tile_size=full_resolution_tile_size
+        input_slide_image, tile_size=tile_size
     )
     return [
         (
@@ -449,23 +465,23 @@ def get_downscaled_thumbnail(
 
 
 def get_full_resolution_generator(
-    slide: TiffSlide, tile_size: int
+    slide_file: fsspec.core.OpenFile,
+    tile_size: int,
 ) -> Tuple[DeepZoomGenerator, int]:
-    """Return DeepZoomGenerator and generator level
+    """Return MinimalComputeAperioDZGenerator and generator level
 
     Args:
-        slide (TiffSlide): slide object
-        tile_size (int): width and height of a single tile for the DeepZoomGenerator
+        slide_file (fsspec.core.OpenFile): slide object
 
     Returns:
-        Tuple[DeepZoomGenerator, int]
+        Tuple[MinimalComputeAperioDZGenerator, int]
     """
-    assert isinstance(slide, TiffSlide) or isinstance(slide, TiffSlide)
     generator = DeepZoomGenerator(
-        slide, overlap=0, tile_size=tile_size, limit_bounds=False
+        slide_file, overlap=0, tile_size=tile_size, limit_bounds=False
     )
+
     generator_level = generator.level_count - 1
-    assert generator.level_dimensions[generator_level] == slide.dimensions
+    # assert generator.level_dimensions[generator_level] == slide.dimensions
     return generator, generator_level
 
 

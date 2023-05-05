@@ -1,12 +1,11 @@
 import fire
 import numpy as np
-from dask.distributed import Client
 from girder_client import GirderClient
 
 from luna.pathology.cli.dsa_annotation_etl import cli
 
 
-def test_cli(tmp_path, monkeypatch):
+def test_cli(tmp_path, monkeypatch, dask_client):
     def mock_get(*args, **kwargs):
         if args[1] == "/system/check":
             return {}
@@ -60,7 +59,6 @@ def test_cli(tmp_path, monkeypatch):
     monkeypatch.setattr(GirderClient, "listCollection", mock_listCollection)
     monkeypatch.setattr(GirderClient, "listResource", mock_listResource)
 
-    Client()
     fire.Fire(
         cli,
         [
@@ -74,7 +72,7 @@ def test_cli(tmp_path, monkeypatch):
             "test-collection",
             "--annotation_name",
             "test-annotation",
-            "--output_url",
+            "--output_urlpath",
             str(tmp_path),
         ],
     )

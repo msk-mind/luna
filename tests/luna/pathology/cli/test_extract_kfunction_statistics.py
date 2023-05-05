@@ -2,19 +2,28 @@ import os
 
 import fire
 import pandas as pd
-from dask.distributed import Client
+import pytest
+from dask.distributed import Client, LocalCluster
 
 from luna.pathology.cli.extract_kfunction_statistics import cli
 
 
-def test_cli(tmp_path):
-    Client()
+@pytest.fixture(scope="module")
+def dask_client():
+    cluster = LocalCluster()
+    client = Client(cluster)
+    yield client
+    client.close()
+    cluster.close()
+
+
+def test_cli(tmp_path, dask_client):
     fire.Fire(
         cli,
         [
-            "--input_cell_objects_url",
+            "--input_cell_objects_urlpath",
             "tests/testdata/pathology/test_tile_stats.parquet",
-            "--output_url",
+            "--output_urlpath",
             str(tmp_path),
             "--intensity_label",
             "Centroid X µm",

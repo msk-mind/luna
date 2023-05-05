@@ -5,7 +5,7 @@ scale_factor: 8
 tile_size: 256
 requested_magnification: 20
 collection_name: tcga
-output_folder: tests/testdata/pathology_staging
+output_Urlpath: tests/testdata/pathology_staging
 dsa_config:
   host: localhost
   port: 8080

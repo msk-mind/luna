@@ -1,7 +1,7 @@
 import io
 import os
 
-from click.testing import CliRunner
+import fire
 
 import docker
 from luna.pathology.cli.run_stardist_cell_detection import cli
@@ -44,20 +44,18 @@ def test_cli(monkeypatch):
     )
     monkeypatch.setattr(docker.models.containers.Container, "logs", mock_container)
 
-    runner = CliRunner()
-    result = runner.invoke(
+    fire.Fire(
         cli,
         [
+            "--slide-urlpath",
             "tests/testdata/pathology/123.svs",
-            "-o",
-            tmppath,
-            "-cs",
-            8,
-            "-it",
+            "--output-urlpath",
+            str(tmppath),
+            "--cell-expansion-size",
+            "8",
+            "--image-type",
             "BRIGHTFIELD_H_DAB",
         ],
     )
-
-    assert result.exit_code == 0
 
     assert os.path.exists(f"{tmppath}/cell_detections.tsv")

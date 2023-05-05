@@ -1,4 +1,4 @@
-from click.testing import CliRunner
+import fire
 from girder_client import GirderClient
 
 from luna.pathology.cli.dsa_upload import cli
@@ -6,7 +6,6 @@ from luna.pathology.cli.dsa_upload import cli
 
 def test_upload(monkeypatch):
     def mock_get(*args, **kwargs):
-
         if args[1] == "/system/check":
             return {}
         if args[1] == "/item?text=123":
@@ -31,13 +30,11 @@ def test_upload(monkeypatch):
         ]
 
     def mock_put(*args, **kwargs):
-
         if args == "/annotation?itemId=None":
             return {}
         pass
 
     def mock_auth(*args, **kwargs):
-
         if args[1] == "myuser" and args[2] == "mypassword":
             return 0  # success
         else:
@@ -49,12 +46,12 @@ def test_upload(monkeypatch):
     monkeypatch.setattr(GirderClient, "listResource", mock_listResource)
     monkeypatch.setattr(GirderClient, "listCollection", mock_listCollection)
 
-    runner = CliRunner()
-    result = runner.invoke(
+    fire.Fire(
         cli,
         [
+            "--dsa_endpoint_url",
             "http://localhost:8080/",
-            "--annotation_filepath",
+            "--annotation_file_urlpath",
             "tests/luna/pathology/cli/testouts/"
             + "Tile-Based_Pixel_Classifier_Inference_123.json",
             "--image_filename",
@@ -67,5 +64,3 @@ def test_upload(monkeypatch):
             "pw",
         ],
     )
-
-    assert result.exit_code == 0

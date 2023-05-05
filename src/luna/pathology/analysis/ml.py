@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 import torch
+from fsspec import open
 from PIL import Image
 
 # from sklearn.model_selection._split import _BaseKFold, _RepeatedSplits
@@ -129,10 +130,11 @@ class BaseTorchTileDataset(Dataset):
 
     def __init__(
         self,
-        tile_manifest=None,
-        tile_path=None,
-        label_cols=[],
-        using_ray=False,
+        tile_manifest: pd.DataFrame = None,
+        tile_urlpath: str = "",
+        label_cols: List[str] = [],
+        using_ray: bool = False,
+        storage_options: dict = {},
         **kwargs,
     ):
         """Initialize BaseTileDataset
@@ -148,8 +150,9 @@ class BaseTorchTileDataset(Dataset):
 
         if tile_manifest is not None:
             self.tile_manifest = tile_manifest
-        elif tile_path is not None:
-            self.tile_manifest = pd.read_csv(tile_path).set_index("address")
+        elif tile_urlpath is not None:
+            with open(tile_urlpath, storage_options) as of:
+                self.tile_manifest = pd.read_csv(of).set_index("address")
         else:
             raise RuntimeError("Must specifiy either tile_manifest or tile_path")
 

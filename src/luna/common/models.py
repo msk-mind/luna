@@ -1,4 +1,3 @@
-import uuid
 from typing import Optional
 
 import pandera as pa
@@ -10,8 +9,8 @@ class Slide(BaseModel):
     id: str
     project_name: str = ""
     comment: str = ""
-    size: int
-    uuid: uuid.UUID
+    slide_size: int
+    uuid: str
     url: str
     channel0_R: Optional[float]
     channel0_G: Optional[float]
@@ -21,7 +20,6 @@ class Slide(BaseModel):
     channel1_B: Optional[float]
 
     class Config:
-        arbitrary_types_allowed = True
         extra = "allow"
 
 
@@ -37,11 +35,24 @@ class Tile(BaseModel):
     x_coord: int
     y_coord: int
     xy_extent: int
-    size: int
-    units: str
+    tile_size: int
+    tile_units: str
+
+    class Config:
+        extra = "allow"
+
+
+class StoredTile(Tile):
+    tile_store: str
 
 
 class TileSchema(pa.DataFrameModel):
     class Config:
         dtype = PydanticModel(Tile)
+        coerce = True
+
+
+class StoredTileSchema(pa.DataFrameModel):
+    class Config:
+        dtype = PydanticModel(StoredTile)
         coerce = True

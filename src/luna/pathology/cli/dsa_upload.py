@@ -22,7 +22,7 @@ logger = logging.getLogger("dsa_upload")
 @save_metadata
 def cli(
     dsa_endpoint_url: str = "???",
-    annotation_file_url: str = "???",
+    annotation_file_urlpath: str = "???",
     collection_name: str = "???",
     image_filename: str = "???",
     username: str = "???",
@@ -36,7 +36,7 @@ def cli(
 
     Args:
         dsa_endpoint_url (string): DSA endpoint URL
-        annotation_file_url (string): URL to a DSA annotation json file
+        annotation_file_urlpath (string): URL/path to a DSA annotation json file
         image_filename (string): name of the image file in DSA e.g. 123.svs
         collection_name (string): name of the collection in DSA
         uri (string): DSA API endpoint e.g. http://localhost:8080/api/v1
@@ -47,7 +47,8 @@ def cli(
     config = get_config(vars())
     dsa_uuid = upload_annotation_to_dsa(
         config["dsa_endpoint_url"],
-        config["annotation_file_url"],
+        config["annotation_file_urlpath"],
+        config["collection_name"],
         config["image_filename"],
         config["username"],
         config["password"],
@@ -59,7 +60,7 @@ def cli(
 
 def upload_annotation_to_dsa(
     dsa_endpoint_url: str,
-    annotation_file_url: str,
+    annotation_file_urlpath: str,
     collection_name: str,
     image_filename: str,
     username: str,
@@ -71,7 +72,7 @@ def upload_annotation_to_dsa(
     Upload json annotation file as a new annotation to the image in the DSA collection.
 
     Args:
-        annotation_file_url (string): URL to a DSA annotation json file
+        annotation_file_urlpath (string): URL/path to a DSA annotation json file
         image_filename (string): name of the image file in DSA e.g. 123.svs
         collection_name (string): name of the collection in DSA
         uri (string): DSA API endpoint e.g. http://localhost:8080/api/v1
@@ -95,7 +96,7 @@ def upload_annotation_to_dsa(
         logger.error(exc)
         raise RuntimeError("Error connecting to DSA API")
 
-    with open(annotation_file_url, **storage_options).open() as annotation_json:
+    with open(annotation_file_urlpath, **storage_options).open() as annotation_json:
         dsa_annotation = json.load(annotation_json)
 
     dsa_uuid = get_item_uuid(gc, image_filename, collection_name)

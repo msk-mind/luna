@@ -1,144 +1,72 @@
 # General imports
 import logging
-import os
-import sys
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
+from typing import Optional
 
-import click
+import fire
+import fsspec
 import h5py
-import openslide
-import pandas as pd
-from tqdm import tqdm
+from dask.distributed import Client, as_completed, get_client, progress
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner, grouper
-from luna.pathology.common.utils import get_tile_from_slide
+from luna.common.utils import get_config, grouper, save_metadata, timed
+from luna.pathology.cli.generate_tiles import generate_tiles
+from luna.pathology.common.utils import get_array_from_tile
 
 init_logger()
 logger = logging.getLogger("generate_tiles")
 
-_params_ = [
-    ("input_slide_image", str),
-    ("input_slide_tiles", str),
-    ("output_dir", str),
-    ("num_cores", int),
-    ("batch_size", int),
-]
 
-
-@click.command()
-@click.argument("input_slide_image", nargs=1)
-@click.argument("input_slide_tiles", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-nc", "--num_cores", required=False, help="Number of cores to use", default=4
-)
-@click.option(
-    "-bx",
-    "--batch_size",
-    required=False,
-    help="Batch size used for inference speedup",
-    default=64,
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-@click.option(
-    "-dsid",
-    "--dataset_id",
-    required=False,
-    help="Optional dataset identifier to add results to",
-)
-def cli(**cli_kwargs):
-    """Saves tiles to disk
-
-    Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
-    and the corresponding manifest/header file (tiles.parquet) is also generated
-
-    Adds tile_store to manifest for use in HDF5 Image loader
-
-    \b
-    Inputs:
-        input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        input_slide_tiles: path to tile images (.tiles.parquet)
-
-    Outputs:
-        slide_tiles
-    \b
-    Example:
-        save_tiles 10001.svs 10001/tiles
-            -nc 8 -bx 200
-            -o 10001/tile_data
-    """
-    cli_runner(cli_kwargs, _params_, save_tiles)
-
-
-def get_tile_array(iterrows: pd.DataFrame, input_slide_image):
-    """
-    Returns address, tile for a list of tile rows (batched)
-
-    Args:
-        iterrows (list[pd.Series]): list of rows with tile metadata
-        input_slide_image: path to openslide compatible image
-
-    """
-    slide = openslide.OpenSlide(str(input_slide_image))
-    return [(index, get_tile_from_slide(row, slide)) for index, row in iterrows]
-
-
-def save_tiles(input_slide_image, input_slide_tiles, output_dir, num_cores, batch_size):
+@timed
+@save_metadata
+def cli(
+    slide_urlpath: str = "???",
+    tile_size: int = "???",  # type: ignore
+    requested_magnification: Optional[int] = None,
+    batch_size: int = 1000,
+    output_urlpath: str = ".",
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+    local_config: str = "",
+):
     """Saves tiles to disk
 
     Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
     and the corresponding manifest/header file (tiles.parquet) is also generated
 
     Args:
-        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.parquet)
-        output_dir (str): output/working directory
+        slide_urlpath (str): url/path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        tile_size (int): size of tiles to use (at the requested magnification)
+        requested_magnification (float): Magnification scale at which to perform computation
+        output_urlpath (str): output url/path prefix
         batch_size (int): size in batch dimension to chuck jobs
+        storage_options (dict): storage options to reading functions
+        output_storage_options (dict): storage options to writing functions
+        local_config (str): url/path to local config yaml file
 
     Returns:
         dict: metadata about function call
     """
-    slide_id = Path(input_slide_image).stem
-    df = pd.read_parquet(input_slide_tiles).reset_index().set_index("address")
+    config = get_config(vars())
 
-    output_header_file = f"{output_dir}/{slide_id}.tiles.parquet"
-    output_hdf_file = f"{output_dir}/{slide_id}.tiles.h5"
-
-    logger.info(
-        f"Now generating tiles with num_cores={num_cores} and batch_size={batch_size}!"
+    df = save_tiles(
+        config["slide_urlpath"],
+        config["tile_size"],
+        config["output_urlpath"],
+        config["batch_size"],
+        config["requested_magnification"],
+        config["storage_options"],
+        config["output_storage_options"],
     )
-    if os.path.exists(output_hdf_file):
-        logger.warning(f"{output_hdf_file} already exists, deleting the file..")
-        os.remove(output_hdf_file)
-
-    # save address:tile arrays key:value pair in hdf5
-    hfile = h5py.File(output_hdf_file, "a")
-    with ProcessPoolExecutor(num_cores) as executor:
-        out = [
-            executor.submit(get_tile_array, tile_row, input_slide_image)
-            for tile_row in grouper(df.iterrows(), batch_size)
-        ]
-        for future in tqdm(as_completed(out), file=sys.stdout, total=len(out)):
-            for index, tile in future.result():
-                hfile.create_dataset(index, data=tile)
-    hfile.close()
-
-    df["tile_store"] = output_hdf_file
 
     logger.info(df)
-    df.to_parquet(output_header_file)
+    fs, output_urlpath_prefix = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+    slide_id = Path(config["slide_urlpath"]).stem
+    output_header_file = Path(output_urlpath_prefix) / f"{slide_id}.tiles.parquet"
+    with fs.open(output_header_file, "wb") as of:
+        df.to_parquet(of)
 
     properties = {
         "slide_tiles": output_header_file,  # "Tiles" are the metadata that describe them
@@ -149,5 +77,74 @@ def save_tiles(input_slide_image, input_slide_tiles, output_dir, num_cores, batc
     return properties
 
 
+def save_tiles(
+    slide_urlpath: str,
+    tile_size: int,
+    output_urlpath: str,
+    batch_size: int = 1000,
+    requested_magnification: Optional[int] = None,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+):
+    """Saves tiles to disk
+
+    Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
+    and the corresponding manifest/header file (tiles.parquet) is also generated
+
+    Args:
+        slide_urlpath (str): url/path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        tile_size (int): size of tiles to use (at the requested magnification)
+        requested_magnification (float): Magnification scale at which to perform computation
+        output_urlpath (str): output url/path prefix
+        batch_size (int): size in batch dimension to chuck jobs
+        storage_options (dict): storage options to reading functions
+        output_storage_options (dict): storage options to writing functions
+
+    Returns:
+        dict: metadata about function call
+    """
+    client = get_client()
+    slide_id = Path(slide_urlpath).stem
+    df = generate_tiles(
+        slide_urlpath, tile_size, storage_options, requested_magnification
+    )
+
+    logger.info(f"Now generating tiles with batch_size={batch_size}!")
+
+    # save address:tile arrays key:value pair in hdf5
+    def f_many(iterator):
+        return [
+            (
+                x.address,
+                get_array_from_tile(x, slide_urlpath, storage_options=storage_options),
+            )
+            for x in iterator
+        ]
+
+    chunks = grouper(df.itertuples(name="Tile"), batch_size)
+
+    futures = client.map(f_many, chunks)
+    progress(futures)
+
+    fs, output_urlpath_prefix = fsspec.core.url_to_fs(
+        output_urlpath, **output_storage_options
+    )
+    output_hdf_file = Path(output_urlpath_prefix) / f"{slide_id}.tiles.h5"
+    progress(futures)
+
+    simplecache_fs = fsspec.filesystem("simplecache", target_protocol=fs.protocol)
+
+    with simplecache_fs.open(output_hdf_file, "wb") as of:
+        with h5py.File(of, "x") as hfile:
+            for future in as_completed(futures):
+                for result in future.result():
+                    address, tile_arr = result
+                    hfile.create_dataset(address, data=tile_arr)
+
+    df["tile_store"] = fs.unstrip_protocol(str(output_hdf_file))
+    return df
+
+
 if __name__ == "__main__":
-    cli()
+    Client()
+    fire.Fire(cli)
