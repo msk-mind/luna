@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.optim as optim
 from ray import tune
 from ray.air import session
-from ray.air.config import RunConfig, ScalingConfig
+from ray.air.config import TuneConfig, RunConfig, ScalingConfig
 from ray.train.torch import TorchTrainer
 from torch.utils.data import DataLoader
 from torchmetrics import (
@@ -432,6 +432,9 @@ def train_model(
     cli_reporter = CustomReporter(max_report_frequency=180)
     tuner = ray.tune.Tuner(
             trainable=trainer,
+            tune_config=TuneConfig(
+                num_samples=num_samples,
+                ),
             run_config=RunConfig(
                 local_dir=output_dir,
                 progress_reporter=cli_reporter,
