@@ -37,7 +37,7 @@ def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
 
     if len(df_collections) == 0:
         logger.error(f"No matching collection '{collection_name}'")
-        raise RuntimeError(f"No matching collection '{collection_name}'")
+        return None
 
     collection_uuid = df_collections.index.item()
 
