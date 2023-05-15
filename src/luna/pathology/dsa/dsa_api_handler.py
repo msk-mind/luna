@@ -13,6 +13,11 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+# TODO Do we want to allow users to create objects? I think it's fine because 
+#      if they sign in with a user that doesn't have write permissions they 
+#      won't be able to do anything with the create functions.
+
+# TODO For create functions, would we want to return None or raise an error?
 
 def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
     """Returns the DSA collection uuid from the provided `collection_name`
@@ -26,17 +31,19 @@ def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
             error in the get request
     """
     try:
-        df_collections = pd.DataFrame(gc.listCollection()).set_index("_id")
+        df_collections = pd.DataFrame(gc.listCollection())
+        if len(df_collections):
+            df_collections = df_collections.set_index("_id")
+            df_collections = df_collections.query(f"name=='{collection_name}'")
         logger.debug(f"Found collections {df_collections}")
     except Exception as err:
         logger.error(f"Couldn't retrieve data from DSA: {err}")
         raise RuntimeError("Connection to DSA endpoint failed.")
 
-    # Look for a collection callled our collection name
-    df_collections = df_collections.query(f"name=='{collection_name}'")
+    # Look for a collection called our collection name
 
     if len(df_collections) == 0:
-        logger.error(f"No matching collection '{collection_name}'")
+        logger.debug(f"No matching collection '{collection_name}'")
         return None
 
     collection_uuid = df_collections.index.item()
@@ -46,6 +53,115 @@ def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
     )
 
     return collection_uuid
+
+def create_collection(gc, collection_name: str) -> Optional[str]:
+    """
+    Creates a dsa collection and returns a collection uuid from the created
+    collection on successful creation.
+
+    Args:
+        gc: girder client
+        collection_name (string): name of the collection
+
+    Returns:
+        string: DSA collection uuid. Or an error in the post request.
+    """
+    try:
+        gc.createCollection(collection_name)
+        logger.debug(f"Created collection {collection_name}")
+        new_collection_id = get_collection_uuid(gc, collection_name)
+        logger.debug(f"Collection {collection_name} has id {new_collection_id}")
+    except Exception as err:
+        logger.error(f"Couldn't create collection {collection_name} : {err}")
+        return None
+
+    return new_collection_id
+
+def get_folder_uuid(gc, folder_name: str, parent_type: str, parent_id: str) -> Optional[str]:
+    try:
+        df_folders = pd.DataFrame(gc.listFolder(parent_id, parent_type))
+        if len(df_folders):
+            df_folders = df_folders.set_index('_id')
+            df_folders = df_folders.query(f"name=='{folder_name}'")
+        logger.debug(f"Found folders {df_folders}")
+    except Exception as err:
+        logger.error(f"Couldn't retrieve data from DSA: {err}")
+        raise RuntimeError("Connection to DSA endpoint failed.")
+
+    if len(df_folders) == 0:
+        logger.debug(f"No matching folders '{folder_name}'")
+        return None
+
+    folder_uuid = df_folders.index.item()
+
+    logger.info(
+        f"Found folder id={folder_uuid} for folder={folder_name}"
+    )
+
+    return folder_uuid
+
+def create_folder(gc, folder_name: str, parent_type: str, parent_id: str) -> Optional[str]:
+    try:
+        gc.createFolder(parent_id, folder_name, parentType=parent_type)
+        logger.debug(f"Created folder {folder_name}")
+        new_folder_uuid = get_folder_uuid(gc, folder_name, parent_type, parent_id)
+        logger.debug(f"Folder {folder_name} has id {new_folder_uuid}")
+    except Exception as err:
+        logger.error(f"Couldn't create folder {folder_name} : {err}")
+        return None
+
+    return new_folder_uuid
+
+def get_assetstore_uuid(gc, assetstore_name: str) -> Optional[str]:
+    try:
+        df_assetstores = pd.DataFrame(gc.get(f"assetstore?"))
+        if len(df_assetstores):
+            df_assetstores = df_assetstores.set_index("_id")
+            df_assetstores = df_assetstores.query(f"name=='{assetstore_name}'")
+        logger.debug(f"Found assetstores {df_assetstores}")
+    except Exception as err:
+        logger.error(f"Couldn't retrieve data from DSA: {err}")
+        raise RuntimeError("Connection to DSA endpoint failed.")
+
+    if len(df_assetstores) == 0:
+        logger.debug(f"No matching assetstore '{assetstore_name}'")
+        return None
+
+    assetstore_uuid = df_assetstores.index.item()
+    
+    logger.info(
+        f"Found assetstore id={assetstore_uuid} for assetstore={assetstore_name}"
+    )
+
+    return assetstore_uuid
+
+def create_s3_assetstore(gc, name: str, bucket: str, access: str, 
+                         secret: str, service: str) -> Optional[str]:
+    request_url = (f"assetstore?name={name}&type=2&bucket={bucket}&accessKeyId={access}" +
+                   f"&secret={secret}&service={service}") 
+    try:
+        gc.post(request_url)
+        logger.debug(f"Created assetstore {name}")
+        new_assetstore_uuid = get_assetstore_uuid(gc, name)
+        logger.debug(f"Assetstore {name} has id {new_assetstore_uuid}")
+    except Exception as err:
+        logger.error(f"Couldn't create assetstore {name}: {err}")
+        raise RuntimeError("Unable to create s3 assetstore")
+    
+    return new_assetstore_uuid
+
+def import_assetstore_to_folder(gc, assetstore_uuid: str, 
+                                destination_uuid: str) -> Optional[str]:
+    request_url = (f"assetstore/{assetstore_uuid}/import?destinationId=" + 
+                  f"{destination_uuid}&destinationType=folder" +
+                  "&importPath=%2F")
+    try:
+        gc.post(request_url)
+        logger.debug(f"Importing from assetstore id {assetstore_uuid}" + 
+                     f"to destination id {destination_uuid}")
+    except Exception as err:
+        logger.error(f"Couldn't import assetstore id {assetstore_uuid} : {err}")
+        raise RuntimeError("Unable to import assetstore to collection")
 
 
 def get_annotation_uuid(gc, item_id, annotation_name):
@@ -115,10 +231,47 @@ def get_item_uuid(gc, image_name: str, collection_name: str) -> Optional[str]:
                     and uuid_response_dict["baseParentId"] == collection_uuid
                 ):
                     dsa_uuid = uuid_response_dict["_id"]
-                    print(f"Image file {image_name} found with id: {dsa_uuid}")
+                    logger.debug(f"Image file {image_name} found with id: {dsa_uuid}")
                     return dsa_uuid
     logger.warning(f"Image file {image_name} not found")
     return None
+
+def get_item_uuid_by_folder(gc, image_name: str, folder_uuid: str) -> Optional[str]:
+    image_id = Path(image_name).stem
+    try:
+        uuid_response = gc.get(f'/item?text="{image_id}"')
+
+    except requests.exceptions.HTTPError as err:
+        logger.error(
+            f"Error in item get request: {err.response.status_code}, {err.response.text}"
+        )
+        return None
+    
+    if uuid_response is not None and len(uuid_response) > 0:
+        # multiple entries can come up based on substring matches, return the correct item id by checking name field in dictionary.
+        for uuid_response_dict in uuid_response:
+            if "name" in uuid_response_dict and "_id" in uuid_response_dict:
+                if (
+                    uuid_response_dict["name"] == image_name
+                    and uuid_response_dict["folderId"] == folder_uuid
+                ):
+                    dsa_uuid = uuid_response_dict["_id"]
+                    logger.debug(f"Image file {image_name} found with id: {dsa_uuid}")
+                    return dsa_uuid
+    logger.warning(f"Image file {image_name} not found")
+    return None
+
+
+
+def copy_item(gc, item_id: str,  destination_id: str):
+    request_url = f"item/{item_id}/copy?folderId={destination_id}"
+    try:
+        gc.post(request_url)
+    except Exception as err:
+        logger.error(f"Error copying item: {err}")
+        raise RuntimeError("Can not copy item")
+    
+
 
 
 def push_annotation_to_dsa_image(
@@ -219,7 +372,7 @@ def get_collection_metadata(
     collection_uuid = get_collection_uuid(gc, collection_name)
 
     if collection_uuid is not None:
-        print("retreived collection uuid")
+        logger.debug("retreived collection uuid")
 
         # try get request from girder
         try:
@@ -344,7 +497,7 @@ def get_slide_annotation(
 
     # search for annotation
 
-    print("Starting request for annotation")
+    logger.debug("Starting request for annotation")
     try:
         annotation_id_response = gc.get(f"/annotation?itemId={item_uuid}")
         annotation_id = None
