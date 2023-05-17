@@ -152,11 +152,13 @@ def create_s3_assetstore(gc, name: str, bucket: str, access: str,
 
 def import_assetstore_to_folder(gc, assetstore_uuid: str, 
                                 destination_uuid: str) -> Optional[str]:
-    request_url = (f"assetstore/{assetstore_uuid}/import?destinationId=" + 
-                  f"{destination_uuid}&destinationType=folder" +
-                  "&importPath=%2F")
+    request_url = f"assetstore/{assetstore_uuid}/import"  
+    params      = { 'destinationId' : destination_uuid, 
+                    'destinationType' : 'folder',
+                    'importPath' : '/'
+                  } 
     try:
-        gc.post(request_url)
+        gc.post(request_url, parameters=params)
         logger.debug(f"Importing from assetstore id {assetstore_uuid}" + 
                      f"to destination id {destination_uuid}")
     except Exception as err:
