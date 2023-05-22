@@ -2,6 +2,7 @@ import itertools
 import json
 import os
 import subprocess
+import tempfile
 import time
 import urllib
 import warnings
@@ -21,6 +22,7 @@ import yaml
 from fsspec import open  # type: ignore
 from loguru import logger
 from omegaconf import MissingMandatoryValue, OmegaConf
+from pyarrow.fs import copy_files
 
 # Distinct types that are actually the same (effectively)
 TYPE_ALIASES = {"itk_geometry": "itk_volume"}
@@ -55,6 +57,32 @@ def save_metadata(func, output_urlpath_key="output_urlpath"):
     return wrapper
 
 
+def local_cache_dir(func: Callable, dir_write_mode: dict[str, str]):
+    """Decorator for caching dirs locally"""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        storage_options = kwargs.get("storage_options", {})
+        output_storage_options = kwargs.get("output_storage_options", {})
+        protocol = None
+        for dir_name, write_mode in dir_write_mode:
+            if "w" in write_mode:
+                so = output_storage_options
+            else:
+                so = storage_options
+            fs, dir = fsspec.core.url_to_fs(kwargs[dir_name], **so)
+            if protocol and fs.protocol != protocol:
+                raise RuntimeError("Only one filesystem protocol supported")
+            protocol = fs.protocol
+
+            local_tmp_dir = tempfile.TemporaryDirectory()
+            result = func(*args, **kwargs)
+            copy_files(local_tmp_dir, dir, destination_fs=fs)
+            return result
+
+    return wrapper
+
+
 def local_cache_urlpath(func: Callable, urlpath_write_mode: dict[str, str]):
     """Decorator for caching url/paths locally"""
 
@@ -74,9 +102,7 @@ def local_cache_urlpath(func: Callable, urlpath_write_mode: dict[str, str]):
                     raise RuntimeError("Only one filesystem protocol supported")
                 protocol = fs.protocol
 
-                simplecache_fs = fsspec.filesystem(
-                    "simplecache", target_protocol=protocol
-                )
+                simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
 
                 of = simplecache_fs.open(path, write_mode)
                 stack.enter_context(of)
@@ -125,7 +151,7 @@ def clean_nested_colname(s):
     return s[s.find(".") + 1 :]
 
 
-def generate_uuid(filesystem: fsspec.spec.AbstractFileSystem, path: str, prefix):
+def generate_uuid(urlpath: str, prefix, storage_options={}):
     """
     Returns hash of the file given path, preceded by the prefix.
     :param path: file path e.g. file:/path/to/file
@@ -133,7 +159,9 @@ def generate_uuid(filesystem: fsspec.spec.AbstractFileSystem, path: str, prefix)
     :return: string uuid
     """
 
-    rec_hash = str(filesystem.checksum(path))
+    fs, path = fsspec.core.url_to_fs(urlpath, **storage_options)
+
+    rec_hash = str(fs.checksum(path))
     prefix.append(rec_hash)
     return "-".join(prefix)
 
@@ -409,12 +437,15 @@ def get_config(cli_kwargs: dict):
     except MissingMandatoryValue as e:
         raise fire.core.FireError(e)
 
-    if merged_conf.get("output_url"):
-        o = urlparse(str(merged_conf.get("output_dir")))
+    if merged_conf.get("output_urlpath"):
+        o = urlparse(str(merged_conf.get("output_urlpath")))
         merged_conf["output_filesystem"] = "file"
         if o.scheme != "":
             merged_conf["output_filesystem"] = o.scheme
-        merged_conf["output_storage_options"] = merged_conf.get("storage_options", {})
+        if not merged_conf.get("output_storage_options"):
+            merged_conf["output_storage_options"] = merged_conf.get(
+                "storage_options", {}
+            )
         if (
             merged_conf["output_filesystem"] == "file"
             and merged_conf["output_storage_options"] == {}
@@ -424,7 +455,7 @@ def get_config(cli_kwargs: dict):
     return merged_conf
 
 
-def apply_csv_filter(input_paths, subset_csv=None):
+def apply_csv_filter(input_paths, subset_csv=None, storage_options={}):
     """Filters a list of input_paths based on include/exclude logic given for either the full path, filename, or filestem.
 
     If using "include" logic, only matching entries with include=True are kept.
@@ -447,7 +478,9 @@ def apply_csv_filter(input_paths, subset_csv=None):
         return input_paths
 
     try:
-        subset_df = pd.read_csv(subset_csv, dtype={0: str})
+        subset_df = pd.read_csv(
+            subset_csv, dtype={0: str}, storage_options=storage_options
+        )
 
         match_type = subset_df.columns[0]
         filter_logic = subset_df.columns[1]

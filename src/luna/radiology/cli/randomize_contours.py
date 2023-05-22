@@ -1,10 +1,9 @@
 import logging
 
-import click
+import fire
 import numpy as np
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
 from luna.radiology.mirp.imagePerturbations import randomise_roi_contours
 from luna.radiology.mirp.imageProcess import (
     combine_all_rois,
@@ -18,59 +17,6 @@ from luna.radiology.mirp.importSettings import Settings
 
 init_logger()
 logger = logging.getLogger("randomize_contours")
-
-
-_params_ = [
-    ("input_itk_volume", str),
-    ("input_itk_labels", str),
-    ("resample_pixel_spacing", float),
-    ("resample_smoothing_beta", float),
-    ("output_dir", str),
-]
-
-
-@click.command()
-@click.argument("input_itk_volume", nargs=1)
-@click.argument("input_itk_labels", nargs=1)
-@click.option(
-    "-rps", "--resample_pixel_spacing", required=False, help="path to input label data"
-)
-@click.option(
-    "-rsb", "--resample_smoothing_beta", required=False, help="path to input label data"
-)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
-    """Generate randomize contours given and image, label after resampling using MIRP processing library
-
-    \b
-    Inputs:
-        input_itk_volume: itk compatible image volume (.mhd, .nrrd, .nii, etc.)
-        input_itk_labels: itk compatible label volume (.mha, .nii, etc.)
-    \b
-    Outputs:
-        itk_volume
-        itk_labels
-        mirp_pertubations
-        mirp_supervoxels
-    \b
-    Example:
-        randomize_contours ct_image.mhd, ct_lesions.mha
-            -rps 1.5
-            -rsb 0.9
-            -o ./mirp_results/
-    """
-    cli_runner(cli_kwargs, _params_, randomize_contours)
 
 
 def randomize_contours(
@@ -172,4 +118,4 @@ def randomize_contours(
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(randomize_contours)

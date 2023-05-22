@@ -111,7 +111,7 @@ def run_stardist_cell_detection(
     if fs.protocol == "file":
         local_file = slide_path
     else:
-        fs = fsspec.filesystem("simplecache", target_protocol=fs.protocol)
+        fs = fsspec.filesystem("simplecache", fs=fs)
         of = fs.open(slide_path, "r")
         local_file = of.name
 

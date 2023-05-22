@@ -28,34 +28,31 @@ def cli(
     slide_urlpath: str = "???",
     project_name: str = "",
     comment: str = "",
-    subset_csv: str = "",
+    subset_csv_urlpath: str = "",
     debug_limit: int = 0,
     output_urlpath: str = "",
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
 ):
-    """Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
+    """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
 
-    Output schema follows [ slide_id (str), slide_uuid (str), readable (bool), comment, project, ingest_time (UTC), generation_date (UTC), <store data | data_url >, <openslide data>, <stain data> ]
 
-    \b
-    Inputs:
-        input_slide_folder: a slide image folder to walk over to find slide images
+    Args:
+        slide_url (str): path to slide image
+        project_name (str): project name underwhich the slides should reside
+        comment (str): comment and description of dataset
+        subset_csv_urlpath (str): url/path to subset csv
+        storage_options (dict): storage options to pass to reading functions
+        output_urlpath (str): url/path to output table
+        output_storage_options (dict): storage options to pass to writing functions
+        local_config (str): url/path to YAML config file
 
-    \b
-    Outputs:
-        slide_table: a dataset representing the slide ingestion job
 
-    \b
-    Example:
-        slide_etl /source/pathology/images
-            --project_name PATH-123-45
-            --comment "H&E needle core biospies"
-            --store_url s3://localhost:9000/
-            --num_cores 8
-            -o /data/PATH-123-45/table
+    Returns:
+        slide (Slide): slide object
     """
+
     config = get_config(vars())
     filesystem, slide_path = fsspec.core.url_to_fs(
         config["slide_urlpath"], **config["storage_options"]
@@ -67,8 +64,10 @@ def cli(
         for ext in VALID_SLIDE_EXTENSIONS:
             slide_paths += filesystem.glob(f"{slide_path}/*{ext}")
 
-    if config["subset_csv"]:
-        slide_paths = apply_csv_filter(slide_paths, config["subset_csv"])
+    if config["subset_csv_urlpath"]:
+        slide_paths = apply_csv_filter(
+            slide_paths, config["subset_csv_urlpath"], config["storage_options"]
+        )
     if config["debug_limit"] > 0:
         slide_paths = slide_paths[: config["debug_limit"]]
 
@@ -146,13 +145,13 @@ def slide_etl(
 ) -> Slide:
     """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
 
-
     Args:
-        slide_urlpath (str): path to slide image
+        slide_url (str): path to slide image
         project_name (str): project name underwhich the slides should reside
         comment (str): comment and description of dataset
-        debug_limit (int): cap number fo slides to process below this number (for debugging, testing, no_write is automatically enabled)
-        output_dir (str): path to output table
+        storage_options (dict): storage options to pass to reading functions
+        output_urlpath (str): url/path to output table
+        output_storage_options (dict): storage options to pass to writing functions
 
 
     Returns:

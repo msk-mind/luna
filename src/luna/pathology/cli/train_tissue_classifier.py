@@ -65,22 +65,49 @@ def cli(
     storage_options: dict = {},
     output_storage_options: dict = {},
 ):
-    """Train a tissue classifier model for all tiles in a slide
+    """Trains a tissue classifier model based on tile dataset parquet table
 
-    \b
-    Inputs:
-        tile_urlpath: path to tile dataset parquet table
-    \b
-    Outputs:
-        ray ExperimentAnalysis dataframe and metadata saved to the output
-    \b
-    Example:
-        train_tissue_classifier /tables/slides/slide_table
-            -ne 5
-            -nt torchvision.models.resnet18
-            -nw 1
-            -o results/train_tile_classifier_results
+    Args:
+        tile_urlpath (str): url/path to input dataframe that contains a row for each tile
+             and the cooresponding tissue type
+        label_set (dict): dictionary that maps tissue types to numerical values
+        label_col (str): name of the column in the tile_urlpath that contains the labels (tissue type)
+            for each tile
+        stratify_col (str): columnn in the tile_urlpath used to stratify the train/test splits,
+            such as the patient id or slide id
+        num_splits (int): (Optional) The number of folds, must at least be 2.
+        num_epochs (Union[int, Callable]): number of epochs to train the model for. Can be either an integer value
+            or a Ray.tune distribution (eg ray.tune.choice([10, 15])). In the YAML config, this must be specified
+            by setting the 'search type' and the 'search space'.
+        batch_size (Union[int, Callable]): batch size used in PyTorch dataloader. Can be either an integer value
+            or a Ray.tune distribution (eg ray.tune.choice([32, 64])). In the YAML config, this must be specified
+            by setting the 'search type' and the 'search space'.
+        learning_rate (Union[float, Callable]): the learning rate used for the ADAM optimizer. an be either a float value
+            or a Ray.tune distribution (eg ray.tune.loguniform([1.0e-4, 1.0e-1])). In the YAML config, this must be specified
+            by setting the 'search type' and the 'search space'.
+        network (nn.Module): The model architecture. Can either be defined in a seperate module, or be from torchvision.models
+        use_gpu (bool): whether or not use use GPUs for model training. If set False, the num_gpu flag is ignored.
+        num_cpus_per_worker (int): the number of cpus available to each worker. by default the number of workers is set to 1, meaning
+            only one trial can be run at a time. If num_workers is increased, num_cpus_per_worker must refer to the number of cpus that
+            can be used at the same time (ie if num_workers = 2 and num_cpus_per_worker=10, then 20 cores must be available), and must
+            be less than or equal to num_cpus
+        num_gpus_per_worker (int): the number of GPUs available for each worker. By default the number of workers is set to 1, meaning
+            only one trial can be run at a time. If num_workers is increased, num_gpus_per_worker must refer to the number of GPUs that
+            can be used at the same time (ie if num_workers = 2 and num_cpus_per_worker=1, then 2 GPUs must be available), and must
+            be less than or equal to num_gpus
+        num_gpus (int): total number of GPUs transparent to Ray
+        num_cpus (int): total number of CPUs transparent to Ray
+        output_urlpath (str): Output url/path. This is the location where Ray is going to save all associated metadata, logs, checkpoints and
+            any artifacts from model training
+        num_samples (int): This refers to the number of trials Ray is going to run, or how many times it's going to train a model with
+            different parameters if performing hyperparameter tuning by setting a distribution on a passed argument, like learning_rate.
+        num_workers (int): This refers to the number of workers that Ray will attempt to run in parallel. num_workers and other hardware
+            resource arguments must be set in concert. Default = 1.
+        storage_options (dict): options to pass to storage reading functions
+        output_storage_options (dict): options to pass to storage writing functions
 
+    Returns:
+        dict: model fit metadata
     """
     config = get_config(vars())
     analysis = train_model(
@@ -267,7 +294,7 @@ def train_model(
     label_set: Dict,
     label_col: str,
     stratify_col: str,
-    num_splits: float,
+    num_splits: int,
     num_epochs: Union[int, Callable],
     batch_size: Union[int, Callable],
     learning_rate: Union[float, Callable],
@@ -293,6 +320,7 @@ def train_model(
             for each tile
         stratify_col (str): columnn in the tile_urlpath used to stratify the train/test splits,
             such as the patient id or slide id
+        num_splits (int): (Optional) The number of folds, must at least be 2.
         num_epochs (Union[int, Callable]): number of epochs to train the model for. Can be either an integer value
             or a Ray.tune distribution (eg ray.tune.choice([10, 15])). In the YAML config, this must be specified
             by setting the 'search type' and the 'search space'.
@@ -314,7 +342,7 @@ def train_model(
             be less than or equal to num_gpus
         num_gpus (int): total number of GPUs transparent to Ray
         num_cpus (int): total number of CPUs transparent to Ray
-        output_dir (str): Output directory. This is the location where Ray is going to save all associated metadata, logs, checkpoints and
+        output_urlpath (str): Output url/path. This is the location where Ray is going to save all associated metadata, logs, checkpoints and
             any artifacts from model training
         num_samples (int): This refers to the number of trials Ray is going to run, or how many times it's going to train a model with
             different parameters if performing hyperparameter tuning by setting a distribution on a passed argument, like learning_rate.
@@ -324,7 +352,7 @@ def train_model(
         output_storage_options (dict): options to pass to storage writing functions
 
     Returns:
-        dict: metadata about function call
+        ray.tune.result_grid.ResultGrid: model fit result
     """
 
     logger.info(

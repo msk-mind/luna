@@ -55,7 +55,7 @@ def test_slide_etl_subset(tmp_path, dask_client):
             "TEST-00-000",
             "--comment",
             "Test ingestion",
-            "--subset-csv",
+            "--subset-csv-urlpath",
             "tests/testdata/pathology/slide_etl_subset.csv",
         ],
     )

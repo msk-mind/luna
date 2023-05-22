@@ -1,38 +1,32 @@
-import os
+from pathlib import Path
 
+import fire
 import medpy.io
 import numpy as np
-import yaml
-from click.testing import CliRunner
 
-from luna.radiology.cli.window_volume import cli
+from luna.radiology.cli.window_volume import window_volume
 
 
 def test_cli_window(tmp_path):
-
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
+    fire.Fire(
+        window_volume,
         [
             "tests/testdata/radiology/2.000000-CTAC-24716/volumes/image.mhd",
-            "-o",
-            tmp_path,
+            "--output_dir",
+            str(tmp_path),
             "--low_level",
-            0,
+            "0",
             "--high_level",
-            100,
+            "100",
         ],
     )
 
-    assert result.exit_code == 0
-    assert os.path.exists(str(tmp_path) + "/metadata.yml")
+    # assert os.path.exists(str(tmp_path) + "/metadata.yml")
 
-    with open((str(tmp_path) + "/metadata.yml"), "r") as fp:
-        metadata = yaml.safe_load(fp)
+    # with open((str(tmp_path) + "/metadata.yml"), "r") as fp:
+    # metadata = yaml.safe_load(fp)
 
-    assert os.path.exists(metadata["itk_volume"])
-
-    image, _ = medpy.io.load(metadata["itk_volume"])
+    image, _ = medpy.io.load(Path(tmp_path) / "image.windowed.mhd")
 
     assert np.max(image) == 100
     assert np.min(image) == 0

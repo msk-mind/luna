@@ -1,38 +1,37 @@
 import numpy as np
+import openslide
 import pytest
+from fsspec import open
 
-import luna.common.constants as const
-from luna.common.config import ConfigSet
 from luna.pathology.common.utils import (
     DeepZoomGenerator,
     convert_halo_xml_to_roi,
     convert_xml_to_mask,
     get_downscaled_thumbnail,
     get_full_resolution_generator,
-    get_labelset_keys,
-    get_scale_factor_at_magnfication,
+    get_scale_factor_at_magnification,
     get_tile_array,
     get_tile_color,
-    openslide,
 )
 
 output_dir = "tests/testdata/pathology/output-123"
 slide_path = "tests/testdata/pathology/123.svs"
 scores_csv_path = "tests/testdata/pathology/input/tile_scores_and_labels.csv"
+slide_file = open(slide_path)
 slide = openslide.OpenSlide(slide_path)
 img_arr = get_downscaled_thumbnail(slide, 10)
 
 
 def test_get_scale_factor_at_magnification_double():
     # slide scanned mag is 20
-    res = get_scale_factor_at_magnfication(slide, 10)
+    res = get_scale_factor_at_magnification(slide, 10)
     assert 2 == res
 
 
 def test_get_scale_factor_at_magnification_error():
     # slide scanned mag is 20
     with pytest.raises(ValueError):
-        get_scale_factor_at_magnfication(slide, 40)
+        get_scale_factor_at_magnification(slide, 40)
 
 
 def test_get_tile_color():
@@ -46,7 +45,7 @@ def test_get_tile_color_str():
 
 
 def test_get_full_resolution_generator():
-    generator, level = get_full_resolution_generator(slide, 128)
+    generator, level = get_full_resolution_generator(slide_file, 128)
     assert isinstance(generator, DeepZoomGenerator)
     assert 12 == level
 
@@ -57,16 +56,16 @@ def test_get_downscaled_thumbnail():
     assert isinstance(res, np.ndarray)
 
 
-def test_get_labelset_keys():
-    ConfigSet(
-        name=const.DATA_CFG,
-        config_file="tests/testdata/pathology/point_geojson_config.yaml",
-    )
-
-    res = get_labelset_keys()
-
-    assert 1 == len(res)
-    assert "LYMPHOCYTE_DETECTION_LABELSET" == res[0]
+# def test_get_labelset_keys():
+#    ConfigSet(
+#        name=const.DATA_CFG,
+#        config_file="tests/testdata/pathology/point_geojson_config.yaml",
+#    )
+#
+#    res = get_labelset_keys()
+#
+#    assert 1 == len(res)
+#    assert "LYMPHOCYTE_DETECTION_LABELSET" == res[0]
 
 
 xml_data_path = "tests/testdata/pathology/test-project/pathology_annotations/123456_annotation_from_halo.xml"
