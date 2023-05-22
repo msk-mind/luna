@@ -7,6 +7,7 @@ from pathlib import Path
 import fire
 import fsspec
 import pandas as pd
+from pyarrow.fs import copy_files
 
 import docker
 from luna.common.custom_logger import init_logger
@@ -147,7 +148,7 @@ def run_stardist_cell_detection(
         detach=True,
     )
     if ofs.protocol != "file":
-        ofs.copy(local_working_path, output_path)
+        copy_files(local_working_path, output_path, destination_filesystem=ofs)
 
     for line in container.logs(stream=True):
         print(line.decode(), end="")
