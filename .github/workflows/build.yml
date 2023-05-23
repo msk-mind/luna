@@ -25,18 +25,15 @@ jobs:
           path: ./venv
           key: ${{ runner.os }}-${{ hashFiles('environment.yml', 'poetry.lock', 'pyproject.toml')}}
 
-      - name: Install dependencies
+      - name: Install mamba dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           micromamba create -y -p ./venv -f environment.yml
-          . ./venv/bin/activate
-          poetry export --without-hashes -f requirements.txt --dev | SETUPTOOLS_USE_DISTUTILS=stdlib pip install --no-deps -r /dev/stdin
 
       - name: Build project
         run: |
           . ./venv/bin/activate
           poetry config virtualenvs.create false
-          poetry build
           poetry install --with dev
 
       - name: Lint with flake8
