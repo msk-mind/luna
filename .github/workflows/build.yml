@@ -37,7 +37,7 @@ jobs:
           . ./venv/bin/activate
           poetry config virtualenvs.create false
           poetry build
-          pip install --no-deps --force-reinstall dist/*.whl
+          poetry install --with dev
 
       - name: Lint with flake8
         run: |
