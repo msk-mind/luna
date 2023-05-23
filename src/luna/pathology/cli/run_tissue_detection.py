@@ -106,7 +106,6 @@ def cli(
         tile_size (int): size of tiles to use (at the requested magnification)
         requested_magnification (Optional[int]): Magnification scale at which to perform computation
         output_urlpath (str): Output url/path prefix
-        num_cores (int): Number of cores to use for CPU parallelization
         storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
         local_config (str): local config file
