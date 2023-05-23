@@ -6,7 +6,7 @@ dependencies:
   - python=3.9.*
   - mamba
   - pip=22.3.1
+  - poetry=1.1.15
   - openslide=3.4.1
   - pip:
     - numpy==1.23.5
-    - poetry==1.4.2
