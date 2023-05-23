@@ -13,12 +13,6 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-# TODO Do we want to allow users to create objects? I think it's fine because 
-#      if they sign in with a user that doesn't have write permissions they 
-#      won't be able to do anything with the create functions.
-
-# TODO For create functions, would we want to return None or raise an error?
-
 def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
     """Returns the DSA collection uuid from the provided `collection_name`
 
@@ -28,7 +22,7 @@ def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
 
     Returns:
         string: DSA collection uuid. None if nothing matches the collection name or an
-            error in the get request
+                error in the get request
     """
     try:
         df_collections = pd.DataFrame(gc.listCollection())
@@ -41,7 +35,6 @@ def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
         raise RuntimeError("Connection to DSA endpoint failed.")
 
     # Look for a collection called our collection name
-
     if len(df_collections) == 0:
         logger.debug(f"No matching collection '{collection_name}'")
         return None
@@ -78,6 +71,18 @@ def create_collection(gc, collection_name: str) -> Optional[str]:
     return new_collection_id
 
 def get_folder_uuid(gc, folder_name: str, parent_type: str, parent_id: str) -> Optional[str]:
+    """Returns the DSA folder uuid from the provided `folder_name`
+
+    Args:
+        gc: girder client
+        folder_name (string): name of the folder in DSA
+        parent_type (string): type of the parent container (ie. folder, collection)
+        parent_id (string): uuid of the parent container
+        
+    Returns:
+        string: DSA folder uuid. None if nothing matches the collection name or an
+                error in the get request
+    """
     try:
         df_folders = pd.DataFrame(gc.listFolder(parent_id, parent_type))
         if len(df_folders):
@@ -101,6 +106,19 @@ def get_folder_uuid(gc, folder_name: str, parent_type: str, parent_id: str) -> O
     return folder_uuid
 
 def create_folder(gc, folder_name: str, parent_type: str, parent_id: str) -> Optional[str]:
+    """
+    Creates a dsa folder and returns a folder uuid from the created
+    folder on successful creation.
+
+    Args:
+        gc: girder client
+        folder_name (string): name of the folder in DSA
+        parent_type (string): type of the parent container (ie. folder, collection)
+        parent_id (string): uuid of the parent container
+
+    Returns:
+        string: DSA folder uuid. Or an error in the post request.
+    """
     try:
         gc.createFolder(parent_id, folder_name, parentType=parent_type)
         logger.debug(f"Created folder {folder_name}")
@@ -113,6 +131,16 @@ def create_folder(gc, folder_name: str, parent_type: str, parent_id: str) -> Opt
     return new_folder_uuid
 
 def get_assetstore_uuid(gc, assetstore_name: str) -> Optional[str]:
+    """Returns the DSA assetstore uuid from the provided `assetstore_name`
+
+    Args:
+        gc: girder client
+        assetstore_name (string): name of the assetstore in DSA
+
+    Returns:
+        string: DSA assetstore uuid. None if nothing matches the assetstore name or an
+                error in the get request
+    """
     try:
         df_assetstores = pd.DataFrame(gc.get(f"assetstore?"))
         if len(df_assetstores):
@@ -137,6 +165,19 @@ def get_assetstore_uuid(gc, assetstore_name: str) -> Optional[str]:
 
 def create_s3_assetstore(gc, name: str, bucket: str, access: str, 
                          secret: str, service: str) -> Optional[str]:
+    """
+    Creates a s3 assetstore.
+
+    Args:
+        gc: girder client
+        bucket (string): name of the folder in DSA
+        access (string): s3 access ID
+        secret (string): s3 password
+        service (string) : url of the s3 host
+
+    Returns:
+        string: DSA assetstore uuid. Or an error in the post request. 
+    """
     request_url = (f"assetstore?name={name}&type=2&bucket={bucket}&accessKeyId={access}" +
                    f"&secret={secret}&service={service}") 
     try:
@@ -152,6 +193,17 @@ def create_s3_assetstore(gc, name: str, bucket: str, access: str,
 
 def import_assetstore_to_folder(gc, assetstore_uuid: str, 
                                 destination_uuid: str) -> Optional[str]:
+    """
+    Imports the assetstore to the specified destination folder.
+
+    Args:
+        gc: girder client
+        assetstore_uuid (string): uuid of the assetstore
+        destination_uuid (string): uuid of the destination folder
+
+    Returns:
+        None, raises error if post request fails
+    """
     request_url = f"assetstore/{assetstore_uuid}/import"  
     params      = { 'destinationId' : destination_uuid, 
                     'destinationType' : 'folder',
@@ -239,6 +291,16 @@ def get_item_uuid(gc, image_name: str, collection_name: str) -> Optional[str]:
     return None
 
 def get_item_uuid_by_folder(gc, image_name: str, folder_uuid: str) -> Optional[str]:
+    """Returns the DSA item uuid from the provided folder
+
+    Args:
+        gc: girder client
+        image_name (string): name of the image in DSA e.g. 123.svs
+        folder_uuid (string): uuid of parent DSA folder
+
+    Returns:
+        string: DSA item uuid. None if nothing matches the folder uuid / image name.
+    """
     image_id = Path(image_name).stem
     try:
         uuid_response = gc.get(f'/item?text="{image_id}"')
@@ -266,15 +328,20 @@ def get_item_uuid_by_folder(gc, image_name: str, folder_uuid: str) -> Optional[s
 
 
 def copy_item(gc, item_id: str,  destination_id: str):
+    """
+    Copies the item to the destination.
+
+    Args:
+        gc: girder_client
+        item_id (string): uuid of the item to be copied
+        destination_id (string): uuid of the destination folder
+    """
     request_url = f"item/{item_id}/copy?folderId={destination_id}"
     try:
         gc.post(request_url)
     except Exception as err:
         logger.error(f"Error copying item: {err}")
         raise RuntimeError("Can not copy item")
-    
-
-
 
 def push_annotation_to_dsa_image(
     item_uuid: str, dsa_annotation_json: Dict[str, any], uri: str, gc
