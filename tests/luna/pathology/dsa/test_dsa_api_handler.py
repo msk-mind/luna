@@ -7,6 +7,8 @@ from luna.pathology.dsa.dsa_api_handler import (
     get_collection_uuid,
     get_item_uuid,
     get_slide_annotation,
+    get_folder_uuid,
+    get_assetstore_uuid
 )
 
 
@@ -196,3 +198,53 @@ def test_get_slide_no_annotation(monkeypatch):
     res = get_slide_annotation("123.svs", "regional", "test-collection", gc)
 
     assert res is None
+
+def test_get_folder_uuid(monkeypatch):
+    def mock_listFolder(*args, **kwargs):
+        return [
+            {"name" : "test-folder", "_id": "f-1234", "parentCollection" : "collection", "parentId" : "f-4321"}
+        ]
+
+    monkeypatch.setattr(GirderClient, "listFolder", mock_listFolder)
+    gc = GirderClient(apiUrl="http://localhost/api/v1")
+
+    res = get_folder_uuid(gc, "test-folder", "collection", "f-4321")
+    assert res == "f-1234"
+
+def test_get_folder_uuid_missing(monkeypatch):
+    def mock_listFolder(*args, **kwargs):
+        return [
+            {"name" : "test-folder", "_id": "f-1234", "parentCollection" : "collection", "parentId" : "f-4321"}
+        ]
+
+    monkeypatch.setattr(GirderClient, "listFolder", mock_listFolder)
+    gc = GirderClient(apiUrl="http://localhost/api/v1")
+
+    res = get_folder_uuid(gc, "missing-test-folder", "collection", "f-4321")
+    assert res is None
+
+def test_get_assetstore_uuid(monkeypatch):
+    def mock_get(*args, **kwargs):
+        return [
+            {"name" : "test-assetstore", "_id" : "a-1000"}
+        ]
+    monkeypatch.setattr(GirderClient, "get", mock_get)
+    gc = GirderClient(apiUrl="http://localhost/api/v1")
+
+    res = get_assetstore_uuid(gc, "test-assetstore")
+    assert res == "a-1000"
+
+def test_get_assetstore_uuid_missing(monkeypatch):
+    def mock_get(*args, **kwargs):
+        return [
+            {"name" : "test-assetstore", "_id" : "a-1000"}
+        ]
+    monkeypatch.setattr(GirderClient, "get", mock_get)
+    gc = GirderClient(apiUrl="http://localhost/api/v1")
+
+    res = get_assetstore_uuid(gc, "missing-test-assetstore")
+    assert res is None
+
+
+
+
