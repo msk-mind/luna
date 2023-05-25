@@ -21,7 +21,6 @@ label_path = f"{data_dir}/radiology/2.000000-CTAC-24716/volumes/label.mha"
 
 
 def test_find_centroid():
-
     data, header = load(label_path)
     for i in range(data.shape[2]):
         slice = data[:, :, i]
@@ -46,7 +45,6 @@ def test_find_centroid():
 
 
 def test_slice_to_image():
-
     import luna
 
     sys.modules["preprocess"] = luna.radiology.common.preprocess
@@ -59,7 +57,6 @@ def test_slice_to_image():
 
 
 def test_subset_bound_seg():
-
     new_filepath = f"{data_dir}/radiology/2.000000-CTAC-24716/volumes/subset_image.mhd"
     modified_file = subset_bound_seg(image_path, new_filepath, 0, 3)
 

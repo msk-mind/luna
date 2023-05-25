@@ -2,59 +2,14 @@ import logging
 import os
 from pathlib import Path
 
-import click
+import fire
 import medpy.io
 import numpy as np
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
 
 init_logger()
 logger = logging.getLogger("window_volume")
-
-
-_params_ = [
-    ("input_itk_volume", str),
-    ("output_dir", str),
-    ("low_level", float),
-    ("high_level", float),
-]
-
-
-@click.command()
-@click.argument("input_itk_volume", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option("-ll", "--low_level", required=False, help="lower bound of window")
-@click.option("-hl", "--high_level", required=False, help="upper bound of window")
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
-    """
-    Applies a window function to an input itk volume, outputs windowed volume
-
-    \b
-    Inputs:
-        input_itk_volume: itk compatible image volume (.mhd, .nrrd, .nii, etc.)
-    \b
-    Outputs:
-        itk_volume
-    \b
-    Example:
-        window_volume ./scans/original/NRRDs/10001.nrrd
-            --low_level 0
-            --high_level 250
-            -o scans/windowed/NRRDs/10001
-    """
-    cli_runner(cli_kwargs, _params_, window_volume)
 
 
 def window_volume(
@@ -90,4 +45,4 @@ def window_volume(
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(window_volume)

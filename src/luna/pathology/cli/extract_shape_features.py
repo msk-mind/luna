@@ -1,43 +1,32 @@
 # General imports
 import logging
-import os
+from pathlib import Path
 from typing import List
 
-import click
+import fire
+import fsspec
 import pandas as pd
 import tifffile
+from fsspec import open
 from skimage import measure
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
+from luna.common.utils import get_config, save_metadata, timed
 
 init_logger()
 logger = logging.getLogger("extract_shape_features")
 
-_params_ = [("input_slide_mask", str), ("output_dir", str), ("label_cols", List[str])]
 
-
-@click.command()
-@click.argument("input_slide_mask", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-lc",
-    "--label_cols",
-    required=False,
-    help="columns whose values are used to generate the mask",
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
+@timed
+@save_metadata
+def cli(
+    slide_mask_urlpath: str = "???",
+    label_cols: List[str] = "???",  # type: ignore
+    output_urlpath: str = "???",  # type: ignore
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+    local_config: str = "",
+):
     """Extracts shape and spatial features (HIF features) from a slide mask.
     This CLI extracts two sets of features. The first set are 'whole slide features', where
     the entire mask label is considred as a single region and features are extracted. These features
@@ -52,34 +41,47 @@ def cli(**cli_kwargs):
     So, the original mask is passed as an intensity image to ensure that each region can be
     associated with a tissue type.
 
-    \b
-    Inputs:
-        input_slide_mask: an input slide mask (*.tif)
-    \b
-    Outputs:
-        shape features for each region
-    \b
-    Example:
-        extract_shape_features ./10001/label_mask.tif
-            -lc Background,Tumor
-            -o ./shape_features.csv
+     Args:
+        slide_mask_urlpath (str): URL/path to slide mask (*.tif)
+        label_cols (List[str]): list of labels that coorespond to those in slide_mask_urlpath
+        output_urlpath (str): output URL/path prefix
+
+    Returns:
+        dict: output .tif path and the number of shapes for which features were generated
 
     """
-    cli_runner(cli_kwargs, _params_, extract_shape_features)
+    config = get_config(vars())
+    result_df = extract_shape_features(
+        config["slide_mask_urlpath"], config["label_cols"], config["storage_options"]
+    )
+
+    fs, urlpath = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+
+    output_fpath = Path(urlpath) / "shape_features.csv"
+    with fs.open(output_fpath, "w") as of:
+        result_df.to_csv(of)
+
+    properties = {"shape_features": output_fpath, "num_shapes": len(result_df)}
+
+    logger.info(properties)
+    return properties
 
 
 def extract_shape_features(
-    input_slide_mask: str, label_cols: List[str], output_dir: str
+    slide_mask_urlpath: str,
+    label_cols: List[str],
+    storage_options: dict,
 ):
     """Extracts shape and spatial features (HIF features) from a slide mask
 
      Args:
-        input_slide_mask (str): path to slide mask (*.tif)
-        label_cols (List[str]): list of labels that coorespond to those in input_slide_tiles
-        output_dir (str): output/working directory
+        slide_mask_urlpath (str): url/path to slide mask (*.tif)
+        label_cols (List[str]): list of labels that coorespond to those in slide_mask_urlpath
 
     Returns:
-        dict: output .tif path and the number of shapes for which features were generated
+        pd.DataFrame: shape and spatial features
     """
     # List of features to extract.
     # Default behavior of regionprops_table only generates label and bbox features.
@@ -115,7 +117,8 @@ def extract_shape_features(
         "solidity",
     ]
 
-    mask = tifffile.imread(input_slide_mask)
+    with open(slide_mask_urlpath, "rb", **storage_options).open() as of:
+        mask = tifffile.imread(of)
     logger.info(f"Mask shape={mask.shape}")
 
     mask_values = {k: v + 1 for v, k in enumerate(label_cols)}
@@ -163,14 +166,8 @@ def extract_shape_features(
 
     result_df = pd.concat([whole_slide_features_df, regional_features_df])
 
-    output_fpath = os.path.join(output_dir, "shape_features.csv")
-    result_df.to_csv(output_fpath)
-
-    properties = {"shape_features": output_fpath, "num_shapes": len(result_df)}
-
-    logger.info(properties)
-    return properties
+    return result_df
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(cli)

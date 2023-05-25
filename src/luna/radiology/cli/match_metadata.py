@@ -1,49 +1,14 @@
 import logging
 from pathlib import Path
 
-import click
+import fire
 import medpy.io
 from pydicom import dcmread
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
 
 init_logger()
 logger = logging.getLogger("match_metadata")
-
-_params_ = [("dicom_tree_folder", str), ("input_itk_labels", str), ("output_dir", str)]
-
-
-@click.command()
-@click.argument("dicom_tree_folder", nargs=1)
-@click.argument("input_itk_labels", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
-    """Scans a dicom tree for images that match the z-dimension (number of slices), useful to matching case segmentations to their associated scans
-
-    \b
-    Input:
-        dicom_tree_folder: path a dicom tree folder containing many scans and many dicoms
-    \b
-    Output:
-        dicom_folder: path to a single dicom series
-    \b
-    Example:
-        match_metadata ./scan_folder/ scan_segmentation.nii
-            -o ./matched_dicoms/
-    """
-    cli_runner(cli_kwargs, _params_, match_metadata)
 
 
 def match_metadata(dicom_tree_folder: str, input_itk_labels: str, output_dir: str):
@@ -103,4 +68,4 @@ def match_metadata(dicom_tree_folder: str, input_itk_labels: str, output_dir: st
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(match_metadata)

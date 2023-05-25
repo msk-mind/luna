@@ -1,27 +1,26 @@
 import os
 
+import fire
 import numpy as np
 import tifffile
-from click.testing import CliRunner
 
 from luna.pathology.cli.generate_tile_mask import cli
 
 
 def test_cli_generate_mask(tmp_path):
-    runner = CliRunner()
-    result = runner.invoke(
+    fire.Fire(
         cli,
         [
+            "--slide_urlpath",
             "tests/testdata/pathology/123.svs",
-            "tests/testdata/pathology/infer_tumor_background/123/",
-            "-o",
-            tmp_path,
-            "-lc",
+            "--tiles_urlpath",
+            "tests/testdata/pathology/infer_tumor_background/123/tile_scores_and_labels_pytorch_inference.parquet",
+            "--output-urlpath",
+            str(tmp_path),
+            "--label_cols",
             "Background,Tumor",
         ],
     )
-
-    assert result.exit_code == 0
 
     assert os.path.exists(f"{tmp_path}/tile_mask.tif")
     assert os.path.exists(f"{tmp_path}/metadata.yml")

@@ -2,15 +2,18 @@
 import logging
 import os
 import sys
+from pathlib import Path
 
-import click
+import fire
+import fsspec
 import pandas as pd
 import torch
+from fsspec import open
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
+from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.analysis.ml import (
     HDF5Dataset,
     TorchTransformModel,
@@ -21,67 +24,19 @@ init_logger()
 logger = logging.getLogger("infer_tile_labels")
 
 
-_params_ = [
-    ("input_slide_tiles", str),
-    ("output_dir", str),
-    ("hub_repo_or_dir", str),
-    ("model_name", str),
-    ("kwargs", dict),
-    ("num_cores", int),
-    ("batch_size", int),
-]
-
-
-@click.command()
-@click.argument("input_slide_tiles", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-rn",
-    "--hub_repo_or_dir",
-    required=False,
-    help="repository name to pull model and weight from, e.g. msk-mind/luna-ml",
-)
-@click.option(
-    "-mn",
-    "--model_name",
-    required=False,
-    help="torch hub model name",
-)
-@click.option(
-    "-kw",
-    "--kwargs",
-    required=False,
-    help="additional keywords to pass to model initialization",
-    default={},
-)
-@click.option(
-    "-nc", "--num_cores", required=False, help="Number of cores to use", default=4
-)
-@click.option(
-    "-bx",
-    "--batch_size",
-    required=False,
-    help="batch size used for inference speedup",
-    default=64,
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-@click.option(
-    "-dsid",
-    "--dataset_id",
-    required=False,
-    help="Optional dataset identifier to add results to",
-)
-def cli(**cli_kwargs):
+@timed
+@save_metadata
+def cli(
+    tiles_urlpath: str = "???",
+    torch_model_repo_or_dir: str = "???",
+    model_name: str = "???",
+    num_cores: int = 4,
+    batch_size: int = 8,
+    output_urlpath: str = ".",
+    kwargs: dict = {},
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+):
     """Run a model with a specific pre-transform for all tiles in a slide (tile_images), requires tiles to be saved (save_tiles) first
 
     \b
@@ -99,17 +54,47 @@ def cli(**cli_kwargs):
             -wt main:tissue_net_2021-01-19_21.05.24-e17.pth
             -o tiles/slide-100012/scores
     """
-    cli_runner(cli_kwargs, _params_, infer_tile_labels)
+    config = get_config(vars())
+
+    df_output = infer_tile_labels(
+        config["tiles_urlpath"],
+        config["torch_model_repo_or_dir"],
+        config["model_name"],
+        config["num_cores"],
+        config["batch_size"],
+        config["kwargs"],
+        config["storage_options"],
+    )
+
+    fs, output_path_prefix = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+    output_file = (
+        Path(output_path_prefix) / "tile_scores_and_labels_pytorch_inference.parquet"
+    )
+    #
+    with fs.open(output_file, "wb") as of:
+        df_output.to_parquet(of)
+
+    # Save our properties and params
+    properties = {
+        "slide_tiles": output_file,
+        "feature_data": output_file,
+        "total_tiles": len(df_output),
+        "available_labels": list(df_output.columns),
+    }
+
+    return properties
 
 
 def infer_tile_labels(
-    input_slide_tiles,
-    output_dir,
-    hub_repo_or_dir,
-    model_name,
-    num_cores,
-    batch_size,
-    kwargs,
+    tiles_urlpath: str,
+    torch_model_repo_or_dir: str,
+    model_name: str,
+    num_cores: int,
+    batch_size: int,
+    kwargs: dict,
+    storage_options: dict,
 ):
     """Run inference using a model and transform definition (either local or using torch.hub)
 
@@ -117,31 +102,30 @@ def infer_tile_labels(
 
     Args:
         input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
-        output_dir (str): output/working directory
+        output_urlpath (str): output/working directory
         hub_repo_or_dir (str): repository root name like (namespace/repo) at github.com to serve torch.hub models.
             Or path to a local model
         model_name (str): torch hub model name (a nn.Module at the repo repo_name)
         num_cores (int): Number of cores to use for CPU parallelization
         batch_size (int): size in batch dimension to chuck inference (8-256 recommended, depending on memory usage)
-        kwargs (str): additional keywords to pass to model initialization
+        kwargs (dict): additional keywords to pass to model initialization
 
     Returns:
-        dict: metadata about function call
+        pd.DataFrame: augmented tiles dataframe
     """
     # Get our model and transforms and construct the Tile Dataset and Classifier
-
-    if os.path.exists(hub_repo_or_dir):
+    if os.path.exists(torch_model_repo_or_dir):
         source = "local"
     else:
         source = "github"
 
-    logger.info(f"Torch hub source = {source} @ {hub_repo_or_dir}")
+    logger.info(f"Torch hub source = {source} @ {torch_model_repo_or_dir}")
 
     if source == "github":
-        logger.info(f"Available models: {torch.hub.list(hub_repo_or_dir)}")
+        logger.info(f"Available models: {torch.hub.list(torch_model_repo_or_dir)}")
 
     ttm = torch.hub.load(
-        hub_repo_or_dir, model_name, source=source, **kwargs, force_reload=True
+        torch_model_repo_or_dir, model_name, source=source, **kwargs, force_reload=True
     )
 
     if not isinstance(ttm, TorchTransformModel):
@@ -157,7 +141,8 @@ def infer_tile_labels(
         transform = ttm.transform
         ttm.model.to(device)
 
-    df = pd.read_parquet(input_slide_tiles).reset_index().set_index("address")
+    with open(tiles_urlpath, **storage_options) as of:
+        df = pd.read_parquet(of).reset_index().set_index("address")
     ds = HDF5Dataset(df, preprocess=preprocess)
     loader = DataLoader(
         ds, num_workers=num_cores, batch_size=batch_size, pin_memory=True
@@ -180,26 +165,11 @@ def infer_tile_labels(
 
     df_output = df.join(df_scores)
     df_output.columns = df_output.columns.astype(str)
+    df_output.index.name = "address"
 
     logger.info(df_output)
-
-    output_file = os.path.join(
-        output_dir, "tile_scores_and_labels_pytorch_inference.parquet"
-    )
-    #
-    df_output.index.name = "address"
-    df_output.to_parquet(output_file)
-
-    # Save our properties and params
-    properties = {
-        "slide_tiles": output_file,
-        "feature_data": output_file,
-        "total_tiles": len(df_output),
-        "available_labels": list(df_output.columns),
-    }
-
-    return properties
+    return df_output
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(cli)

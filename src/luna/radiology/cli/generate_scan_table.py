@@ -2,26 +2,17 @@ import os
 from pathlib import Path
 from typing import Tuple
 
-import click
 import dask.dataframe as dd
 import dicom2nifti
+import fire
 import numpy as np
 import pandas as pd
 from medpy.io import load, save
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner, generate_uuid
+from luna.common.utils import generate_uuid
 
 logger = init_logger()
-
-_params_ = [
-    ("raw_data_path", str),
-    ("mapping_csv_path", str),
-    ("output_dir", str),
-    ("scan_table_path", str),
-    ("npartitions", int),
-    ("subset", bool),
-]
 
 
 def find_z_nbound(dim: Tuple) -> Tuple[int, int]:
@@ -154,47 +145,6 @@ def dicom_to_nifti(
     return row
 
 
-@click.command()
-@click.option(
-    "-r",
-    "--raw_data_path",
-    help="path to raw data. e.g /data/radiology/project_name/dicoms",
-    type=click.Path(),
-)
-@click.option(
-    "-c",
-    "--mapping_csv_path",
-    help="csv with AccessionNumber, SeriesNumber columns",
-    type=click.Path(),
-)
-@click.option("-o", "--output_dir", help="path to scan output folder")
-@click.option("-t", "--scan_table_path", help="path to save scan table")
-@click.option(
-    "-s", "--subset", help="extract first post contrast in bound series", is_flag=True
-)
-@click.option(
-    "-n",
-    "--npartitions",
-    help="npartitions for parallelization",
-    default=20,
-    show_default=True,
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-    type=click.Path(),
-)
-def cli(**cli_kwargs):
-    """
-    Convert dicoms to nii.gz format and optionally subset bound series.
-
-    dicom2nifti is used to convert bound series into 4D volumes.
-    For more simple dicom to scan function, see luna.radiology.cli.dicom_to_itk.
-    """
-    cli_runner(cli_kwargs, _params_, generate_scan_table)
-
-
 def generate_scan_table(
     raw_data_path: str,
     mapping_csv_path: str,
@@ -248,4 +198,4 @@ def generate_scan_table(
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(generate_scan_table)

@@ -1,210 +1,342 @@
 # General imports
-import logging
-from concurrent.futures import ThreadPoolExecutor
-from functools import partial
 from pathlib import Path
+from typing import Optional, Union
+from urllib.parse import urlparse
 
-import click
+import fire  # type: ignore
+import fsspec  # type: ignore
 import numpy as np
-import openslide
 import pandas as pd
+from dask.distributed import Client, get_client, progress
+from fsspec import open  # type: ignore
+from loguru import logger
+from multimethod import multimethod
+from pandera.typing import DataFrame
 from PIL import Image, ImageEnhance
-from skimage.color import rgb2gray
-from skimage.filters import threshold_otsu
-from tqdm import tqdm
+from skimage.color import rgb2gray  # type: ignore
+from skimage.filters import threshold_otsu  # type: ignore
+from tiffslide import TiffSlide
 
-from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
+from luna.common.models import SlideSchema, Tile
+from luna.common.utils import get_config, save_metadata, timed
+from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import (
+    get_array_from_tile,
     get_downscaled_thumbnail,
-    get_scale_factor_at_magnfication,
+    get_scale_factor_at_magnification,
     get_stain_vectors_macenko,
-    get_tile_from_slide,
     pull_stain_channel,
 )
 
-init_logger()
-logger = logging.getLogger("detect_tissue")
 
-_params_ = [
-    ("input_slide_image", str),
-    ("input_slide_tiles", str),
-    ("requested_magnification", float),
-    ("filter_query", str),
-    ("output_dir", str),
-    ("num_cores", int),
-]
-
-
-@click.command()
-@click.argument("input_slide_image", nargs=1)
-@click.argument("input_slide_tiles", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-nc", "--num_cores", required=False, help="Number of cores to use", default=4
-)
-@click.option(
-    "-rmg",
-    "--requested_magnification",
-    required=False,
-    help="Magnificiation scale at which to perform tissue detection",
-)
-@click.option(
-    "-fq", "--filter_query", required=False, help="Filter query (pandas format)"
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
-    """Run a model with a specific pre-transform for all tiles in a slide (tile_images)
-    \b
-    Inputs:
-        input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        input_slide_tiles: slide tiles (manifest tile files, .tiles.csv)
-    \b
-    Outputs:
-        slide_tiles
-    \b
-    Example:
-        run_tissue_detection 10001.svs 10001/tiles
-            -rmg 0.5 -nc 8
-            -rq 'otsu_score > 0.1 or stain0_score > 0.1'
-            -o 10001/filtered_tiles
-    """
-    cli_runner(cli_kwargs, _params_, detect_tissue)
-
-
-def compute_otsu_score(iterrow: tuple, slide, otsu_threshold: float) -> float:
+def compute_otsu_score(
+    tile: Tile, slide_urlpath: str, otsu_threshold: float, storage_options: dict
+) -> float:
     """
     Return otsu score for the tile.
     Args:
-        iterrow (pd.Series): row with tile metadata
-        slide (str): path to slide
+        row (pd.Series): row with tile metadata
+        slide_urlpath (str): path to slide
         otsu_threshold (float): otsu threshold value
     """
-    index, row = iterrow
-
-    tile = get_tile_from_slide(row, slide, size=(10, 10))
-
-    score = np.mean(rgb2gray(tile) < otsu_threshold)
-
+    tile_arr = get_array_from_tile(tile, slide_urlpath, 10, storage_options)
+    score = np.mean((rgb2gray(tile_arr) < otsu_threshold).astype(int))
     return score
 
 
-def compute_purple_score(iterrow: tuple, slide) -> float:
-    """
-    Return purple score for the tile.
-    Args:
-        iterrow (pd.Series): row with tile metadata
-        slide (str): path to slide
-    """
-    index, row = iterrow
-
-    tile = get_tile_from_slide(row, slide, size=(10, 10))
-
-    r, g, b = tile[..., 0], tile[..., 1], tile[..., 2]
+def get_purple_score(x):
+    r, g, b = x[..., 0], x[..., 1], x[..., 2]
     score = np.mean((r > (g + 10)) & (b > (g + 10)))
     return score
 
 
-def compute_stain_score(
-    iterrow: pd.DataFrame, slide, vectors, channel, stain_threshold: float
+def compute_purple_score(
+    tile: Tile, slide_urlpath: str, storage_options: dict
 ) -> float:
+    """
+    Return purple score for the tile.
+    Args:
+        row (pd.Series): row with tile metadata
+        slide_url (str): path to slide
+    """
+    tile_arr = get_array_from_tile(tile, slide_urlpath, 10, storage_options)
+    return get_purple_score(tile_arr)
+
+
+def compute_stain_score(
+    tile: Tile,
+    slide_urlpath: str,
+    vectors,
+    channel,
+    stain_threshold: float,
+    storage_options: dict,
+) -> np.floating:
     """
     Returns stain score for the tile
     Args:
-        iterrow (pd.Series): row with tile metadata
-        slide (str): path to slide
+        row (pd.Series): row with tile metadata
+        slide_url (str): path to slide
         vectors (np.ndarray): stain vectors
         channel (int): stain channel
         stain_threshold (float): stain threshold value
     """
-    index, row = iterrow
-
-    tile = get_tile_from_slide(row, slide, size=(10, 10))
-
-    stain = pull_stain_channel(tile, vectors=vectors, channel=channel)
+    tile_arr = get_array_from_tile(tile, slide_urlpath, 10, storage_options)
+    stain = pull_stain_channel(tile_arr, vectors=vectors, channel=channel)
     score = np.mean(stain > stain_threshold)
     return score
 
 
-def detect_tissue(
-    input_slide_image,
-    input_slide_tiles,
-    requested_magnification,
-    filter_query,
-    output_dir,
-    num_cores,
-):
+@timed
+@save_metadata
+def cli(
+    slide_urlpath: str = "???",
+    tiles_urlpath: str = "",
+    filter_query: str = "???",
+    tile_size: Optional[int] = None,
+    requested_magnification: Optional[int] = None,
+    output_urlpath: str = ".",
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+    local_config: str = "",
+) -> dict:
     """Run simple/deterministic tissue detection algorithms based on a filter query, to reduce tiles to those (likely) to contain actual tissue
     Args:
-        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        input_slide_tiles (str): path to a slide-tile manifest file (.tiles.csv)
-        requested_magnification (float): Magnification scale at which to perform computation
+        slide_urlpath (str): url/path to slide image (virtual slide formats compatible with pyvips, .svs, .tif, .scn, ...)
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
-        output_dir (str): output/working directory
-        num_cores (int): Number of cores to use for CPU parallelization
+        tile_size (int): size of tiles to use (at the requested magnification)
+        requested_magnification (Optional[int]): Magnification scale at which to perform computation
+        output_urlpath (str): Output url/path prefix
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
+        local_config (str): local config file
     Returns:
-        dict: metadata about function call
+        dict: metadata about cli function call
+
     """
-    slide = openslide.OpenSlide(input_slide_image)
-    slide_id = Path(input_slide_image).stem
-    df = pd.read_parquet(input_slide_tiles).reset_index().set_index("address")
+    config = get_config(vars())
 
-    logger.info(f"Slide dimensions {slide.dimensions}")
+    if not config["tile_size"] and not config["tiles_urlpath"]:
+        raise fire.core.FireError("Specify either tiles_urlpath or tile_size")
 
-    to_mag_scale_factor = get_scale_factor_at_magnfication(
-        slide, requested_magnification=requested_magnification
+    output_filesystem, output_urlpath_prefix = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
     )
 
-    logger.info(f"Thumbnail scale factor: {to_mag_scale_factor}")
+    slide_id = Path(urlparse(config["slide_urlpath"]).path).stem
+    output_header_file = (
+        Path(output_urlpath_prefix) / f"{slide_id}-filtered.tiles.parquet"
+    )
 
-    # Origonal thumbnail
-    sample_arr = get_downscaled_thumbnail(slide, to_mag_scale_factor)
-    logger.info(f"Sample array size: {sample_arr.shape}")
-    Image.fromarray(sample_arr).save(output_dir + "/sample_arr.png")
+    df = detect_tissue(
+        config["slide_urlpath"],
+        config["tiles_urlpath"],
+        config["tile_size"],
+        config["requested_magnification"],
+        config["filter_query"],
+        config["storage_options"],
+        config["output_urlpath"],
+        config["output_storage_options"],
+    )
+    with open(output_header_file, "wb", **config["output_storage_options"]) as of:
+        print(f"saving to {output_header_file}")
+        df.to_parquet(of)
+        properties = {
+            "tiles_manifest": output_header_file,
+            "total_tiles": len(df),
+        }
+
+    return properties
+
+
+@multimethod
+def detect_tissue(
+    slide_manifest: DataFrame,
+    tile_size: int,
+    requested_magnification: Optional[int] = None,
+    filter_query: str = "",
+    storage_options: dict = {},
+    output_urlpath_prefix: str = "",
+    output_storage_options: dict = {},
+):
+    slide_manifest = SlideSchema(slide_manifest)
+    dfs = []
+    for row in slide_manifest.itertuples():
+        df = detect_tissue(
+            row.url,
+            tile_size,
+            requested_magnification,
+            filter_query,
+            storage_options,
+            output_urlpath_prefix,
+            output_storage_options,
+        )
+        df["id"] = row.id
+        dfs.append(df)
+    tiles = pd.concat(dfs)
+    return tiles.merge(slide_manifest, on="id")
+
+
+# this doesn't work:
+#    client = get_client()
+#    futures = {
+#            row.id: client.submit(detect_tissue,
+#                                  row.url,
+#                                  tile_size,
+#                                  requested_magnification,
+#                                  filter_query,
+#                                  storage_options,
+#                                  output_urlpath_prefix,
+#                                  output_storage_options,
+#                                  ) for row in slide_manifest.itertuples()
+#            }
+#    progress(futures)
+#    results = client.gather(futures)
+#    for k, v in results.items():
+#        v['id'] = str(k)
+#    tiles = pd.concat(results)
+#    return tiles.merge(slide_manifest, on='id')
+
+
+@multimethod
+def detect_tissue(
+    slide_urlpaths: Union[str, list[str]],
+    tile_size: int,
+    requested_magnification: Optional[int] = None,
+    filter_query: str = "",
+    storage_options: dict = {},
+    output_urlpath_prefix: str = "",
+    output_storage_options: dict = {},
+) -> pd.DataFrame:
+    if type(slide_urlpaths) == str:
+        slide_urlpaths = [slide_urlpaths]
+    dfs = []
+    for slide_urlpath in slide_urlpaths:
+        df = detect_tissue(
+            slide_urlpath,
+            "",
+            tile_size,
+            requested_magnification,
+            filter_query,
+            storage_options,
+            output_urlpath_prefix,
+            output_storage_options,
+        )
+        o = urlparse(slide_urlpath)
+        df["id"] = Path(o.path).stem
+        dfs.append(df)
+    return pd.concat(dfs)
+
+
+@multimethod
+def detect_tissue(
+    slide_urlpath: str,
+    tiles_urlpath: str = "",
+    tile_size: Optional[int] = None,
+    requested_magnification: Optional[int] = None,
+    filter_query: str = "",
+    storage_options: dict = {},
+    output_urlpath_prefix: str = "",
+    output_storage_options: dict = {},
+) -> pd.DataFrame:
+    """Run simple/deterministic tissue detection algorithms based on a filter query, to reduce tiles to those (likely) to contain actual tissue
+    Args:
+        slide_urlpath (str): slide url/path
+        tile_size (int): size of tiles to use (at the requested magnification)
+        requested_magnification (Optional[int]): Magnification scale at which to perform computation
+        filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
+        storage_options (dict): storage options to pass to reading functions
+        output_urlpath_prefix (str): output url/path prefix
+        output_storage_options (dict): output storage optoins
+    Returns:
+        pd.DataFrame
+    """
+
+    client = get_client()
+
+    if tiles_urlpath:
+        with open(tiles_urlpath, **storage_options) as of:
+            tiles_df = pd.read_parquet(of)
+    elif type(tile_size) == int:
+        tiles_df = generate_tiles(
+            slide_urlpath, tile_size, storage_options, requested_magnification
+        )
+    else:
+        raise RuntimeError("Specify tile_size or tile_urlpath")
+
+    with open(slide_urlpath, "rb", **storage_options) as f:
+        slide = TiffSlide(f)
+        logger.info(f"Slide dimensions {slide.dimensions}")
+        to_mag_scale_factor = get_scale_factor_at_magnification(
+            slide, requested_magnification=requested_magnification
+        )
+        logger.info(f"Thumbnail scale factor: {to_mag_scale_factor}")
+        # Original thumbnail
+        sample_arr = get_downscaled_thumbnail(slide, to_mag_scale_factor)
+        logger.info(f"Sample array size: {sample_arr.shape}")
+
+    if output_urlpath_prefix:
+        with open(
+            output_urlpath_prefix + "/sample_arr.png", "wb", **output_storage_options
+        ) as f:
+            Image.fromarray(sample_arr).save(f, format="png")
 
     # Enhance to drive stain apart from shadows, pushes darks from colors
     enhanced_sample_img = ImageEnhance.Contrast(
         ImageEnhance.Color(Image.fromarray(sample_arr)).enhance(10)
     ).enhance(10)
-    enhanced_sample_img.save(output_dir + "/enhanced_sample_arr.png")
+    if output_urlpath_prefix:
+        with open(
+            output_urlpath_prefix + "/enhanced_sample_arr.png",
+            "wb",
+            **output_storage_options,
+        ) as f:
+            enhanced_sample_img.save(f, format="png")
 
     # Look at HSV space
     hsv_sample_arr = np.array(enhanced_sample_img.convert("HSV"))
-    Image.fromarray(np.array(hsv_sample_arr)).save(output_dir + "/hsv_sample_arr.png")
+    if output_urlpath_prefix:
+        with open(
+            output_urlpath_prefix + "/hsv_sample_arr.png",
+            "wb",
+            **output_storage_options,
+        ) as f:
+            Image.fromarray(np.array(hsv_sample_arr)).save(f, "png")
 
     # Look at max of saturation and value
     hsv_max_sample_arr = np.max(hsv_sample_arr[:, :, 1:3], axis=2)
-    Image.fromarray(hsv_max_sample_arr).save(output_dir + "/hsv_max_sample_arr.png")
+    if output_urlpath_prefix:
+        with open(
+            output_urlpath_prefix + "/hsv_max_sample_arr.png",
+            "wb",
+            **output_storage_options,
+        ) as f:
+            Image.fromarray(hsv_max_sample_arr).save(f, "png")
 
     # Get shadow mask and filter it out before other estimations
     shadow_mask = np.where(np.max(hsv_sample_arr, axis=2) < 10, 255, 0).astype(np.uint8)
-    Image.fromarray(shadow_mask).save(output_dir + "/shadow_mask.png")
+    if output_urlpath_prefix:
+        with open(
+            output_urlpath_prefix + "/shadow_mask.png", "wb", **output_storage_options
+        ) as f:
+            Image.fromarray(shadow_mask).save(f, "png")
 
     # Filter out shadow/dust/etc
     sample_arr_filtered = np.where(
         np.expand_dims(shadow_mask, 2) == 0, sample_arr, np.full(sample_arr.shape, 255)
     ).astype(np.uint8)
-    Image.fromarray(sample_arr_filtered).save(output_dir + "/sample_arr_filtered.png")
+    if output_urlpath_prefix:
+        with open(
+            output_urlpath_prefix + "/sample_arr_filtered.png",
+            "wb",
+            **output_storage_options,
+        ) as f:
+            Image.fromarray(sample_arr_filtered).save(f, "png")
 
     # Get otsu threshold
     threshold = threshold_otsu(rgb2gray(sample_arr_filtered))
 
     # Get stain vectors
     stain_vectors = get_stain_vectors_macenko(sample_arr_filtered)
-
-    # Get stain thumnail image
-    deconv_sample_arr = pull_stain_channel(sample_arr_filtered, vectors=stain_vectors)
-    Image.fromarray(deconv_sample_arr).save(output_dir + "/deconv_sample_arr.png")
 
     # Get stain background thresholds
     threshold_stain0 = threshold_otsu(
@@ -219,99 +351,112 @@ def detect_tissue(
     )
 
     # Get the otsu mask
-    otsu_mask = np.where(rgb2gray(sample_arr_filtered) < threshold, 255, 0).astype(
-        np.uint8
-    )
-    Image.fromarray(otsu_mask).save(output_dir + "/otsu_mask.png")
+    if output_urlpath_prefix:
+        otsu_mask = np.where(rgb2gray(sample_arr_filtered) < threshold, 255, 0).astype(
+            np.uint8
+        )
+        with open(
+            output_urlpath_prefix + "/otsu_mask.png", "wb", **output_storage_options
+        ) as f:
+            Image.fromarray(otsu_mask).save(f, "png")
 
-    # Get the stain masks
-    stain0_mask = np.where(deconv_sample_arr[..., 0] > threshold_stain0, 255, 0).astype(
-        np.uint8
-    )
-    stain1_mask = np.where(deconv_sample_arr[..., 1] > threshold_stain1, 255, 0).astype(
-        np.uint8
-    )
-    Image.fromarray(stain0_mask).save(output_dir + "/stain0_mask.png")
-    Image.fromarray(stain1_mask).save(output_dir + "/stain1_mask.png")
+    if output_urlpath_prefix:
+        # Get stain thumnail image
+        deconv_sample_arr = pull_stain_channel(
+            sample_arr_filtered, vectors=stain_vectors
+        )
+        with open(output_urlpath_prefix + "/deconv_sample_arr.png", "wb") as f:
+            Image.fromarray(deconv_sample_arr).save(f, "png", **output_storage_options)
 
-    # Be smart about computation time
-    with ThreadPoolExecutor(num_cores) as p:
+        # Get the stain masks
+        stain0_mask = np.where(
+            deconv_sample_arr[..., 0] > threshold_stain0, 255, 0
+        ).astype(np.uint8)
+        stain1_mask = np.where(
+            deconv_sample_arr[..., 1] > threshold_stain1, 255, 0
+        ).astype(np.uint8)
+        with open(
+            output_urlpath_prefix + "/stain0_mask.png", "wb", **output_storage_options
+        ) as f:
+            Image.fromarray(stain0_mask).save(f, "png")
+        with open(
+            output_urlpath_prefix + "/stain1_mask.png", "wb", **output_storage_options
+        ) as f:
+            Image.fromarray(stain1_mask).save(f, "png")
+
+    if filter_query:
         if "otsu_score" in filter_query:
             logger.info(f"Starting otsu thresholding, threshold={threshold}")
-            df["otsu_score"] = list(
-                tqdm(
-                    p.map(
-                        partial(
-                            compute_otsu_score, slide=slide, otsu_threshold=threshold
-                        ),
-                        df.iterrows(),
-                    ),
-                    total=len(df),
+            otsu_score_futures = [
+                client.submit(
+                    compute_otsu_score,
+                    tile=row,
+                    slide_urlpath=slide_urlpath,
+                    storage_options=storage_options,
+                    otsu_threshold=threshold,
                 )
-            )
+                for row in tiles_df.itertuples(name="Tile")
+            ]
+            progress(otsu_score_futures)
+            tiles_df["otsu_score"] = client.gather(otsu_score_futures)
         if "purple_score" in filter_query:
             logger.info("Starting purple scoring")
-            df["purple_score"] = list(
-                tqdm(
-                    p.map(partial(compute_purple_score, slide=slide), df.iterrows()),
-                    total=len(df),
+            purple_futures = [
+                client.submit(
+                    compute_purple_score,
+                    tile=row,
+                    slide_urlpath=slide_urlpath,
+                    storage_options=storage_options,
                 )
-            )
+                for row in tiles_df.itertuples(name="Tile")
+            ]
+            progress(purple_futures)
+            tiles_df["purple_score"] = client.gather(purple_futures)
         if "stain0_score" in filter_query:
             logger.info(
                 f"Starting stain thresholding, channel=0, threshold={threshold_stain0}"
             )
-            df["stain0_score"] = list(
-                tqdm(
-                    p.map(
-                        partial(
-                            compute_stain_score,
-                            slide=slide,
-                            vectors=stain_vectors,
-                            channel=0,
-                            stain_threshold=threshold_stain0,
-                        ),
-                        df.iterrows(),
-                    ),
-                    total=len(df),
+            stain0_futures = [
+                client.submit(
+                    compute_stain_score,
+                    tile=row,
+                    slide_urlpath=slide_urlpath,
+                    storage_options=storage_options,
+                    vectors=stain_vectors,
+                    channel=0,
+                    stain_threshold=threshold_stain0,
                 )
-            )
+                for row in tiles_df.itertuples(name="Tile")
+            ]
+            progress(stain0_futures)
+            tiles_df["stain0_score"] = client.gather(stain0_futures)
         if "stain1_score" in filter_query:
             logger.info(
                 f"Starting stain thresholding, channel=1, threshold={threshold_stain1}"
             )
-            df["stain1_score"] = list(
-                tqdm(
-                    p.map(
-                        partial(
-                            compute_stain_score,
-                            slide=slide,
-                            vectors=stain_vectors,
-                            channel=1,
-                            stain_threshold=threshold_stain1,
-                        ),
-                        df.iterrows(),
-                    ),
-                    total=len(df),
+            stain1_futures = [
+                client.submit(
+                    compute_stain_score,
+                    tile=row,
+                    slide_urlpath=slide_urlpath,
+                    storage_options=storage_options,
+                    vectors=stain_vectors,
+                    channel=1,
+                    stain_threshold=threshold_stain1,
                 )
-            )
+                for row in tiles_df.itertuples(name="Tile")
+            ]
+            progress(stain1_futures)
+            tiles_df["stain1_score"] = client.gather(stain1_futures)
 
-    logger.info(f"Filtering based on query: {filter_query}")
-    df = df.query(filter_query)
+        logger.info(f"Filtering based on query: {filter_query}")
+        tiles_df = tiles_df.query(filter_query)
 
-    logger.info(df)
+    logger.info(tiles_df)
 
-    output_header_file = f"{output_dir}/{slide_id}-filtered.tiles.parquet"
-
-    df.to_parquet(output_header_file)
-
-    properties = {
-        "slide_tiles": output_header_file,
-        "total_tiles": len(df),
-    }
-
-    return properties
+    return tiles_df
 
 
 if __name__ == "__main__":
-    cli()
+    client = Client()
+    fire.Fire(cli)

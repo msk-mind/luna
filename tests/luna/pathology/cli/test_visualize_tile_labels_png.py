@@ -1,8 +1,8 @@
 import os
 
+import fire
 import numpy as np
 import pandas as pd
-from click.testing import CliRunner
 
 from luna.pathology.cli.visualize_tile_labels_png import cli
 
@@ -12,20 +12,20 @@ def test_viz(tmp_path):
     df["random"] = np.random.rand(len(df))
     df.to_parquet(f"{tmp_path}/input_tiles.parquet")
 
-    runner = CliRunner()
-    result = runner.invoke(
+    fire.Fire(
         cli,
         [
+            "--slide-urlpath",
             "tests/testdata/pathology/123.svs",
+            "--tiles-urlpath",
             f"{tmp_path}/input_tiles.parquet",
-            "-o",
-            tmp_path,
-            "-pl",
+            "--output-urlpath",
+            str(tmp_path),
+            "--plot_labels",
             "random",
-            "-rmg",
-            5,
+            "--requested-magnification",
+            "5",
         ],
     )
 
-    assert result.exit_code == 0
     assert os.path.exists(f"{tmp_path}/tile_scores_and_labels_visualization_random.png")

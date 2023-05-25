@@ -1,23 +1,22 @@
 import os
 
+import fire
 import pandas as pd
-from click.testing import CliRunner
 
 from luna.pathology.cli.extract_tile_statistics import cli
 
 
 def test_cli_extract_tile_statistics(tmp_path):
-    runner = CliRunner()
-    result = runner.invoke(
+    fire.Fire(
         cli,
         [
+            "--tiles-urlpath",
             "tests/testdata/pathology/test_tile_stats.parquet",
-            "-o",
-            tmp_path,
+            "--output-urlpath",
+            str(tmp_path),
         ],
     )
 
-    assert result.exit_code == 0
     assert os.path.exists(f"{tmp_path}/test_tile_stats_tile_stats.parquet")
     df = pd.read_parquet(f"{tmp_path}/test_tile_stats_tile_stats.parquet")
     cols = df.columns

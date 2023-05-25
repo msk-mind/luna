@@ -93,7 +93,6 @@ def test_fetch_slide_ids_with_csv(monkeypatch):
 
 # when optional field SLIDEVIEWER_CSV_FILE is not specified in the data config yaml
 def test_fetch_slide_ids_without_csv(requests_mock):
-
     requests_mock.get(
         "https://fake-slides-res.mskcc.org/exportProjectCSV?pid=155",
         content=b"Title: IRB #16-1144 Subset\n"
@@ -117,7 +116,6 @@ def test_fetch_slide_ids_without_csv(requests_mock):
 
 
 def test_downlaod_zip(requests_mock):
-
     requests_mock.get(
         SLIDEVIEWER_API_URL,
         content=Path("tests/testdata/pathology/input/label.zip").read_bytes(),
@@ -139,7 +137,6 @@ def test_unzip():
 
 
 def test_download_sv_point_annotation(requests_mock):
-
     requests_mock.get(
         "http://test/user@8;123.svs/get",
         text='[{"project_id":"8","image_id":"123.svs","label_type":"nucleus","x":"1440","y":"747","class":"0","classname":"Tissue 1"}, '

@@ -1,100 +1,118 @@
 # General imports
 import logging
-from typing import List
+from pathlib import Path
+from typing import List, Optional
 
-import click
+import fire
+import fsspec
 import numpy as np
-import openslide
 import pandas as pd
 import tifffile
+import tiffslide
+from fsspec import open
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
-from luna.pathology.common.schemas import SlideTiles
+from luna.common.utils import get_config, save_metadata, timed
+from luna.pathology.cli.generate_tiles import generate_tiles
 
 init_logger()
 logger = logging.getLogger("convert_tiles_to_mask")
 
-_params_ = [
-    ("input_slide_image", str),
-    ("input_slide_tiles", str),
-    ("output_dir", str),
-    ("label_cols", List[str]),
-]
 
-
-@click.command()
-@click.argument("input_slide_image", nargs=1)
-@click.argument("input_slide_tiles", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-lc",
-    "--label_cols",
-    required=False,
-    help="columns whose values are used to generate the mask",
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
-    """Generates a .tif mask from slide tile labels
-
-    \b
-    Inputs:
-        input: input data
-    \b
-    Outputs:
-        output data
-    \b
-    Example:
-        convert_tiles_to_mask ./slides/10001.svs ./tiles_scores_and_labels.parquet
-            -lc Background,Tumor
-            -o ./label_mask.parquet
-    """
-    cli_runner(cli_kwargs, _params_, convert_tiles_to_mask)
-
-
-def convert_tiles_to_mask(
-    input_slide_image: str,
-    input_slide_tiles: str,
-    label_cols: List[str],
-    output_dir: str,
+@timed
+@save_metadata
+def cli(
+    slide_urlpath: str = "???",
+    tiles_urlpath: str = "",
+    label_cols: List[str] = "???",  # type: ignore
+    tile_size: Optional[int] = None,
+    requested_magnification: Optional[int] = None,
+    output_urlpath: str = ".",
+    storage_options: dict = {},
+    output_storage_options: dict = {},
 ):
-    """Converts cateogrial tile labels to a slide image mask. This mask can be used for feature extraction and spatial analysis.
+    """Converts categorical tile labels to a slide image mask. This mask can be used for feature extraction and spatial analysis.
 
      Args:
         input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         input_slide_tiles (str): path to valid SlideTiles table
         label_cols (List[str]): list of label columns in the input_slide_tiles table to generate the mask with
-        output_dir (str): output/working directory
+        tile_size (int): tile size
+        requested_magnification (int): Magnification scale at which to perform computation
+        storage_options (dict): storage options to pass to reading functions
 
     Returns:
-        dict: output .tif path and the mask size
+        np.ndarray: image mask
+
+    """
+    config = get_config(vars())
+    mask_arr = convert_tiles_to_mask(
+        config["slide_urlpath"],
+        config["tiles_urlpath"],
+        config["label_cols"],
+        config["tile_size"],
+        config["requested_magnification"],
+        config["storage_options"],
+    )
+
+    fs, output_urlpath_prefix = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+
+    slide_mask = Path(output_urlpath_prefix) / "tile_mask.tif"
+    logger.info(f"Saving output mask to {slide_mask}")
+    with fs.open(slide_mask, "wb") as of:
+        tifffile.imsave(of, mask_arr)
+
+    properties = {
+        "slide_mask": slide_mask,
+        "mask_size": mask_arr.shape,
+    }
+    logger.info(properties)
+    return properties
+
+
+def convert_tiles_to_mask(
+    slide_urlpath: str,
+    tiles_urlpath: str,
+    label_cols: List[str],
+    tile_size: Optional[int],
+    requested_magnification: Optional[int],
+    storage_options: dict,
+):
+    """Converts categorical tile labels to a slide image mask. This mask can be used for feature extraction and spatial analysis.
+
+     Args:
+        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        input_slide_tiles (str): path to valid SlideTiles table
+        label_cols (List[str]): list of label columns in the input_slide_tiles table to generate the mask with
+        tile_size (int): tile size
+        requested_magnification (int): Magnification scale at which to perform computation
+        storage_options (dict): storage options to pass to reading functions
+
+    Returns:
+        np.ndarray: image mask
 
     """
 
-    slide = openslide.OpenSlide(input_slide_image)
+    with open(slide_urlpath, **storage_options) as of:
+        slide = tiffslide.TiffSlide(of)
+        w = slide.dimensions[0]
+        h = slide.dimensions[1]
 
-    w = slide.dimensions[0]
-    h = slide.dimensions[1]
     wsi_shape = h, w  # open slide has reversed conventions
     logger.info(f"Slide shape={wsi_shape}")
 
-    logger.info("Validating SlideTiles schema")
-    assert SlideTiles.check(f"{input_slide_tiles}")  # verfiying SlideTiles schema
-
-    # check if tile_col is a valid argument
-    logger.info("Reading SlideTiles")
-    print(label_cols)
-    tile_df = pd.read_parquet(input_slide_tiles).reset_index().set_index("address")
+    if tiles_urlpath:
+        logger.info("Reading SlideTiles")
+        with open(tiles_urlpath, "rb", **storage_options) as of:
+            tile_df = pd.read_parquet(of).reset_index().set_index("address")
+    elif type(tile_size) == int:
+        tile_df = generate_tiles(
+            slide_urlpath, tile_size, storage_options, requested_magnification
+        )
+    else:
+        raise ValueError("Specify tile size or url/path to tiling data")
 
     if not set(label_cols).issubset(tile_df.columns):
         raise ValueError(f"Invalid label_cols={label_cols}, verify input dataframe")
@@ -116,17 +134,8 @@ def convert_tiles_to_mask(
 
         logger.info(f"{address}, {row['mask']}, {value}")
 
-    slide_mask = f"{output_dir}/tile_mask.tif"
-    logger.info(f"Saving output mask to {slide_mask}")
-    tifffile.imsave(slide_mask, mask_arr)
-
-    properties = {
-        "slide_mask": slide_mask,
-        "mask_size": list(wsi_shape),
-    }
-    logger.info(properties)
-    return properties
+    return mask_arr
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(cli)

@@ -1,9 +1,17 @@
 import os
 from pathlib import Path
 
-from click.testing import CliRunner
+import fire
+import pytest
 
-from luna.pathology.cli.dsa_viz import cli
+from luna.pathology.cli.dsa_viz import (  # bmp_polygon,
+    bitmask_polygon,
+    heatmap,
+    qupath_polygon,
+    regional_polygon,
+    stardist_cell,
+    stardist_polygon,
+)
 
 
 def verify_cleanup(output_file):
@@ -14,18 +22,14 @@ def verify_cleanup(output_file):
 
 
 def test_stardist_polygon():
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
+    fire.Fire(
+        stardist_polygon,
         [
-            "stardist-polygon",
-            "tests/testdata/pathology/test_object_classification.geojson",
-            "-m",
-            "tests/testdata/pathology" "/stardist_polygon.yml",
+            "--local_config",
+            "tests/testdata/pathology/stardist_polygon.yml",
         ],
     )
 
-    assert result.exit_code == 0
     output_file = (
         "tests/luna/pathology/cli/testouts"
         "/StarDist_Segmentations_with_Lymphocyte_Classifications_123.json"
@@ -34,18 +38,13 @@ def test_stardist_polygon():
 
 
 def test_stardist_cell():
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
+    fire.Fire(
+        stardist_cell,
         [
-            "stardist-cell",
-            "tests/testdata/pathology/test_object_detection.tsv",
-            "-m",
-            "tests/testdata/pathology" "/stardist_cell.yml",
+            "--local_config",
+            "tests/testdata/pathology/stardist_cell.yml",
         ],
     )
-
-    assert result.exit_code == 0
 
     output_file = (
         "tests/luna/pathology/cli/testouts"
@@ -55,18 +54,13 @@ def test_stardist_cell():
 
 
 def test_regional_polygon():
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
+    fire.Fire(
+        regional_polygon,
         [
-            "regional-polygon",
-            "tests/testdata/pathology/regional_annotation.json",
-            "-m",
+            "--local_config",
             "tests/testdata/pathology" "/regional_polygon.yml",
         ],
     )
-
-    assert result.exit_code == 0
 
     output_file = (
         "tests/luna/pathology/cli/testouts" "/Slideviewer_Regional_Annotations_123.json"
@@ -75,33 +69,27 @@ def test_regional_polygon():
 
 
 def test_bitmask_polygon_invalid():
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
+    with pytest.raises(Exception):
+        fire.Fire(
+            bitmask_polygon,
+            [
+                "--input_map",
+                '{"Tumor": "non/existing/path/to/png.png"}',
+                "--local_config",
+                "tests/testdata/pathology" "/bitmask_polygon.yml",
+            ],
+        )
+
+
+""" doesn't work on github actions
+def test_bitmask_polygon():
+    fire.Fire(
+        bitmask_polygon,
         [
-            "bitmask-polygon",
-            '{"Tumor": "non/existing/path/to/png.png"}',
-            "-m",
+            "--local_config",
             "tests/testdata/pathology" "/bitmask_polygon.yml",
         ],
     )
-    assert isinstance(result.exception, ValueError)
-
-
-""" works locally. but times out on circleci
-def test_bitmask_polygon():
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        [
-            "bitmask-polygon",
-            "-m",
-            "tests/testdata/pathology"
-            "/bitmask_polygon.yml",
-        ],
-    )
-
-    assert result.exit_code == 0
 
     output_file = (
         "tests/luna/pathology/cli/testouts"
@@ -112,37 +100,31 @@ def test_bitmask_polygon():
 
 
 def test_heatmap():
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
+    fire.Fire(
+        heatmap,
         [
-            "heatmap",
             "tests/testdata/pathology/tile_scores.csv",
-            "-c",
+            "--column",
             "otsu_score",
-            "-m",
+            "--local_config",
             "tests/testdata/pathology" "/heatmap_config.yml",
         ],
     )
 
-    assert result.exit_code == 0
     output_file = "tests/luna/pathology/cli/testouts" "/otsu_score_test_123.json"
     verify_cleanup(output_file)
 
 
 def test_qupath_polygon():
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
+    fire.Fire(
+        qupath_polygon,
         [
-            "qupath-polygon",
             "tests/testdata/pathology/region_annotation_results.geojson",
-            "-m",
+            "--local_config",
             "tests/testdata/pathology" "/qupath_polygon.yml",
         ],
     )
 
-    assert result.exit_code == 0
     output_file = (
         "tests/luna/pathology/cli/testouts" "/Qupath_Pixel_Classifier_Polygons_123.json"
     )

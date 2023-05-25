@@ -1,33 +1,27 @@
+import fire
 import pandas as pd
-from click.testing import CliRunner
 
+from luna.common.models import TileSchema
 from luna.pathology.cli.infer_tile_labels import cli
-from luna.pathology.common.schemas import SlideTiles
 
 
 def test_cli(tmp_path):
-    runner = CliRunner()
-
-    result = runner.invoke(
+    fire.Fire(
         cli,
         [
-            "tests/testdata/pathology/save_tiles/123/",
-            "-o",
-            tmp_path,
-            "-rn",
+            "--tiles-urlpath",
+            "tests/testdata/pathology/save_tiles/123/123.tiles.parquet",
+            "--output-urlpath",
+            str(tmp_path),
+            "--torch-model-repo-or-dir",
             "tests/testdata/pathology/testhub",
-            "-mn",
+            "--model-name",
             "test_custom_model",
         ],
     )
-
-    assert result.exit_code == 0
-    assert SlideTiles.check(
-        f"{tmp_path}" f"/tile_scores_and_labels_pytorch_inference.parquet"
-    )
-
     # Default to 2 channels..
     df = pd.read_parquet(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet")
+    TileSchema.validate(df.reset_index())
     assert df.shape == (12, 9)
 
     assert set(["Background", "Tumor"]).intersection(set(df.columns)) == set(
@@ -36,60 +30,46 @@ def test_cli(tmp_path):
 
 
 def test_cli_kwargs(tmp_path):
-    runner = CliRunner()
-
-    result = runner.invoke(
+    fire.Fire(
         cli,
         [
-            "tests/testdata/pathology/save_tiles/123/",
-            "-o",
-            tmp_path,
-            "-rn",
+            "--tiles-urlpath",
+            "tests/testdata/pathology/save_tiles/123/123.tiles.parquet",
+            "--output-urlpath",
+            str(tmp_path),
+            "--torch-model-repo-or-dir",
             "tests/testdata/pathology/testhub",
-            "-mn",
+            "--model-name",
             "test_custom_model",
-            "-kw",
+            "--kwargs",
             '{"n_channels":10}',
         ],
     )
 
-    assert result.exit_code == 0
-    assert SlideTiles.check(
-        f"{tmp_path}" f"/tile_scores_and_labels_pytorch_inference.parquet"
-    )
-
     df = pd.read_parquet(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet")
+    TileSchema.validate(df.reset_index())
 
     assert df.shape == (12, 17)  # 8 more
 
 
 def test_cli_resnet(tmp_path):
-    runner = CliRunner()
-
-    result = runner.invoke(
+    fire.Fire(
         cli,
         [
-            "tests/testdata/pathology/save_tiles/123/",
-            "-o",
-            tmp_path,
-            "-rn",
+            "--tiles-urlpath",
+            "tests/testdata/pathology/save_tiles/123/123.tiles.parquet",
+            "--output-urlpath",
+            str(tmp_path),
+            "--torch-model-repo-or-dir",
             "tests/testdata/pathology/testhub",
-            "-mn",
+            "--model-name",
             "test_resnet",
-            "-kw",
+            "--kwargs",
             '{"depth": 18, "pretrained": True}',
         ],
     )
 
-    assert result.exit_code == 0
-    assert SlideTiles.check(
-        f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet"
-    )
+    df = pd.read_parquet(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet")
 
-    assert pd.read_parquet(
-        f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet"
-    ).shape == (12, 1007)
-
-    assert pd.read_parquet(
-        f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet"
-    ).shape == (12, 1007)
+    TileSchema.validate(df.reset_index())
+    assert df.shape == (12, 1007)

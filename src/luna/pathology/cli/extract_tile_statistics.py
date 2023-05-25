@@ -1,72 +1,82 @@
 # General imports
 import logging
-import os
 from pathlib import Path
+from urllib.parse import urlparse
 
-import click
+import fire
+import fsspec
 import pandas as pd
 
 import luna.common.stats
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
+from luna.common.utils import get_config, save_metadata, timed
 
 init_logger()
 logger = logging.getLogger("extract_tile_statistics")  # Add CLI tool name
 
-_params_ = [("input_slide_tiles", str), ("output_dir", str)]
 
-
-@click.command()
-@click.argument("input_slide_tiles", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-@click.option(
-    "-dsid",
-    "--dataset_id",
-    required=False,
-    help="Optional dataset identifier to add tabular output to",
-)
-def cli(**cli_kwargs):
-    """Extracts statistics over tiles
-
-    \b
-    Inputs:
-        input: input data
-    \b
-    Outputs:
-        output data
-    \b
-    Example:
-        CLI_TOOL ./slides/10001.svs ./halo/10001.job18484.annotations
-            -an Tumor
-            -o ./masks/10001/
-    """
-    cli_runner(cli_kwargs, _params_, extract_tile_statistics)
-
-
-def extract_tile_statistics(input_slide_tiles, output_dir):
+@timed
+@save_metadata
+def cli(
+    tiles_urlpath: str = "???",
+    output_urlpath: str = "???",
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+    local_config: str = "",
+):
     """Extracts statistics over tiles
 
     Args:
-        input_slide_tiles (str): path to input data
-        output_dir (str): output/working directory
+        tiles_urlpath (str): Tiles parquet file for slide(s). Absolute or relative filepath. Prefix with protocol to read from alternative filesystems
+        output_urlpath (str): Output prefix. Absolute or relative filepath. Prefix with protocol to write to alternative filesystems
+        storage_options (dict): extra options that make sense for reading from a particular storage connection
+        output_storage_options (dict): extra options that make sense for writing to a particular storage connection
+        local_config (str): local config yaml file
+
+    """
+    config = get_config(vars())
+
+    df_feature_data = extract_tile_statistics(
+        config["tiles_urlpath"],
+        config["storage_options"],
+    )
+
+    fs, output_path_prefix = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+
+    o = urlparse(config["tiles_urlpath"])
+    id = Path(o.path).stem
+
+    output_feature_file = Path(output_path_prefix) / f"{id}_tile_stats.parquet"
+
+    logger.info(df_feature_data)
+    with fs.open(output_feature_file, "wb") as f:
+        df_feature_data.to_parquet(f)
+
+    properties = {"feature_data": output_feature_file}
+
+    return properties
+
+
+def extract_tile_statistics(
+    tiles_urlpath: str,
+    storage_options: dict,
+):
+    """Extracts statistics over tiles
+
+    Args:
+        tiles_urlpath (str): Tiles parquet file for slide(s). Absolute or relative filepath. Prefix with protocol to read from alternative filesystems
+        output_urlpath (str): Output prefix. Absolute or relative filepath. Prefix with protocol to write to alternative filesystems
+        storage_options (dict): extra options that make sense for reading from a particular storage connection
+        output_storage_options (dict): extra options that make sense for writing to a particular storage connection
 
     Returns:
-        dict: metadata about function call
+        pd.DataFrame: metadata about function call
     """
 
     df = (
-        pd.read_parquet(input_slide_tiles)
+        pd.read_parquet(tiles_urlpath, storage_options=storage_options)
         .reset_index()
         .set_index("address")
         .drop(
@@ -85,18 +95,8 @@ def extract_tile_statistics(input_slide_tiles, output_dir):
 
     df_feature_data = pd.DataFrame([dict_feature_data])
 
-    output_feature_file = os.path.join(
-        output_dir, Path(input_slide_tiles).stem + "_tile_stats.parquet"
-    )
-
-    logger.info(df_feature_data)
-
-    df_feature_data.to_parquet(output_feature_file)
-
-    properties = {"feature_data": output_feature_file}
-
-    return properties
+    return df_feature_data
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(cli)

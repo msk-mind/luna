@@ -12,7 +12,7 @@ test_data = "tests/testdata/pathology/save_tiles/123/123.tiles.csv"
 # We need to impliment these
 def test_ds_not_implimented():
     with pytest.raises(NotImplementedError):
-        tile_dataset = BaseTorchTileDataset(tile_path=test_data)
+        tile_dataset = BaseTorchTileDataset(tile_urlpath=test_data)
         tile_dataset[0]
 
 
@@ -54,6 +54,6 @@ def test_wrong_args_ds():
 
 
 def test_init_ds_no_labels():
-    tile_dataset = TileDataset(tile_path=test_data)
+    tile_dataset = TileDataset(tile_urlpath=test_data)
     assert len(tile_dataset[0]) == 2
     assert tile_dataset[0][1].shape == torch.Size([196608])

@@ -1,31 +1,41 @@
 import os
 
+import fire
 import pandas as pd
-from click.testing import CliRunner
+import pytest
+from dask.distributed import Client, LocalCluster
 
 from luna.pathology.cli.extract_kfunction_statistics import cli
 
 
-def test_cli(tmp_path):
-    runner = CliRunner()
-    result = runner.invoke(
+@pytest.fixture(scope="module")
+def dask_client():
+    cluster = LocalCluster()
+    client = Client(cluster)
+    yield client
+    client.close()
+    cluster.close()
+
+
+def test_cli(tmp_path, dask_client):
+    fire.Fire(
         cli,
         [
+            "--input_cell_objects_urlpath",
             "tests/testdata/pathology/test_tile_stats.parquet",
-            "-o",
-            tmp_path,
-            "-il",
+            "--output_urlpath",
+            str(tmp_path),
+            "--intensity_label",
             "Centroid X µm",
-            "-r",
-            160.0,
-            "-rts",
-            300,
-            "-rtd",
-            300,
+            "--radius",
+            str(160.0),
+            "--tile_stride",
+            str(300),
+            "--tile_size",
+            str(300),
         ],
     )
 
-    assert result.exit_code == 0
     assert os.path.exists(f"{tmp_path}/test_tile_stats_kfunction_supertiles.parquet")
 
     df = pd.read_parquet(f"{tmp_path}/test_tile_stats_kfunction_supertiles.parquet")

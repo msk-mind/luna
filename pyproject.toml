@@ -21,7 +21,7 @@ classifiers = [
 include = ["HISTORY.md"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<3.12"
 minio = "^7.1.12"
 requests = "^2.28.1"
 filehash = "^0.2.dev1"
@@ -72,6 +72,15 @@ CLAM = "^3.1.8"
 tqdm = "^4.64.1"
 poetry = "1.1.15"
 protobuf = "3.20.*"
+fire = "^0.5.0"
+omegaconf = "^2.3.0"
+appdirs = "^1.4.4"
+loguru = "^0.6.0"
+pyvips = "^2.2.1"
+tiffslide = "^2.1.0"
+s3fs = "^2022.10.0"
+pandera = {extras = ["io"], version = "^0.14.5"}
+multimethod = "^1.9.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.2.0"
@@ -92,7 +101,6 @@ toml-cli = "^0.3.1"
 python-semantic-release = "^7.32.2"
 deptry = "^0.6.5"
 jupyter = "^1.0.0"
-s3fs = "^2022.11.0"
 python-docs-theme = "^2022.1"
 myst-parser = "^0.18.1"
 pandoc = "^2.2"
@@ -109,6 +117,13 @@ mkdocstrings-python = "^0.8.2"
 mkdocs-awesome-pages-plugin = "^2.8.0"
 mkdocs-jupyter = "^0.22.0"
 mkdocs-material = "^8.5.11"
+mypy = "^1.0.1"
+types-six = "^1.16.21"
+types-requests = "^2.28.11"
+pandas-stubs = "^1.5.3"
+types-PyYAML = "^6.0.12"
+types-Pillow = "^9.4.0"
+types-tqdm = "^4.65.0"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

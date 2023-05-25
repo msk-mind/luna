@@ -6,7 +6,6 @@ from skimage.segmentation import slic
 
 
 def saturate_image(img_obj, intensity_range, fill_value):
-
     # Sature image
     img_obj.saturate(intensity_range=intensity_range, fill_value=fill_value)
 
@@ -16,7 +15,6 @@ def saturate_image(img_obj, intensity_range, fill_value):
 def normalise_image(
     img_obj, norm_method, intensity_range=None, saturation_range=None, mask=None
 ):
-
     if intensity_range is None:
         intensity_range = [np.nan, np.nan]
 
@@ -38,9 +36,7 @@ def resegmentise(img_obj, roi_list, settings):
     # Resegmentises segmentation map based on selected method
 
     if roi_list is not None:
-
         for ii in np.arange(0, len(roi_list)):
-
             # Generate intensity and morphology masks
             roi_list[ii].generate_masks()
 
@@ -79,7 +75,6 @@ def interpolate_roi(roi_list, img_obj, settings):
 
 
 def estimate_image_noise(img_obj, settings, method="chang"):
-
     # TODO Implement as method for imageClass
     import scipy.ndimage as ndi
 
@@ -408,7 +403,6 @@ def transform_images(
 
     # Iterate over spatial filters
     for curr_filter in spatial_filter:
-
         if curr_filter == "wavelet":
             # Wavelet filters
             from mirp.imageFilters.waveletFilter import WaveletFilter
@@ -497,7 +491,6 @@ def crop_image(img_obj, roi_list=None, roi_obj=None, boundary=0.0, z_only=False)
 
     # Determine extent of all rois
     for roi_obj in roi_list:
-
         # Skip if the ROI is missing
         if roi_obj.roi is None:
             continue
@@ -514,7 +507,6 @@ def crop_image(img_obj, roi_list=None, roi_obj=None, boundary=0.0, z_only=False)
 
     # Check if the combined ROIs are empty
     if not (len(roi_ext_z) == 0 or len(roi_ext_y) == 0 or len(roi_ext_x) == 0):
-
         # Express mm boundary in voxels.
         boundary = np.ceil(boundary / img_obj.spacing).astype(np.int)
 
@@ -707,7 +699,6 @@ def gaussian_preprocess_filter(
     mode="nearest",
     by_slice=False,
 ):
-
     import scipy.ndimage
 
     # If no sample spacing is provided, assume original spacing. Note that for most purposes sample spacing should be provided

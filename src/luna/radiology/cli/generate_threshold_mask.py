@@ -1,76 +1,16 @@
 import logging
 
-import click
+import fire
 import numpy as np
 import pandas as pd
 from scipy.ndimage import distance_transform_edt
 from skimage.morphology import remove_small_holes
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
 from luna.radiology.mirp.imageReaders import read_itk_image
 
 init_logger()
 logger = logging.getLogger("generate_threshold_mask")
-
-_params_ = [
-    ("input_itk_volume", str),
-    ("threshold", float),
-    ("area_closing_radius", float),
-    ("expansion_radius", float),
-    ("output_dir", str),
-    ("save_npy", bool),
-]
-
-
-@click.command()
-@click.argument("input_itk_volume", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-th",
-    "--threshold",
-    required=False,
-    help="Threshold above which voxels are labeled",
-)
-@click.option(
-    "-ar",
-    "--area_closing_radius",
-    required=False,
-    help="Radius (of a sphere) of areas to close",
-)
-@click.option(
-    "-er",
-    "--expansion_radius",
-    required=False,
-    help="Radius (in mm) to grow segmentation mask",
-)
-@click.option(
-    "-npy",
-    "--save_npy",
-    required=False,
-    is_flag=True,
-    help="whether to additionally save the volumes as numpy files",
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-@click.option(
-    "-dsid",
-    "--dataset_id",
-    required=False,
-    help="Optional dataset identifier to add results to",
-)
-def cli(**cli_kwargs):
-    """ """
-    cli_runner(cli_kwargs, _params_, generate_threshold_mask)
 
 
 def generate_threshold_mask(
@@ -129,4 +69,4 @@ def generate_threshold_mask(
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(generate_threshold_mask)

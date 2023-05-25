@@ -1,19 +1,20 @@
 # imports
 import json
 import logging
-import os
 from copy import deepcopy
+from pathlib import Path
 
-import click
+import fire
+import fsspec  # type: ignore
 import girder_client
 import pandas as pd
 import requests
-from dask.distributed import Client, as_completed
+from dask.distributed import Client, as_completed, get_client
 from geojson import Feature, FeatureCollection, Point, Polygon
 from shapely.geometry import shape
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
+from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.dsa.dsa_api_handler import (
     get_annotation_df,
     get_annotation_uuid,
@@ -25,64 +26,24 @@ from luna.pathology.dsa.dsa_api_handler import (
 init_logger()
 logger = logging.getLogger("dsa_annotation_etl")
 
-_params_ = [
-    ("input_dsa_endpoint", str),
-    ("collection_name", str),
-    ("annotation_name", str),
-    ("num_cores", int),
-    ("username", str),
-    ("password", str),
-    ("output_dir", str),
-]
 
-
-@click.command(context_settings={"auto_envvar_prefix": "DSA"})
-@click.argument("input_dsa_endpoint", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-c",
-    "--collection-name",
-    required=False,
-    help="name of the collection to pull data from in DSA",
-)
-@click.option(
-    "-a",
-    "--annotation-name",
-    required=False,
-    help="name of the annotations to pull from DSA (same annotation name for all slides)",
-)
-@click.option(
-    "-u",
-    "--username",
-    required=False,
-    help="DSA username, can be inferred from DSA_USERNAME",
-)
-@click.option(
-    "-p",
-    "--password",
-    required=False,
-    help="DSA password, should be inferred from DSA_PASSWORD",
-)
-@click.option(
-    "-nc", "--num_cores", required=False, help="Number of cores to use", default=4
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
+@timed
+@save_metadata
+def cli(
+    dsa_endpoint: str = "???",
+    collection_name: str = "???",
+    annotation_name: str = "???",
+    username: str = "???",
+    password: str = "???",
+    local_config: str = "",
+    output_urlpath: str = ".",
+    storage_options: dict = {},
+):
     """A cli tool
 
     \b
     Inputs:
-        input_dsa_endpoint: Path to the DSA endpoint like http://localhost:8080/dsa/api/v1
+        dsa_endpoint: Path to the DSA endpoint like http://localhost:8080/dsa/api/v1
     \b
     Outputs:
         slide_annotation_dataset
@@ -95,31 +56,63 @@ def cli(**cli_kwargs):
             --annotation-name TumorVsOther
             -o /data/annotations/
     """
-    cli_runner(cli_kwargs, _params_, dsa_annotation_etl)
+    config = get_config(vars())
+
+    df_full_annotation_data = dsa_annotation_etl(
+        config["dsa_endpoint"],
+        config["collection_name"],
+        config["annotation_name"],
+        config["username"],
+        config["password"],
+        config["output_urlpath"],
+        config["storage_options"],
+    )
+
+    output_fs, output_path = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["storage_options"]
+    )
+
+    slide_annotation_dataset_path = (
+        Path(output_path)
+        / f"slide_annotation_dataset_{config['collection_name']}_{config['annotation_name']}.parquet"
+    )
+
+    if len(df_full_annotation_data) > 0:
+        with output_fs.open(slide_annotation_dataset_path, "wb") as of:
+            df_full_annotation_data.to_parquet(of)
+
+        properties = {
+            "slide_annotation_dataset": slide_annotation_dataset_path,
+            "segment_keys": {
+                "dsa_collection_uuid": df_full_annotation_data["collection_uuid"][0]
+            },
+        }
+        return properties
 
 
 # Transform imports
 def dsa_annotation_etl(
-    input_dsa_endpoint,
-    username,
-    password,
-    collection_name,
-    annotation_name,
-    num_cores,
-    output_dir,
+    dsa_endpoint: str,
+    collection_name: str,
+    annotation_name: str,
+    username: str,
+    password: str,
+    output_urlpath: str,
+    storage_options: dict,
 ):
     """Take
 
     Args:
-        input_dsa_endpoint (str): path to input data
-        output_dir (str): output/working directory
+        dsa_endpoint (str): path to input data
+        output_urlpath (str): output/working url/path prefix
 
     Returns:
-        dict: metadata about function call
+        pd.DataFrame: metadata about function call
     """
-    # girder = girder_client.GirderClient(apiUrl=input_dsa_endpoint)
+    client = get_client()
+    # girder = girder_client.GirderClient(apiUrl=dsa_endpoint)
     try:
-        girder = girder_client.GirderClient(apiUrl=input_dsa_endpoint)
+        girder = girder_client.GirderClient(apiUrl=dsa_endpoint)
         # girder python client doesn't support turning off ssl verify.
         # can be removed once we replace the self-signed cert
         session = requests.Session()
@@ -145,25 +138,19 @@ def dsa_annotation_etl(
         return {}
 
     # Initialize the DsaAnnotationProcessor
-    dap = DsaAnnotationProcessor(girder, annotation_name, output_dir)
+    dap = DsaAnnotationProcessor(
+        girder, annotation_name, output_urlpath, storage_options
+    )
 
-    with Client(
-        host=os.environ["HOSTNAME"],
-        n_workers=((num_cores + 1) // 2),
-        threads_per_worker=2,
-    ) as client:
-        logger.info("Dashboard: " + client.dashboard_link)
-        df_polygon_data = pd.concat(
-            [
-                x.result()
-                for x in as_completed(
-                    [
-                        client.submit(dap.run, row)
-                        for _, row in df_slide_items.iterrows()
-                    ]
-                )
-            ]
-        )
+    logger.info("Dashboard: " + client.dashboard_link)
+    df_polygon_data = pd.concat(
+        [
+            x.result()
+            for x in as_completed(
+                [client.submit(dap.run, row) for _, row in df_slide_items.iterrows()]
+            )
+        ]
+    )
 
     # Join the slide level data with the polygon level data, so this is a lot of information!
     df_full_annotation_data = (
@@ -176,6 +163,7 @@ def dsa_annotation_etl(
         .set_index("slide_id")
     )
 
+    df_full_annotation_data.loc[:, "collection_uuid"] = collection_uuid
     df_full_annotation_data.loc[:, "collection_name"] = collection_name
     df_full_annotation_data.loc[:, "annotation_name"] = annotation_name
     df_full_annotation_data = df_full_annotation_data.drop(columns=["meta"])
@@ -190,23 +178,15 @@ def dsa_annotation_etl(
         f"""Created {len(df_full_annotation_data.query("type=='geojson'"))} geojsons, {len(df_full_annotation_data.query("type=='point'"))} points, and {len(df_full_annotation_data.query("type=='polyline'"))} polygons"""
     )
 
-    slide_annotation_dataset_path = f"{output_dir}/slide_annotation_dataset_{collection_name}_{annotation_name}.parquet"
-
-    df_full_annotation_data.to_parquet(slide_annotation_dataset_path)
-
-    properties = {
-        "slide_annotation_dataset": slide_annotation_dataset_path,
-        "segment_keys": {"dsa_collection_uuid": collection_uuid},
-    }
-
-    return properties
+    return df_full_annotation_data
 
 
 class DsaAnnotationProcessor:
-    def __init__(self, girder, annotation_name, output_dir):
+    def __init__(self, girder, annotation_name, output_urlpath, storage_options):
         self.girder = girder
         self.annotation_name = annotation_name
-        self.output_dir = output_dir
+        self.output_urlpath = output_urlpath
+        self.storage_options = storage_options
 
     def histomics_annotation_table_to_geojson(
         self, df, properties, shape_type_col="type", x_col="x_coords", y_col="y_coords"
@@ -266,7 +246,6 @@ class DsaAnnotationProcessor:
         # slide made two days apart)
         df_annotations = []
         for annotation_uuid in annotation_uuids:
-
             df_annotation = get_annotation_df(self.girder, annotation_uuid)
             df_annotations.append(df_annotation)
 
@@ -281,8 +260,10 @@ class DsaAnnotationProcessor:
             y_col="y_coords",
         )
 
-        slide_geojson_path = f"{self.output_dir}/{slide_id}.annotation.geojson"
-        with open(slide_geojson_path, "w") as fp:
+        fs, urlpath = fsspec.core.url_to_fs(self.output_urlpath, **self.storage_options)
+
+        slide_geojson_path = Path(urlpath) / f"{slide_id}.annotation.geojson"
+        with fs.open(slide_geojson_path, "w") as fp:
             json.dump(feature_collection, fp)  # Finally, save it!
 
         df_annotation_proxy = pd.concat(
@@ -318,4 +299,5 @@ class DsaAnnotationProcessor:
 
 
 if __name__ == "__main__":
-    cli()
+    client = Client()
+    fire.Fire(cli)

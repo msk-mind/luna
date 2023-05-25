@@ -3,7 +3,7 @@
 import logging
 import os
 
-import click
+import fire
 import pandas as pd
 import pyxnat
 
@@ -14,92 +14,9 @@ from dask.delayed import delayed
 from dask.distributed import Client
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
 
 init_logger()
 logger = logging.getLogger("xnat_etl")
-
-_params_ = [
-    ("input_xnat_url", str),
-    ("username", str),
-    ("password", str),
-    ("num_cores", int),
-    ("project_name", str),
-    ("debug_limit", int),
-    ("output_dir", str),
-]
-
-
-@click.command(context_settings={"auto_envvar_prefix": "XNAT"})
-@click.argument("input_xnat_url", nargs=1)
-@click.option(
-    "-u",
-    "--username",
-    required=False,
-    help="DSA username, can be inferred from XNAT_USERNAME",
-)
-@click.option(
-    "-p",
-    "--password",
-    required=False,
-    help="DSA password, should be inferred from XNAT_PASSWORD",
-)
-@click.option(
-    "-p",
-    "--project_name",
-    required=False,
-    help="project name to which slides are assigned or associated",
-)
-@click.option(
-    "-dl",
-    "--debug_limit",
-    required=False,
-    default=-1,
-    help="limit number of slides process, for debugging, no_write is automatically enabled",
-)
-@click.option(
-    "-nc", "--num_cores", required=False, help="Number of cores to use", default=4
-)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-@click.option(
-    "-dsid",
-    "--dataset_id",
-    required=False,
-    help="Optional dataset identifier to add results to",
-)
-def cli(**cli_kwargs):
-    """Ingest images from XNAT
-
-    \b
-    Inputs:
-        xnat_url: XNAT URL
-
-    \b
-    Outputs:
-        scan_table: a dataset representing the scan ingestion job
-
-    \b
-    Example:
-        xnat_etl https://xnat.my.insitution.org
-            --project_name 12-345
-            --num_cores 8
-            -o /data/RAD-12-345/
-            -dsid XNAT_TABLE
-
-    python3 -m luna.radiology.cli.xnat_etl https://xnat.mskcc.org -p 16-1335 -s _ -nc 16 --no-write -o . -dl 8 -dsid XNAT_TABLE
-    """
-    cli_runner(cli_kwargs, _params_, xnat_etl)
 
 
 def xnat_etl(
@@ -160,7 +77,6 @@ def experiment_scans_to_df(s, experiment_id, output_dir):
     df_scans["experiment_id"] = experiment_id
 
     for scan_id in df_scans["@ID"]:
-
         df_scan = df_scans.loc[df_scans["@ID"] == scan_id]
 
         dest_dir = os.path.join(output_dir, experiment_id, scan_id)
@@ -217,4 +133,4 @@ def get_patient_scans(s, output_dir):
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(xnat_etl)

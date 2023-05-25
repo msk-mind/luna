@@ -2,84 +2,25 @@ import logging
 import os
 from pathlib import Path
 
-import click
+import fire
 import itk
 import medpy.io
 from pydicom import dcmread
 
 from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
 
 init_logger()
 logger = logging.getLogger("dicom_to_itk")
 
 
-_params_ = [
-    ("input_dicom_folder", str),
-    ("output_dir", str),
-    ("itk_image_type", str),
-    ("convert_to_suv", bool),
-    ("itk_c_type", str),
-]
-
-
-@click.command()
-@click.argument("input_dicom_folder", nargs=1)
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-it", "--itk_image_type", required=False, help="desired ITK image extention"
-)
-@click.option(
-    "-ct",
-    "--itk_c_type",
-    required=False,
-    help="desired C datatype (float, unsigned short)",
-)
-@click.option(
-    "-suv",
-    "--convert_to_suv",
-    required=False,
-    help="If an applicable PET image, convert to SUVs",
-    is_flag=True,
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-def cli(**cli_kwargs):
-    """Generates a ITK compatible image from a dicom series
-
-    \b
-    Inputs:
-        input_dicom_folder: A folder containing a dicom series
-    \b
-    Outputs:
-        itk_volume
-    \b
-    Example:
-        dicom_to_itk ./scans/10000/2/DICOM/
-            --itk_image_type nrrd
-            --itk_c_type 'unsigned short'
-            -o ./scans/10000/2/NRRD
-    """
-    cli_runner(cli_kwargs, _params_, dicom_to_itk)
-
-
 def dicom_to_itk(
-    input_dicom_folder, output_dir, itk_image_type, itk_c_type, convert_to_suv
+    dicom_urlpath, output_urlpath, itk_image_type, itk_c_type, convert_to_suv=False
 ):
     """Generate an ITK compatible image from a dicom series/folder
 
     Args:
-        input_dicom_folder (str): path to dicom series within a folder
-        output_dir (str): output/working directory
+        dicom_urlpath (str): path to dicom series within a folder
+        output_urlpath (str): output/working directory
         itk_image_type (str): ITK volume image type to output (mhd, nrrd, nii, etc.)
         itk_c_type (str): pixel (C) type for pixels, e.g. float or unsigned short
 
@@ -93,18 +34,18 @@ def dicom_to_itk(
     namesGenerator.SetUseSeriesDetails(True)
     namesGenerator.AddSeriesRestriction("0008|0021")
     namesGenerator.SetGlobalWarningDisplay(False)
-    namesGenerator.SetDirectory(input_dicom_folder)
+    namesGenerator.SetDirectory(dicom_urlpath)
 
     seriesUIDs = namesGenerator.GetSeriesUIDs()
     num_dicoms = len(seriesUIDs)
 
     if num_dicoms < 1:
-        logger.warning("No DICOMs in: " + input_dicom_folder)
+        logger.warning("No DICOMs in: " + dicom_urlpath)
         return None
 
     logger.info(
         "The directory {} contains {} DICOM Series".format(
-            input_dicom_folder, str(num_dicoms)
+            dicom_urlpath, str(num_dicoms)
         )
     )
 
@@ -127,7 +68,7 @@ def dicom_to_itk(
         writer = itk.ImageFileWriter[ImageType].New()
 
         outFileName = os.path.join(
-            output_dir, uid + "_volumetric_image." + itk_image_type
+            output_urlpath, uid + "_volumetric_image." + itk_image_type
         )
         writer.SetFileName(outFileName)
         writer.UseCompressionOn()
@@ -136,9 +77,9 @@ def dicom_to_itk(
         writer.Update()
 
     if convert_to_suv:
-        convert_pet_volume_to_suv(input_dicom_folder, outFileName)
+        convert_pet_volume_to_suv(dicom_urlpath, outFileName)
 
-    path = next(Path(input_dicom_folder).glob("*.dcm"))
+    path = next(Path(dicom_urlpath).glob("*.dcm"))
     ds = dcmread(path)
 
     # Prepare metadata and commit
@@ -223,14 +164,14 @@ def calculate_normalization(dcms):
     return norm
 
 
-def convert_pet_volume_to_suv(input_dicom_folder, input_volume):
+def convert_pet_volume_to_suv(dicom_urlpath, input_volume):
     """Renormalizes a PET ITK volume to SUVs, saves a new volume in-place
 
     Args:
-        input_dicom_folder (str): path to matching dicom series within a folder
+        dicom_urlpath (str): path to matching dicom series within a folder
         input_volume (str): path to PT volume
     """
-    dcms = list(Path(input_dicom_folder).glob("*.dcm"))
+    dcms = list(Path(dicom_urlpath).glob("*.dcm"))
 
     if check_pet(dcms):
         check_delay_correction(dcms)
@@ -249,4 +190,4 @@ def convert_pet_volume_to_suv(input_dicom_folder, input_volume):
 
 
 if __name__ == "__main__":
-    cli()
+    fire.Fire(dicom_to_itk)

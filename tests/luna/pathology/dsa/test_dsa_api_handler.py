@@ -25,7 +25,6 @@ def test_get_collection_uuid(monkeypatch):
 
 
 def test_get_collection_uuid_missing():
-
     gc = GirderClient(apiUrl="http://localhost/api/v1")
 
     with pytest.raises(RuntimeError):
