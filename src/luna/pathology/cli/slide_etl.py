@@ -34,6 +34,7 @@ def cli(
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
+    no_copy: bool = False
 ):
     """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
 
@@ -83,6 +84,7 @@ def cli(
         config["storage_options"],
         config["output_urlpath"],
         config["output_storage_options"],
+        config["no_copy"]
     )
 
     # rebase_schema_numeric(df)
@@ -105,6 +107,7 @@ def slide_etl(
     storage_options: dict = {},
     output_urlpath: str = "",
     output_storage_options: dict = {},
+    no_copy: bool = False
 ) -> DataFrame:
     client = get_client()
     sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
@@ -120,7 +123,7 @@ def slide_etl(
     ]
     progress(futures)
     slides = client.gather(futures)
-    if output_urlpath:
+    if not no_copy and output_urlpath:
         futures = [
             client.submit(
                 sb.copy_slide,
@@ -142,6 +145,7 @@ def slide_etl(
     storage_options: dict = {},
     output_urlpath: str = "",
     output_storage_options: dict = {},
+    no_copy: bool = False
 ) -> Slide:
     """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
 
@@ -161,7 +165,7 @@ def slide_etl(
     sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
 
     slide = sb.get_slide(slide_url, project_name=project_name, comment=comment)
-    if output_urlpath:
+    if not no_copy and output_urlpath:
         slide = sb.copy_slide(slide, output_urlpath)
     return slide
 
