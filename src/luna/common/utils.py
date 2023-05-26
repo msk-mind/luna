@@ -11,7 +11,6 @@ from functools import wraps
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
-from typing import Callable
 from urllib.parse import urlparse
 
 import fire
@@ -36,7 +35,7 @@ def _get_args_dict(fn, args, kwargs):
     return {**dict(zip(args_names, args)), **kwargs}
 
 
-def save_metadata(func, output_urlpath_key="output_urlpath"):
+def save_metadata(func):
     """This decorator saves metadata in output_url"""
 
     @wraps(func)
@@ -45,8 +44,8 @@ def save_metadata(func, output_urlpath_key="output_urlpath"):
         result = func(*args, **kwargs)
         if result is not None:
             metadata = metadata | result
-            if output_urlpath_key in metadata:
-                o = urlparse(str(metadata[output_urlpath_key]))
+            if "output_urlpath" in metadata:
+                o = urlparse(str(metadata["output_urlpath"]))
                 fs = fsspec.filesystem(
                     o.scheme, **metadata.get("output_storage_options", {})
                 )
@@ -57,59 +56,64 @@ def save_metadata(func, output_urlpath_key="output_urlpath"):
     return wrapper
 
 
-def local_cache_dir(func: Callable, dir_write_mode: dict[str, str]):
-    """Decorator for caching dirs locally"""
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        storage_options = kwargs.get("storage_options", {})
-        output_storage_options = kwargs.get("output_storage_options", {})
-        protocol = None
-        for dir_name, write_mode in dir_write_mode:
-            if "w" in write_mode:
-                so = output_storage_options
-            else:
-                so = storage_options
-            fs, dir = fsspec.core.url_to_fs(kwargs[dir_name], **so)
-            if protocol and fs.protocol != protocol:
-                raise RuntimeError("Only one filesystem protocol supported")
-            protocol = fs.protocol
-
-            local_tmp_dir = tempfile.TemporaryDirectory()
-            result = func(*args, **kwargs)
-            copy_files(local_tmp_dir, dir, destination_fs=fs)
-            return result
-
-    return wrapper
-
-
-def local_cache_urlpath(func: Callable, urlpath_write_mode: dict[str, str]):
+def local_cache_urlpath(
+    file_key_write_mode: dict[str, str] = {}, dir_key_write_mode: dict[str, str] = {}
+):
     """Decorator for caching url/paths locally"""
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        storage_options = kwargs.get("storage_options", {})
-        output_storage_options = kwargs.get("output_storage_options", {})
-        protocol = None
-        with ExitStack() as stack:
-            for urlpath_name, write_mode in urlpath_write_mode:
-                if "w" in urlpath_write_mode:
-                    so = output_storage_options
-                else:
-                    so = storage_options
-                fs, path = fsspec.core.url_to_fs(kwargs[urlpath_name], **so)
-                if protocol and fs.protocol != protocol:
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            args_dict = _get_args_dict(func, args, kwargs)
+            new_args_dict = args_dict.copy()
+
+            filesystem = None
+            storage_options_key = "storage_options"
+            tmp_dir_dest = []
+            for key, write_mode in dir_key_write_mode.items():
+                if "w" in write_mode:
+                    storage_options_key = "output_storage_options"
+                fs, dir = fsspec.core.url_to_fs(
+                    args_dict[key], **args_dict.get(storage_options_key, {})
+                )
+                if filesystem and fs.protocol != filesystem.protocol:
                     raise RuntimeError("Only one filesystem protocol supported")
-                protocol = fs.protocol
+                filesystem = fs
+                if filesystem and filesystem.protocol != "file":
+                    new_args_dict[storage_options_key] = {"auto_mkdir": True}
+                    tmp_dir = tempfile.TemporaryDirectory()
+                    new_args_dict[key] = tmp_dir.name
+                    tmp_dir_dest.append((tmp_dir, dir))
 
-                simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
+            protocol = None
+            result = None
+            with ExitStack() as stack:
+                for key, write_mode in file_key_write_mode.items():
+                    if "w" in write_mode:
+                        storage_options_key = "output_storage_options"
+                    fs, path = fsspec.core.url_to_fs(
+                        args_dict[key], **args_dict.get(storage_options_key, {})
+                    )
+                    if protocol and fs.protocol != protocol:
+                        raise RuntimeError("Only one filesystem protocol supported")
+                    protocol = fs.protocol
 
-                of = simplecache_fs.open(path, write_mode)
-                stack.enter_context(of)
-                kwargs[urlpath_name] = of.name
-            return func(*args, **kwargs)
+                    simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
 
-    return wrapper
+                    of = simplecache_fs.open(path, write_mode)
+                    stack.enter_context(of)
+                    new_args_dict[key] = of.name
+
+                result = func(**new_args_dict)
+
+            for tmp_dir, dest in tmp_dir_dest:
+                copy_files(tmp_dir.name, dest, destination_filesystem=filesystem)
+
+            return result
+
+        return wrapper
+
+    return decorator
 
 
 def timed(func):
