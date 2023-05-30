@@ -11,9 +11,14 @@ from loguru import logger
 from multimethod import multimethod
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
-
 from luna.common.models import Slide, SlideSchema
-from luna.common.utils import apply_csv_filter, get_config, timed, rebase_schema_numeric, rebase_schema_mixed
+from luna.common.utils import (
+    apply_csv_filter, 
+    get_config, 
+    timed, 
+    rebase_schema_numeric, 
+    rebase_schema_mixed,
+)
 from luna.pathology.common.utils import (
     get_downscaled_thumbnail,
     get_scale_factor_at_magnification,
@@ -21,7 +26,6 @@ from luna.pathology.common.utils import (
 )
 
 VALID_SLIDE_EXTENSIONS = [".svs", ".scn", ".tif"]
-
 
 @timed
 def cli(
@@ -48,10 +52,8 @@ def cli(
         output_urlpath (str): url/path to output table
         output_storage_options (dict): storage options to pass to writing functions
         local_config (str): url/path to YAML config file
+        no_copy (bool): determines whether we copy slides to output_urlpath
 
-
-    Returns:
-        slide (Slide): slide object
     """
 
     config = get_config(vars())
@@ -110,6 +112,22 @@ def slide_etl(
     output_storage_options: dict = {},
     no_copy: bool = False
 ) -> DataFrame:
+    """Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
+
+    Args:
+        slide_url (str): path to slide image
+        project_name (str): project name underwhich the slides should reside
+        comment (str): comment and description of dataset
+        storage_options (dict): storage options to pass to reading functions
+        output_urlpath (str): url/path to output table
+        output_storage_options (dict): storage options to pass to writing functions
+
+
+    Returns:
+        df (DataFrame): dataframe containing the metadata of all the slides
+    """
+
+
     client = get_client()
     sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
 
