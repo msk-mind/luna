@@ -13,7 +13,7 @@ from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
 from luna.common.models import Slide, SlideSchema
-from luna.common.utils import apply_csv_filter, get_config, timed
+from luna.common.utils import apply_csv_filter, get_config, timed, rebase_schema_numeric, rebase_schema_mixed
 from luna.pathology.common.utils import (
     get_downscaled_thumbnail,
     get_scale_factor_at_magnification,
@@ -87,16 +87,17 @@ def cli(
         config["no_copy"]
     )
 
-    # rebase_schema_numeric(df)
+    rebase_schema_numeric(df)
+    rebase_schema_mixed(df)
 
     logger.info(df)
     if config["output_urlpath"]:
         output_filesystem, output_path = fsspec.core.url_to_fs(
             config["output_urlpath"], **config["output_storage_options"]
         )
-        f = Path(output_path) / f"slide_ingest_{config['project_name']}.parquet"
+        f = Path(output_path) / f"slide_ingest_{config['project_name']}.csv"
         with output_filesystem.open(f, "wb") as of:
-            df.to_parquet(of)
+            df.to_csv(of)
 
 
 @multimethod
@@ -132,9 +133,11 @@ def slide_etl(
             )
             for slide in slides
         ]
-    return DataFrame[SlideSchema](
+    df = DataFrame[SlideSchema](
         pd.json_normalize([x.__dict__ for x in client.gather(futures)])
     )
+
+    return df
 
 
 @multimethod
