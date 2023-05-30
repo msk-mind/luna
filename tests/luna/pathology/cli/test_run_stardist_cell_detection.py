@@ -4,7 +4,7 @@ import os
 import fire
 
 import docker
-from luna.pathology.cli.run_stardist_cell_detection import cli
+from luna.pathology.cli.run_stardist_cell_detection import stardist_simple
 
 tmppath = "tests/testdata/pathology/stardist_cell_detection"
 
@@ -45,7 +45,7 @@ def test_cli(monkeypatch):
     monkeypatch.setattr(docker.models.containers.Container, "logs", mock_container)
 
     fire.Fire(
-        cli,
+        stardist_simple,
         [
             "--slide-urlpath",
             "tests/testdata/pathology/123.svs",

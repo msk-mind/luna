@@ -1,23 +1,22 @@
 # General imports
 import logging
-import os
-import tempfile
 from pathlib import Path
 
 import fire
 import fsspec
 import pandas as pd
-from pyarrow.fs import copy_files
 
 import docker
 from luna.common.custom_logger import init_logger
-from luna.common.utils import get_config
+from luna.common.utils import get_config, local_cache_urlpath, save_metadata, timed
 
 init_logger()
-logger = logging.getLogger("run_stardist_cell_detection")
+logger = logging.getLogger("stardist_simple")
 
 
-def cli(
+@timed
+@save_metadata
+def stardist_simple(
     slide_urlpath: str = "???",
     cell_expansion_size: float = "???",  # type: ignore
     image_type: str = "???",
@@ -28,29 +27,24 @@ def cli(
     output_storage_options: dict = {},
     local_config: str = "",
 ):
-    """Run stardist using qupath CLI within a docker container
+    """Run stardist using qupath CLI
 
-    Note: containers are spawned with a root process, and will not exit if the CLI tool is aborted.
+    Args:
+        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        cell_expansion_size (float): size in pixels to expand cell cytoplasm
+        num_cores (int): Number of cores to use for CPU parallelization
+        image_type (str): qupath image type (BRIGHTFIELD_H_DAB)
+        output_urlpath (str): output url/path
+        debug_opts (str): debug options passed as arguments to groovy script
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
 
-    Note: Stardist cell coordinates are in microns. To convert to pixel coordinates, divide by microns-per-pixel (mpp)
-
-    TODO: Improve handling of containers, move to singularity, and/or ensure graceful exits
-
-    \b
-    Inputs:
-        input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-    \b
-    Outputs:
-        cell_objects
-    \b
-    Example:
-        run_stardist_cell_detection /absolute/path/to/10001.svs
-            -cs 8 -it BRIGHTFIELD_H_DAB -nc 8
-            -o /absolute/path/to/working_dir
+    Returns:
+        pd.DataFrame: metadata about function call
     """
     config = get_config(vars())
 
-    df = run_stardist_cell_detection(
+    df = stardist_simple_main(
         config["slide_urlpath"],
         config["cell_expansion_size"],
         config["image_type"],
@@ -70,7 +64,7 @@ def cli(
     with fs.open(output_header_file, "wb") as of:
         df.to_parquet(of)
 
-    logger.info("Generated cell data:")
+    logger.info("generated cell data:")
     logger.info(df)
 
     properties = {
@@ -84,7 +78,11 @@ def cli(
     return properties
 
 
-def run_stardist_cell_detection(
+@local_cache_urlpath(
+    file_key_write_mode={"slide_urlpath": "r"},
+    dir_key_write_mode={"output_urlpath": "w"},
+)
+def stardist_simple_main(
     slide_urlpath: str,
     cell_expansion_size: float,
     image_type: str,
@@ -93,67 +91,179 @@ def run_stardist_cell_detection(
     num_cores: int,
     storage_options: dict,
     output_storage_options: dict,
-):
+) -> pd.DataFrame:
     """Run stardist using qupath CLI
 
     Args:
-        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        slide_urlpath (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         cell_expansion_size (float): size in pixels to expand cell cytoplasm
         num_cores (int): Number of cores to use for CPU parallelization
         image_type (str): qupath image type (BRIGHTFIELD_H_DAB)
         output_urlpath (str): output url/path
         debug_opts (str): debug options passed as arguments to groovy script
         storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
 
     Returns:
-        dict: metadata about function call
+        pd.DataFrame: cell detections
     """
     fs, slide_path = fsspec.core.url_to_fs(slide_urlpath, **storage_options)
-    if fs.protocol == "file":
-        local_file = slide_path
-    else:
-        fs = fsspec.filesystem("simplecache", fs=fs)
-        of = fs.open(slide_path, "r")
-        local_file = of.name
 
     ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
-    if ofs.protocol == "file":
-        local_working_path = output_path
-    else:
-        tmp_dir = tempfile.TemporaryDirectory()
-        local_working_path = tmp_dir.name
 
     slide_filename = Path(slide_path).name
-    docker_image = "mskmind/qupath-stardist"
+    docker_image = "mskmind/qupath-stardist:latest"
     command = f"QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy"
     logger.info("Launching docker container:")
     logger.info(
-        f"\tvolumes={slide_urlpath}:'/inputs/{slide_filename}', {local_working_path}:'/output_dir'"
+        f"\tvolumes={slide_urlpath}:'/inputs/{slide_filename}', {slide_path}:'/output_dir'"
     )
     logger.info(f"\tnano_cpus={int(num_cores * 1e9)}")
     logger.info(f"\timage='{docker_image}'")
     logger.info(f"\tcommand={command}")
 
-    os.makedirs(local_working_path, exist_ok=True)
-
     client = docker.from_env()
     container = client.containers.run(
         volumes={
-            local_file: {"bind": f"/inputs/{slide_filename}", "mode": "ro"},
-            local_working_path: {"bind": "/output_dir", "mode": "rw"},
+            slide_path: {"bind": f"/inputs/{slide_filename}", "mode": "ro"},
+            output_path: {"bind": "/output_dir", "mode": "rw"},
         },
         nano_cpus=int(num_cores * 1e9),
         image=docker_image,
         command=command,
         detach=True,
     )
-    if ofs.protocol != "file":
-        copy_files(local_working_path, output_path, destination_filesystem=ofs)
 
     for line in container.logs(stream=True):
         print(line.decode(), end="")
 
-    stardist_output = Path(local_working_path) / "cell_detections.tsv"
+    stardist_output = Path(output_path) / "cell_detections.tsv"
+
+    df = pd.read_csv(stardist_output, sep="\t")
+    df.index = "cell-" + df.index.astype(int).astype(str)
+    df.index.rename("cell_id", inplace=True)
+
+    df = df.rename(
+        columns={"Centroid X µm": "x_coord", "Centroid Y µm": "y_coord"}
+    )  # x,ys follow this convention
+
+    return df
+
+
+@timed
+@save_metadata
+def stardist_cell_lymphocyte(
+    slide_urlpath: str = "???",
+    output_urlpath: str = ".",
+    num_cores: int = 1,
+    use_gpu: bool = False,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+):
+    """Run stardist using qupath CLI
+
+    Args:
+        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        num_cores (int): Number of cores to use for CPU parallelization
+        output_urlpath (str): output url/path
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
+
+    Returns:
+        pd.DataFrame: cell detections
+    """
+    config = get_config(vars())
+
+    df = stardist_cell_lymphocyte_main(
+        config["slide_urlpath"],
+        config["output_urlpath"],
+        config["num_cores"],
+        config["use_gpu"],
+        config["storage_options"],
+        config["output_storage_options"],
+    )
+
+    slide_id = Path(config["slide_urlpath"]).stem
+
+    fs, output_path = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
+    with fs.open(output_header_file, "wb") as of:
+        df.to_parquet(of)
+
+    logger.info("generated cell data:")
+    logger.info(df)
+
+    properties = {
+        "cell_objects": output_header_file,
+        "feature_data": output_header_file,
+        "spatial": True,
+        "total_cells": len(df),
+        "segment_keys": {"slide_id": slide_id},
+    }
+
+    return properties
+
+
+@local_cache_urlpath(
+    file_key_write_mode={"slide_urlpath": "r"},
+    dir_key_write_mode={"output_urlpath": "w"},
+)
+def stardist_cell_lymphocyte_main(
+    slide_urlpath: str,
+    output_urlpath: str,
+    num_cores: int,
+    use_gpu: bool = False,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+) -> pd.DataFrame:
+    """Run stardist using qupath CLI
+
+    Args:
+        input_slide_image (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
+        num_cores (int): Number of cores to use for CPU parallelization
+        output_urlpath (str): output url/path
+        storage_options (dict): storage options to pass to reading functions
+
+    Returns:
+        pd.DataFrame: cell detections
+    """
+    fs, slide_path = fsspec.core.url_to_fs(slide_urlpath, **storage_options)
+
+    ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
+
+    qupath_cmd = "QuPath-cpu"
+    if use_gpu:
+        qupath_cmd = "QuPath-gpu"
+
+    slide_filename = Path(slide_path).name
+    docker_image = "mskmind/qupath-tensorflow:latest"
+    command = f"{qupath_cmd} script --image /inputs/{slide_filename} /scripts/stardist_nuclei_and_lymphocytes.groovy"
+    logger.info("Launching docker container:")
+    logger.info(
+        f"\tvolumes={slide_path}:'/inputs/{slide_filename}', {output_path}:'/output_dir'"
+    )
+    logger.info(f"\tnano_cpus={int(num_cores * 1e9)}")
+    logger.info(f"\timage='{docker_image}'")
+    logger.info(f"\tcommand={command}")
+
+    client = docker.from_env()
+    container = client.containers.run(
+        volumes={
+            slide_path: {"bind": f"/inputs/{slide_filename}", "mode": "ro"},
+            output_path: {"bind": "/output_dir", "mode": "rw"},
+        },
+        nano_cpus=int(num_cores * 1e9),
+        image=docker_image,
+        command=command,
+        detach=True,
+    )
+
+    for line in container.logs(stream=True):
+        print(line.decode(), end="")
+
+    stardist_output = Path(output_path) / "cell_detections.tsv"
 
     df = pd.read_csv(stardist_output, sep="\t")
     df.index = "cell-" + df.index.astype(int).astype(str)
@@ -167,4 +277,9 @@ def run_stardist_cell_detection(
 
 
 if __name__ == "__main__":
-    fire.Fire(cli)
+    fire.Fire(
+        {
+            "simple": stardist_simple,
+            "cell-lymphocyte": stardist_cell_lymphocyte,
+        }
+    )
