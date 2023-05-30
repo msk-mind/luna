@@ -15,9 +15,7 @@ from luna.common.models import Slide, SlideSchema
 from luna.common.utils import (
     apply_csv_filter, 
     get_config, 
-    timed, 
-    rebase_schema_numeric, 
-    rebase_schema_mixed,
+    timed 
 )
 from luna.pathology.common.utils import (
     get_downscaled_thumbnail,
@@ -38,7 +36,8 @@ def cli(
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
-    no_copy: bool = False
+    no_copy: bool = False, 
+    metadata_extension: str = "parquet"
 ):
     """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
 
@@ -53,7 +52,7 @@ def cli(
         output_storage_options (dict): storage options to pass to writing functions
         local_config (str): url/path to YAML config file
         no_copy (bool): determines whether we copy slides to output_urlpath
-
+        metadata_extension(str): file extension of generated metadata file (either 'csv' or 'parquet') 
     """
 
     config = get_config(vars())
@@ -66,6 +65,9 @@ def cli(
     else:
         for ext in VALID_SLIDE_EXTENSIONS:
             slide_paths += filesystem.glob(f"{slide_path}/*{ext}")
+
+    if config["metadata_extension"]:
+        extension = config["metadata_extension"].lower().replace('.','')
 
     if config["subset_csv_urlpath"]:
         slide_paths = apply_csv_filter(
@@ -89,17 +91,20 @@ def cli(
         config["no_copy"]
     )
 
-    rebase_schema_numeric(df)
-    rebase_schema_mixed(df)
-
     logger.info(df)
     if config["output_urlpath"]:
         output_filesystem, output_path = fsspec.core.url_to_fs(
             config["output_urlpath"], **config["output_storage_options"]
         )
-        f = Path(output_path) / f"slide_ingest_{config['project_name']}.csv"
+
+        f = Path(output_path) / f"slide_ingest_{config['project_name']}.{extension}"
         with output_filesystem.open(f, "wb") as of:
-            df.to_csv(of)
+            if extension == "csv":
+                logger.info("Writing to csv file")
+                df.to_csv(of)
+            elif extension == "parquet":
+                logger.info("Writing to parquet file")
+                df.to_parquet(of)
 
 
 @multimethod
