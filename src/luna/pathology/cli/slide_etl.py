@@ -11,9 +11,12 @@ from loguru import logger
 from multimethod import multimethod
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
-
 from luna.common.models import Slide, SlideSchema
-from luna.common.utils import apply_csv_filter, get_config, timed
+from luna.common.utils import (
+    apply_csv_filter, 
+    get_config, 
+    timed 
+)
 from luna.pathology.common.utils import (
     get_downscaled_thumbnail,
     get_scale_factor_at_magnification,
@@ -21,7 +24,6 @@ from luna.pathology.common.utils import (
 )
 
 VALID_SLIDE_EXTENSIONS = [".svs", ".scn", ".tif"]
-
 
 @timed
 def cli(
@@ -34,6 +36,8 @@ def cli(
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
+    no_copy: bool = False, 
+    metadata_extension: str = "parquet"
 ):
     """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
 
@@ -47,10 +51,8 @@ def cli(
         output_urlpath (str): url/path to output table
         output_storage_options (dict): storage options to pass to writing functions
         local_config (str): url/path to YAML config file
-
-
-    Returns:
-        slide (Slide): slide object
+        no_copy (bool): determines whether we copy slides to output_urlpath
+        metadata_extension(str): file extension of generated metadata file (either 'csv' or 'parquet') 
     """
 
     config = get_config(vars())
@@ -63,6 +65,9 @@ def cli(
     else:
         for ext in VALID_SLIDE_EXTENSIONS:
             slide_paths += filesystem.glob(f"{slide_path}/*{ext}")
+
+    if config["metadata_extension"]:
+        extension = config["metadata_extension"].lower().replace('.','')
 
     if config["subset_csv_urlpath"]:
         slide_paths = apply_csv_filter(
@@ -83,18 +88,23 @@ def cli(
         config["storage_options"],
         config["output_urlpath"],
         config["output_storage_options"],
+        config["no_copy"]
     )
-
-    # rebase_schema_numeric(df)
 
     logger.info(df)
     if config["output_urlpath"]:
         output_filesystem, output_path = fsspec.core.url_to_fs(
             config["output_urlpath"], **config["output_storage_options"]
         )
-        f = Path(output_path) / f"slide_ingest_{config['project_name']}.parquet"
+
+        f = Path(output_path) / f"slide_ingest_{config['project_name']}.{extension}"
         with output_filesystem.open(f, "wb") as of:
-            df.to_parquet(of)
+            if extension == "csv":
+                logger.info("Writing to csv file")
+                df.to_csv(of)
+            elif extension == "parquet":
+                logger.info("Writing to parquet file")
+                df.to_parquet(of)
 
 
 @multimethod
@@ -105,7 +115,24 @@ def slide_etl(
     storage_options: dict = {},
     output_urlpath: str = "",
     output_storage_options: dict = {},
+    no_copy: bool = False
 ) -> DataFrame:
+    """Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
+
+    Args:
+        slide_url (str): path to slide image
+        project_name (str): project name underwhich the slides should reside
+        comment (str): comment and description of dataset
+        storage_options (dict): storage options to pass to reading functions
+        output_urlpath (str): url/path to output table
+        output_storage_options (dict): storage options to pass to writing functions
+
+
+    Returns:
+        df (DataFrame): dataframe containing the metadata of all the slides
+    """
+
+
     client = get_client()
     sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
 
@@ -120,7 +147,7 @@ def slide_etl(
     ]
     progress(futures)
     slides = client.gather(futures)
-    if output_urlpath:
+    if not no_copy and output_urlpath:
         futures = [
             client.submit(
                 sb.copy_slide,
@@ -129,9 +156,11 @@ def slide_etl(
             )
             for slide in slides
         ]
-    return DataFrame[SlideSchema](
+    df = DataFrame[SlideSchema](
         pd.json_normalize([x.__dict__ for x in client.gather(futures)])
     )
+
+    return df
 
 
 @multimethod
@@ -142,6 +171,7 @@ def slide_etl(
     storage_options: dict = {},
     output_urlpath: str = "",
     output_storage_options: dict = {},
+    no_copy: bool = False
 ) -> Slide:
     """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
 
@@ -161,7 +191,7 @@ def slide_etl(
     sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
 
     slide = sb.get_slide(slide_url, project_name=project_name, comment=comment)
-    if output_urlpath:
+    if not no_copy and output_urlpath:
         slide = sb.copy_slide(slide, output_urlpath)
     return slide
 

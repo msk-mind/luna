@@ -185,9 +185,21 @@ def rebase_schema_numeric(df):
 
         df[col] = df[col].astype(float, errors="ignore")
 
+def rebase_schema_mixed(df):
+    """
+    Tries to convert all columns with mixed types to strings.
 
-#        df[col] = df[col].astype(int, errors="ignore") # This was converting small floats to integers...
+    Note: this is an in-place operation
 
+    Args:
+        df (pd.DataFrame): dataframe to convert columns
+    """
+    for col in df.columns:
+        mixed = (df[[col]].applymap(type) != df[[col]].iloc[0].apply(type)).any(axis=1)
+        if len(df[mixed]) > 0:
+            df[col] = df[col].astype(str)
+        if df[col].dtype == list:
+            df[col] = df[col].astype(str)
 
 def generate_uuid_binary(content, prefix):
     """
