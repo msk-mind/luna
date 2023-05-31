@@ -42,7 +42,7 @@ clean-test: ## remove test and coverage artifacts
 venv: ## create conda environment and install luna
 	mamba env update --prefix $(VENV) --prune -f environment.yml
 	$(CONDA_ACTIVATE) $(VENV)
-	SETUPTOOLS_USE_DISTUTILS=stdlib poetry install
+	SETUPTOOLS_USE_DISTUTILS=stdlib poetry install --with=dev
 	cp conf/logging.default.yml conf/logging.cfg
 .PHONY: venv
 
