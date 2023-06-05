@@ -142,7 +142,7 @@ def dicom_to_itk(
 
     # If there are multple seriesUIDs in a single DICOM dir, return 
     # the largest one by volume in the output properties
-    outFileName = max(vol, key=vol.get)
+    outFileName = max(volume, key=volume.get)
     
     # Prepare metadata and commit
     properties = {
