@@ -1,6 +1,5 @@
 # imports
 import json
-import logging
 from copy import deepcopy
 from pathlib import Path
 
@@ -12,8 +11,7 @@ import requests
 from dask.distributed import Client, as_completed, get_client
 from geojson import Feature, FeatureCollection, Point, Polygon
 from shapely.geometry import shape
-
-from luna.common.custom_logger import init_logger
+from loguru import logger 
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.dsa.dsa_api_handler import (
     get_annotation_df,
@@ -22,9 +20,6 @@ from luna.pathology.dsa.dsa_api_handler import (
     get_slide_df,
     system_check,
 )
-
-init_logger()
-logger = logging.getLogger("dsa_annotation_etl")
 
 
 @timed

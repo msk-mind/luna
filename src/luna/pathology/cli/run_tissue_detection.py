@@ -16,6 +16,7 @@ from PIL import Image, ImageEnhance
 from skimage.color import rgb2gray  # type: ignore
 from skimage.filters import threshold_otsu  # type: ignore
 from tiffslide import TiffSlide
+from loguru import logger 
 
 from luna.common.models import SlideSchema, Tile
 from luna.common.utils import get_config, save_metadata, timed

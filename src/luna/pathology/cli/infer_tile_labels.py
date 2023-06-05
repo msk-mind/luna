@@ -1,5 +1,4 @@
 # General imports
-import logging
 import os
 import sys
 from pathlib import Path
@@ -11,8 +10,8 @@ import torch
 from fsspec import open
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from loguru import logger 
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.analysis.ml import (
     HDF5Dataset,
@@ -20,8 +19,6 @@ from luna.pathology.analysis.ml import (
     post_transform_to_2d,
 )
 
-init_logger()
-logger = logging.getLogger("infer_tile_labels")
 
 
 @timed

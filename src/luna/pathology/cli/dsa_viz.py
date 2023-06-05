@@ -1,10 +1,10 @@
 import copy
 import json
-import logging
 import re
 from decimal import Decimal
 from pathlib import Path
 from typing import Optional
+from loguru import logger
 
 import fire  # type: ignore
 import fsspec  # type: ignore
@@ -16,15 +16,12 @@ from fsspec import open  # type: ignore
 from PIL import Image
 from typing_extensions import TypedDict
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.dsa.utils import (
     get_continuous_color,
     vectorize_np_array_bitmask_by_pixel_value,
 )
 
-init_logger()
-logger = logging.getLogger("dsa_viz")
 
 # Base DSA jsons
 PolygonElement = TypedDict(

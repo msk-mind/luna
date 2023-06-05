@@ -1,12 +1,11 @@
 import json
-import logging
 
 import fire
 import girder_client
 import requests
 from fsspec import open
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.dsa.dsa_api_handler import (
     get_item_uuid,
@@ -14,8 +13,6 @@ from luna.pathology.dsa.dsa_api_handler import (
     system_check,
 )
 
-init_logger()
-logger = logging.getLogger("dsa_upload")
 
 
 @timed

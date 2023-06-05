@@ -7,14 +7,12 @@ import fire
 import fsspec
 import h5py
 from dask.distributed import Client, as_completed, get_client, progress
+from loguru import logger 
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import get_config, grouper, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import get_array_from_tile
 
-init_logger()
-logger = logging.getLogger("generate_tiles")
 
 
 @timed

@@ -1,5 +1,4 @@
 # General imports
-import logging
 from pathlib import Path
 from typing import List
 
@@ -9,12 +8,10 @@ import pandas as pd
 import tifffile
 from fsspec import open
 from skimage import measure
+from loguru import logger 
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import get_config, save_metadata, timed
 
-init_logger()
-logger = logging.getLogger("extract_shape_features")
 
 
 @timed
