@@ -342,10 +342,8 @@ def stardist_cell_main(
         "Image",
         "Name",
         "Class",
-        "ROI",
         "Centroid X µm",
         "Centroid Y µm",
-        "Parent",
     ]
     df = pd.read_csv(
         input_urlpath,
@@ -357,7 +355,8 @@ def stardist_cell_main(
 
     # do some preprocessing on the tsv -- e.g. stardist sometimes finds
     # cells in glass
-    df = df[df["Parent"] != "Glass"]
+    # df = df[df["Parent"] != "Glass"]
+    df = df.dropna(subset=["Centroid X µm", "Centroid Y µm"])
     # populate json elements
     elements = []
     for idx, row in df.iterrows():
