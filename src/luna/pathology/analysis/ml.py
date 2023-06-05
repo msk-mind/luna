@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,6 @@ from sklearn.model_selection import StratifiedGroupKFold
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
-from torchmetrics import MetricCollection
 
 from luna.pathology.common.utils import get_tile_array
 
