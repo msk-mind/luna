@@ -1,16 +1,12 @@
-import logging
 
 import fire
 import numpy as np
 import pandas as pd
 from scipy.ndimage import distance_transform_edt
 from skimage.morphology import remove_small_holes
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
 from luna.radiology.mirp.imageReaders import read_itk_image
-
-init_logger()
-logger = logging.getLogger("generate_threshold_mask")
 
 
 def generate_threshold_mask(

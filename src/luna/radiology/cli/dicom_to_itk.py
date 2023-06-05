@@ -1,4 +1,3 @@
-import logging
 import os
 from pathlib import Path
 import numpy as np
@@ -6,11 +5,8 @@ import fire
 import itk
 import medpy.io
 from pydicom import dcmread
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
-
-init_logger()
-logger = logging.getLogger("dicom_to_itk")
 
 
 def dicom_to_itk(

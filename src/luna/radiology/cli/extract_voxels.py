@@ -1,15 +1,11 @@
-import logging
 import os
 from pathlib import Path
 
 import fire
 import medpy.io
 import numpy as np
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
-
-init_logger()
-logger = logging.getLogger("extract_voxels")
 
 
 def extract_voxels(input_itk_volume, output_dir):

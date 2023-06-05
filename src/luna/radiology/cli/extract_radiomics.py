@@ -1,8 +1,8 @@
-import logging
 import os
 from pathlib import Path
 from typing import List
 
+from loguru import logger
 import fire
 import medpy.io
 import numpy as np
@@ -11,10 +11,7 @@ from radiomics import (
     featureextractor,  # This module is used for interaction with pyradiomics
 )
 
-from luna.common.custom_logger import init_logger
 
-init_logger()
-logger = logging.getLogger("extract_radiomics")
 
 
 def extract_radiomics_multiple_labels(
