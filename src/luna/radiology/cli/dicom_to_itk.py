@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-
+import numpy as np
 import click
 import itk
 import medpy.io
@@ -105,7 +105,7 @@ def dicom_to_itk(
     )
 
     n_slices = 0
-
+    volume = {}
     for uid in seriesUIDs:
         logger.info("Reading: " + uid)
         fileNames = namesGenerator.GetFileNames(uid)
@@ -131,12 +131,19 @@ def dicom_to_itk(
         logger.info("Writing: " + outFileName)
         writer.Update()
 
+        img, _ = medpy.io.load(outFileName)
+        volume[outFileName] = np.prod(img.shape)
+
     if convert_to_suv:
         convert_pet_volume_to_suv(input_dicom_folder, outFileName)
 
     path = next(Path(input_dicom_folder).glob("*.dcm"))
     ds = dcmread(path)
 
+    # If there are multple seriesUIDs in a single DICOM dir, return 
+    # the largest one by volume in the output properties
+    outFileName = max(vol, key=vol.get)
+    
     # Prepare metadata and commit
     properties = {
         "itk_volume": outFileName,
