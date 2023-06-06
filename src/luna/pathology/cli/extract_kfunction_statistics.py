@@ -1,5 +1,4 @@
 # General imports
-import logging
 from pathlib import Path
 
 import fire
@@ -8,14 +7,12 @@ import numpy as np
 import pandas as pd
 from dask.distributed import Client, get_client, progress
 from tqdm.contrib.itertools import product
+from loguru import logger 
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import coord_to_address
 from luna.pathology.spatial.stats import Kfunction
 
-init_logger()
-logger = logging.getLogger("extract_kfunction")
 
 
 @timed

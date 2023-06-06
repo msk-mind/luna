@@ -1,19 +1,15 @@
 # General imports
-import logging
 from pathlib import Path
 from urllib.parse import urlparse
 
 import fire
 import fsspec
 import pandas as pd
+from loguru import logger 
 
 import luna.common.stats
 from luna.common.custom_logger import init_logger
 from luna.common.utils import get_config, save_metadata, timed
-
-init_logger()
-logger = logging.getLogger("extract_tile_statistics")  # Add CLI tool name
-
 
 @timed
 @save_metadata

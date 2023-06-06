@@ -1,5 +1,4 @@
 # General imports
-import logging
 from pathlib import Path
 from typing import List, Optional
 
@@ -10,13 +9,10 @@ import pandas as pd
 import tifffile
 import tiffslide
 from fsspec import open
+from loguru import logger 
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
-
-init_logger()
-logger = logging.getLogger("convert_tiles_to_mask")
 
 
 @timed

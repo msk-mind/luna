@@ -1,14 +1,11 @@
-import logging
 from pathlib import Path
 
 import fire
 import medpy.io
 from pydicom import dcmread
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
 
-init_logger()
-logger = logging.getLogger("match_metadata")
 
 
 def match_metadata(dicom_tree_folder: str, input_itk_labels: str, output_dir: str):

@@ -1,6 +1,5 @@
 # General imports
 import itertools
-import logging
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -15,7 +14,6 @@ from fsspec import open
 from PIL import Image
 from tqdm import tqdm
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import (
     extract_patch_texture_features,
@@ -23,9 +21,8 @@ from luna.pathology.common.utils import (
     get_full_resolution_generator,
     get_stain_vectors_macenko,
 )
+from loguru import logger 
 
-init_logger()
-logger = logging.getLogger("extract_stain_texture")
 
 
 @timed

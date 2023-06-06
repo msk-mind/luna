@@ -1,16 +1,12 @@
-import logging
 import os
 from pathlib import Path
-
+import numpy as np
 import fire
 import itk
 import medpy.io
 from pydicom import dcmread
+from loguru import logger
 
-from luna.common.custom_logger import init_logger
-
-init_logger()
-logger = logging.getLogger("dicom_to_itk")
 
 
 def dicom_to_itk(
@@ -50,7 +46,7 @@ def dicom_to_itk(
     )
 
     n_slices = 0
-
+    volume = {}
     for uid in seriesUIDs:
         logger.info("Reading: " + uid)
         fileNames = namesGenerator.GetFileNames(uid)
@@ -76,11 +72,18 @@ def dicom_to_itk(
         logger.info("Writing: " + outFileName)
         writer.Update()
 
+        img, _ = medpy.io.load(outFileName)
+        volume[outFileName] = np.prod(img.shape)
+
     if convert_to_suv:
         convert_pet_volume_to_suv(dicom_urlpath, outFileName)
 
     path = next(Path(dicom_urlpath).glob("*.dcm"))
     ds = dcmread(path)
+
+    # If there are multiple seriesUIDs in a single DICOM dir, return 
+    # the largest one by volume in the output properties
+    outFileName = max(volume, key=volume.get)
 
     # Prepare metadata and commit
     properties = {

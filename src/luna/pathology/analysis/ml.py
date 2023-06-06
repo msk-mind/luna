@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,6 @@ from sklearn.model_selection import StratifiedGroupKFold
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
-from torchmetrics import MetricCollection
 
 from luna.pathology.common.utils import get_tile_array
 
@@ -305,107 +304,6 @@ class BaseTorchTileClassifier(BaseTorchClassifier):
         raise NotImplementedError("predict() has not been implimented in the subclass!")
 
 
-class TorchTileClassifierTrainer(object):
-    """Simple class to manage training and validation of a BaseTorchClassifier
-    used for tile classification
-    """
-
-    def __init__(
-        self,
-        classifier: BaseTorchClassifier,
-        criterion: nn.Module,
-        optimizer: torch.optim,
-    ):
-        """Instantiate TorchTileClassifierTrainer instance
-
-        Args:
-            classifier (BaseTorchClassifier): an instance of a BaseTorchClassifier
-            criterion (nn.Module): the loss function optimized during training
-            optimizer (torch.optim): torch optimizer object used to optimize the parameters of the BaseTorchClassifier
-
-        """
-        self.network = classifier.model
-        self.criterion = criterion
-        self.optimizer = optimizer
-
-    def train_epoch(self, dataloader: DataLoader, metrics: MetricCollection) -> Dict:
-        """a simple PyTorch training loop that defines the optimization
-        procedure for a single epoch
-
-        Args:
-            dataloader (DataLoader): a PyTorch dataloader object for the training dataset
-            metrics (MetricCollection): a collection of metrics, such as accuracy or recall,
-                used to evaluate model performance during training
-        Returns:
-            Dict: A dictionary of metrics used for monitoring and model evaluation
-        """
-        num_batches = len(dataloader)
-        epoch_loss = 0
-
-        self.network.train()
-        for epoch_iter, (inputs, labels) in enumerate(dataloader):
-            # compute forward pass
-            preds = self.network(inputs)
-
-            # evaluate loss functional
-            loss = self.criterion(preds, labels)
-
-            # backward pass
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-
-            # compute metrics
-            epoch_loss += loss.item()
-            metrics(preds, labels)
-
-        # aggregate metrics accros batches, push to CPU
-        train_metrics = metrics.compute()
-        train_metrics = {k: v.cpu().numpy() for k, v in train_metrics.items()}
-
-        epoch_loss /= num_batches
-
-        train_metrics["train_loss"] = epoch_loss
-
-        return train_metrics
-
-    def validate_epoch(self, dataloader: DataLoader, metrics: MetricCollection) -> Dict:
-        """a simple PyTorch validation loop that defines the model validation procedure
-        used during training.
-
-        Args:
-            dataloader (DataLoader): a PyTorch dataloader object for the validation dataset
-            metrics (MetricCollection):  a collection of torchmetrics used to evaluate model performance
-        Returns:
-            Dict: A dictionary of metrics used for monitoring and model evaluation
-        """
-
-        num_batches = len(dataloader)
-        self.network.eval()
-        loss = 0
-
-        with torch.no_grad():
-            for epoch_iter, (inputs, labels) in enumerate(dataloader):
-                # forward pass
-                preds = self.network(inputs)
-
-                # compute validation loss
-                loss += self.criterion(preds, labels).item()
-
-                # compute metrics
-                metrics(preds, labels)
-
-        # aggregate metrics across batches, push to CPU
-        val_metrics = metrics.compute()
-        val_metrics = {k: v.cpu().numpy() for k, v in val_metrics.items()}
-
-        loss /= num_batches
-
-        val_metrics["val_loss"] = loss
-
-        return val_metrics
-
-
 def get_group_stratified_sampler(
     df_nh: pd.DataFrame,
     label_col: str,
@@ -413,9 +311,9 @@ def get_group_stratified_sampler(
     num_splits: int = 5,
     random_seed: int = 42,
 ) -> Tuple[List, List]:
-    """Generates sampler indicies for torch DataLoader object that are
+    """Generates sampler indices for torch DataLoader object that are
     stratified by a given group set (ie a column in a dataframe
-    cooresponding to patient identifiers), and balanced between target
+    corresponding to patient identifiers), and balanced between target
     labels
 
     Args:
@@ -424,7 +322,7 @@ def get_group_stratified_sampler(
         group_col (str): The column name used to stratify the data (ie patient ids).
         num_splits (int): (Optional) The number of folds, must at least be 2.
     Returns:
-        Tuple(List, List): a tuple of indices that coorespond to training and validation samplers
+        Tuple(List, List): a tuple of indices that correspond to training and validation samplers
     """
 
     cv = StratifiedGroupKFold(

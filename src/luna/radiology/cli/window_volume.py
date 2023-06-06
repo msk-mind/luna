@@ -1,15 +1,10 @@
-import logging
 import os
 from pathlib import Path
-
+from loguru import logger
 import fire
 import medpy.io
 import numpy as np
 
-from luna.common.custom_logger import init_logger
-
-init_logger()
-logger = logging.getLogger("window_volume")
 
 
 def window_volume(

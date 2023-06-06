@@ -9,8 +9,8 @@ import pandas as pd
 import tiffslide
 from fsspec import open
 from PIL import Image
+from loguru import logger 
 
-from luna.common.custom_logger import init_logger
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import (
@@ -19,8 +19,6 @@ from luna.pathology.common.utils import (
     visualize_tiling_scores,
 )
 
-init_logger()
-logger = logging.getLogger("visualize_tiles_png")
 
 
 @timed

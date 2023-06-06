@@ -1,7 +1,3 @@
-"""
-USED -> IMAGE CLASS
-"""
-
 import copy
 from typing import Union
 
@@ -17,6 +13,18 @@ from luna.radiology.mirp.imageProcess import (
     interpolate_to_new_grid,
 )
 
+def rep(x, each=1, times=1):
+    """"This functions replicates the R rep function for tiling and repeating vectors"""
+    each = int(each)
+    times = int(times)
+
+    if each > 1:
+        x = np.repeat(x, repeats=each)
+
+    if times > 1:
+        x = np.tile(x, reps=times)
+
+    return x
 
 class RoiClass:
     # Class for regions of interest
@@ -589,7 +597,6 @@ class RoiClass:
 
     def dilate(self, by_slice, dist=None, vox_dist=None):
         import scipy.ndimage as ndi
-        from mirp.featureSets.utilities import rep
 
         # Skip if the roi does not exist
         if self.roi is None:
