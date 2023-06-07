@@ -5,12 +5,14 @@ from pathlib import Path
 import fire
 import fsspec
 import pandas as pd
-from dask.distributed import Client, get_client, progress
+from dask.distributed import Client, progress
 from fsspec import open  # type: ignore
 from loguru import logger
 from multimethod import multimethod
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
+
+from luna.common.dask import get_or_create_dask_client
 from luna.common.models import Slide, SlideSchema
 from luna.common.utils import (
     apply_csv_filter, 
@@ -133,7 +135,7 @@ def slide_etl(
     """
 
 
-    client = get_client()
+    client = get_or_create_dask_client()
     sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
 
     futures = [
