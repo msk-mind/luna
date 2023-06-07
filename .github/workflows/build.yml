@@ -5,7 +5,7 @@ on: [push]
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     container:
       image: mambaorg/micromamba:1.0.0
       options: --user root
