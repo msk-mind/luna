@@ -7,13 +7,14 @@ from urllib.parse import urlparse
 import fire
 import fsspec
 import pandas as pd
-from dask.distributed import Client, get_client, progress
+from dask.distributed import Client, progress
 from fsspec import open  # type: ignore
 from loguru import logger
 from multimethod import multimethod
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
+from luna.common.dask import get_or_create_dask_client
 from luna.common.models import SlideSchema, Tile, TileSchema
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import (
@@ -86,7 +87,7 @@ def generate_tiles(
     storage_options: dict = {},
     requested_magnification: Optional[int] = None,
 ) -> pd.DataFrame:
-    client = get_client()
+    client = get_or_create_dask_client()
     futures = {
         row.id: client.submit(
             _generate_tiles,
@@ -115,7 +116,7 @@ def generate_tiles(
     if type(slide_urlpaths) == str:
         slide_urlpaths = [slide_urlpaths]
 
-    client = get_client()
+    client = get_or_create_dask_client()
     futures = {
         Path(urlparse(slide_urlpath).path).stem: client.submit(
             _generate_tiles,

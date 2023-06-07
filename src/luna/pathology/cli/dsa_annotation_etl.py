@@ -8,10 +8,11 @@ import fsspec  # type: ignore
 import girder_client
 import pandas as pd
 import requests
-from dask.distributed import Client, as_completed, get_client
+from dask.distributed import Client, as_completed
 from geojson import Feature, FeatureCollection, Point, Polygon
 from shapely.geometry import shape
 from loguru import logger 
+from luna.common.dask import get_or_create_dask_client
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.dsa.dsa_api_handler import (
     get_annotation_df,
@@ -104,7 +105,7 @@ def dsa_annotation_etl(
     Returns:
         pd.DataFrame: metadata about function call
     """
-    client = get_client()
+    client = get_or_create_dask_client()
     # girder = girder_client.GirderClient(apiUrl=dsa_endpoint)
     try:
         girder = girder_client.GirderClient(apiUrl=dsa_endpoint)

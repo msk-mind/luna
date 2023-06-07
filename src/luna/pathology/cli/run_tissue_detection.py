@@ -7,7 +7,7 @@ import fire  # type: ignore
 import fsspec  # type: ignore
 import numpy as np
 import pandas as pd
-from dask.distributed import Client, get_client, progress
+from dask.distributed import Client, progress
 from fsspec import open  # type: ignore
 from loguru import logger
 from multimethod import multimethod
@@ -18,6 +18,7 @@ from skimage.filters import threshold_otsu  # type: ignore
 from tiffslide import TiffSlide
 from loguru import logger 
 
+from luna.common.dask import get_or_create_dask_client
 from luna.common.models import SlideSchema, Tile
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
@@ -252,7 +253,7 @@ def detect_tissue(
         pd.DataFrame
     """
 
-    client = get_client()
+    client = get_or_create_dask_client()
 
     if tiles_urlpath:
         with open(tiles_urlpath, **storage_options) as of:
