@@ -68,7 +68,7 @@ jobs:
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     container:
       image: mambaorg/micromamba:1.0.0
