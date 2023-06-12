@@ -8,7 +8,6 @@ import pandas as pd
 from loguru import logger 
 
 import luna.common.stats
-from luna.common.custom_logger import init_logger
 from luna.common.utils import get_config, save_metadata, timed
 
 @timed

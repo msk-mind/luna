@@ -5,7 +5,7 @@ on: [push]
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     container:
       image: mambaorg/micromamba:1.0.0
       options: --user root
@@ -16,6 +16,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y build-essential libgdal-dev liblapack-dev libblas-dev gfortran libgl1 git curl make
+          git config --system --add safe.directory *
 
       - uses: actions/checkout@v3
 
@@ -68,7 +69,7 @@ jobs:
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     container:
       image: mambaorg/micromamba:1.0.0

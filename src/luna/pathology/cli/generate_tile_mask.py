@@ -58,7 +58,7 @@ def cli(
     slide_mask = Path(output_urlpath_prefix) / "tile_mask.tif"
     logger.info(f"Saving output mask to {slide_mask}")
     with fs.open(slide_mask, "wb") as of:
-        tifffile.imsave(of, mask_arr)
+        tifffile.imwrite(of, mask_arr)
 
     properties = {
         "slide_mask": slide_mask,
