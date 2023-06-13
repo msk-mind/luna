@@ -57,9 +57,15 @@ def save_metadata(func):
 
 
 def local_cache_urlpath(
-    file_key_write_mode: dict[str, str] = {}, dir_key_write_mode: dict[str, str] = {}
+    file_key_write_mode: dict[str, str] = {},
+    dir_key_write_mode: dict[str, str] = {},
+    system_tmp_dir=None,
 ):
     """Decorator for caching url/paths locally"""
+
+    # workaround for docker not remapping scratch directory correctly in non-docker universe jobs
+    if os.environ.get("_CONDOR_SCRATCH_DIR"):
+        system_tmp_dir = Path(str(os.environ.get("_CONDOR_SCRATCH_DIR"))) / "tmp"
 
     def decorator(func):
         @wraps(func)
@@ -81,7 +87,7 @@ def local_cache_urlpath(
                 filesystem = fs
                 if filesystem and filesystem.protocol != "file":
                     new_args_dict[storage_options_key] = {"auto_mkdir": True}
-                    tmp_dir = tempfile.TemporaryDirectory()
+                    tmp_dir = tempfile.TemporaryDirectory(dir=system_tmp_dir)
                     new_args_dict[key] = tmp_dir.name
                     tmp_dir_dest.append((tmp_dir, dir))
 
@@ -98,7 +104,12 @@ def local_cache_urlpath(
                         raise RuntimeError("Only one filesystem protocol supported")
                     protocol = fs.protocol
 
-                    simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
+                    cache_storage = "TMP"
+                    if system_tmp_dir:
+                        cache_storage = system_tmp_dir
+                    simplecache_fs = fsspec.filesystem(
+                        "simplecache", fs=fs, cache_storage=cache_storage
+                    )
 
                     of = simplecache_fs.open(path, write_mode)
                     stack.enter_context(of)
@@ -185,6 +196,7 @@ def rebase_schema_numeric(df):
 
         df[col] = df[col].astype(float, errors="ignore")
 
+
 def rebase_schema_mixed(df):
     """
     Tries to convert all columns with mixed types to strings.
@@ -200,6 +212,7 @@ def rebase_schema_mixed(df):
             df[col] = df[col].astype(str)
         if df[col].dtype == list:
             df[col] = df[col].astype(str)
+
 
 def generate_uuid_binary(content, prefix):
     """
