@@ -106,7 +106,7 @@ def local_cache_urlpath(
 
                     cache_storage = "TMP"
                     if system_tmp_dir:
-                        cache_storage = system_tmp_dir
+                        cache_storage = str(system_tmp_dir)
                     simplecache_fs = fsspec.filesystem(
                         "simplecache", fs=fs, cache_storage=cache_storage
                     )

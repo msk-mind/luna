@@ -1,14 +1,15 @@
 # General imports
+import os
 from pathlib import Path
 
 import fire
+import signal
 import fsspec
 import pandas as pd
 from loguru import logger
 
 import docker
 from luna.common.utils import get_config, local_cache_urlpath, save_metadata, timed
-
 
 
 @timed
@@ -108,8 +109,11 @@ def stardist_simple_main(
 
     ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
 
+    if ofs.protocol == 'file' and not os.path.exists(output_path):
+        os.makedirs(output_path)
+
     slide_filename = Path(slide_path).name
-    docker_image = "mskmind/qupath-stardist:latest"
+    docker_image = "mskmind/qupath-stardist:0.4.3"
     command = f"QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy"
     logger.info("Launching docker container:")
     logger.info(
@@ -119,8 +123,8 @@ def stardist_simple_main(
     logger.info(f"\timage='{docker_image}'")
     logger.info(f"\tcommand={command}")
 
-    client = docker.from_env()
-    container = client.containers.run(
+    docker_kwargs = dict(
+        user=os.getuid(),
         volumes={
             slide_path: {"bind": f"/inputs/{slide_filename}", "mode": "ro"},
             output_path: {"bind": "/output_dir", "mode": "rw"},
@@ -130,9 +134,29 @@ def stardist_simple_main(
         command=command,
         detach=True,
     )
+    if use_gpu:
+        docker_kwargs['device_requests'] = [docker.types.DeviceRequest(device_ids=["0"], capabilities=[['gpu']])]
+
+    client = docker.from_env()
+    container = client.containers.run(**docker_kwargs)
+        
+    def handler_stop_signals(signum, frame):
+        nonlocal container
+        logger.info("Received kill signal, stopping container...")
+        container.stop()
+
+    signal.signal(signal.SIGTERM, handler_stop_signals)
+    signal.signal(signal.SIGINT, handler_stop_signals)
 
     for line in container.logs(stream=True):
         print(line.decode(), end="")
+
+    result = container.wait()
+    container.remove()
+
+    if result['StatusCode'] != 0:
+        logger.error(f"Docker container returned non-zero: {result['StatusCode']}")
+        raise docker.errors.DockerException(f"command: {command}\nimage: {docker_image}\nreturn code: {result['StatusCode']}")
 
     stardist_output = Path(output_path) / "cell_detections.tsv"
 
@@ -230,13 +254,16 @@ def stardist_cell_lymphocyte_main(
 
     ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
 
+    if ofs.protocol == 'file' and not os.path.exists(output_path):
+        os.makedirs(output_path)
+
     qupath_cmd = "QuPath-cpu"
     if use_gpu:
         qupath_cmd = "QuPath-gpu"
 
     slide_filename = Path(slide_path).name
-    docker_image = "mskmind/qupath-tensorflow:latest"
-    command = f"{qupath_cmd} script --image /inputs/{slide_filename} /scripts/stardist_nuclei_and_lymphocytes.groovy"
+    docker_image = "mskmind/qupath-stardist:0.4.3"
+    command = f"{qupath_cmd} script  --image /inputs/{slide_filename} /scripts/stardist_nuclei_and_lymphocytes.groovy"
     logger.info("Launching docker container:")
     logger.info(
         f"\tvolumes={slide_path}:'/inputs/{slide_filename}', {output_path}:'/output_dir'"
@@ -245,8 +272,8 @@ def stardist_cell_lymphocyte_main(
     logger.info(f"\timage='{docker_image}'")
     logger.info(f"\tcommand={command}")
 
-    client = docker.from_env()
-    container = client.containers.run(
+    docker_kwargs = dict(
+        user=os.getuid(),
         volumes={
             slide_path: {"bind": f"/inputs/{slide_filename}", "mode": "ro"},
             output_path: {"bind": "/output_dir", "mode": "rw"},
@@ -256,9 +283,29 @@ def stardist_cell_lymphocyte_main(
         command=command,
         detach=True,
     )
+    if use_gpu:
+        docker_kwargs['device_requests'] = [docker.types.DeviceRequest(device_ids=["0"], capabilities=[['gpu']])]
+        
+
+    client = docker.from_env()
+    container = client.containers.run(**docker_kwargs)
+    def handler_stop_signals(signum, frame):
+        nonlocal container
+        logger.info("Received kill signal, stopping container...")
+        container.stop()
+
+    signal.signal(signal.SIGTERM, handler_stop_signals)
+    signal.signal(signal.SIGINT, handler_stop_signals)
 
     for line in container.logs(stream=True):
         print(line.decode(), end="")
+
+    result = container.wait()
+    container.remove()
+
+    if result['StatusCode'] != 0:
+        logger.error(f"Docker container returned non-zero: {result['StatusCode']}")
+        raise docker.errors.DockerException(f"command: {command}\nimage: {docker_image}\nreturn code: {result['StatusCode']}")
 
     stardist_output = Path(output_path) / "cell_detections.tsv"
 
@@ -274,6 +321,7 @@ def stardist_cell_lymphocyte_main(
 
 
 if __name__ == "__main__":
+
     fire.Fire(
         {
             "simple": stardist_simple,
