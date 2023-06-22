@@ -13,6 +13,12 @@ class MockContainer(object):
     def logs(*args, **kwargs):
         return io.StringIO(None)
 
+    def wait(self):
+        return dict(StatusCode=0)
+
+    def remove(self):
+        pass
+
 
 class MockContainerCollection(object):
     def run(*args, **kwargs):

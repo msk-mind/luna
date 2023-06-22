@@ -1,9 +1,9 @@
 # General imports
 import os
+import signal
 from pathlib import Path
 
 import fire
-import signal
 import fsspec
 import pandas as pd
 from loguru import logger
@@ -21,6 +21,8 @@ def stardist_simple(
     output_urlpath: str = ".",
     debug_opts: str = "",
     num_cores: int = 1,
+    use_gpu: bool = False,
+    docker_image: str = "mskmind/qupath-stardist:0.4.3",
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
@@ -49,6 +51,8 @@ def stardist_simple(
         config["output_urlpath"],
         config["debug_opts"],
         config["num_cores"],
+        config["use_gpu"],
+        config["docker_image"],
         config["storage_options"],
         config["output_storage_options"],
     )
@@ -87,8 +91,10 @@ def stardist_simple_main(
     output_urlpath: str,
     debug_opts: str,
     num_cores: int,
-    storage_options: dict,
-    output_storage_options: dict,
+    use_gpu: bool = False,
+    docker_image: str = "mskmind/qupath-stardist:0.4.3",
+    storage_options: dict = {},
+    output_storage_options: dict = {},
 ) -> pd.DataFrame:
     """Run stardist using qupath CLI
 
@@ -109,66 +115,22 @@ def stardist_simple_main(
 
     ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
 
-    if ofs.protocol == 'file' and not os.path.exists(output_path):
+    if ofs.protocol == "file" and not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    slide_filename = Path(slide_path).name
     docker_image = "mskmind/qupath-stardist:0.4.3"
-    command = f"QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy"
-    logger.info("Launching docker container:")
-    logger.info(
-        f"\tvolumes={slide_urlpath}:'/inputs/{slide_filename}', {slide_path}:'/output_dir'"
+    command_args = (
+        f"-args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}]"
     )
-    logger.info(f"\tnano_cpus={int(num_cores * 1e9)}")
-    logger.info(f"\timage='{docker_image}'")
-    logger.info(f"\tcommand={command}")
-
-    docker_kwargs = dict(
-        user=os.getuid(),
-        volumes={
-            slide_path: {"bind": f"/inputs/{slide_filename}", "mode": "ro"},
-            output_path: {"bind": "/output_dir", "mode": "rw"},
-        },
-        nano_cpus=int(num_cores * 1e9),
-        image=docker_image,
-        command=command,
-        detach=True,
+    return run_qupath_docker(
+        docker_image,
+        "/scripts/stardist_simple.groovy",
+        command_args,
+        slide_path,
+        output_path,
+        num_cores,
+        use_gpu,
     )
-    if use_gpu:
-        docker_kwargs['device_requests'] = [docker.types.DeviceRequest(device_ids=["0"], capabilities=[['gpu']])]
-
-    client = docker.from_env()
-    container = client.containers.run(**docker_kwargs)
-        
-    def handler_stop_signals(signum, frame):
-        nonlocal container
-        logger.info("Received kill signal, stopping container...")
-        container.stop()
-
-    signal.signal(signal.SIGTERM, handler_stop_signals)
-    signal.signal(signal.SIGINT, handler_stop_signals)
-
-    for line in container.logs(stream=True):
-        print(line.decode(), end="")
-
-    result = container.wait()
-    container.remove()
-
-    if result['StatusCode'] != 0:
-        logger.error(f"Docker container returned non-zero: {result['StatusCode']}")
-        raise docker.errors.DockerException(f"command: {command}\nimage: {docker_image}\nreturn code: {result['StatusCode']}")
-
-    stardist_output = Path(output_path) / "cell_detections.tsv"
-
-    df = pd.read_csv(stardist_output, sep="\t")
-    df.index = "cell-" + df.index.astype(int).astype(str)
-    df.index.rename("cell_id", inplace=True)
-
-    df = df.rename(
-        columns={"Centroid X µm": "x_coord", "Centroid Y µm": "y_coord"}
-    )  # x,ys follow this convention
-
-    return df
 
 
 @timed
@@ -178,6 +140,7 @@ def stardist_cell_lymphocyte(
     output_urlpath: str = ".",
     num_cores: int = 1,
     use_gpu: bool = False,
+    docker_image: str = "mskmind/qupath-stardist:0.4.3",
     storage_options: dict = {},
     output_storage_options: dict = {},
 ):
@@ -200,6 +163,7 @@ def stardist_cell_lymphocyte(
         config["output_urlpath"],
         config["num_cores"],
         config["use_gpu"],
+        config["docker_image"],
         config["storage_options"],
         config["output_storage_options"],
     )
@@ -236,6 +200,7 @@ def stardist_cell_lymphocyte_main(
     output_urlpath: str,
     num_cores: int,
     use_gpu: bool = False,
+    docker_image: str = "mskmind/qupath-stardist:0.4.3",
     storage_options: dict = {},
     output_storage_options: dict = {},
 ) -> pd.DataFrame:
@@ -254,16 +219,39 @@ def stardist_cell_lymphocyte_main(
 
     ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
 
-    if ofs.protocol == 'file' and not os.path.exists(output_path):
+    if ofs.protocol == "file" and not os.path.exists(output_path):
         os.makedirs(output_path)
 
+    docker_image = "mskmind/qupath-stardist:0.4.3"
+    return run_qupath_docker(
+        docker_image,
+        "/scripts/stardist_nuclei_and_lymphocytes.groovy",
+        "",
+        slide_path,
+        output_path,
+        num_cores,
+        use_gpu,
+    )
+
+
+def run_qupath_docker(
+    docker_image: str,
+    script: str,
+    command_args: str,
+    slide_path: str,
+    output_path: str,
+    num_cores: int,
+    use_gpu: bool,
+):
     qupath_cmd = "QuPath-cpu"
     if use_gpu:
         qupath_cmd = "QuPath-gpu"
 
     slide_filename = Path(slide_path).name
-    docker_image = "mskmind/qupath-stardist:0.4.3"
-    command = f"{qupath_cmd} script  --image /inputs/{slide_filename} /scripts/stardist_nuclei_and_lymphocytes.groovy"
+    command = (
+        f"{qupath_cmd} script --image /inputs/{slide_filename} {script} {command_args}"
+    )
+
     logger.info("Launching docker container:")
     logger.info(
         f"\tvolumes={slide_path}:'/inputs/{slide_filename}', {output_path}:'/output_dir'"
@@ -284,11 +272,13 @@ def stardist_cell_lymphocyte_main(
         detach=True,
     )
     if use_gpu:
-        docker_kwargs['device_requests'] = [docker.types.DeviceRequest(device_ids=["0"], capabilities=[['gpu']])]
-        
+        docker_kwargs["device_requests"] = [
+            docker.types.DeviceRequest(device_ids=["0"], capabilities=[["gpu"]])
+        ]
 
     client = docker.from_env()
     container = client.containers.run(**docker_kwargs)
+
     def handler_stop_signals(signum, frame):
         nonlocal container
         logger.info("Received kill signal, stopping container...")
@@ -303,9 +293,11 @@ def stardist_cell_lymphocyte_main(
     result = container.wait()
     container.remove()
 
-    if result['StatusCode'] != 0:
+    if result["StatusCode"] != 0:
         logger.error(f"Docker container returned non-zero: {result['StatusCode']}")
-        raise docker.errors.DockerException(f"command: {command}\nimage: {docker_image}\nreturn code: {result['StatusCode']}")
+        raise docker.errors.DockerException(
+            f"command: {command}\nimage: {docker_image}\nreturn code: {result['StatusCode']}"
+        )
 
     stardist_output = Path(output_path) / "cell_detections.tsv"
 
@@ -321,7 +313,6 @@ def stardist_cell_lymphocyte_main(
 
 
 if __name__ == "__main__":
-
     fire.Fire(
         {
             "simple": stardist_simple,
