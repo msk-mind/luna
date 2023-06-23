@@ -6,7 +6,7 @@ from torch import nn
 from luna.pathology.analysis.ml import BaseTorchTileClassifier, BaseTorchTileDataset
 
 # we are using sample PIL data
-test_data = "tests/testdata/pathology/save_tiles/123/123.tiles.csv"
+test_data = "tests/testdata/pathology/save_tiles/123/123.tiles.parquet"
 
 
 # We need to impliment these

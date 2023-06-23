@@ -13,8 +13,9 @@ from luna.radiology.mirp.imageProcess import (
     interpolate_to_new_grid,
 )
 
+
 def rep(x, each=1, times=1):
-    """"This functions replicates the R rep function for tiling and repeating vectors"""
+    """ "This functions replicates the R rep function for tiling and repeating vectors"""
     each = int(each)
     times = int(times)
 
@@ -25,6 +26,7 @@ def rep(x, each=1, times=1):
         x = np.tile(x, reps=times)
 
     return x
+
 
 class RoiClass:
     # Class for regions of interest

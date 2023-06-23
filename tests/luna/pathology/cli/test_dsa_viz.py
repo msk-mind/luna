@@ -103,7 +103,7 @@ def test_heatmap():
     fire.Fire(
         heatmap,
         [
-            "tests/testdata/pathology/tile_scores.csv",
+            "tests/testdata/pathology/tile_scores.parquet",
             "--column",
             "otsu_score",
             "--local_config",

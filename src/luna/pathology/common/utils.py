@@ -317,23 +317,20 @@ def extract_patch_texture_features(
 
 def get_array_from_tile(
     tile: Tile,
-    slide_urlpath: str,
+    slide: TiffSlide,
     size: Optional[int] = None,
-    storage_options: dict = {},
 ):
     x, y, extent = tile.x_coord, tile.y_coord, tile.xy_extent
     if size is None:
         resize_size = (tile.tile_size, tile.tile_size)
     else:
         resize_size = (size, size)
-    with open(slide_urlpath, **storage_options) as of:
-        slide = TiffSlide(of)
-        arr = np.array(
-            slide.read_region((x, y), 0, (extent, extent)).resize(
-                resize_size, Image.NEAREST
-            )
-        )[:, :, :3]
-        return arr
+    arr = np.array(
+        slide.read_region((x, y), 0, (extent, extent)).resize(
+            resize_size, Image.NEAREST
+        )
+    )[:, :, :3]
+    return arr
 
 
 def get_tile_from_slide(
@@ -361,8 +358,9 @@ def get_tile_from_slide(
 
 def get_tile_arrays(
     indices: List[int],
-    input_slide_image: str,
+    input_slide_urlpath: str,
     tile_size: int,
+    storage_options: dict = {},
 ) -> List[Tuple[int, np.ndarray]]:
     """
     Get tile arrays for the tile indices
@@ -376,7 +374,7 @@ def get_tile_arrays(
         a list of tuples (index, tile array) for given indices
     """
     full_generator, full_level = get_full_resolution_generator(
-        input_slide_image, tile_size=tile_size
+        input_slide_urlpath, tile_size=tile_size, storage_options=storage_options
     )
     return [
         (
@@ -391,16 +389,19 @@ def get_tile_arrays(
     ]
 
 
-def get_tile_array(row: pd.DataFrame) -> np.ndarray:
+def get_tile_array(row: pd.DataFrame, storage_options: dict = {}) -> np.ndarray:
     """
     Returns a tile image as a numpy array.
 
     Args:
         row (pd.DataFrame): row with address and tile_image_file columns
     """
-    with h5py.File(row.tile_store, "r") as hf:
-        tile = np.array(hf[row.name])
-    return tile
+    fs, path = fsspec.core.url_to_fs(row.tile_store, **storage_options)
+    cache_fs = fsspec.filesystem("filecache", fs=fs)
+    with cache_fs.open(path, "rb", **storage_options) as of:
+        with h5py.File(of, "r") as hf:
+            tile = np.array(hf[row.name])
+            return tile
 
 
 # USED -> utils
@@ -465,19 +466,24 @@ def get_downscaled_thumbnail(
 
 
 def get_full_resolution_generator(
-    slide_file: fsspec.core.OpenFile,
+    slide_urlpath: str,
     tile_size: int,
+    storage_options: dict = {},
 ) -> Tuple[DeepZoomGenerator, int]:
     """Return MinimalComputeAperioDZGenerator and generator level
 
     Args:
-        slide_file (fsspec.core.OpenFile): slide object
+        slide_urlpath (str): slide urlpath
 
     Returns:
         Tuple[MinimalComputeAperioDZGenerator, int]
     """
     generator = DeepZoomGenerator(
-        slide_file, overlap=0, tile_size=tile_size, limit_bounds=False
+        slide_urlpath,
+        overlap=0,
+        tile_size=tile_size,
+        limit_bounds=False,
+        storage_options=storage_options,
     )
 
     generator_level = generator.level_count - 1
