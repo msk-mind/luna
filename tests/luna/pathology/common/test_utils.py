@@ -17,7 +17,6 @@ from luna.pathology.common.utils import (
 output_dir = "tests/testdata/pathology/output-123"
 slide_path = "tests/testdata/pathology/123.svs"
 scores_csv_path = "tests/testdata/pathology/input/tile_scores_and_labels.csv"
-slide_file = open(slide_path)
 slide = openslide.OpenSlide(slide_path)
 img_arr = get_downscaled_thumbnail(slide, 10)
 
@@ -45,7 +44,7 @@ def test_get_tile_color_str():
 
 
 def test_get_full_resolution_generator():
-    generator, level = get_full_resolution_generator(slide_file, 128)
+    generator, level = get_full_resolution_generator(slide_path, 128)
     assert isinstance(generator, DeepZoomGenerator)
     assert 12 == level
 

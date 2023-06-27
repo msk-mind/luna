@@ -361,8 +361,9 @@ def get_tile_from_slide(
 
 def get_tile_arrays(
     indices: List[int],
-    input_slide_image: str,
+    input_slide_urlpath: str,
     tile_size: int,
+    storage_options: dict = {},
 ) -> List[Tuple[int, np.ndarray]]:
     """
     Get tile arrays for the tile indices
@@ -376,7 +377,7 @@ def get_tile_arrays(
         a list of tuples (index, tile array) for given indices
     """
     full_generator, full_level = get_full_resolution_generator(
-        input_slide_image, tile_size=tile_size
+        input_slide_urlpath, tile_size=tile_size, storage_options=storage_options
     )
     return [
         (
@@ -465,19 +466,20 @@ def get_downscaled_thumbnail(
 
 
 def get_full_resolution_generator(
-    slide_file: fsspec.core.OpenFile,
+    slide_urlpath: str,
     tile_size: int,
+    storage_options: dict = {},
 ) -> Tuple[DeepZoomGenerator, int]:
     """Return MinimalComputeAperioDZGenerator and generator level
 
     Args:
-        slide_file (fsspec.core.OpenFile): slide object
+        slide_urlpath (str): slide urlpath
 
     Returns:
         Tuple[MinimalComputeAperioDZGenerator, int]
     """
     generator = DeepZoomGenerator(
-        slide_file, overlap=0, tile_size=tile_size, limit_bounds=False
+        slide_urlpath, overlap=0, tile_size=tile_size, limit_bounds=False, storage_options=storage_options
     )
 
     generator_level = generator.level_count - 1

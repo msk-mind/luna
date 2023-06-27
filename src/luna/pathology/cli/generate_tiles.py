@@ -32,6 +32,7 @@ def cli(
     requested_magnification: Optional[int] = None,
     storage_options: dict = {},
     output_storage_options: dict = {},
+    dask_config: dict = {},
     local_config: str = "",
     output_urlpath: str = ".",
 ) -> dict:
@@ -52,6 +53,8 @@ def cli(
             -o 10001/tiles
     """
     config = get_config(vars())
+
+    Client(**config['dask_config'])
 
     output_filesystem, output_urlpath_prefix = fsspec.core.url_to_fs(
         config["output_urlpath"], **config["output_storage_options"]
@@ -156,7 +159,7 @@ def _generate_tiles(
     Returns:
         DataFrame[TileSchema]: tile manifest
     """
-    with open(slide_urlpath, "rb", **storage_options) as f:
+    with fsspec.open(slide_urlpath, "rb", **storage_options) as f:
         slide = TiffSlide(f)
         logger.info(f"Slide size = [{slide.dimensions[0]},{slide.dimensions[1]}]")
 
@@ -172,22 +175,18 @@ def _generate_tiles(
 
         full_resolution_tile_size = int(tile_size * to_mag_scale_factor)
         logger.info(
-            "Normalized magnification scale factor for %sx is %s",
-            requested_magnification,
-            to_mag_scale_factor,
+            f"Normalized magnification scale factor for {requested_magnification}x is {to_mag_scale_factor}",
         )
         logger.info(
-            "Requested tile size=%s, tile size at full magnification=%s",
-            tile_size,
-            full_resolution_tile_size,
+            f"Requested tile size={tile_size}, tile size at full magnification={full_resolution_tile_size}"
         )
 
-        # get DeepZoomGenerator, level
-        full_generator, full_level = get_full_resolution_generator(
-            f, tile_size=full_resolution_tile_size
-        )
-        tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
-        logger.info(f"tiles x {tile_x_count}, tiles y {tile_y_count}")
+    # get DeepZoomGenerator, level
+    full_generator, full_level = get_full_resolution_generator(
+        slide_urlpath, tile_size=full_resolution_tile_size, storage_options=storage_options,
+    )
+    tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
+    logger.info(f"tiles x {tile_x_count}, tiles y {tile_y_count}")
 
     # populate address, coordinates
     tiles = DataFrame[TileSchema](
@@ -228,5 +227,4 @@ def _generate_tiles(
 
 
 if __name__ == "__main__":
-    Client()
     fire.Fire(cli)

@@ -26,6 +26,7 @@ def cli(
     output_urlpath: str = ".",
     storage_options: dict = {},
     output_storage_options: dict = {},
+    dask_options: dict = {},
     local_config: str = "",
 ):
     """Saves tiles to disk
@@ -47,6 +48,8 @@ def cli(
         dict: metadata about function call
     """
     config = get_config(vars())
+
+    Client(**config["dask_options"])
 
     df = save_tiles(
         config["slide_urlpath"],
@@ -145,5 +148,4 @@ def save_tiles(
 
 
 if __name__ == "__main__":
-    Client()
     fire.Fire(cli)

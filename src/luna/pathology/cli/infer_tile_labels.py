@@ -12,6 +12,7 @@ from fsspec import open
 from loguru import logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from dask.distributed import Client
 
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.analysis.ml import (
@@ -19,7 +20,7 @@ from luna.pathology.analysis.ml import (
     TorchTransformModel,
     post_transform_to_2d,
 )
-from luna.pathology.cli.generate_tiles import generate_tiles
+from luna.pathology.cli.save_tiles import save_tiles
 
 
 @timed
@@ -36,6 +37,7 @@ def cli(
     output_urlpath: str = ".",
     kwargs: dict = {},
     use_gpu: bool = False,
+    dask_config: dict = {},
     storage_options: dict = {},
     output_storage_options: dict = {},
 ):
@@ -54,6 +56,7 @@ def cli(
         output_urlpath (str): output/working directory
         kwargs (dict): additional keywords to pass to model initialization
         use_gpu (bool): use GPU if available
+        dask_config (dict): options to pass to dask client
         storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
 
@@ -79,7 +82,9 @@ def cli(
         config["batch_size"],
         config["kwargs"],
         config["use_gpu"],
+        config['dask_config'],
         config["storage_options"],
+        config["output_storage_options"],
     )
 
     fs, output_path_prefix = fsspec.core.url_to_fs(
@@ -114,14 +119,16 @@ def infer_tile_labels(
     batch_size: int,
     kwargs: dict,
     use_gpu: bool,
+    dask_config: dict,
     storage_options: dict,
+    output_storage_options: dict,
 ):
     """Run inference using a model and transform definition (either local or using torch.hub)
 
     Decorates existing slide_tiles with additional columns corresponding to class prediction/scores from the model
 
     Args:
-        tiles_urlpath (str): path to a slide-tile manifest file (.tiles.csv)
+        tiles_urlpath (str): path to a slide-tile manifest file (.tiles.parquet)
         torch_model_repo_or_dir (str): repository root name like (namespace/repo) at github.com to serve torch.hub models. Or path to a local model (e.g. msk-mind/luna-ml)
         model_name (str): torch hub model name (a nn.Module at the repo repo_name)
         num_cores (int): Number of cores to use for CPU parallelization
@@ -129,6 +136,7 @@ def infer_tile_labels(
         output_urlpath (str): output/working directory
         kwargs (dict): additional keywords to pass to model initialization
         storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
 
     Returns:
         pd.DataFrame: augmented tiles dataframe
@@ -156,8 +164,15 @@ def infer_tile_labels(
         with open(tiles_urlpath, **storage_options) as of:
             df = pd.read_parquet(of).reset_index().set_index("address")
     else:
-        df = generate_tiles(
-            slide_urlpath, tile_size, storage_options, requested_magnification
+        Client(**dask_config)
+        df = save_tiles(
+            slide_urlpath,
+            tile_size,
+            output_urlpath,
+            batch_size,
+            requested_magnification,
+            storage_options,
+            output_storage_options,
         )
 
     device = torch.device("cuda" if (use_gpu and torch.cuda.is_available()) else "cpu")

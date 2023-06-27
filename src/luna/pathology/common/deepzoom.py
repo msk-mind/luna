@@ -1,6 +1,7 @@
 import math
 from typing import Union
 
+from loguru import logger
 import fsspec.core
 import tiffslide
 from PIL import Image
@@ -29,10 +30,10 @@ class DeepZoomGenerator:
         self._limit_bounds = limit_bounds
 
         self._storage_options = storage_options
-        if isinstance(urlpath, fsspec.core.OpenFile):
-            self._openfile = urlpath
-        else:
+        if isinstance(urlpath, str):
             self._openfile = fsspec.open(urlpath, **storage_options)
+        else:
+            self._openfile = urlpath
 
         with self._openfile as f, tiffslide.TiffSlide(f) as tiff:
             if limit_bounds:
