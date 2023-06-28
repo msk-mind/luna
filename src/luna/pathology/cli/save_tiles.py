@@ -134,7 +134,7 @@ def save_tiles(
     output_hdf_file = Path(output_urlpath_prefix) / f"{slide_id}.tiles.h5"
     progress(futures)
 
-    simplecache_fs = fsspec.filesystem("simplecache", target_protocol=fs.protocol)
+    simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
 
     with simplecache_fs.open(output_hdf_file, "wb") as of:
         with h5py.File(of, "x") as hfile:
