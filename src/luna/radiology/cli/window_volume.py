@@ -1,10 +1,10 @@
 import os
 from pathlib import Path
-from loguru import logger
+
 import fire
 import medpy.io
 import numpy as np
-
+from loguru import logger
 
 
 def window_volume(
@@ -39,5 +39,9 @@ def window_volume(
     return properties
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(window_volume)
+
+
+if __name__ == "__main__":
+    fire_cli()

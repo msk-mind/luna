@@ -7,11 +7,10 @@ import fsspec
 import pandas as pd
 import tifffile
 from fsspec import open
+from loguru import logger
 from skimage import measure
-from loguru import logger 
 
 from luna.common.utils import get_config, save_metadata, timed
-
 
 
 @timed
@@ -166,5 +165,9 @@ def extract_shape_features(
     return result_df
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

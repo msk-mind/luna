@@ -7,7 +7,7 @@ import fire  # type: ignore
 import fsspec  # type: ignore
 import numpy as np
 import pandas as pd
-from dask.distributed import Client, progress
+from dask.distributed import progress
 from fsspec import open  # type: ignore
 from loguru import logger
 from multimethod import multimethod
@@ -16,7 +16,6 @@ from PIL import Image, ImageEnhance
 from skimage.color import rgb2gray  # type: ignore
 from skimage.filters import threshold_otsu  # type: ignore
 from tiffslide import TiffSlide
-from loguru import logger 
 
 from luna.common.dask import get_or_create_dask_client
 from luna.common.models import SlideSchema, Tile
@@ -459,6 +458,9 @@ def detect_tissue(
     return tiles_df
 
 
-if __name__ == "__main__":
-    client = Client()
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

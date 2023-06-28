@@ -2,16 +2,14 @@ import os
 from pathlib import Path
 from typing import List
 
-from loguru import logger
 import fire
 import medpy.io
 import numpy as np
 import pandas as pd
+from loguru import logger
 from radiomics import (
     featureextractor,  # This module is used for interaction with pyradiomics
 )
-
-
 
 
 def extract_radiomics_multiple_labels(
@@ -104,5 +102,9 @@ def extract_radiomics_multiple_labels(
     return properties
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(extract_radiomics_multiple_labels)
+
+
+if __name__ == "__main__":
+    fire_cli()

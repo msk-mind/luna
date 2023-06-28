@@ -131,12 +131,9 @@ def infer_tile_labels(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device = {device}")
 
-    if isinstance(
-        ttm, TorchTransformModel
-    ):  # This class packages preprocesing, the model, and optionally class_labels all together
-        preprocess = ttm.get_preprocess()
-        transform = ttm.transform
-        ttm.model.to(device)
+    preprocess = ttm.get_preprocess()
+    transform = ttm.transform
+    ttm.model.to(device)
 
     with open(tiles_urlpath, **storage_options) as of:
         df = pd.read_parquet(of).reset_index().set_index("address")
@@ -168,5 +165,9 @@ def infer_tile_labels(
     return df_output
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()
