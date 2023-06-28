@@ -9,7 +9,7 @@ import pandas as pd
 import tifffile
 import tiffslide
 from fsspec import open
-from loguru import logger 
+from loguru import logger
 
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
@@ -133,5 +133,9 @@ def convert_tiles_to_mask(
     return mask_arr
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

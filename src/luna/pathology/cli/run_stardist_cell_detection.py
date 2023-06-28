@@ -10,7 +10,6 @@ import docker
 from luna.common.utils import get_config, local_cache_urlpath, save_metadata, timed
 
 
-
 @timed
 @save_metadata
 def stardist_simple(
@@ -273,10 +272,14 @@ def stardist_cell_lymphocyte_main(
     return df
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(
         {
             "simple": stardist_simple,
             "cell-lymphocyte": stardist_cell_lymphocyte,
         }
     )
+
+
+if __name__ == "__main__":
+    fire_cli()

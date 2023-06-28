@@ -1,12 +1,12 @@
 import os
 from pathlib import Path
-import numpy as np
+
 import fire
 import itk
 import medpy.io
-from pydicom import dcmread
+import numpy as np
 from loguru import logger
-
+from pydicom import dcmread
 
 
 def dicom_to_itk(
@@ -81,7 +81,7 @@ def dicom_to_itk(
     path = next(Path(dicom_urlpath).glob("*.dcm"))
     ds = dcmread(path)
 
-    # If there are multiple seriesUIDs in a single DICOM dir, return 
+    # If there are multiple seriesUIDs in a single DICOM dir, return
     # the largest one by volume in the output properties
     outFileName = max(volume, key=volume.get)
 
@@ -192,5 +192,9 @@ def convert_pet_volume_to_suv(dicom_urlpath, input_volume):
         logger.info(f"Saved normalized volume: {input_volume}")
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(dicom_to_itk)
+
+
+if __name__ == "__main__":
+    fire_cli()

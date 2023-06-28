@@ -7,7 +7,6 @@ import numpy as np
 from loguru import logger
 
 
-
 def extract_voxels(input_itk_volume, output_dir):
     """Save a numpy file from a given ITK volume
 
@@ -37,5 +36,9 @@ def extract_voxels(input_itk_volume, output_dir):
     return properties
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(extract_voxels)
+
+
+if __name__ == "__main__":
+    fire_cli()

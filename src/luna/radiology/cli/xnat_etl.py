@@ -3,13 +3,13 @@ import os
 import fire
 import pandas as pd
 import pyxnat
-from loguru import logger
 
 # ===========================================
 # Custom Imports
 import xmltodict
 from dask.delayed import delayed
 from dask.distributed import Client
+from loguru import logger
 
 
 def xnat_etl(
@@ -125,5 +125,9 @@ def get_patient_scans(s, output_dir):
     return df_subject
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(xnat_etl)
+
+
+if __name__ == "__main__":
+    fire_cli()

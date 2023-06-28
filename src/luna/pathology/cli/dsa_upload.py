@@ -14,7 +14,6 @@ from luna.pathology.dsa.dsa_api_handler import (
 )
 
 
-
 @timed
 @save_metadata
 def cli(
@@ -106,5 +105,9 @@ def upload_annotation_to_dsa(
     return dsa_uuid
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()
