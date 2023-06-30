@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from dask.distributed import Client, progress
 from fsspec import open  # type: ignore
+from functools import partial
 from loguru import logger
 from multimethod import multimethod
 from pandera.typing import DataFrame
@@ -20,7 +21,7 @@ from loguru import logger
 
 from luna.common.dask import get_or_create_dask_client
 from luna.common.models import SlideSchema, Tile
-from luna.common.utils import get_config, save_metadata, timed
+from luna.common.utils import get_config, save_metadata, timed, grouper
 from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import (
     get_array_from_tile,
@@ -32,7 +33,7 @@ from luna.pathology.common.utils import (
 
 
 def compute_otsu_score(
-    tile: Tile, slide_urlpath: str, otsu_threshold: float, storage_options: dict
+    tile: Tile, slide: TiffSlide, otsu_threshold: float
 ) -> float:
     """
     Return otsu score for the tile.
@@ -41,7 +42,7 @@ def compute_otsu_score(
         slide_urlpath (str): path to slide
         otsu_threshold (float): otsu threshold value
     """
-    tile_arr = get_array_from_tile(tile, slide_urlpath, 10, storage_options)
+    tile_arr = get_array_from_tile(tile, slide, 10)
     score = np.mean((rgb2gray(tile_arr) < otsu_threshold).astype(int))
     return score
 
@@ -53,7 +54,7 @@ def get_purple_score(x):
 
 
 def compute_purple_score(
-    tile: Tile, slide_urlpath: str, storage_options: dict
+    tile: Tile, slide: TiffSlide,
 ) -> float:
     """
     Return purple score for the tile.
@@ -61,17 +62,16 @@ def compute_purple_score(
         row (pd.Series): row with tile metadata
         slide_url (str): path to slide
     """
-    tile_arr = get_array_from_tile(tile, slide_urlpath, 10, storage_options)
+    tile_arr = get_array_from_tile(tile, slide, 10)
     return get_purple_score(tile_arr)
 
 
 def compute_stain_score(
     tile: Tile,
-    slide_urlpath: str,
+    slide: TiffSlide,
     vectors,
     channel,
     stain_threshold: float,
-    storage_options: dict,
 ) -> np.floating:
     """
     Returns stain score for the tile
@@ -82,7 +82,7 @@ def compute_stain_score(
         channel (int): stain channel
         stain_threshold (float): stain threshold value
     """
-    tile_arr = get_array_from_tile(tile, slide_urlpath, 10, storage_options)
+    tile_arr = get_array_from_tile(tile, slide, 10)
     stain = pull_stain_channel(tile_arr, vectors=vectors, channel=channel)
     score = np.mean(stain > stain_threshold)
     return score
@@ -96,7 +96,9 @@ def cli(
     filter_query: str = "???",
     tile_size: Optional[int] = None,
     requested_magnification: Optional[int] = None,
+    batch_size: int = 2000,
     output_urlpath: str = ".",
+    dask_options: dict = {},
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
@@ -108,6 +110,7 @@ def cli(
         tile_size (int): size of tiles to use (at the requested magnification)
         requested_magnification (Optional[int]): Magnification scale at which to perform computation
         output_urlpath (str): Output url/path prefix
+        dask_options (dict): dask options
         storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
         local_config (str): local config file
@@ -116,6 +119,8 @@ def cli(
 
     """
     config = get_config(vars())
+
+    Client(**dask_options)
 
     if not config["tile_size"] and not config["tiles_urlpath"]:
         raise fire.core.FireError("Specify either tiles_urlpath or tile_size")
@@ -135,6 +140,7 @@ def cli(
         config["tile_size"],
         config["requested_magnification"],
         config["filter_query"],
+        config["batch_size"],
         config["storage_options"],
         config["output_urlpath"],
         config["output_storage_options"],
@@ -156,6 +162,7 @@ def detect_tissue(
     tile_size: int,
     requested_magnification: Optional[int] = None,
     filter_query: str = "",
+    batch_size: int = 2000,
     storage_options: dict = {},
     output_urlpath_prefix: str = "",
     output_storage_options: dict = {},
@@ -168,6 +175,7 @@ def detect_tissue(
             tile_size,
             requested_magnification,
             filter_query,
+            batch_size,
             storage_options,
             output_urlpath_prefix,
             output_storage_options,
@@ -205,6 +213,7 @@ def detect_tissue(
     tile_size: int,
     requested_magnification: Optional[int] = None,
     filter_query: str = "",
+    batch_size: int = 2000,
     storage_options: dict = {},
     output_urlpath_prefix: str = "",
     output_storage_options: dict = {},
@@ -219,6 +228,7 @@ def detect_tissue(
             tile_size,
             requested_magnification,
             filter_query,
+            batch_size,
             storage_options,
             output_urlpath_prefix,
             output_storage_options,
@@ -236,6 +246,7 @@ def detect_tissue(
     tile_size: Optional[int] = None,
     requested_magnification: Optional[int] = None,
     filter_query: str = "",
+    batch_size: int = 2000,
     storage_options: dict = {},
     output_urlpath_prefix: str = "",
     output_storage_options: dict = {},
@@ -387,69 +398,47 @@ def detect_tissue(
             Image.fromarray(stain1_mask).save(f, "png")
 
     if filter_query:
+        def f_many(iterator, tile_fn):
+            with open(slide_urlpath, **storage_options) as of:
+                slide = TiffSlide(of)
+                return [tile_fn(tile=x, slide=slide) for x in iterator]
         if "otsu_score" in filter_query:
             logger.info(f"Starting otsu thresholding, threshold={threshold}")
-            otsu_score_futures = [
-                client.submit(
-                    compute_otsu_score,
-                    tile=row,
-                    slide_urlpath=slide_urlpath,
-                    storage_options=storage_options,
-                    otsu_threshold=threshold,
-                )
-                for row in tiles_df.itertuples(name="Tile")
-            ]
-            progress(otsu_score_futures)
-            tiles_df["otsu_score"] = client.gather(otsu_score_futures)
+
+            chunks = grouper(tiles_df.itertuples(name="Tile"), batch_size)
+            otsu_tile_fn = partial(compute_otsu_score, otsu_threshold=threshold)
+
+            futures = client.map(partial(f_many, tile_fn=otsu_tile_fn), chunks)
+            progress(futures)
+            tiles_df["otsu_score"] = np.concatenate(client.gather(futures))
         if "purple_score" in filter_query:
             logger.info("Starting purple scoring")
-            purple_futures = [
-                client.submit(
-                    compute_purple_score,
-                    tile=row,
-                    slide_urlpath=slide_urlpath,
-                    storage_options=storage_options,
-                )
-                for row in tiles_df.itertuples(name="Tile")
-            ]
-            progress(purple_futures)
-            tiles_df["purple_score"] = client.gather(purple_futures)
+            chunks = grouper(tiles_df.itertuples(name="Tile"), batch_size)
+
+            futures = client.map(partial(f_many, tile_fn=compute_purple_score), chunks)
+            progress(futures)
+            tiles_df["purple_score"] = np.concatenate(client.gather(futures))
         if "stain0_score" in filter_query:
             logger.info(
                 f"Starting stain thresholding, channel=0, threshold={threshold_stain0}"
             )
-            stain0_futures = [
-                client.submit(
-                    compute_stain_score,
-                    tile=row,
-                    slide_urlpath=slide_urlpath,
-                    storage_options=storage_options,
-                    vectors=stain_vectors,
-                    channel=0,
-                    stain_threshold=threshold_stain0,
-                )
-                for row in tiles_df.itertuples(name="Tile")
-            ]
-            progress(stain0_futures)
-            tiles_df["stain0_score"] = client.gather(stain0_futures)
+
+            chunks = grouper(tiles_df.itertuples(name="Tile"), batch_size)
+            stain_tile_fn = partial(compute_stain_score, vectors=stain_vectors, channel=0, stain_threshold=threshold_stain0)
+
+            futures = client.map(partial(f_many, tile_fn=stain_tile_fn), chunks)
+            progress(futures)
+            tiles_df["stain0_score"] = np.concatenate(client.gather(futures))
         if "stain1_score" in filter_query:
             logger.info(
                 f"Starting stain thresholding, channel=1, threshold={threshold_stain1}"
             )
-            stain1_futures = [
-                client.submit(
-                    compute_stain_score,
-                    tile=row,
-                    slide_urlpath=slide_urlpath,
-                    storage_options=storage_options,
-                    vectors=stain_vectors,
-                    channel=1,
-                    stain_threshold=threshold_stain1,
-                )
-                for row in tiles_df.itertuples(name="Tile")
-            ]
-            progress(stain1_futures)
-            tiles_df["stain1_score"] = client.gather(stain1_futures)
+            chunks = grouper(tiles_df.itertuples(name="Tile"), batch_size)
+            stain_tile_fn = partial(compute_stain_score, vectors=stain_vectors, channel=1, stain_threshold=threshold_stain1)
+
+            futures = client.map(partial(f_many, tile_fn=stain_tile_fn), chunks)
+            progress(futures)
+            tiles_df["stain1_score"] = np.concatenate(client.gather(futures))
 
         logger.info(f"Filtering based on query: {filter_query}")
         tiles_df = tiles_df.query(filter_query)
@@ -460,5 +449,4 @@ def detect_tissue(
 
 
 if __name__ == "__main__":
-    client = Client()
     fire.Fire(cli)

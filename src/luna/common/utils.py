@@ -76,10 +76,7 @@ def local_cache_urlpath(
                 fs, dir = fsspec.core.url_to_fs(
                     args_dict[key], **args_dict.get(storage_options_key, {})
                 )
-                if filesystem and fs.protocol != filesystem.protocol:
-                    raise RuntimeError("Only one filesystem protocol supported")
-                filesystem = fs
-                if filesystem and filesystem.protocol != "file":
+                if fs.protocol != "file":
                     new_args_dict[storage_options_key] = {"auto_mkdir": True}
                     tmp_dir = tempfile.TemporaryDirectory()
                     new_args_dict[key] = tmp_dir.name
@@ -94,9 +91,6 @@ def local_cache_urlpath(
                     fs, path = fsspec.core.url_to_fs(
                         args_dict[key], **args_dict.get(storage_options_key, {})
                     )
-                    if protocol and fs.protocol != protocol:
-                        raise RuntimeError("Only one filesystem protocol supported")
-                    protocol = fs.protocol
 
                     simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
 
@@ -458,7 +452,7 @@ def get_config(cli_kwargs: dict):
         merged_conf["output_filesystem"] = "file"
         if o.scheme != "":
             merged_conf["output_filesystem"] = o.scheme
-        if not merged_conf.get("output_storage_options"):
+        if merged_conf["output_filesystem"] != "file" and not merged_conf.get("output_storage_options"):
             merged_conf["output_storage_options"] = merged_conf.get(
                 "storage_options", {}
             )

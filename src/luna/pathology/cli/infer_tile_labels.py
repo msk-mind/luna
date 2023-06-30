@@ -3,6 +3,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Optional
+import ssl
 
 import fire
 import fsspec
@@ -23,6 +24,7 @@ from luna.pathology.analysis.ml import (
 from luna.pathology.cli.save_tiles import save_tiles
 
 
+
 @timed
 @save_metadata
 def cli(
@@ -37,7 +39,8 @@ def cli(
     output_urlpath: str = ".",
     kwargs: dict = {},
     use_gpu: bool = False,
-    dask_config: dict = {},
+    dask_options: dict = {},
+    insecure: bool = False,
     storage_options: dict = {},
     output_storage_options: dict = {},
 ):
@@ -56,7 +59,8 @@ def cli(
         output_urlpath (str): output/working directory
         kwargs (dict): additional keywords to pass to model initialization
         use_gpu (bool): use GPU if available
-        dask_config (dict): options to pass to dask client
+        dask_options (dict): options to pass to dask client
+        insecure (bool): insecure SSL
         storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
 
@@ -82,7 +86,8 @@ def cli(
         config["batch_size"],
         config["kwargs"],
         config["use_gpu"],
-        config['dask_config'],
+        config['dask_options'],
+        config['insecure'],
         config["storage_options"],
         config["output_storage_options"],
     )
@@ -119,7 +124,8 @@ def infer_tile_labels(
     batch_size: int,
     kwargs: dict,
     use_gpu: bool,
-    dask_config: dict,
+    dask_options: dict,
+    insecure: bool
     storage_options: dict,
     output_storage_options: dict,
 ):
@@ -141,6 +147,10 @@ def infer_tile_labels(
     Returns:
         pd.DataFrame: augmented tiles dataframe
     """
+
+    if insecure:
+        ssl._create_default_https_context = ssl._create_unverified_context
+
     # Get our model and transforms and construct the Tile Dataset and Classifier
     if os.path.exists(torch_model_repo_or_dir):
         source = "local"
@@ -149,11 +159,11 @@ def infer_tile_labels(
 
     logger.info(f"Torch hub source = {source} @ {torch_model_repo_or_dir}")
 
-    if source == "github":
-        logger.info(f"Available models: {torch.hub.list(torch_model_repo_or_dir)}")
+    #if source == "github":
+        #logger.info(f"Available models: {torch.hub.list(torch_model_repo_or_dir, trust_repo=False)}")
 
     ttm = torch.hub.load(
-        torch_model_repo_or_dir, model_name, source=source, **kwargs, force_reload=True
+        torch_model_repo_or_dir, model_name, source=source, **kwargs, force_reload=True, trust_repo=True
     )
 
     if not isinstance(ttm, TorchTransformModel):
@@ -164,7 +174,7 @@ def infer_tile_labels(
         with open(tiles_urlpath, **storage_options) as of:
             df = pd.read_parquet(of).reset_index().set_index("address")
     else:
-        Client(**dask_config)
+        Client(**dask_options)
         df = save_tiles(
             slide_urlpath,
             tile_size,
@@ -185,7 +195,7 @@ def infer_tile_labels(
         transform = ttm.transform
         ttm.model.to(device)
 
-    ds = HDF5Dataset(df, preprocess=preprocess)
+    ds = HDF5Dataset(df, preprocess=preprocess, storage_options=storage_options)
     loader = DataLoader(
         ds, num_workers=num_cores, batch_size=batch_size, pin_memory=True
     )

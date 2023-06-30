@@ -50,7 +50,7 @@ class HDF5Dataset(Dataset):
     """
 
     def __init__(
-        self, hdf5_manifest, preprocess=nn.Identity(), label_cols=[], using_ray=False
+        self, hdf5_manifest, preprocess=nn.Identity(), label_cols=[], using_ray=False, storage_options={}
     ):
         """Initialize HD5FDataset
 
@@ -60,11 +60,11 @@ class HDF5Dataset(Dataset):
             label_cols (list[str]): (Optional) label columns to return as tensors, e.g. for training
             using_ray (bool): (Optional) Perform distributed dataloading with Ray for training
         """
-
         self.hdf5_manifest = hdf5_manifest
         self.label_cols = label_cols
         self.using_ray = using_ray
         self.preprocess = preprocess
+        self.storage_options = storage_options
 
     def __len__(self):
         return len(self.hdf5_manifest)
@@ -90,7 +90,7 @@ class HDF5Dataset(Dataset):
         """
 
         row = self.hdf5_manifest.iloc[idx]
-        img = get_tile_array(row)
+        img = get_tile_array(row, self.storage_options)
 
         if self.using_ray and not (len(self.label_cols)):
             raise ValueError(
