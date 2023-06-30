@@ -459,9 +459,8 @@ def get_config(cli_kwargs: dict):
             merged_conf["output_storage_options"] = merged_conf.get(
                 "storage_options", {}
             )
-        if (
-            merged_conf["output_filesystem"] == "file"
-            and merged_conf["output_storage_options"] == {}
+        if merged_conf["output_filesystem"] == "file" and not merged_conf.get(
+            "output_storage_options"
         ):
             merged_conf["output_storage_options"] = {"auto_mkdir": True}
 
