@@ -8,7 +8,6 @@ import fire
 import fsspec
 import pandas as pd
 from dask.distributed import Client, progress
-from fsspec import open  # type: ignore
 from loguru import logger
 from multimethod import multimethod
 from pandera.typing import DataFrame
@@ -54,7 +53,7 @@ def cli(
     """
     config = get_config(vars())
 
-    Client(**config['dask_config'])
+    Client(**config["dask_config"])
 
     output_filesystem, output_urlpath_prefix = fsspec.core.url_to_fs(
         config["output_urlpath"], **config["output_storage_options"]
@@ -183,7 +182,9 @@ def _generate_tiles(
 
     # get DeepZoomGenerator, level
     full_generator, full_level = get_full_resolution_generator(
-        slide_urlpath, tile_size=full_resolution_tile_size, storage_options=storage_options,
+        slide_urlpath,
+        tile_size=full_resolution_tile_size,
+        storage_options=storage_options,
     )
     tile_x_count, tile_y_count = full_generator.level_tiles[full_level]
     logger.info(f"tiles x {tile_x_count}, tiles y {tile_y_count}")

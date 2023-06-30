@@ -10,7 +10,6 @@ import docker
 from luna.common.utils import get_config, local_cache_urlpath, save_metadata, timed
 
 
-
 @timed
 @save_metadata
 def stardist_simple(

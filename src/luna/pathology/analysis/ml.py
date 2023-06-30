@@ -10,7 +10,7 @@ from PIL import Image
 # from sklearn.model_selection._split import _BaseKFold, _RepeatedSplits
 from sklearn.model_selection import StratifiedGroupKFold
 from torch import nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
 
 from luna.pathology.common.utils import get_tile_array
@@ -50,7 +50,12 @@ class HDF5Dataset(Dataset):
     """
 
     def __init__(
-        self, hdf5_manifest, preprocess=nn.Identity(), label_cols=[], using_ray=False, storage_options={}
+        self,
+        hdf5_manifest,
+        preprocess=nn.Identity(),
+        label_cols=[],
+        using_ray=False,
+        storage_options={},
     ):
         """Initialize HD5FDataset
 

@@ -1,19 +1,19 @@
 # General imports
 import os
+import ssl
 import sys
 from pathlib import Path
 from typing import Optional
-import ssl
 
 import fire
 import fsspec
 import pandas as pd
 import torch
+from dask.distributed import Client
 from fsspec import open
 from loguru import logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from dask.distributed import Client
 
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.analysis.ml import (
@@ -22,7 +22,6 @@ from luna.pathology.analysis.ml import (
     post_transform_to_2d,
 )
 from luna.pathology.cli.save_tiles import save_tiles
-
 
 
 @timed
@@ -84,10 +83,11 @@ def cli(
         config["model_name"],
         config["num_cores"],
         config["batch_size"],
+        config["output_urlpath"],
         config["kwargs"],
         config["use_gpu"],
-        config['dask_options'],
-        config['insecure'],
+        config["dask_options"],
+        config["insecure"],
         config["storage_options"],
         config["output_storage_options"],
     )
@@ -122,6 +122,7 @@ def infer_tile_labels(
     model_name: str,
     num_cores: int,
     batch_size: int,
+    output_urlpath: str,
     kwargs: dict,
     use_gpu: bool,
     dask_options: dict,
@@ -134,7 +135,10 @@ def infer_tile_labels(
     Decorates existing slide_tiles with additional columns corresponding to class prediction/scores from the model
 
     Args:
+        slide_urlpath (str): url/path to slide image (virtual slide formats compatible with TiffSlide, .svs, .tif, .scn, ...)
         tiles_urlpath (str): path to a slide-tile manifest file (.tiles.parquet)
+        tile_size (int): size of tiles to use (at the requested magnification)
+        requested_magnification (float): Magnification scale at which to perform computation
         torch_model_repo_or_dir (str): repository root name like (namespace/repo) at github.com to serve torch.hub models. Or path to a local model (e.g. msk-mind/luna-ml)
         model_name (str): torch hub model name (a nn.Module at the repo repo_name)
         num_cores (int): Number of cores to use for CPU parallelization
@@ -159,11 +163,16 @@ def infer_tile_labels(
 
     logger.info(f"Torch hub source = {source} @ {torch_model_repo_or_dir}")
 
-    #if source == "github":
-        #logger.info(f"Available models: {torch.hub.list(torch_model_repo_or_dir, trust_repo=False)}")
+    # if source == "github":
+    # logger.info(f"Available models: {torch.hub.list(torch_model_repo_or_dir, trust_repo=False)}")
 
     ttm = torch.hub.load(
-        torch_model_repo_or_dir, model_name, source=source, **kwargs, force_reload=True, trust_repo=True
+        torch_model_repo_or_dir,
+        model_name,
+        source=source,
+        **kwargs,
+        force_reload=True,
+        trust_repo=True,
     )
 
     if not isinstance(ttm, TorchTransformModel):
@@ -173,27 +182,31 @@ def infer_tile_labels(
     if tiles_urlpath:
         with open(tiles_urlpath, **storage_options) as of:
             df = pd.read_parquet(of).reset_index().set_index("address")
-    else:
+    elif tile_size is not None:
         Client(**dask_options)
+        slide_id = Path(slide_urlpath).stem
+        tiles_urlpath = str(Path(output_urlpath) / f"{slide_id}.tiles.h5")
+
         df = save_tiles(
             slide_urlpath,
             tile_size,
-            output_urlpath,
+            tiles_urlpath,
             batch_size,
             requested_magnification,
             storage_options,
             output_storage_options,
         )
+    else:
+        raise RuntimeError(
+            "Need to specify tiles_urlpath or both slide_urlpath and tile_size"
+        )
 
     device = torch.device("cuda" if (use_gpu and torch.cuda.is_available()) else "cpu")
     logger.info(f"Using device = {device}")
 
-    if isinstance(
-        ttm, TorchTransformModel
-    ):  # This class packages preprocesing, the model, and optionally class_labels all together
-        preprocess = ttm.get_preprocess()
-        transform = ttm.transform
-        ttm.model.to(device)
+    preprocess = ttm.get_preprocess()
+    transform = ttm.transform
+    ttm.model.to(device)
 
     ds = HDF5Dataset(df, preprocess=preprocess, storage_options=storage_options)
     loader = DataLoader(

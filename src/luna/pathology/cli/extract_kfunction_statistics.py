@@ -6,14 +6,13 @@ import fsspec
 import numpy as np
 import pandas as pd
 from dask.distributed import Client, progress
+from loguru import logger
 from tqdm.contrib.itertools import product
-from loguru import logger 
 
 from luna.common.dask import get_or_create_dask_client
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import coord_to_address
 from luna.pathology.spatial.stats import Kfunction
-
 
 
 @timed

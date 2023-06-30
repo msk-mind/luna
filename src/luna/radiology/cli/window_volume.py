@@ -1,10 +1,10 @@
 import os
 from pathlib import Path
-from loguru import logger
+
 import fire
 import medpy.io
 import numpy as np
-
+from loguru import logger
 
 
 def window_volume(

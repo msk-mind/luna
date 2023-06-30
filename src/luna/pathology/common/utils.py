@@ -389,7 +389,7 @@ def get_tile_arrays(
     ]
 
 
-def get_tile_array(row: pd.DataFrame, storage_options:dict = {}) -> np.ndarray:
+def get_tile_array(row: pd.DataFrame, storage_options: dict = {}) -> np.ndarray:
     """
     Returns a tile image as a numpy array.
 
@@ -398,7 +398,7 @@ def get_tile_array(row: pd.DataFrame, storage_options:dict = {}) -> np.ndarray:
     """
     fs, path = fsspec.core.url_to_fs(row.tile_store, **storage_options)
     cache_fs = fsspec.filesystem("filecache", fs=fs)
-    with cache_fs.open(path, 'rb', **storage_options) as of:
+    with cache_fs.open(path, "rb", **storage_options) as of:
         with h5py.File(of, "r") as hf:
             tile = np.array(hf[row.name])
             return tile
@@ -479,7 +479,11 @@ def get_full_resolution_generator(
         Tuple[MinimalComputeAperioDZGenerator, int]
     """
     generator = DeepZoomGenerator(
-        slide_urlpath, overlap=0, tile_size=tile_size, limit_bounds=False, storage_options=storage_options
+        slide_urlpath,
+        overlap=0,
+        tile_size=tile_size,
+        limit_bounds=False,
+        storage_options=storage_options,
     )
 
     generator_level = generator.level_count - 1

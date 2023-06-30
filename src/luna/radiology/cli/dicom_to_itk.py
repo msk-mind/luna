@@ -1,12 +1,12 @@
 import os
 from pathlib import Path
-import numpy as np
+
 import fire
 import itk
 import medpy.io
-from pydicom import dcmread
+import numpy as np
 from loguru import logger
-
+from pydicom import dcmread
 
 
 def dicom_to_itk(
@@ -81,7 +81,7 @@ def dicom_to_itk(
     path = next(Path(dicom_urlpath).glob("*.dcm"))
     ds = dcmread(path)
 
-    # If there are multiple seriesUIDs in a single DICOM dir, return 
+    # If there are multiple seriesUIDs in a single DICOM dir, return
     # the largest one by volume in the output properties
     outFileName = max(volume, key=volume.get)
 

@@ -7,7 +7,6 @@ import numpy as np
 from loguru import logger
 
 
-
 def extract_voxels(input_itk_volume, output_dir):
     """Save a numpy file from a given ITK volume
 

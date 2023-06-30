@@ -1,21 +1,19 @@
 # General imports
-import logging
 from pathlib import Path
 from typing import Optional
 
 import fire
 import fsspec
-from fsspec import open
 import h5py
 from dask.distributed import Client, as_completed, progress
-from loguru import logger 
+from fsspec import open
+from loguru import logger
 from tiffslide import TiffSlide
 
 from luna.common.dask import get_or_create_dask_client
-from luna.common.utils import get_config, grouper, save_metadata, timed, local_cache_urlpath
+from luna.common.utils import get_config, grouper, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import get_array_from_tile
-
 
 
 @timed
@@ -63,7 +61,9 @@ def cli(
     output_header_urlpath = fs.unstrip_protocol(output_header_path)
 
     if fs.exists(output_h5_path) or fs.exists(output_header_path):
-        logger.info(f"outputs already exist: {output_h5_urlpath}, {output_header_urlpath}")
+        logger.info(
+            f"outputs already exist: {output_h5_urlpath}, {output_header_urlpath}"
+        )
         return
 
     df = save_tiles(
@@ -87,7 +87,6 @@ def cli(
     }
 
     return properties
-
 
 
 def save_tiles(
@@ -117,7 +116,6 @@ def save_tiles(
         dict: metadata about function call
     """
     client = get_or_create_dask_client()
-    slide_id = Path(slide_urlpath).stem
     df = generate_tiles(
         slide_urlpath, tile_size, storage_options, requested_magnification
     )
@@ -141,16 +139,14 @@ def save_tiles(
     futures = client.map(f_many, chunks)
     progress(futures)
 
-    fs, output_path = fsspec.core.url_to_fs(
-        output_urlpath, **output_storage_options
-        )
+    fs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
     # need simplecache for non-local filesystems
-    if fs.protocol != 'file':
+    if fs.protocol != "file":
         simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
         output_path = simplecache_fs.open(output_path, "wb")
     else:
         Path(output_path).parents[0].mkdir(parents=True, exist_ok=True)
-    
+
     with h5py.File(output_path, "x") as hfile:
         for future in as_completed(futures):
             for result in future.result():

@@ -14,7 +14,6 @@ from luna.pathology.dsa.dsa_api_handler import (
 )
 
 
-
 @timed
 @save_metadata
 def cli(

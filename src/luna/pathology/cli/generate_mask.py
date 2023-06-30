@@ -9,12 +9,13 @@ import pandas as pd
 import tifffile
 import tiffslide
 from fsspec import open
+from loguru import logger
 from PIL import Image
 from skimage.measure import block_reduce
-from loguru import logger 
 
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import convert_xml_to_mask, get_layer_names
+
 
 @timed
 @save_metadata

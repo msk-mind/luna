@@ -5,10 +5,11 @@ from urllib.parse import urlparse
 import fire
 import fsspec
 import pandas as pd
-from loguru import logger 
+from loguru import logger
 
 import luna.common.stats
 from luna.common.utils import get_config, save_metadata, timed
+
 
 @timed
 @save_metadata

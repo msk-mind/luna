@@ -82,7 +82,6 @@ def local_cache_urlpath(
                     new_args_dict[key] = tmp_dir.name
                     tmp_dir_dest.append((tmp_dir, dir))
 
-            protocol = None
             result = None
             with ExitStack() as stack:
                 for key, write_mode in file_key_write_mode.items():
@@ -179,6 +178,7 @@ def rebase_schema_numeric(df):
 
         df[col] = df[col].astype(float, errors="ignore")
 
+
 def rebase_schema_mixed(df):
     """
     Tries to convert all columns with mixed types to strings.
@@ -194,6 +194,7 @@ def rebase_schema_mixed(df):
             df[col] = df[col].astype(str)
         if df[col].dtype == list:
             df[col] = df[col].astype(str)
+
 
 def generate_uuid_binary(content, prefix):
     """
@@ -452,7 +453,9 @@ def get_config(cli_kwargs: dict):
         merged_conf["output_filesystem"] = "file"
         if o.scheme != "":
             merged_conf["output_filesystem"] = o.scheme
-        if merged_conf["output_filesystem"] != "file" and not merged_conf.get("output_storage_options"):
+        if merged_conf["output_filesystem"] != "file" and not merged_conf.get(
+            "output_storage_options"
+        ):
             merged_conf["output_storage_options"] = merged_conf.get(
                 "storage_options", {}
             )

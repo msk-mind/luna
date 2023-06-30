@@ -11,6 +11,7 @@ import pandas as pd
 import scipy.stats
 import tiffslide
 from fsspec import open
+from loguru import logger
 from PIL import Image
 from tqdm import tqdm
 
@@ -21,8 +22,6 @@ from luna.pathology.common.utils import (
     get_full_resolution_generator,
     get_stain_vectors_macenko,
 )
-from loguru import logger
-
 
 
 @timed

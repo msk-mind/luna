@@ -1,10 +1,9 @@
-
 import fire
 import numpy as np
 import pandas as pd
+from loguru import logger
 from scipy.ndimage import distance_transform_edt
 from skimage.morphology import remove_small_holes
-from loguru import logger
 
 from luna.radiology.mirp.imageReaders import read_itk_image
 

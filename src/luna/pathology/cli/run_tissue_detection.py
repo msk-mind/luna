@@ -1,4 +1,5 @@
 # General imports
+from functools import partial
 from pathlib import Path
 from typing import Optional, Union
 from urllib.parse import urlparse
@@ -9,7 +10,6 @@ import numpy as np
 import pandas as pd
 from dask.distributed import Client, progress
 from fsspec import open  # type: ignore
-from functools import partial
 from loguru import logger
 from multimethod import multimethod
 from pandera.typing import DataFrame
@@ -17,11 +17,10 @@ from PIL import Image, ImageEnhance
 from skimage.color import rgb2gray  # type: ignore
 from skimage.filters import threshold_otsu  # type: ignore
 from tiffslide import TiffSlide
-from loguru import logger 
 
 from luna.common.dask import get_or_create_dask_client
 from luna.common.models import SlideSchema, Tile
-from luna.common.utils import get_config, save_metadata, timed, grouper
+from luna.common.utils import get_config, grouper, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import (
     get_array_from_tile,
@@ -32,9 +31,7 @@ from luna.pathology.common.utils import (
 )
 
 
-def compute_otsu_score(
-    tile: Tile, slide: TiffSlide, otsu_threshold: float
-) -> float:
+def compute_otsu_score(tile: Tile, slide: TiffSlide, otsu_threshold: float) -> float:
     """
     Return otsu score for the tile.
     Args:
@@ -54,7 +51,8 @@ def get_purple_score(x):
 
 
 def compute_purple_score(
-    tile: Tile, slide: TiffSlide,
+    tile: Tile,
+    slide: TiffSlide,
 ) -> float:
     """
     Return purple score for the tile.
@@ -398,10 +396,12 @@ def detect_tissue(
             Image.fromarray(stain1_mask).save(f, "png")
 
     if filter_query:
+
         def f_many(iterator, tile_fn):
             with open(slide_urlpath, **storage_options) as of:
                 slide = TiffSlide(of)
                 return [tile_fn(tile=x, slide=slide) for x in iterator]
+
         if "otsu_score" in filter_query:
             logger.info(f"Starting otsu thresholding, threshold={threshold}")
 
@@ -424,7 +424,12 @@ def detect_tissue(
             )
 
             chunks = grouper(tiles_df.itertuples(name="Tile"), batch_size)
-            stain_tile_fn = partial(compute_stain_score, vectors=stain_vectors, channel=0, stain_threshold=threshold_stain0)
+            stain_tile_fn = partial(
+                compute_stain_score,
+                vectors=stain_vectors,
+                channel=0,
+                stain_threshold=threshold_stain0,
+            )
 
             futures = client.map(partial(f_many, tile_fn=stain_tile_fn), chunks)
             progress(futures)
@@ -434,7 +439,12 @@ def detect_tissue(
                 f"Starting stain thresholding, channel=1, threshold={threshold_stain1}"
             )
             chunks = grouper(tiles_df.itertuples(name="Tile"), batch_size)
-            stain_tile_fn = partial(compute_stain_score, vectors=stain_vectors, channel=1, stain_threshold=threshold_stain1)
+            stain_tile_fn = partial(
+                compute_stain_score,
+                vectors=stain_vectors,
+                channel=1,
+                stain_threshold=threshold_stain1,
+            )
 
             futures = client.map(partial(f_many, tile_fn=stain_tile_fn), chunks)
             progress(futures)
