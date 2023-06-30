@@ -125,7 +125,7 @@ def infer_tile_labels(
     kwargs: dict,
     use_gpu: bool,
     dask_options: dict,
-    insecure: bool
+    insecure: bool,
     storage_options: dict,
     output_storage_options: dict,
 ):

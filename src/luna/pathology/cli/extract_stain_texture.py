@@ -21,7 +21,7 @@ from luna.pathology.common.utils import (
     get_full_resolution_generator,
     get_stain_vectors_macenko,
 )
-from loguru import logger 
+from loguru import logger
 
 
 
@@ -122,7 +122,6 @@ def extract_stain_texture(
         slide_image_urlpath, tile_size=tile_size, storage_options=storage_options
     )
 
-    logger.info(f"Mask dimensions {mask.dimensions}")
     mask_full_generator, mask_full_level = get_full_resolution_generator(
         slide_mask_urlpath, tile_size=tile_size, storage_options=storage_options
     )
