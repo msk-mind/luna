@@ -20,7 +20,7 @@ from tiffslide import TiffSlide
 
 from luna.common.dask import get_or_create_dask_client
 from luna.common.models import SlideSchema, Tile
-from luna.common.utils import get_config, grouper, save_metadata, timed
+from luna.common.utils import get_config, grouper, local_cache_urlpath, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import (
     get_array_from_tile,
@@ -104,6 +104,7 @@ def cli(
     """Run simple/deterministic tissue detection algorithms based on a filter query, to reduce tiles to those (likely) to contain actual tissue
     Args:
         slide_urlpath (str): url/path to slide image (virtual slide formats compatible with pyvips, .svs, .tif, .scn, ...)
+        tiles_urlpath (str): url/path to tiles manifest (parquet)
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
         tile_size (int): size of tiles to use (at the requested magnification)
         requested_magnification (Optional[int]): Magnification scale at which to perform computation
@@ -238,6 +239,11 @@ def detect_tissue(
 
 
 @multimethod
+@local_cache_urlpath(
+    file_key_write_mode={
+        "slide_urlpath": "r",
+    },
+)
 def detect_tissue(
     slide_urlpath: str,
     tiles_urlpath: str = "",

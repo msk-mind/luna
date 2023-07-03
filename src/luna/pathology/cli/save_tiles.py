@@ -11,7 +11,7 @@ from loguru import logger
 from tiffslide import TiffSlide
 
 from luna.common.dask import get_or_create_dask_client
-from luna.common.utils import get_config, grouper, save_metadata, timed
+from luna.common.utils import get_config, grouper, local_cache_urlpath, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import get_array_from_tile
 
@@ -89,6 +89,12 @@ def cli(
     return properties
 
 
+@local_cache_urlpath(
+    file_key_write_mode={
+        "slide_urlpath": "r",
+        "output_urlpath": "w",
+    },
+)
 def save_tiles(
     slide_urlpath: str,
     tile_size: int,
@@ -139,15 +145,7 @@ def save_tiles(
     futures = client.map(f_many, chunks)
     progress(futures)
 
-    fs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
-    # need simplecache for non-local filesystems
-    if fs.protocol != "file":
-        simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
-        output_path = simplecache_fs.open(output_path, "wb")
-    else:
-        Path(output_path).parents[0].mkdir(parents=True, exist_ok=True)
-
-    with h5py.File(output_path, "x") as hfile:
+    with h5py.File(output_urlpath, "w") as hfile:
         for future in as_completed(futures):
             for result in future.result():
                 address, tile_arr = result
