@@ -71,6 +71,8 @@ def local_cache_urlpath(
             storage_options_key = "storage_options"
             tmp_dir_dest = []
             for key, write_mode in dir_key_write_mode.items():
+                if not args_dict[key]:
+                    continue
                 if "w" in write_mode:
                     storage_options_key = "output_storage_options"
                 fs, dir = fsspec.core.url_to_fs(
@@ -85,6 +87,8 @@ def local_cache_urlpath(
             result = None
             with ExitStack() as stack:
                 for key, write_mode in file_key_write_mode.items():
+                    if not args_dict[key]:
+                        continue
                     if "w" in write_mode:
                         storage_options_key = "output_storage_options"
                     fs, path = fsspec.core.url_to_fs(
