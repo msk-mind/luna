@@ -6,9 +6,9 @@ import fire
 import fsspec
 import pandas as pd
 from fsspec import open
+from loguru import logger
 from shapely.geometry import GeometryCollection, Polygon, shape
 from tqdm import tqdm
-from loguru import logger 
 
 from luna.common.utils import get_config, save_metadata, timed
 
@@ -159,5 +159,9 @@ def generate_tile_labels(
     return df_tiles
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

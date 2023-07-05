@@ -1,5 +1,4 @@
 # General imports
-import logging
 from pathlib import Path
 from typing import List, Optional
 
@@ -8,8 +7,8 @@ import fsspec
 import pandas as pd
 import tiffslide
 from fsspec import open
+from loguru import logger
 from PIL import Image
-from loguru import logger 
 
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
@@ -18,7 +17,6 @@ from luna.pathology.common.utils import (
     get_scale_factor_at_magnification,
     visualize_tiling_scores,
 )
-
 
 
 @timed
@@ -149,5 +147,9 @@ def visualize_tiles(
     return thumbnails_overlayed
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

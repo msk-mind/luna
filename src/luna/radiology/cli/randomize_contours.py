@@ -1,7 +1,6 @@
-
 import fire
 import numpy as np
-from loguru import logger 
+from loguru import logger
 
 from luna.radiology.mirp.imagePerturbations import randomise_roi_contours
 from luna.radiology.mirp.imageProcess import (
@@ -113,5 +112,9 @@ def randomize_contours(
     return properties
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(randomize_contours)
+
+
+if __name__ == "__main__":
+    fire_cli()

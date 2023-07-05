@@ -11,6 +11,7 @@ import pandas as pd
 import scipy.stats
 import tiffslide
 from fsspec import open
+from loguru import logger
 from PIL import Image
 from tqdm import tqdm
 
@@ -21,8 +22,6 @@ from luna.pathology.common.utils import (
     get_full_resolution_generator,
     get_stain_vectors_macenko,
 )
-from loguru import logger 
-
 
 
 @timed
@@ -216,5 +215,9 @@ def extract_stain_texture(
     return df_result
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

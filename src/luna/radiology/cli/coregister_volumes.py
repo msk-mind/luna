@@ -1,82 +1,12 @@
 from pathlib import Path
-import click
+
+import fire
 import numpy as np
 import pandas as pd
 import scipy.ndimage
-
 from loguru import logger
 
-from luna.common.custom_logger import init_logger
-from luna.common.utils import cli_runner
 from luna.radiology.mirp.imageReaders import read_itk_image
-
-
-_params_ = [
-    ("input_itk_volume", str),
-    ("input_itk_geometry", str),
-    ("output_dir", str),
-    ("order", int),
-    ("resample_pixel_spacing", float),
-    ("save_npy", bool),
-]
-
-
-@click.command()
-@click.argument("input_itk_volume", nargs=1)
-@click.argument("input_itk_geometry", nargs=1)
-@click.option(
-    "-npy",
-    "--save_npy",
-    required=False,
-    is_flag=True,
-    help="whether to additionally save the volumes as numpy files",
-)
-@click.option(
-    "-rps",
-    "--resample_pixel_spacing",
-    required=False,
-    help="isotropic voxel size (in mm)",
-)
-@click.option("-ord", "--order", required=False, help="interpolation order")
-@click.option(
-    "-o",
-    "--output_dir",
-    required=False,
-    help="path to output directory to save results",
-)
-@click.option(
-    "-m",
-    "--method_param_path",
-    required=False,
-    help="path to a metadata json/yaml file with method parameters to reproduce results",
-)
-@click.option(
-    "-dsid",
-    "--dataset_id",
-    required=False,
-    help="Optional dataset identifier to add results to",
-)
-def cli(**cli_kwargs):
-    """Resamples and co-registeres all volumes to occupy the same physical coordinates of a reference geometry (given as a itk_volume)
-
-    NB: Pass the same image as both the volume and geometry to simply resample a given volume. Useful for PET/CT coregistration.
-
-    \b
-    Inputs:
-        input_itk_volume: itk compatible image volume (.mhd, .nrrd, .nii, etc.)
-        input_itk_geometry: itk compatible image volume (.mhd, .nrrd, .nii, etc.) to use as reference geometry
-    \b
-    Outputs:
-        itk_volume
-    \b
-    Example: (Resample a pet image to match dimensions of a CT image)
-        coregister_volumes ./scans/10001/CT/pet_image.nii ./scans/10001/CT/ct_image.nii
-            --resample_pixel_spacing 1.5
-            --order 3
-            --save_npy
-            -o ./registered/
-    """
-    cli_runner(cli_kwargs, _params_, coregister_volumes)
 
 
 def coregister_volumes(
@@ -198,5 +128,9 @@ def interpolate(image, resample_spacing, reference_geometry, order=3):
     return resampled_image
 
 
+def fire_cli():
+    fire.Fire(coregister_volumes)
+
+
 if __name__ == "__main__":
-    cli()
+    fire_cli()

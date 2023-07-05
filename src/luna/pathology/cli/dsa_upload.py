@@ -111,5 +111,9 @@ def upload_annotation_to_dsa(
     return dsa_uuid
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

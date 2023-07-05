@@ -8,7 +8,7 @@ import fsspec  # type: ignore
 import girder_client
 import pandas as pd
 import requests
-from dask.distributed import Client, as_completed
+from dask.distributed import as_completed
 from geojson import Feature, FeatureCollection, Point, Polygon
 from loguru import logger
 from shapely.geometry import shape
@@ -297,6 +297,9 @@ class DsaAnnotationProcessor:
         return df
 
 
-if __name__ == "__main__":
-    client = Client()
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

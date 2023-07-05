@@ -1,19 +1,17 @@
 # General imports
-import logging
 from pathlib import Path
 from typing import Optional
 
 import fire
 import fsspec
 import h5py
-from dask.distributed import Client, as_completed, progress
-from loguru import logger 
+from dask.distributed import as_completed, progress
+from loguru import logger
 
 from luna.common.dask import get_or_create_dask_client
 from luna.common.utils import get_config, grouper, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import get_array_from_tile
-
 
 
 @timed
@@ -144,6 +142,9 @@ def save_tiles(
     return df
 
 
-if __name__ == "__main__":
-    Client()
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

@@ -5,10 +5,11 @@ from urllib.parse import urlparse
 import fire
 import fsspec
 import pandas as pd
-from loguru import logger 
+from loguru import logger
 
 import luna.common.stats
 from luna.common.utils import get_config, save_metadata, timed
+
 
 @timed
 @save_metadata
@@ -93,5 +94,9 @@ def extract_tile_statistics(
     return df_feature_data
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

@@ -9,12 +9,13 @@ import pandas as pd
 import tifffile
 import tiffslide
 from fsspec import open
+from loguru import logger
 from PIL import Image
 from skimage.measure import block_reduce
-from loguru import logger 
 
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import convert_xml_to_mask, get_layer_names
+
 
 @timed
 @save_metadata
@@ -139,5 +140,9 @@ def generate_mask(
     return pd.DataFrame(mask_properties)
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

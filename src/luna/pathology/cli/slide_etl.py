@@ -5,7 +5,7 @@ from pathlib import Path
 import fire
 import fsspec
 import pandas as pd
-from dask.distributed import Client, progress
+from dask.distributed import progress
 from fsspec import open  # type: ignore
 from loguru import logger
 from multimethod import multimethod
@@ -14,11 +14,7 @@ from tiffslide import TiffSlide
 
 from luna.common.dask import get_or_create_dask_client
 from luna.common.models import Slide, SlideSchema
-from luna.common.utils import (
-    apply_csv_filter, 
-    get_config, 
-    timed 
-)
+from luna.common.utils import apply_csv_filter, get_config, timed
 from luna.pathology.common.utils import (
     get_downscaled_thumbnail,
     get_scale_factor_at_magnification,
@@ -26,6 +22,7 @@ from luna.pathology.common.utils import (
 )
 
 VALID_SLIDE_EXTENSIONS = [".svs", ".scn", ".tif"]
+
 
 @timed
 def cli(
@@ -38,8 +35,8 @@ def cli(
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
-    no_copy: bool = False, 
-    metadata_extension: str = "parquet"
+    no_copy: bool = False,
+    metadata_extension: str = "parquet",
 ):
     """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
 
@@ -54,7 +51,7 @@ def cli(
         output_storage_options (dict): storage options to pass to writing functions
         local_config (str): url/path to YAML config file
         no_copy (bool): determines whether we copy slides to output_urlpath
-        metadata_extension(str): file extension of generated metadata file (either 'csv' or 'parquet') 
+        metadata_extension(str): file extension of generated metadata file (either 'csv' or 'parquet')
     """
 
     config = get_config(vars())
@@ -69,7 +66,7 @@ def cli(
             slide_paths += filesystem.glob(f"{slide_path}/*{ext}")
 
     if config["metadata_extension"]:
-        extension = config["metadata_extension"].lower().replace('.','')
+        extension = config["metadata_extension"].lower().replace(".", "")
 
     if config["subset_csv_urlpath"]:
         slide_paths = apply_csv_filter(
@@ -90,7 +87,7 @@ def cli(
         config["storage_options"],
         config["output_urlpath"],
         config["output_storage_options"],
-        config["no_copy"]
+        config["no_copy"],
     )
 
     logger.info(df)
@@ -117,7 +114,7 @@ def slide_etl(
     storage_options: dict = {},
     output_urlpath: str = "",
     output_storage_options: dict = {},
-    no_copy: bool = False
+    no_copy: bool = False,
 ) -> DataFrame:
     """Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
 
@@ -133,7 +130,6 @@ def slide_etl(
     Returns:
         df (DataFrame): dataframe containing the metadata of all the slides
     """
-
 
     client = get_or_create_dask_client()
     sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
@@ -173,7 +169,7 @@ def slide_etl(
     storage_options: dict = {},
     output_urlpath: str = "",
     output_storage_options: dict = {},
-    no_copy: bool = False
+    no_copy: bool = False,
 ) -> Slide:
     """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
 
@@ -270,6 +266,9 @@ class SlideBuilder:
     # def estimate_stain(self, slide):
 
 
-if __name__ == "__main__":
-    client = Client()
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()
