@@ -18,6 +18,7 @@ from typing_extensions import TypedDict
 
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.dsa.utils import (
+    address_to_coord,
     get_continuous_color,
     vectorize_np_array_bitmask_by_pixel_value,
 )
@@ -290,7 +291,6 @@ def stardist_cell(
     config = get_config(vars())
     dsa_annotation = stardist_cell_main(
         config["input_urlpath"],
-        config["image_filename"],
         config["annotation_name"],
         config["line_colors"],
         config["fill_colors"],
@@ -307,7 +307,6 @@ def stardist_cell(
 
 def stardist_cell_main(
     input_urlpath: str,
-    image_filename: str,
     annotation_name: str,
     line_colors: Optional[dict[str, str]],
     fill_colors: Optional[dict[str, str]],
@@ -718,7 +717,7 @@ def heatmap(
     - the color ranges from purple to yellow, for scores from 0 to 1.
 
     Args:
-        input_urlpath (string): URL/path to CSV with tile scores
+        input_urlpath (string): URL/path to parquet with tile scores
         output_urlpath (string): URL/path prefix to save the DSA compatible annotation
         json
         image_filename (string): name of the image file in DSA e.g. 123.svs
@@ -771,7 +770,7 @@ def heatmap_main(
     - the color ranges from purple to yellow, for scores from 0 to 1.
 
     Args:
-        input_urlpath (string): url/path to CSV with tile scores
+        input_urlpath (string): url/path to parquet with tile scores
         annotation_name (string): name of the annotation to be displayed in DSA
         column (list[string]): columns to visualize e.g. tile_score
         tile_size (int): size of tiles
@@ -786,7 +785,7 @@ def heatmap_main(
     if type(column) == str:
         column = [column]
 
-    df = pd.read_csv(input_urlpath, storage_options=storage_options)
+    df = pd.read_parquet(input_urlpath, storage_options=storage_options).reset_index()
     scaled_tile_size = int(tile_size * int(scale_factor if scale_factor else 1))
 
     elements = []
@@ -811,7 +810,7 @@ def heatmap_main(
                 element["lineColor"] = line_colors[label]
 
         # convert coordinate string to tuple using eval
-        x, y = eval(row["coordinates"])
+        x, y = address_to_coord(row["address"])
 
         pixel_x = x * scaled_tile_size
         pixel_y = y * scaled_tile_size
