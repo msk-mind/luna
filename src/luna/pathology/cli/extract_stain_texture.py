@@ -207,7 +207,6 @@ def extract_stain_texture(
         .astype(float)
     )
     logger.info(df_result)
-    slide_file.close()
 
     return df_result
 
