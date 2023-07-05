@@ -63,5 +63,9 @@ def generate_threshold_mask(
     return d_properties
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(generate_threshold_mask)
+
+
+if __name__ == "__main__":
+    fire_cli()

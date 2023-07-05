@@ -4,7 +4,6 @@ import re
 from decimal import Decimal
 from pathlib import Path
 from typing import Optional
-from loguru import logger
 
 import fire  # type: ignore
 import fsspec  # type: ignore
@@ -13,6 +12,7 @@ import ijson  # type: ignore
 import numpy as np
 import pandas as pd
 from fsspec import open  # type: ignore
+from loguru import logger
 from PIL import Image
 from typing_extensions import TypedDict
 
@@ -21,7 +21,6 @@ from luna.pathology.dsa.utils import (
     get_continuous_color,
     vectorize_np_array_bitmask_by_pixel_value,
 )
-
 
 # Base DSA jsons
 PolygonElement = TypedDict(
@@ -940,7 +939,7 @@ def bmp_polygon_main(
     return get_dsa_annotation(elements, annotation_name)
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(
         {
             "stardist-polygon": stardist_polygon,
@@ -952,3 +951,7 @@ if __name__ == "__main__":
             "bmp-polygon": bmp_polygon,
         }
     )
+
+
+if __name__ == "__main__":
+    fire_cli()

@@ -39,5 +39,9 @@ def window_volume(
     return properties
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(window_volume)
+
+
+if __name__ == "__main__":
+    fire_cli()

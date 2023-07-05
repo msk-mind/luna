@@ -62,5 +62,9 @@ def match_metadata(dicom_tree_folder: str, input_itk_labels: str, output_dir: st
     return properties
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(match_metadata)
+
+
+if __name__ == "__main__":
+    fire_cli()

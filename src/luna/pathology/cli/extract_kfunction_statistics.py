@@ -5,7 +5,7 @@ import fire
 import fsspec
 import numpy as np
 import pandas as pd
-from dask.distributed import Client, progress
+from dask.distributed import progress
 from loguru import logger
 from tqdm.contrib.itertools import product
 
@@ -157,6 +157,9 @@ def extract_kfunction(
     return df_stats
 
 
-if __name__ == "__main__":
-    Client()
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

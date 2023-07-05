@@ -102,5 +102,9 @@ def extract_radiomics_multiple_labels(
     return properties
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(extract_radiomics_multiple_labels)
+
+
+if __name__ == "__main__":
+    fire_cli()

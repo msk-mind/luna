@@ -211,5 +211,9 @@ def extract_stain_texture(
     return df_result
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

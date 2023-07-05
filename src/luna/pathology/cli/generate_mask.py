@@ -140,5 +140,9 @@ def generate_mask(
     return pd.DataFrame(mask_properties)
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

@@ -5,7 +5,7 @@ from pathlib import Path
 import fire
 import fsspec
 import pandas as pd
-from dask.distributed import Client, progress
+from dask.distributed import progress
 from fsspec import open  # type: ignore
 from loguru import logger
 from multimethod import multimethod
@@ -266,6 +266,9 @@ class SlideBuilder:
     # def estimate_stain(self, slide):
 
 
-if __name__ == "__main__":
-    client = Client()
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

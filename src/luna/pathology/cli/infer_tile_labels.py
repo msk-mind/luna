@@ -236,5 +236,9 @@ def infer_tile_labels(
     return df_output
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

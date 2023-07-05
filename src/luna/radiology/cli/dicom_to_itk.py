@@ -192,5 +192,9 @@ def convert_pet_volume_to_suv(dicom_urlpath, input_volume):
         logger.info(f"Saved normalized volume: {input_volume}")
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(dicom_to_itk)
+
+
+if __name__ == "__main__":
+    fire_cli()

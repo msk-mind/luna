@@ -8,7 +8,7 @@ import fsspec  # type: ignore
 import girder_client
 import pandas as pd
 import requests
-from dask.distributed import Client, as_completed
+from dask.distributed import as_completed
 from geojson import Feature, FeatureCollection, Point, Polygon
 from loguru import logger
 from shapely.geometry import shape
@@ -30,28 +30,25 @@ def cli(
     dsa_endpoint: str = "???",
     collection_name: str = "???",
     annotation_name: str = "???",
-    username: str = "???",
-    password: str = "???",
+    username: str = "${oc.env:DSA_USERNAME}",
+    password: str = "${oc.env:DSA_PASSWORD}",
     local_config: str = "",
     output_urlpath: str = ".",
     storage_options: dict = {},
 ):
-    """A cli tool
+    """DSA annotation ETL
+    Args:
+        dsa_endpoint (str): path to input data
+        collection_name (str): collection name in DSA
+        annotation_name (str): annotation name
+        username (str): DSA username (defaults to environment variable DSA_USERNAME)
+        password (str): DSA password (defaults to environment variable DSA_PASSWORD)
+        local_config (str): local config yaml url/path
+        output_urlpath (str): output/working url/path prefix
+        storage_options (dict): options to pass to reading/writing functions
 
-    \b
-    Inputs:
-        dsa_endpoint: Path to the DSA endpoint like http://localhost:8080/dsa/api/v1
-    \b
-    Outputs:
-        slide_annotation_dataset
-    \b
-    Example:
-        export DSA_USERNAME=username
-        export DSA_PASSWORD=password
-        dsa_annotation_etl http://localhost:8080/dsa/api/v1
-            --collection-name tcga-data
-            --annotation-name TumorVsOther
-            -o /data/annotations/
+    Returns:
+        pd.DataFrame: metadata from function call
     """
     config = get_config(vars())
 
@@ -97,14 +94,19 @@ def dsa_annotation_etl(
     output_urlpath: str,
     storage_options: dict,
 ):
-    """Take
+    """DSA annotation ETL
 
     Args:
         dsa_endpoint (str): path to input data
+        collection_name (str): collection name in DSA
+        annotation_name (str): annotation name
+        username (str): DSA username
+        password (str): DSA password
         output_urlpath (str): output/working url/path prefix
+        storage_options (dict): options to pass to reading/writing functions
 
     Returns:
-        pd.DataFrame: metadata about function call
+        pd.DataFrame: slide etl dataframe with annotation columns
     """
     client = get_or_create_dask_client()
     # girder = girder_client.GirderClient(apiUrl=dsa_endpoint)
@@ -295,6 +297,9 @@ class DsaAnnotationProcessor:
         return df
 
 
-if __name__ == "__main__":
-    client = Client()
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

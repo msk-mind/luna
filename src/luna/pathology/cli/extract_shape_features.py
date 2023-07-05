@@ -165,5 +165,9 @@ def extract_shape_features(
     return result_df
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

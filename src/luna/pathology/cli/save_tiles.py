@@ -11,7 +11,13 @@ from loguru import logger
 from tiffslide import TiffSlide
 
 from luna.common.dask import get_or_create_dask_client
-from luna.common.utils import get_config, grouper, local_cache_urlpath, save_metadata, timed
+from luna.common.utils import (
+    get_config,
+    grouper,
+    local_cache_urlpath,
+    save_metadata,
+    timed,
+)
 from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import get_array_from_tile
 
@@ -155,5 +161,9 @@ def save_tiles(
     return df
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(cli)
+
+
+if __name__ == "__main__":
+    fire_cli()

@@ -112,5 +112,9 @@ def randomize_contours(
     return properties
 
 
-if __name__ == "__main__":
+def fire_cli():
     fire.Fire(randomize_contours)
+
+
+if __name__ == "__main__":
+    fire_cli()
