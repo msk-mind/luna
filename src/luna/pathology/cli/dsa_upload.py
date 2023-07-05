@@ -14,7 +14,6 @@ from luna.pathology.dsa.dsa_api_handler import (
 )
 
 
-
 @timed
 @save_metadata
 def cli(
@@ -22,8 +21,8 @@ def cli(
     annotation_file_urlpath: str = "???",
     collection_name: str = "???",
     image_filename: str = "???",
-    username: str = "???",
-    password: str = "???",
+    username: str = "${oc.env:DSA_USERNAME}",
+    password: str = "${oc.env:DSA_PASSWORD}",
     storage_options: dict = {},
     local_config: str = "",
 ):
@@ -32,11 +31,14 @@ def cli(
     Upload json annotation file as a new annotation to the image in the DSA collection.
 
     Args:
-        dsa_endpoint_url (string): DSA endpoint URL
+        dsa_endpoint_url (string): DSA API endpoint e.g. http://localhost:8080/api/v1
         annotation_file_urlpath (string): URL/path to a DSA annotation json file
-        image_filename (string): name of the image file in DSA e.g. 123.svs
         collection_name (string): name of the collection in DSA
-        uri (string): DSA API endpoint e.g. http://localhost:8080/api/v1
+        image_filename (string): name of the image file in DSA e.g. 123.svs
+        username (string): DSA username (defaults to environment variable DSA_USERNAME)
+        password (string): DSA password (defaults to environment variable DSA_PASSWORD)
+        storage_options (dict): options to pass to reading functions
+        local_config (string): local config yaml url/path
 
     Returns:
         dict: metadata
@@ -69,10 +71,13 @@ def upload_annotation_to_dsa(
     Upload json annotation file as a new annotation to the image in the DSA collection.
 
     Args:
+        dsa_endpoint_url (string): DSA API endpoint e.g. http://localhost:8080/api/v1
         annotation_file_urlpath (string): URL/path to a DSA annotation json file
-        image_filename (string): name of the image file in DSA e.g. 123.svs
         collection_name (string): name of the collection in DSA
-        uri (string): DSA API endpoint e.g. http://localhost:8080/api/v1
+        image_filename (string): name of the image file in DSA e.g. 123.svs
+        username (string): DSA username
+        password (string): DSA password
+        storage_options (dict): options to pass to reading functions
 
     Returns:
         dict: item_uuid. None if item doesn't exist
