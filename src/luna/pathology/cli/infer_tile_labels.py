@@ -95,9 +95,8 @@ def cli(
     fs, output_path_prefix = fsspec.core.url_to_fs(
         config["output_urlpath"], **config["output_storage_options"]
     )
-    output_file = (
-        Path(output_path_prefix) / "tile_scores_and_labels_pytorch_inference.parquet"
-    )
+    slide_id = Path(config["slide_urlpath"]).stem
+    output_file = str(Path(output_path_prefix) / f"{slide_id}.classified_tiles.parquet")
     #
     with fs.open(output_file, "wb") as of:
         df_output.to_parquet(of)
