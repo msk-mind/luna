@@ -31,7 +31,7 @@ def cli(
     requested_magnification: Optional[int] = None,
     storage_options: dict = {},
     output_storage_options: dict = {},
-    dask_config: dict = {},
+    dask_options: dict = {},
     local_config: str = "",
     output_urlpath: str = ".",
 ) -> dict:
@@ -53,7 +53,7 @@ def cli(
     """
     config = get_config(vars())
 
-    Client(**config["dask_config"])
+    Client(**config["dask_options"])
 
     output_filesystem, output_urlpath_prefix = fsspec.core.url_to_fs(
         config["output_urlpath"], **config["output_storage_options"]
