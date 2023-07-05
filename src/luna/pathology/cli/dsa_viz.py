@@ -17,8 +17,8 @@ from PIL import Image
 from typing_extensions import TypedDict
 
 from luna.common.utils import get_config, save_metadata, timed
+from luna.pathology.common.utils import address_to_coord
 from luna.pathology.dsa.utils import (
-    address_to_coord,
     get_continuous_color,
     vectorize_np_array_bitmask_by_pixel_value,
 )
@@ -794,20 +794,16 @@ def heatmap_main(
 
         # get label specific color and add to elements
         if len(column) == 1:
-            label_value = row[column[0]]
-            element["label"]["value"] = str(label_value)
-            line_color, fill_color = get_continuous_color(label_value)
-            if fill_colors:
-                element["fillColor"] = fill_color
-            if line_colors:
-                element["lineColor"] = line_color
+            label = row[column[0]]
+            element["label"]["value"] = str(label)
         else:
             label = pd.to_numeric(row[column]).idxmax()
             element["label"]["value"] = str(label)
-            if fill_colors:
-                element["fillColor"] = fill_colors[label]
-            if line_colors:
-                element["lineColor"] = line_colors[label]
+
+        if fill_colors:
+            element["fillColor"] = fill_colors[label]
+        if line_colors:
+            element["lineColor"] = line_colors[label]
 
         # convert coordinate string to tuple using eval
         x, y = address_to_coord(row["address"])
