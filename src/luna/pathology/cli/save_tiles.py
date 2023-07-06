@@ -8,8 +8,11 @@ import h5py
 from dask.distributed import Client, as_completed, progress
 from fsspec import open
 from loguru import logger
+from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
+
+from luna.common.models import TileSchema
 from luna.common.dask import get_or_create_dask_client
 from luna.common.utils import (
     get_config,
@@ -66,7 +69,7 @@ def cli(
     output_header_path = str(Path(output_urlpath_prefix) / f"{slide_id}.tiles.parquet")
     output_header_urlpath = fs.unstrip_protocol(output_header_path)
 
-    if fs.exists(output_h5_path) or fs.exists(output_header_path):
+    if fs.exists(output_h5_path) and fs.exists(output_header_path):
         logger.info(
             f"outputs already exist: {output_h5_urlpath}, {output_header_urlpath}"
         )
@@ -98,7 +101,6 @@ def cli(
 @local_cache_urlpath(
     file_key_write_mode={
         "slide_urlpath": "r",
-        "output_urlpath": "w",
     },
 )
 def save_tiles(
@@ -127,14 +129,33 @@ def save_tiles(
     Returns:
         dict: metadata about function call
     """
-    client = get_or_create_dask_client()
     df = generate_tiles(
         slide_urlpath, tile_size, storage_options, requested_magnification
     )
 
     logger.info(f"Now generating tiles with batch_size={batch_size}!")
+    df = _save_tiles(df, slide_urlpath, output_urlpath, batch_size, storage_options, output_storage_options)
+    df["tile_store"] = output_urlpath
+    return df
 
-    # save address:tile arrays key:value pair in hdf5
+@local_cache_urlpath(
+    file_key_write_mode={
+        "output_urlpath": "w",
+    },
+)
+def _save_tiles(
+    df: DataFrame[TileSchema],
+    slide_urlpath,
+    output_urlpath: str,
+    batch_size: int = 2000,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+):
+    """
+    save address:tile arrays key:value pair in hdf5
+    a separate function from save_tiles such that the tile_store in the tile df is the non-cached path
+    """
+    client = get_or_create_dask_client()
     def f_many(iterator):
         with open(slide_urlpath, **storage_options) as of:
             slide = TiffSlide(of)
@@ -157,7 +178,6 @@ def save_tiles(
                 address, tile_arr = result
                 hfile.create_dataset(address, data=tile_arr)
 
-    df["tile_store"] = output_urlpath
     return df
 
 

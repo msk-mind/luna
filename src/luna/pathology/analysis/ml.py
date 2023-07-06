@@ -156,7 +156,7 @@ class BaseTorchTileDataset(Dataset):
             self.tile_manifest = tile_manifest
         elif tile_urlpath:
             with open(tile_urlpath, **storage_options) as of:
-                self.tile_manifest = pd.read_csv(of).set_index("address")
+                self.tile_manifest = pd.read_parquet(of).set_index("address")
         else:
             raise RuntimeError("Must specifiy either tile_manifest or tile_path")
 
