@@ -44,6 +44,15 @@ def stardist_simple(
     """
     config = get_config(vars())
 
+    slide_id = Path(config["slide_urlpath"]).stem
+    fs, output_path = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
+    if fs.exists(output_header_file):
+        logger.info(f"outputs already exist: {fs.unstrip_protocol(str(output_header_file))}")
+        return
+
     df = stardist_simple_main(
         config["slide_urlpath"],
         config["cell_expansion_size"],
@@ -57,12 +66,7 @@ def stardist_simple(
         config["output_storage_options"],
     )
 
-    slide_id = Path(config["slide_urlpath"]).stem
 
-    fs, output_path = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
-    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
     with fs.open(output_header_file, "wb") as of:
         df.to_parquet(of)
 
@@ -158,6 +162,15 @@ def stardist_cell_lymphocyte(
     """
     config = get_config(vars())
 
+    slide_id = Path(config["slide_urlpath"]).stem
+    fs, output_path = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
+    if fs.exists(output_header_file):
+        logger.info(f"outputs already exist: {fs.unstrip_protocol(str(output_header_file))}")
+        return
+
     df = stardist_cell_lymphocyte_main(
         config["slide_urlpath"],
         config["output_urlpath"],
@@ -168,12 +181,7 @@ def stardist_cell_lymphocyte(
         config["output_storage_options"],
     )
 
-    slide_id = Path(config["slide_urlpath"]).stem
 
-    fs, output_path = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
-    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
     with fs.open(output_header_file, "wb") as of:
         df.to_parquet(of)
 
