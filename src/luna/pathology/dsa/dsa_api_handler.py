@@ -1,5 +1,6 @@
 import json
-import logging
+import fsspec
+from loguru import logger
 import time
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -10,8 +11,6 @@ import histomicstk.annotations_and_masks.annotation_and_mask_utils
 import orjson
 import pandas as pd
 import requests
-
-logger = logging.getLogger(__name__)
 
 
 def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
@@ -361,7 +360,7 @@ def copy_item(gc, item_id: str, destination_id: str):
 
 
 def push_annotation_to_dsa_image(
-    item_uuid: str, dsa_annotation_json: Dict[str, any], uri: str, gc
+    item_uuid: str, annotation_file_urlpath: str, uri: str, gc: girder_client.GirderClient, storage_options: dict = {},
 ):
     """Pushes annotation to DSA, adding given item_uuid (slide-specific id)
 
@@ -380,10 +379,21 @@ def push_annotation_to_dsa_image(
     # updating or deleting an existing annotation for a large annotation
     # document results in timeout.
     try:
-        gc.post(
-            f"/annotation?itemId={item_uuid}",
-            data=orjson.dumps(dsa_annotation_json).decode(),
-        )
+        fs, path = fsspec.core.url_to_fs(annotation_file_urlpath, **storage_options)
+        size = fs.size(path)
+        reference = {
+            'identifier': f'{Path(path).stem}-AnnotationFile',
+            'itemId': item_uuid
+        }
+        with fs.open(path) as of:
+            gc.uploadFile(
+                item_uuid,
+                of,
+                Path(path).name,
+                size,
+                reference=orjson.dumps(reference).decode()
+            )
+
 
     except requests.exceptions.HTTPError as err:
         raise RuntimeError(
@@ -584,36 +594,26 @@ def get_slide_annotation(
 
     logger.debug("Starting request for annotation")
     try:
-        annotation_id_response = gc.get(f"/annotation?itemId={item_uuid}")
-        annotation_id = None
-        for annot_dict in annotation_id_response:
-            try:
-                if (
-                    annot_dict.get("annotation")
-                    and annot_dict.get("annotation").get("name") == annotation_name
-                ):
-                    annotation_id = annot_dict.get("_id")
-                    annotation_response = gc.get(f"/annotation/{annotation_id}")
-
-                    break
-            except AttributeError:
-                break
+        annotation_response = gc.get(f"/annotation?itemId={item_uuid}&name={annotation_name}")
 
     except Exception as err:
         logger.error(f"Error in annotation get request: {err}")
         return None
 
     # get annotation json from response
-    if "annotation" in annotation_response:
-        annotation = annotation_response["annotation"]
+    if annotation_response:
+        annotation_response = annotation_response[0]
+        annotation = annotation_response['annotation']
     else:
-        logger.error(f"No annotation found for slide {slide_id}")
+        logger.info(f"No annotation found for slide {slide_id}")
         return None
+
 
     # get additional slide-level metadata from response
     date_created = annotation_response["created"]
     date_updated = annotation_response["updated"]
 
+    annotation_id = annotation_response["_id"]
     creator_id = annotation_response["creatorId"]
     creator_updated_id = annotation_response["updatedId"]
     annotation_name = annotation["name"]
@@ -631,6 +631,7 @@ def get_slide_annotation(
     creator_login_updated = creator_updated_response["login"]
 
     slide_metadata = {
+        "annotation_id": annotation_id,
         "annotation_name": annotation_name,
         "date": date_created,
         "date_updated": date_updated,

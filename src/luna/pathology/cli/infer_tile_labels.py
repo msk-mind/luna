@@ -21,6 +21,7 @@ from luna.pathology.analysis.ml import (
     TorchTransformModel,
     post_transform_to_2d,
 )
+from luna.pathology.cli.run_tissue_detection import detect_tissue
 from luna.pathology.cli.save_tiles import save_tiles
 
 
@@ -30,6 +31,7 @@ def cli(
     slide_urlpath: str = "",
     tiles_urlpath: str = "",
     tile_size: Optional[int] = None,
+    filter_query: str = "",
     requested_magnification: Optional[int] = None,
     torch_model_repo_or_dir: str = "???",
     model_name: str = "???",
@@ -51,6 +53,7 @@ def cli(
         slide_urlpath (str): url/path to slide image (virtual slide formats compatible with TiffSlide, .svs, .tif, .scn, ...)
         tiles_urlpath (str): path to a slide-tile manifest file (.tiles.csv)
         tile_size (int): size of tiles to use (at the requested magnification)
+        filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
         torch_model_repo_or_dir (str): repository root name like (namespace/repo) at github.com to serve torch.hub models. Or path to a local model (e.g. msk-mind/luna-ml)
         model_name (str): torch hub model name (a nn.Module at the repo repo_name)
         num_cores (int): Number of cores to use for CPU parallelization
@@ -78,6 +81,7 @@ def cli(
         config["slide_urlpath"],
         config["tiles_urlpath"],
         config["tile_size"],
+        config["filter_query"],
         config["requested_magnification"],
         config["torch_model_repo_or_dir"],
         config["model_name"],
@@ -95,8 +99,12 @@ def cli(
     fs, output_path_prefix = fsspec.core.url_to_fs(
         config["output_urlpath"], **config["output_storage_options"]
     )
-    slide_id = Path(config["slide_urlpath"]).stem
-    output_file = str(Path(output_path_prefix) / f"{slide_id}.classified_tiles.parquet")
+    if config['slide_urlpath']:
+        slide_id = Path(config["slide_urlpath"]).stem
+    else:
+        slide_id = Path(config["tiles_urlpath"]).stem.removesuffix('.tiles')
+
+    output_file = str(Path(output_path_prefix) / f"{slide_id}.tiles.parquet")
     #
     with fs.open(output_file, "wb") as of:
         df_output.to_parquet(of)
@@ -116,6 +124,7 @@ def infer_tile_labels(
     slide_urlpath: str,
     tiles_urlpath: str,
     tile_size: Optional[int],
+    filter_query: str,
     requested_magnification: Optional[int],
     torch_model_repo_or_dir: str,
     model_name: str,
@@ -137,7 +146,8 @@ def infer_tile_labels(
         slide_urlpath (str): url/path to slide image (virtual slide formats compatible with TiffSlide, .svs, .tif, .scn, ...)
         tiles_urlpath (str): path to a slide-tile manifest file (.tiles.parquet)
         tile_size (int): size of tiles to use (at the requested magnification)
-        requested_magnification (float): Magnification scale at which to perform computation
+        filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
+        requested_magnification (Optional[int]): Magnification scale at which to perform computation
         torch_model_repo_or_dir (str): repository root name like (namespace/repo) at github.com to serve torch.hub models. Or path to a local model (e.g. msk-mind/luna-ml)
         model_name (str): torch hub model name (a nn.Module at the repo repo_name)
         num_cores (int): Number of cores to use for CPU parallelization
@@ -184,23 +194,41 @@ def infer_tile_labels(
     elif tile_size is not None:
         Client(**dask_options)
         slide_id = Path(slide_urlpath).stem
-        tiles_urlpath = str(Path(output_urlpath) / f"{slide_id}.tiles.h5")
+        tiles_h5_urlpath = str(Path(output_urlpath) / f"{slide_id}.tiles.h5")
+
+        df = detect_tissue(
+            slide_urlpath,
+            tile_size=tile_size,
+            requested_magnification=requested_magnification,
+            filter_query=filter_query,
+            batch_size=batch_size,
+            storage_options=storage_options,
+            output_urlpath_prefix=output_urlpath + "/" + slide_id,
+            output_storage_options=output_storage_options,
+            )
 
         df = save_tiles(
+            df,
             slide_urlpath,
-            tile_size,
-            tiles_urlpath,
+            tiles_h5_urlpath,
             batch_size,
-            requested_magnification,
             storage_options,
             output_storage_options,
         )
+        
+        df = df.reset_index().set_index("address")
     else:
         raise RuntimeError(
             "Need to specify tiles_urlpath or both slide_urlpath and tile_size"
         )
 
-    device = torch.device("cuda" if (use_gpu and torch.cuda.is_available()) else "cpu")
+    pin_memory = False
+    if use_gpu and torch.cuda.is_available():
+        pin_memory = True
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+
     logger.info(f"Using device = {device}")
 
     preprocess = ttm.get_preprocess()
@@ -208,9 +236,7 @@ def infer_tile_labels(
     ttm.model.to(device)
 
     ds = HDF5Dataset(df, preprocess=preprocess, storage_options=storage_options)
-    loader = DataLoader(
-        ds, num_workers=num_cores, batch_size=batch_size, pin_memory=True
-    )
+    loader = DataLoader(ds, num_workers=num_cores, batch_size=batch_size, pin_memory=pin_memory)
 
     # Generate aggregate dataframe
     with torch.no_grad():

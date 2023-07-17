@@ -22,7 +22,7 @@ def test_otsu(tmp_path, dask_client):
         ],
     )
 
-    assert os.path.exists(f"{tmp_path}/123-filtered.tiles.parquet")
+    assert os.path.exists(f"{tmp_path}/123.tiles.parquet")
     assert os.path.exists(f"{tmp_path}/metadata.yml")
 
 
@@ -45,5 +45,5 @@ def test_stain(tmp_path, dask_client):
         ],
     )
 
-    assert os.path.exists(f"{tmp_path}/123-filtered.tiles.parquet")
+    assert os.path.exists(f"{tmp_path}/123.tiles.parquet")
     assert os.path.exists(f"{tmp_path}/metadata.yml")

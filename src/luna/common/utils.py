@@ -68,17 +68,17 @@ def local_cache_urlpath(
             new_args_dict = args_dict.copy()
 
             filesystem = None
-            storage_options_key = "storage_options"
             tmp_dir_dest = []
             for key, write_mode in dir_key_write_mode.items():
                 if not args_dict[key]:
                     continue
+                storage_options_key = "storage_options"
                 if "w" in write_mode:
                     storage_options_key = "output_storage_options"
                 fs, dir = fsspec.core.url_to_fs(
                     args_dict[key], **args_dict.get(storage_options_key, {})
                 )
-                if fs.protocol != "file":
+                if fs.protocol != "file" and 'cache' not in fs.protocol:
                     new_args_dict[storage_options_key] = {"auto_mkdir": True}
                     tmp_dir = tempfile.TemporaryDirectory()
                     new_args_dict[key] = tmp_dir.name
@@ -89,17 +89,18 @@ def local_cache_urlpath(
                 for key, write_mode in file_key_write_mode.items():
                     if not args_dict[key]:
                         continue
+                    storage_options_key = "storage_options"
                     if "w" in write_mode:
                         storage_options_key = "output_storage_options"
                     fs, path = fsspec.core.url_to_fs(
                         args_dict[key], **args_dict.get(storage_options_key, {})
                     )
+                    if 'cache' not in fs.protocol:
+                        simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
 
-                    simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
-
-                    of = simplecache_fs.open(path, write_mode)
-                    stack.enter_context(of)
-                    new_args_dict[key] = of.name
+                        of = simplecache_fs.open(path, write_mode)
+                        stack.enter_context(of)
+                        new_args_dict[key] = of.name
 
                 result = func(**new_args_dict)
 

@@ -125,7 +125,7 @@ def cli(
     """
     config = get_config(vars())
 
-    Client(**dask_options)
+    Client(**config['dask_options'])
 
     if not config["tile_size"] and not config["tiles_urlpath"]:
         raise fire.core.FireError("Specify either tiles_urlpath or tile_size")
@@ -136,7 +136,7 @@ def cli(
 
     slide_id = Path(urlparse(config["slide_urlpath"]).path).stem
     output_header_file = (
-        Path(output_urlpath_prefix) / f"{slide_id}-filtered.tiles.parquet"
+        Path(output_urlpath_prefix) / f"{slide_id}.tiles.parquet"
     )
 
     df = detect_tissue(
@@ -147,7 +147,7 @@ def cli(
         config["filter_query"],
         config["batch_size"],
         config["storage_options"],
-        config["output_urlpath"],
+        config["output_urlpath"] + "/" + slide_id,
         config["output_storage_options"],
     )
     with open(output_header_file, "wb", **config["output_storage_options"]) as of:
@@ -280,14 +280,21 @@ def detect_tissue(
         with open(tiles_urlpath, **storage_options) as of:
             tiles_df = pd.read_parquet(of)
     elif type(tile_size) == int:
-        tiles_df = generate_tiles(
-            slide_urlpath, tile_size, storage_options, requested_magnification
-        )
+        tiles_df = generate_tiles(slide_urlpath, tile_size, storage_options)
     else:
         raise RuntimeError("Specify tile_size or tile_urlpath")
 
-    with open(slide_urlpath, "rb", **storage_options) as f:
-        slide = TiffSlide(f)
+    with TiffSlide(slide_urlpath) as slide:
+        logger.info(f"Slide dimensions {slide.dimensions}")
+        to_mag_scale_factor = get_scale_factor_at_magnification(
+            slide, requested_magnification=requested_magnification
+        )
+        logger.info(f"Thumbnail scale factor: {to_mag_scale_factor}")
+        # Original thumbnail
+        sample_arr = get_downscaled_thumbnail(slide, to_mag_scale_factor)
+        logger.info(f"Sample array size: {sample_arr.shape}")
+
+    with TiffSlide(slide_urlpath) as slide:
         logger.info(f"Slide dimensions {slide.dimensions}")
         to_mag_scale_factor = get_scale_factor_at_magnification(
             slide, requested_magnification=requested_magnification
@@ -303,7 +310,7 @@ def detect_tissue(
         ) as f:
             Image.fromarray(sample_arr).save(f, format="png")
 
-    # Enhance to drive stain apart from shadows, pushes darks from colors
+    logger.info("Enhancing image...")
     enhanced_sample_img = ImageEnhance.Contrast(
         ImageEnhance.Color(Image.fromarray(sample_arr)).enhance(10)
     ).enhance(10)
@@ -315,7 +322,7 @@ def detect_tissue(
         ) as f:
             enhanced_sample_img.save(f, format="png")
 
-    # Look at HSV space
+    logger.info("HSV space conversion...")
     hsv_sample_arr = np.array(enhanced_sample_img.convert("HSV"))
     if output_urlpath_prefix:
         with open(
@@ -325,7 +332,7 @@ def detect_tissue(
         ) as f:
             Image.fromarray(np.array(hsv_sample_arr)).save(f, "png")
 
-    # Look at max of saturation and value
+    logger.info("Calculating max saturation...")
     hsv_max_sample_arr = np.max(hsv_sample_arr[:, :, 1:3], axis=2)
     if output_urlpath_prefix:
         with open(
@@ -335,7 +342,7 @@ def detect_tissue(
         ) as f:
             Image.fromarray(hsv_max_sample_arr).save(f, "png")
 
-    # Get shadow mask and filter it out before other estimations
+    logger.info("Calculate and filter shadow mask...")
     shadow_mask = np.where(np.max(hsv_sample_arr, axis=2) < 10, 255, 0).astype(np.uint8)
     if output_urlpath_prefix:
         with open(
@@ -343,7 +350,7 @@ def detect_tissue(
         ) as f:
             Image.fromarray(shadow_mask).save(f, "png")
 
-    # Filter out shadow/dust/etc
+    logger.info("Filter out shadow/dust/etc...")
     sample_arr_filtered = np.where(
         np.expand_dims(shadow_mask, 2) == 0, sample_arr, np.full(sample_arr.shape, 255)
     ).astype(np.uint8)
@@ -355,18 +362,20 @@ def detect_tissue(
         ) as f:
             Image.fromarray(sample_arr_filtered).save(f, "png")
 
-    # Get otsu threshold
+    logger.info("Calculating otsu threshold...")
     threshold = threshold_otsu(rgb2gray(sample_arr_filtered))
 
-    # Get stain vectors
+    logger.info("Calculating stain vectors...")
     stain_vectors = get_stain_vectors_macenko(sample_arr_filtered)
 
-    # Get stain background thresholds
+    logger.info("Calculating stain background thresholds...")
+    logger.info("Channel 0")
     threshold_stain0 = threshold_otsu(
         pull_stain_channel(
             sample_arr_filtered, vectors=stain_vectors, channel=0
         ).flatten()
     )
+    logger.info("Channel 1")
     threshold_stain1 = threshold_otsu(
         pull_stain_channel(
             sample_arr_filtered, vectors=stain_vectors, channel=1
@@ -375,6 +384,7 @@ def detect_tissue(
 
     # Get the otsu mask
     if output_urlpath_prefix:
+        logger.info("Saving otsu mask") 
         otsu_mask = np.where(rgb2gray(sample_arr_filtered) < threshold, 255, 0).astype(
             np.uint8
         )
@@ -384,14 +394,14 @@ def detect_tissue(
             Image.fromarray(otsu_mask).save(f, "png")
 
     if output_urlpath_prefix:
-        # Get stain thumnail image
+        logger.info("Saving stain thumbnail")
         deconv_sample_arr = pull_stain_channel(
             sample_arr_filtered, vectors=stain_vectors
         )
         with open(output_urlpath_prefix + "/deconv_sample_arr.png", "wb") as f:
             Image.fromarray(deconv_sample_arr).save(f, "png", **output_storage_options)
 
-        # Get the stain masks
+        logger.info("Saving stain masks")
         stain0_mask = np.where(
             deconv_sample_arr[..., 0] > threshold_stain0, 255, 0
         ).astype(np.uint8)
@@ -410,8 +420,7 @@ def detect_tissue(
     if filter_query:
 
         def f_many(iterator, tile_fn):
-            with open(slide_urlpath, **storage_options) as of:
-                slide = TiffSlide(of)
+            with TiffSlide(slide_urlpath) as slide:
                 return [tile_fn(tile=x, slide=slide) for x in iterator]
 
         if "otsu_score" in filter_query:

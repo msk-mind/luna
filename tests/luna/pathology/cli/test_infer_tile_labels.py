@@ -11,6 +11,7 @@ def test_cli(tmp_path):
         [
             "--tiles-urlpath",
             "tests/testdata/pathology/save_tiles/123/123.tiles.parquet",
+            "--insecure",
             "--output-urlpath",
             str(tmp_path),
             "--torch-model-repo-or-dir",
@@ -20,7 +21,7 @@ def test_cli(tmp_path):
         ],
     )
     # Default to 2 channels..
-    df = pd.read_parquet(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet")
+    df = pd.read_parquet(f"{tmp_path}/123.tiles.parquet")
     TileSchema.validate(df.reset_index())
     assert df.shape == (12, 9)
 
@@ -35,6 +36,7 @@ def test_cli_kwargs(tmp_path):
         [
             "--tiles-urlpath",
             "tests/testdata/pathology/save_tiles/123/123.tiles.parquet",
+            "--insecure",
             "--output-urlpath",
             str(tmp_path),
             "--torch-model-repo-or-dir",
@@ -46,7 +48,7 @@ def test_cli_kwargs(tmp_path):
         ],
     )
 
-    df = pd.read_parquet(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet")
+    df = pd.read_parquet(f"{tmp_path}/123.tiles.parquet")
     TileSchema.validate(df.reset_index())
 
     assert df.shape == (12, 17)  # 8 more
@@ -69,7 +71,7 @@ def test_cli_resnet(tmp_path):
         ],
     )
 
-    df = pd.read_parquet(f"{tmp_path}/tile_scores_and_labels_pytorch_inference.parquet")
+    df = pd.read_parquet(f"{tmp_path}/123.tiles.parquet")
 
     TileSchema.validate(df.reset_index())
     assert df.shape == (12, 1007)
