@@ -1,6 +1,7 @@
-from pathlib import Path
-import re
 import json
+import re
+from pathlib import Path
+from typing import List, Union
 
 import fire
 import girder_client
@@ -16,7 +17,6 @@ from luna.pathology.dsa.dsa_api_handler import (
     system_check,
 )
 
-gc = None
 
 @timed
 @save_metadata
@@ -55,26 +55,35 @@ def cli(
     """
     config = get_config(vars())
 
-    if not config["annotation_file_urlpath"] and not config["annotation_file_list_urlpath"]:
-        raise fire.core.FireError("Specify either annotation_file_urlpath or annotation_file_list_urlpath")
+    if (
+        not config["annotation_file_urlpath"]
+        and not config["annotation_file_list_urlpath"]
+    ):
+        raise fire.core.FireError(
+            "Specify either annotation_file_urlpath or annotation_file_list_urlpath"
+        )
 
     annotation_file_urlpaths = []
-    if config['annotation_file_urlpath']:
-        annotation_file_urlpaths.append(config['annotation_file_urlpath'])
-    if config['annotation_file_list_urlpath']:
-        with open(config['annotation_file_list_urlpath'], 'r') as of:
+    if config["annotation_file_urlpath"]:
+        annotation_file_urlpaths.append(config["annotation_file_urlpath"])
+    if config["annotation_file_list_urlpath"]:
+        with open(config["annotation_file_list_urlpath"], "r") as of:
             data = of.read()
-            annotation_file_urlpaths += data.split('\n')
-        
+            annotation_file_urlpaths += data.split("\n")
+
     uuids = []
     for idx, annotation_file_urlpath in enumerate(annotation_file_urlpaths):
-        logger.info(f"Uploading {annotation_file_urlpath}: {idx+1}/{len(annotation_file_urlpaths)}")
-        image_filename = config['image_filename']
+        logger.info(
+            f"Uploading {annotation_file_urlpath}: {idx+1}/{len(annotation_file_urlpaths)}"
+        )
+        image_filename = config["image_filename"]
         if not image_filename:
-            image_filename = Path(annotation_file_urlpath).with_suffix('.svs').name
+            image_filename = Path(annotation_file_urlpath).with_suffix(".svs").name
             image_filename = re.sub(".*_", "", image_filename)
             if not image_filename:
-                raise ValueError(f"Unable to infer image_filename from {annotation_file_urlpath}")
+                raise ValueError(
+                    f"Unable to infer image_filename from {annotation_file_urlpath}"
+                )
             logger.info(f"Image filename inferred as {image_filename}")
         dsa_uuid = upload_annotation_to_dsa(
             config["dsa_endpoint_url"],
@@ -83,8 +92,8 @@ def cli(
             image_filename,
             config["username"],
             config["password"],
-            config['force'],
-            config['insecure'],
+            config["force"],
+            config["insecure"],
             config["storage_options"],
         )
         logger.info(f"Uploaded item to {dsa_uuid}")
@@ -96,13 +105,57 @@ def cli(
 
 def upload_annotation_to_dsa(
     dsa_endpoint_url: str,
-    annotation_file_urlpath: str,
+    annotation_file_urlpaths: Union[str, List[str]],
     collection_name: str,
     image_filename: str,
     username: str,
     password: str,
     force: bool = False,
     insecure: bool = False,
+    storage_options: dict = {},
+):
+    try:
+        gc = girder_client.GirderClient(apiUrl=dsa_endpoint_url)
+        # girder python client doesn't support turning off ssl verify.
+        # can be removed once we replace the self-signed cert
+        session = requests.Session()
+        if insecure:
+            session.verify = False
+        gc._session = session
+        gc.authenticate(username, password)
+
+        # check DSA connection
+        system_check(gc)
+
+    except Exception as exc:
+        logger.error(exc)
+        raise RuntimeError("Error connecting to DSA API")
+
+    if type(annotation_file_urlpaths) == str:
+        annotation_file_urlpaths = [annotation_file_urlpaths]
+    uuids = []
+    for annotation_file_urlpath in annotation_file_urlpaths:
+        uuids.append(
+            __upload_annotation_to_dsa(
+                gc,
+                dsa_endpoint_url,
+                annotation_file_urlpath,
+                collection_name,
+                image_filename,
+                force,
+                storage_options,
+            )
+        )
+    return uuids
+
+
+def __upload_annotation_to_dsa(
+    gc: girder_client.GirderClient,
+    dsa_endpoint_url: str,
+    annotation_file_urlpath: str,
+    collection_name: str,
+    image_filename: str,
+    force: bool = False,
     storage_options: dict = {},
 ):
     """Upload annotation to DSA
@@ -121,39 +174,29 @@ def upload_annotation_to_dsa(
     Returns:
         dict: item_uuid. None if item doesn't exist
     """
-    global gc
-    if not gc:
-        try:
-            gc = girder_client.GirderClient(apiUrl=dsa_endpoint_url)
-            # girder python client doesn't support turning off ssl verify.
-            # can be removed once we replace the self-signed cert
-            session = requests.Session()
-            if insecure:
-                session.verify = False
-            gc._session = session
-            gc.authenticate(username, password)
-
-            # check DSA connection
-            system_check(gc)
-
-        except Exception as exc:
-            logger.error(exc)
-            raise RuntimeError("Error connecting to DSA API")
 
     with open(annotation_file_urlpath, **storage_options).open() as annotation_json:
         dsa_annotation = json.load(annotation_json)
 
     if not force:
-        slide_annotation = get_slide_annotation(image_filename, dsa_annotation['name'], collection_name, gc)
+        slide_annotation = get_slide_annotation(
+            image_filename, dsa_annotation["name"], collection_name, gc
+        )
         if slide_annotation:
-            logger.info(f"Found {slide_annotation[1]['annotation_id']}: slide {image_filename} in collection {collection_name} already has an annotation named {dsa_annotation['name']}")
-            return slide_annotation[1]['annotation_id']
+            logger.info(
+                f"Found {slide_annotation[1]['annotation_id']}: slide {image_filename} in collection {collection_name} already has an annotation named {dsa_annotation['name']}"
+            )
+            return slide_annotation[1]["annotation_id"]
 
     dsa_uuid = get_item_uuid(gc, image_filename, collection_name)
 
     if dsa_uuid:
         dsa_uuid = push_annotation_to_dsa_image(
-            dsa_uuid, annotation_file_urlpath, dsa_endpoint_url[:-6], gc, storage_options
+            dsa_uuid,
+            annotation_file_urlpath,
+            dsa_endpoint_url[:-6],
+            gc,
+            storage_options,
         )
 
     return dsa_uuid
