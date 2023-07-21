@@ -1,0 +1,9 @@
+#!/bin/bash
+. ${HOME}/.bashrc
+. /usr/local/bin/_activate_current_env.sh
+echo "MAMBA: $(env | grep MAMBA)"
+echo "CONDA: $(which conda)"
+echo python3 "$@"
+python3 "$@"
+
+
