@@ -67,6 +67,10 @@ run:        ## launch containers
 	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d
 	@sleep 4
 	make download_sample_data
+	make summary
+	@sleep 4
+
+summary: ## describe how to connect to the running services
 	@echo
 	@echo Minio is deployed with root credentials admin:password1 at,
 	@echo
@@ -98,7 +102,6 @@ run:        ## launch containers
 	@echo
 	@echo == Open Jupyterlab in your broswer and copy-paste this token to view and execute the tutorial notebooks
 	@echo
-	@sleep 4
 	@grep "token=" vmount/logs/tutorial.log |  tail -1 | cut -d "=" -f2
 	@echo
 
@@ -111,9 +114,9 @@ exec:       ## launches terminal prompt inside luna_tutorial container
 
 
 provision_dremio:    ## provision dremio
-	docker exec $(USER_NAME)_luna_tutorial python vmount/provision_dremio.py -u admin -p password1 -d $$(cat .dremio_port) -m $$(cat .minio_api_port)
+	docker exec $(USER_NAME)_luna_tutorial vmount/conda_python vmount/provision_dremio.py -u admin -p password1 -d $$(cat .dremio_port) -m $$(cat .minio_api_port)
 
 
 download_sample_data:    ## download sample_data
-	docker exec $(USER_NAME)_girder python vmount/provision_girder.py --sample-data --user $(USER_NAME)
+	docker exec $(USER_NAME)_girder python3 vmount/provision_girder.py --sample-data --user $(USER_NAME)
 
