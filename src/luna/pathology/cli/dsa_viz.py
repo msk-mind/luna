@@ -8,20 +8,19 @@ from typing import Optional
 import fire  # type: ignore
 import fsspec  # type: ignore
 import geojson  # type: ignore
+import geopandas as gpd
 import ijson  # type: ignore
 import numpy as np
 import pandas as pd
 from fsspec import open  # type: ignore
 from loguru import logger
 from PIL import Image
+from shapely import box
 from typing_extensions import TypedDict
 
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import address_to_coord
-from luna.pathology.dsa.utils import (
-    get_continuous_color,
-    vectorize_np_array_bitmask_by_pixel_value,
-)
+from luna.pathology.dsa.utils import vectorize_np_array_bitmask_by_pixel_value
 
 # Base DSA jsons
 PolygonElement = TypedDict(
@@ -254,6 +253,129 @@ def stardist_polygon_main(
         elements.append(element)
 
     return get_dsa_annotation(elements, annotation_name)
+
+
+@timed
+@save_metadata
+def stardist_polygon_tile(
+    stardist_urlpath: str = "???",
+    tiles_urlpath: str = "???",
+    image_filename: str = "???",
+    annotation_name_prefix: str = "???",
+    tile_column: str = "Classification",
+    output_urlpath: str = "???",
+    line_colors: dict[str, str] = {},
+    fill_colors: dict[str, str] = {},
+    storage_options: dict = {},
+    local_config: str = "",
+):
+    """Build DSA annotation json from stardist geojson classification results
+
+    Args:
+        stardist_urlpath (string): URL/path to stardist geojson classification results json
+        tiles_urlpath (string): URL/path to tiles manifest parquet
+        image_filename (string): name of the image file in DSA e.g. 123.svs
+        annotation_name_prefix (string): name of the annotation to be displayed in DSA
+        tile_column (string): name of column with tile classification in the tiles manifest
+        output_urlpath (string): URL/path prefix to save annotations
+        line_colors (dict): user-provided line color map with {feature name:rgb values}
+        fill_colors (dict): user-provided fill color map with {feature name:rgba values}
+        storage_options (dict): storage options to pass to read/write functions
+        local_config (string): local config YAML file
+
+    Returns:
+        dict[str,str]: annotation file path
+    """
+    config = get_config(vars())
+    dsa_annotations = stardist_polygon_main(
+        config["stardist_urlpath"],
+        config["tiles_urlpath"],
+        config["annotation_name_prefix"],
+        config["tile_column"],
+        config["line_colors"],
+        config["fill_colors"],
+        config["storage_options"],
+    )
+    metadata = {}
+    for tile_label, dsa_annotation in dsa_annotations.items():
+        annotation_filepath = save_dsa_annotation(
+            dsa_annotation,
+            config["output_urlpath"],
+            config["image_filename"],
+            config["storage_options"],
+        )
+        metadata["dsa_annotation_" + tile_label] = annotation_filepath
+    return metadata
+
+
+def stardist_polygon_tile_main(
+    stardist_urlpath: str,
+    tiles_urlpath: str,
+    annotation_name_prefix: str,
+    tile_column: str,
+    line_colors: dict[str, str],
+    fill_colors: dict[str, str],
+    storage_options: dict,
+):
+    with open(tiles_urlpath, **storage_options) as of:
+        tiles_df = pd.read_parquet(of)
+
+    with open(stardist_urlpath, **storage_options) as of:
+        object_gdf = gpd.read_file(of)
+
+    ann_region_polygons = [
+        box(
+            row.x_coord,
+            row.y_coord,
+            row.x_coord + row.xy_extent,
+            row.y_coord + row.xy_extent,
+        )
+        for _, row in tiles_df.iterrows()
+    ]
+    tiles_gdf = gpd.GeoDataFrame(
+        data=tiles_df, geometry=ann_region_polygons, crs="EPSG:4326"
+    )
+
+    object_tiles = object_gdf.sjoin(tiles_gdf, how="left", predicate="within")
+    tile_elements = {}
+    for row in object_tiles.itertuples():
+        tile_label = row[tile_column]
+        if np.isnan(tile_label):
+            tile_label = "unclassified"
+
+        if tile_label not in tile_elements.keys():
+            tile_elements[tile_label] = []
+
+        label_name = row["classification"]["name"]
+        coord_list = list(row["geometry"].exterior.coords)
+
+        # uneven nested list when iterative parsing of json --> make sure
+        # to get the list of coords
+        # this can come as mixed types as well, so type checking needed
+        while (
+            isinstance(coord_list, list)
+            and isinstance(coord_list[0], list)
+            and not isinstance(coord_list[0][0], (int, float, Decimal))
+        ):
+            coord_list = coord_list[0]
+
+        coords = [[float(coord[0]), float(coord[1]), 0] for coord in coord_list]
+        element = copy.deepcopy(base_dsa_polygon_element)
+
+        element["label"]["value"] = str(label_name)
+        element["fillColor"] = fill_colors[label_name]
+        element["lineColor"] = line_colors[label_name]
+        element["points"] = coords
+
+        tile_elements[tile_label].append(element)
+
+    dsa_annotations = {}
+    for tile_label, elements in tile_elements.items():
+        dsa_annotations[tile_label] = get_dsa_annotation(
+            elements, annotation_name_prefix + "_" + tile_label
+        )
+
+    return dsa_annotations
 
 
 @timed
@@ -937,6 +1059,7 @@ def bmp_polygon_main(
 def fire_cli():
     fire.Fire(
         {
+            "stardist-polygon-tile": stardist_polygon_tile,
             "stardist-polygon": stardist_polygon,
             "stardist-cell": stardist_cell,
             "regional-polygon": regional_polygon,

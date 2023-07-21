@@ -459,6 +459,34 @@ python-versions = "*"
 click = "*"
 
 [[package]]
+name = "click-plugins"
+version = "1.1.1"
+description = "An extension module for click to enable registering CLI commands via setuptools entry-points."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+click = ">=4.0"
+
+[package.extras]
+dev = ["coveralls", "pytest (>=3.6)", "pytest-cov", "wheel"]
+
+[[package]]
+name = "cligj"
+version = "0.7.2"
+description = "Click params for commmand line interfaces to GeoJSON"
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, <4"
+
+[package.dependencies]
+click = ">=4.0"
+
+[package.extras]
+test = ["pytest-cov"]
+
+[[package]]
 name = "clikit"
 version = "0.6.2"
 description = "CliKit is a group of utilities to build beautiful and testable command line interfaces."
@@ -834,6 +862,29 @@ docs = ["furo (>=2022.12.7)", "sphinx (>=5.3)", "sphinx-autodoc-typehints (>=1.1
 testing = ["covdefaults (>=2.2.2)", "coverage (>=7.0.1)", "pytest (>=7.2)", "pytest-cov (>=4)", "pytest-timeout (>=2.1)"]
 
 [[package]]
+name = "fiona"
+version = "1.9.4.post1"
+description = "Fiona reads and writes spatial data files"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+attrs = ">=19.2.0"
+certifi = "*"
+click = ">=8.0,<9.0"
+click-plugins = ">=1.0"
+cligj = ">=0.5"
+importlib-metadata = {version = "*", markers = "python_version < \"3.10\""}
+six = "*"
+
+[package.extras]
+all = ["fiona"]
+calc = ["shapely"]
+s3 = ["boto3 (>=1.3.1)"]
+test = ["fiona", "pytest (>=7)", "pytest-cov", "pytz"]
+
+[[package]]
 name = "fire"
 version = "0.5.0"
 description = "A library for automatically generating command line interfaces."
@@ -1003,6 +1054,21 @@ description = "Python bindings and utilities for GeoJSON"
 category = "main"
 optional = false
 python-versions = "*"
+
+[[package]]
+name = "geopandas"
+version = "0.13.2"
+description = "Geographic pandas extensions"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+
+[package.dependencies]
+fiona = ">=1.8.19"
+packaging = "*"
+pandas = ">=1.1.0"
+pyproj = ">=3.0.1"
+shapely = ">=1.7.1"
 
 [[package]]
 name = "ghp-import"
@@ -1812,7 +1878,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "large-image"
-version = "1.22.2"
+version = "1.23.1"
 description = "Python modules to work with large, multiresolution images."
 category = "main"
 optional = false
@@ -1820,51 +1886,51 @@ python-versions = ">=3.6"
 
 [package.dependencies]
 cachetools = ">=3.0.0"
-large-image-source-pil = {version = ">=1.22.2", optional = true, markers = "extra == \"pil\""}
+large-image-source-pil = {version = ">=1.23.1", optional = true, markers = "extra == \"pil\""}
 numpy = ">=1.10.4"
 palettable = "*"
 Pillow = "*"
 
 [package.extras]
-all = ["large-image-converter (>=1.22.2)", "large-image-source-bioformats (>=1.22.2)", "large-image-source-deepzoom (>=1.22.2)", "large-image-source-dicom (>=1.22.2)", "large-image-source-dummy (>=1.22.2)", "large-image-source-gdal (>=1.22.2)", "large-image-source-mapnik (>=1.22.2)", "large-image-source-multi (>=1.22.2)", "large-image-source-nd2 (>=1.22.2)", "large-image-source-ometiff (>=1.22.2)", "large-image-source-openjpeg (>=1.22.2)", "large-image-source-openslide (>=1.22.2)", "large-image-source-pil (>=1.22.2)", "large-image-source-pil[all] (>=1.22.2)", "large-image-source-rasterio (>=1.22.2)", "large-image-source-rasterio[all] (>=1.22.2)", "large-image-source-test (>=1.22.2)", "large-image-source-tiff (>=1.22.2)", "large-image-source-tifffile (>=1.22.2)", "large-image-source-vips (>=1.22.2)", "matplotlib", "psutil (>=4.2.0)", "pylibmc (>=1.5.1)", "pyvips", "simplejpeg", "simplejpeg (<1.6.6)"]
-bioformats = ["large-image-source-bioformats (>=1.22.2)"]
+all = ["large-image-converter (>=1.23.1)", "large-image-source-bioformats (>=1.23.1)", "large-image-source-deepzoom (>=1.23.1)", "large-image-source-dicom (>=1.23.1)", "large-image-source-dummy (>=1.23.1)", "large-image-source-gdal (>=1.23.1)", "large-image-source-mapnik (>=1.23.1)", "large-image-source-multi (>=1.23.1)", "large-image-source-nd2 (>=1.23.1)", "large-image-source-ometiff (>=1.23.1)", "large-image-source-openjpeg (>=1.23.1)", "large-image-source-openslide (>=1.23.1)", "large-image-source-pil (>=1.23.1)", "large-image-source-pil[all] (>=1.23.1)", "large-image-source-rasterio (>=1.23.1)", "large-image-source-rasterio[all] (>=1.23.1)", "large-image-source-test (>=1.23.1)", "large-image-source-tiff (>=1.23.1)", "large-image-source-tifffile (>=1.23.1)", "large-image-source-vips (>=1.23.1)", "matplotlib", "psutil (>=4.2.0)", "pylibmc (>=1.5.1)", "pyvips", "simplejpeg", "simplejpeg (<1.6.6)"]
+bioformats = ["large-image-source-bioformats (>=1.23.1)"]
 colormaps = ["matplotlib"]
-converter = ["large-image-converter (>=1.22.2)"]
-deepzoom = ["large-image-source-deepzoom (>=1.22.2)"]
-dicom = ["large-image-source-dicom (>=1.22.2)"]
-dummy = ["large-image-source-dummy (>=1.22.2)"]
-gdal = ["large-image-source-gdal (>=1.22.2)"]
-mapnik = ["large-image-source-mapnik (>=1.22.2)"]
+converter = ["large-image-converter (>=1.23.1)"]
+deepzoom = ["large-image-source-deepzoom (>=1.23.1)"]
+dicom = ["large-image-source-dicom (>=1.23.1)"]
+dummy = ["large-image-source-dummy (>=1.23.1)"]
+gdal = ["large-image-source-gdal (>=1.23.1)"]
+mapnik = ["large-image-source-mapnik (>=1.23.1)"]
 memcached = ["pylibmc (>=1.5.1)"]
-multi = ["large-image-source-multi (>=1.22.2)"]
-nd2 = ["large-image-source-nd2 (>=1.22.2)"]
-ometiff = ["large-image-source-ometiff (>=1.22.2)"]
-openjpeg = ["large-image-source-openjpeg (>=1.22.2)"]
-openslide = ["large-image-source-openslide (>=1.22.2)"]
+multi = ["large-image-source-multi (>=1.23.1)"]
+nd2 = ["large-image-source-nd2 (>=1.23.1)"]
+ometiff = ["large-image-source-ometiff (>=1.23.1)"]
+openjpeg = ["large-image-source-openjpeg (>=1.23.1)"]
+openslide = ["large-image-source-openslide (>=1.23.1)"]
 performance = ["psutil (>=4.2.0)", "simplejpeg", "simplejpeg (<1.6.6)"]
-pil = ["large-image-source-pil (>=1.22.2)"]
-rasterio = ["large-image-source-rasterio (>=1.22.2)"]
-sources = ["large-image-source-bioformats (>=1.22.2)", "large-image-source-deepzoom (>=1.22.2)", "large-image-source-dicom (>=1.22.2)", "large-image-source-dummy (>=1.22.2)", "large-image-source-gdal (>=1.22.2)", "large-image-source-mapnik (>=1.22.2)", "large-image-source-multi (>=1.22.2)", "large-image-source-nd2 (>=1.22.2)", "large-image-source-ometiff (>=1.22.2)", "large-image-source-openjpeg (>=1.22.2)", "large-image-source-openslide (>=1.22.2)", "large-image-source-pil (>=1.22.2)", "large-image-source-rasterio (>=1.22.2)", "large-image-source-test (>=1.22.2)", "large-image-source-tiff (>=1.22.2)", "large-image-source-tifffile (>=1.22.2)", "large-image-source-vips (>=1.22.2)"]
-test = ["large-image-source-test (>=1.22.2)"]
-tiff = ["large-image-source-tiff (>=1.22.2)"]
-tifffile = ["large-image-source-tifffile (>=1.22.2)"]
+pil = ["large-image-source-pil (>=1.23.1)"]
+rasterio = ["large-image-source-rasterio (>=1.23.1)"]
+sources = ["large-image-source-bioformats (>=1.23.1)", "large-image-source-deepzoom (>=1.23.1)", "large-image-source-dicom (>=1.23.1)", "large-image-source-dummy (>=1.23.1)", "large-image-source-gdal (>=1.23.1)", "large-image-source-mapnik (>=1.23.1)", "large-image-source-multi (>=1.23.1)", "large-image-source-nd2 (>=1.23.1)", "large-image-source-ometiff (>=1.23.1)", "large-image-source-openjpeg (>=1.23.1)", "large-image-source-openslide (>=1.23.1)", "large-image-source-pil (>=1.23.1)", "large-image-source-rasterio (>=1.23.1)", "large-image-source-test (>=1.23.1)", "large-image-source-tiff (>=1.23.1)", "large-image-source-tifffile (>=1.23.1)", "large-image-source-vips (>=1.23.1)"]
+test = ["large-image-source-test (>=1.23.1)"]
+tiff = ["large-image-source-tiff (>=1.23.1)"]
+tifffile = ["large-image-source-tifffile (>=1.23.1)"]
 tiledoutput = ["pyvips"]
-vips = ["large-image-source-vips (>=1.22.2)"]
+vips = ["large-image-source-vips (>=1.23.1)"]
 
 [[package]]
 name = "large-image-source-pil"
-version = "1.22.2"
+version = "1.23.1"
 description = "A Pillow tilesource for large_image."
 category = "main"
 optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
-large-image = ">=1.22.2"
+large-image = ">=1.23.1"
 
 [package.extras]
 all = ["pillow-heif", "rawpy"]
-girder = ["girder-large-image (>=1.22.2)"]
+girder = ["girder-large-image (>=1.23.1)"]
 
 [[package]]
 name = "locket"
@@ -3147,6 +3213,17 @@ python-versions = ">=3.6.8"
 
 [package.extras]
 diagrams = ["jinja2", "railroad-diagrams"]
+
+[[package]]
+name = "pyproj"
+version = "3.6.0"
+description = "Python interface to PROJ (cartographic projections and coordinate transformations library)"
+category = "main"
+optional = false
+python-versions = ">=3.9"
+
+[package.dependencies]
+certifi = "*"
 
 [[package]]
 name = "pyradiomics"
@@ -4650,7 +4727,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.12"
-content-hash = "10fd9b0810e2401797e34eef9c6350601e7dc6f495e5f2eb07c30884f13ef707"
+content-hash = "33ae888a5a4714315d278a9c752fd0b4346f1e69df900845c2a7ceca6397a9ad"
 
 [metadata.files]
 aiobotocore = [
@@ -4978,6 +5055,14 @@ click-log = [
     {file = "click-log-0.4.0.tar.gz", hash = "sha256:3970f8570ac54491237bcdb3d8ab5e3eef6c057df29f8c3d1151a51a9c23b975"},
     {file = "click_log-0.4.0-py2.py3-none-any.whl", hash = "sha256:a43e394b528d52112af599f2fc9e4b7cf3c15f94e53581f74fa6867e68c91756"},
 ]
+click-plugins = [
+    {file = "click-plugins-1.1.1.tar.gz", hash = "sha256:46ab999744a9d831159c3411bb0c79346d94a444df9a3a3742e9ed63645f264b"},
+    {file = "click_plugins-1.1.1-py2.py3-none-any.whl", hash = "sha256:5d262006d3222f5057fd81e1623d4443e41dcda5dc815c06b442aa3c02889fc8"},
+]
+cligj = [
+    {file = "cligj-0.7.2-py3-none-any.whl", hash = "sha256:c1ca117dbce1fe20a5809dc96f01e1c2840f6dcc939b3ddbb1111bf330ba82df"},
+    {file = "cligj-0.7.2.tar.gz", hash = "sha256:a4bc13d623356b373c2c27c53dbd9c68cae5d526270bfa71f6c6fa69669c6b27"},
+]
 clikit = [
     {file = "clikit-0.6.2-py2.py3-none-any.whl", hash = "sha256:71268e074e68082306e23d7369a7b99f824a0ef926e55ba2665e911f7208489e"},
     {file = "clikit-0.6.2.tar.gz", hash = "sha256:442ee5db9a14120635c5990bcdbfe7c03ada5898291f0c802f77be71569ded59"},
@@ -5274,6 +5359,28 @@ filelock = [
     {file = "filelock-3.9.0-py3-none-any.whl", hash = "sha256:f58d535af89bb9ad5cd4df046f741f8553a418c01a7856bf0d173bbc9f6bd16d"},
     {file = "filelock-3.9.0.tar.gz", hash = "sha256:7b319f24340b51f55a2bf7a12ac0755a9b03e718311dac567a0f4f7fabd2f5de"},
 ]
+fiona = [
+    {file = "Fiona-1.9.4.post1-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:d6483a20037db2209c8e9a0c6f1e552f807d03c8f42ed0c865ab500945a37c4d"},
+    {file = "Fiona-1.9.4.post1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:dbe158947099a83ad16f9acd3a21f50ff01114c64e2de67805e382e6b6e0083a"},
+    {file = "Fiona-1.9.4.post1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2c2c7b09eecee3bb074ef8aa518cd6ab30eb663c6fdd0eff3c88d454a9746eaa"},
+    {file = "Fiona-1.9.4.post1-cp310-cp310-win_amd64.whl", hash = "sha256:1da8b954f6f222c3c782bc285586ea8dd9d7e55e1bc7861da9cd772bca671660"},
+    {file = "Fiona-1.9.4.post1-cp311-cp311-macosx_10_15_x86_64.whl", hash = "sha256:c671d8832287cda397621d79c5a635d52e4631f33a8f0e6fdc732a79a93cb96c"},
+    {file = "Fiona-1.9.4.post1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:b633a2e550e083805c638d2ab8059c283ca112aaea8241e170c012d2ee0aa905"},
+    {file = "Fiona-1.9.4.post1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c1faa625d5202b8403471bbc9f9c96b1bf9099cfcb0ee02a80a3641d3d02383e"},
+    {file = "Fiona-1.9.4.post1-cp311-cp311-win_amd64.whl", hash = "sha256:39baf11ff0e4318397e2b2197de427b4eebdc49d4a9a7c1366f8a7ed682978a4"},
+    {file = "Fiona-1.9.4.post1-cp37-cp37m-macosx_10_15_x86_64.whl", hash = "sha256:d93c993265f6378b23f47708c83bddb3377ca6814a1f0b5a0ae0bee9c8d72cf8"},
+    {file = "Fiona-1.9.4.post1-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:b0387cae39e27f338fd948b3b50b6e6ce198cc4cec257fc91660849697c69dc3"},
+    {file = "Fiona-1.9.4.post1-cp37-cp37m-win_amd64.whl", hash = "sha256:450561d308d3ce7c7e30294822b1de3f4f942033b703ddd4a91a7f7f5f506ca0"},
+    {file = "Fiona-1.9.4.post1-cp38-cp38-macosx_10_15_x86_64.whl", hash = "sha256:71b023ef5248ebfa5524e7a875033f7db3bbfaf634b1b5c1ae36958d1eb82083"},
+    {file = "Fiona-1.9.4.post1-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:74511d3755695d75cea0f4ff6f5e0c6c5d5be8e0d46dafff124c6a219e99b1eb"},
+    {file = "Fiona-1.9.4.post1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:285f3dd4f96aa0a3955ed469f0543375b20989731b2dddc85124453f11ac62bc"},
+    {file = "Fiona-1.9.4.post1-cp38-cp38-win_amd64.whl", hash = "sha256:a670ea4262cb9140445bcfc97cbfd2f508a058be342f4a97e966b8ce7696601f"},
+    {file = "Fiona-1.9.4.post1-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:ea7c44c15b3a653452b9b3173181490b7afc5f153b0473c145c43c0fbf90448b"},
+    {file = "Fiona-1.9.4.post1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:7bfb1f49e0e53f6cd7ad64ae809d72646266b37a7b9881205977408b443a8d79"},
+    {file = "Fiona-1.9.4.post1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1a585002a6385cc8ab0f66ddf3caf18711f531901906abd011a67a0cc89ab7b0"},
+    {file = "Fiona-1.9.4.post1-cp39-cp39-win_amd64.whl", hash = "sha256:f5da66b723a876142937e683431bbaa5c3d81bb2ed3ec98941271bc99b7f8cd0"},
+    {file = "Fiona-1.9.4.post1.tar.gz", hash = "sha256:5679d3f7e0d513035eb72e59527bb90486859af4405755dfc739138633106120"},
+]
 fire = [
     {file = "fire-0.5.0.tar.gz", hash = "sha256:a6b0d49e98c8963910021f92bba66f65ab440da2982b78eb1bbf95a0a34aacc6"},
 ]
@@ -5383,6 +5490,10 @@ future = [
 geojson = [
     {file = "geojson-2.5.0-py2.py3-none-any.whl", hash = "sha256:ccbd13368dd728f4e4f13ffe6aaf725b6e802c692ba0dde628be475040c534ba"},
     {file = "geojson-2.5.0.tar.gz", hash = "sha256:6e4bb7ace4226a45d9c8c8b1348b3fc43540658359f93c3f7e03efa9f15f658a"},
+]
+geopandas = [
+    {file = "geopandas-0.13.2-py3-none-any.whl", hash = "sha256:101cfd0de54bcf9e287a55b5ea17ebe0db53a5e25a28bacf100143d0507cabd9"},
+    {file = "geopandas-0.13.2.tar.gz", hash = "sha256:e5b56d9c20800c77bcc0c914db3f27447a37b23b2cd892be543f5001a694a968"},
 ]
 ghp-import = [
     {file = "ghp-import-2.1.0.tar.gz", hash = "sha256:9c535c4c61193c2df8871222567d7fd7e5014d835f97dc7b7439069e2413d343"},
@@ -6019,12 +6130,12 @@ kiwisolver = [
     {file = "kiwisolver-1.4.4.tar.gz", hash = "sha256:d41997519fcba4a1e46eb4a2fe31bc12f0ff957b2b81bac28db24744f333e955"},
 ]
 large-image = [
-    {file = "large-image-1.22.2.tar.gz", hash = "sha256:bc20681dbf232187e786282932c2ff538c3c1959db06758f9760fb6158351feb"},
-    {file = "large_image-1.22.2-py3-none-any.whl", hash = "sha256:eff1642a94b5aa166ea083ad433ec691812c29fb79d6d12060183afc7f46f7de"},
+    {file = "large-image-1.23.1.tar.gz", hash = "sha256:37225081ab5d74d41d1e16eac4ad3c042672a4988d5e63b9b5bbac4989d05b9f"},
+    {file = "large_image-1.23.1-py3-none-any.whl", hash = "sha256:88a68fb15be5256d6ad8d0209007c03f6d7e08855a612c47068b1c735c83de6d"},
 ]
 large-image-source-pil = [
-    {file = "large-image-source-pil-1.22.2.tar.gz", hash = "sha256:82b06e472ce3118512cf84ac08038de82bf2d94f87b33203f882c610384830de"},
-    {file = "large_image_source_pil-1.22.2-py3-none-any.whl", hash = "sha256:af319a985cafc0d046ebcef8fb7f61d3ba12e46738b8d270dfeac50c7e16ad24"},
+    {file = "large-image-source-pil-1.23.1.tar.gz", hash = "sha256:0697ee89b6fb6e040e5b01d651dcc49fa63a1f41cbdc6f83ff2180b7503f18bf"},
+    {file = "large_image_source_pil-1.23.1-py3-none-any.whl", hash = "sha256:707d8a82feac4c791ce5ae48507d9f3cd58e0091083d1031448ff6ae5595769d"},
 ]
 locket = [
     {file = "locket-1.0.0-py2.py3-none-any.whl", hash = "sha256:b6c819a722f7b6bd955b80781788e4a66a55628b858d347536b7e81325a3a5e3"},
@@ -6986,6 +7097,33 @@ pymdown-extensions = [
 pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
     {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
+]
+pyproj = [
+    {file = "pyproj-3.6.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:e600f6a2771d3b41aeb2cc1efd96771ae9a01451013da1dd48ff272e7c6e34ef"},
+    {file = "pyproj-3.6.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:d7f6cd045df29aae960391dfe06a575c110af598f1dea5add8be6ca42332b0f5"},
+    {file = "pyproj-3.6.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:557e6592855111c84eda176ddf6b130f55d5e2b9cb1c017b8c91b69f37f474f5"},
+    {file = "pyproj-3.6.0-cp310-cp310-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:de6288b6ceabdeeac01abf627c74414822d322d8f55dc8efe4d29dedd27c5719"},
+    {file = "pyproj-3.6.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e427ccdbb1763872416549bdfa9fa1f5f169054653c4daf674e71480cc39cf11"},
+    {file = "pyproj-3.6.0-cp310-cp310-win32.whl", hash = "sha256:1283d3c1960edbb74828f5f3405b27578a9a27f7766ab6a3956f4bd851f08239"},
+    {file = "pyproj-3.6.0-cp310-cp310-win_amd64.whl", hash = "sha256:9de1aab71234bfd3fd648a1152519b5ee152c43113d7d8ea52590a0140129501"},
+    {file = "pyproj-3.6.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:00fab048596c17572fa8980014ef117dbb2a445e6f7ba3b9ddfcc683efc598e7"},
+    {file = "pyproj-3.6.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:ba5e7c8ddd6ed5a3f9fcf95ea80ba44c931913723de2ece841c94bb38b200c4a"},
+    {file = "pyproj-3.6.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:08dfc5c9533c78a97afae9d53b99b810a4a8f97c3be9eb2b8f323b726c736403"},
+    {file = "pyproj-3.6.0-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:18a8bdb87aeb41b60a2e91d32f623227de3569fb83b4c64b174c3a7c5b0ed3ae"},
+    {file = "pyproj-3.6.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:dfe392dfc0eba2248dc08c976a72f52ff9da2bddfddfd9ff5dcf18e8e88200c7"},
+    {file = "pyproj-3.6.0-cp311-cp311-win32.whl", hash = "sha256:78276c6b0c831255c97c56dff7313a3571f327a284d8ac63d6a56437a72ed0e0"},
+    {file = "pyproj-3.6.0-cp311-cp311-win_amd64.whl", hash = "sha256:8fbac2eb9a0e425d7d6b7c6f4ebacd675cf3bdef0c59887057b8b4b0374e7c12"},
+    {file = "pyproj-3.6.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:95120d65cbc5983dfd877076f28dbc18b9b329cbee38ca6e217bb7a5a043c099"},
+    {file = "pyproj-3.6.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:830e6de7cfe43853967afee5ef908dfd5aa72d1ec12af9b9e3fecc179886e346"},
+    {file = "pyproj-3.6.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e342b3010b2b20134671564ff9a8c476e5e512bf589477480aded1a5813af7c8"},
+    {file = "pyproj-3.6.0-cp39-cp39-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:23787460fab85ba2f857ee60ffb2e8e21fd9bd5db9833c51c1c05b2a6d9f0be5"},
+    {file = "pyproj-3.6.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:595376e4d3bb72b7dceeccbce0f4c43053d47561f17a1ad0224407e9980ee849"},
+    {file = "pyproj-3.6.0-cp39-cp39-win32.whl", hash = "sha256:4d8a9773503085eada59b6892c96ddf686ab8cf64cfdc18ad744d13ee76dfa6f"},
+    {file = "pyproj-3.6.0-cp39-cp39-win_amd64.whl", hash = "sha256:137a07404f937f264b11b7130cd4cfa00002dbe4333b222e8056db84849c2ea4"},
+    {file = "pyproj-3.6.0-pp39-pypy39_pp73-macosx_10_9_x86_64.whl", hash = "sha256:2799499a4045e4fb73e44c31bdacab0593a253a7a4b6baae6fdd27d604cf9bc2"},
+    {file = "pyproj-3.6.0-pp39-pypy39_pp73-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:f04f6297c615c3b17f835df2556ac8fb9b4f51f281e960437eaf0cd80e7ae26a"},
+    {file = "pyproj-3.6.0-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3a4d2d438b007cb1f8d5f6f308d53d7ff9a2508cff8f9da6e2a93b76ffd98aaf"},
+    {file = "pyproj-3.6.0.tar.gz", hash = "sha256:a5b111865b3f0f8b77b3983f2fbe4dd6248fc09d3730295949977c8dcd988062"},
 ]
 pyradiomics = [
     {file = "pyradiomics-3.0.1-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:872f2e66679b72c1d6ef64993567454aaf32abad314fccdb748f315be8855066"},
