@@ -30,9 +30,9 @@ RUN usermod "--login=${USER_NAME}" "--home=/home/${USER_NAME}" \
     :
 ENV MAMBA_USER=$USER_NAME
 USER $MAMBA_USER
-COPY --chown=$USER_ID:$GROUP_ID environment.yml poetry.lock pyproject.toml /home/$USER_NAME/luna/
+COPY --chown=$USER_ID:$GROUP_ID environment.yml poetry.lock pyproject.toml /home/$USER_NAME/
 
-WORKDIR /home/$USER_NAME/luna
+WORKDIR /home/$USER_NAME
 
 RUN micromamba install -y -n base -f environment.yml && \
     micromamba clean --all --yes
@@ -41,7 +41,7 @@ ARG MAMBA_DOCKERFILE_ACTIVATE=1  # (otherwise python will not be found)
 # workaround for https://github.com/pypa/setuptools/issues/3693
 RUN poetry export --dev --without-hashes -f requirements.txt | SETUPTOOLS_USE_DISTUTILS=stdlib pip install --no-deps -r /dev/stdin
 
-COPY --chown=$USER_ID:$GROUP_ID . /home/$USER_NAME/luna
+COPY --chown=$USER_ID:$GROUP_ID . /home/$USER_NAME/
 RUN poetry config virtualenvs.create false && \
         poetry build &&  pip install --no-deps dist/*.whl
 
