@@ -27,7 +27,7 @@ documentation site for your reference.
 ## 1. Clone the git repository
 
 ```
-git clone https://github.com/msk-mind/docker.git
+git clone https://github.com/msk-mind/luna.git
 ```
 
 ## 2. Run the docker-compose
@@ -35,7 +35,7 @@ git clone https://github.com/msk-mind/docker.git
 -   Build the docker image
 
 ```
-cd docker/luna_tutorial
+cd luna/docker/luna_tutorial
 make build
 ```
 
