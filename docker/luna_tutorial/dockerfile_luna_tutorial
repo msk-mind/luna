@@ -1,6 +1,14 @@
 FROM mambaorg/micromamba:1.0.0
+
 USER root
-RUN apt-get update && apt-get install build-essential libgdal-dev liblapack-dev libblas-dev gfortran libgl1 software-properties-common git vim curl tree -y
+RUN apt-get update && \
+    apt-get install -y \
+        build-essential libgdal-dev liblapack-dev libblas-dev gfortran \
+        libgl1 software-properties-common \
+        git vim curl tree procps net-tools iproute2 lsof \
+    && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ## supress interactive dialogs
 ARG DEBIAN_FRONTEND=noninteractive
@@ -11,12 +19,12 @@ ARG USER_NAME
 ARG LUNA_VERSION
 
 ENV PYTHONFAULTHANDLER=1 \
-                       PYTHONUNBUFFERED=1 \
-                       PYTHONHASHSEED=random \
-                       PIP_NO_CACHE_DIR=off \
-                       PIP_DISABLE_PIP_VERSION_CHECK=on \
-                       PIP_DEFAULT_TIMEOUT=100 \
-                       POETRY_VERSION=1.1.15
+    PYTHONUNBUFFERED=1 \
+    PYTHONHASHSEED=random \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100 \
+    POETRY_VERSION=1.1.15
 
 ## create user so python packages are not being installed with root and jupyter is not executed with rootr
 ## map host user to container user so files can be easily accessed from host and container
@@ -49,13 +57,6 @@ RUN poetry config virtualenvs.create false && \
 ENV LUNA_HOME="/home/$USER_NAME/vmount"
 ENV LANG="C.UTF-8"
 
-## verify installation
-RUN echo $LUNA_HOME
-RUN python3 -c 'import luna; import luna.common; import luna.pathology'
-RUN which jupyter
+COPY docker/luna_tutorial/entrypoint_luna_tutorial.sh /
 
-# Ideally we want to remove the need to do this, maybe?
-COPY docker/luna_tutorial/vmount/conf/logging.cfg "/home/$USER_NAME/vmount/conf/logging.cfg"
-
-
-## entrypoint (see docker-compose file)
+ENTRYPOINT ["/entrypoint_luna_tutorial.sh"]
