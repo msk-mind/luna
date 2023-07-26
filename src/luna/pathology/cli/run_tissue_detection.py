@@ -8,7 +8,7 @@ import fire  # type: ignore
 import fsspec  # type: ignore
 import numpy as np
 import pandas as pd
-from dask.distributed import progress
+from dask.distributed import Client, progress
 from fsspec import open  # type: ignore
 from loguru import logger
 from multimethod import multimethod
