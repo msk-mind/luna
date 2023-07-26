@@ -13,10 +13,8 @@ def test_save_cli(tmp_path, dask_client):
         [
             "--slide_urlpath",
             "tests/testdata/pathology/123.svs",
-            "--tile-size",
-            "256",
-            "--requested-magnification",
-            "10",
+            "--tiles_urlpath",
+            "tests/testdata/pathology//generate_tiles/123/123.tiles.parquet",
             "--output_urlpath",
             str(tmp_path),
             "--batch_size",

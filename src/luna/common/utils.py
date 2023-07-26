@@ -68,41 +68,39 @@ def local_cache_urlpath(
             new_args_dict = args_dict.copy()
 
             filesystem = None
-            storage_options_key = "storage_options"
             tmp_dir_dest = []
             for key, write_mode in dir_key_write_mode.items():
+                if not args_dict[key]:
+                    continue
+                storage_options_key = "storage_options"
                 if "w" in write_mode:
                     storage_options_key = "output_storage_options"
                 fs, dir = fsspec.core.url_to_fs(
                     args_dict[key], **args_dict.get(storage_options_key, {})
                 )
-                if filesystem and fs.protocol != filesystem.protocol:
-                    raise RuntimeError("Only one filesystem protocol supported")
-                filesystem = fs
-                if filesystem and filesystem.protocol != "file":
+                if fs.protocol != "file" and 'cache' not in fs.protocol:
                     new_args_dict[storage_options_key] = {"auto_mkdir": True}
                     tmp_dir = tempfile.TemporaryDirectory()
                     new_args_dict[key] = tmp_dir.name
                     tmp_dir_dest.append((tmp_dir, dir))
 
-            protocol = None
             result = None
             with ExitStack() as stack:
                 for key, write_mode in file_key_write_mode.items():
+                    if not args_dict[key]:
+                        continue
+                    storage_options_key = "storage_options"
                     if "w" in write_mode:
                         storage_options_key = "output_storage_options"
                     fs, path = fsspec.core.url_to_fs(
                         args_dict[key], **args_dict.get(storage_options_key, {})
                     )
-                    if protocol and fs.protocol != protocol:
-                        raise RuntimeError("Only one filesystem protocol supported")
-                    protocol = fs.protocol
+                    if 'cache' not in fs.protocol:
+                        simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
 
-                    simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
-
-                    of = simplecache_fs.open(path, write_mode)
-                    stack.enter_context(of)
-                    new_args_dict[key] = of.name
+                        of = simplecache_fs.open(path, write_mode)
+                        stack.enter_context(of)
+                        new_args_dict[key] = of.name
 
                 result = func(**new_args_dict)
 
@@ -185,6 +183,7 @@ def rebase_schema_numeric(df):
 
         df[col] = df[col].astype(float, errors="ignore")
 
+
 def rebase_schema_mixed(df):
     """
     Tries to convert all columns with mixed types to strings.
@@ -200,6 +199,7 @@ def rebase_schema_mixed(df):
             df[col] = df[col].astype(str)
         if df[col].dtype == list:
             df[col] = df[col].astype(str)
+
 
 def generate_uuid_binary(content, prefix):
     """
@@ -458,13 +458,14 @@ def get_config(cli_kwargs: dict):
         merged_conf["output_filesystem"] = "file"
         if o.scheme != "":
             merged_conf["output_filesystem"] = o.scheme
-        if not merged_conf.get("output_storage_options"):
+        if merged_conf["output_filesystem"] != "file" and not merged_conf.get(
+            "output_storage_options"
+        ):
             merged_conf["output_storage_options"] = merged_conf.get(
                 "storage_options", {}
             )
-        if (
-            merged_conf["output_filesystem"] == "file"
-            and merged_conf["output_storage_options"] == {}
+        if merged_conf["output_filesystem"] == "file" and not merged_conf.get(
+            "output_storage_options"
         ):
             merged_conf["output_storage_options"] = {"auto_mkdir": True}
 

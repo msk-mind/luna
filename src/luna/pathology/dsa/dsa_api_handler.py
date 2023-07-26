@@ -1,5 +1,6 @@
 import json
-import logging
+import fsspec
+from loguru import logger
 import time
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -11,7 +12,6 @@ import orjson
 import pandas as pd
 import requests
 
-logger = logging.getLogger(__name__)
 
 def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
     """Returns the DSA collection uuid from the provided `collection_name`
@@ -47,6 +47,7 @@ def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
 
     return collection_uuid
 
+
 def create_collection(gc, collection_name: str) -> Optional[str]:
     """
     Creates a dsa collection and returns a collection uuid from the created
@@ -70,7 +71,10 @@ def create_collection(gc, collection_name: str) -> Optional[str]:
 
     return new_collection_id
 
-def get_folder_uuid(gc, folder_name: str, parent_type: str, parent_id: str) -> Optional[str]:
+
+def get_folder_uuid(
+    gc, folder_name: str, parent_type: str, parent_id: str
+) -> Optional[str]:
     """Returns the DSA folder uuid from the provided `folder_name`
 
     Args:
@@ -78,7 +82,7 @@ def get_folder_uuid(gc, folder_name: str, parent_type: str, parent_id: str) -> O
         folder_name (string): name of the folder in DSA
         parent_type (string): type of the parent container (ie. folder, collection)
         parent_id (string): uuid of the parent container
-        
+
     Returns:
         string: DSA folder uuid. None if nothing matches the collection name or an
                 error in the get request
@@ -86,7 +90,7 @@ def get_folder_uuid(gc, folder_name: str, parent_type: str, parent_id: str) -> O
     try:
         df_folders = pd.DataFrame(gc.listFolder(parent_id, parent_type))
         if len(df_folders):
-            df_folders = df_folders.set_index('_id')
+            df_folders = df_folders.set_index("_id")
             df_folders = df_folders.query(f"name=='{folder_name}'")
         logger.debug(f"Found folders {df_folders}")
     except Exception as err:
@@ -99,13 +103,14 @@ def get_folder_uuid(gc, folder_name: str, parent_type: str, parent_id: str) -> O
 
     folder_uuid = df_folders.index.item()
 
-    logger.info(
-        f"Found folder id={folder_uuid} for folder={folder_name}"
-    )
+    logger.info(f"Found folder id={folder_uuid} for folder={folder_name}")
 
     return folder_uuid
 
-def create_folder(gc, folder_name: str, parent_type: str, parent_id: str) -> Optional[str]:
+
+def create_folder(
+    gc, folder_name: str, parent_type: str, parent_id: str
+) -> Optional[str]:
     """
     Creates a dsa folder and returns a folder uuid from the created
     folder on successful creation.
@@ -130,6 +135,7 @@ def create_folder(gc, folder_name: str, parent_type: str, parent_id: str) -> Opt
 
     return new_folder_uuid
 
+
 def get_assetstore_uuid(gc, assetstore_name: str) -> Optional[str]:
     """Returns the DSA assetstore uuid from the provided `assetstore_name`
 
@@ -142,7 +148,7 @@ def get_assetstore_uuid(gc, assetstore_name: str) -> Optional[str]:
                 error in the get request
     """
     try:
-        df_assetstores = pd.DataFrame(gc.get(f"assetstore?"))
+        df_assetstores = pd.DataFrame(gc.get("assetstore?"))
         if len(df_assetstores):
             df_assetstores = df_assetstores.set_index("_id")
             df_assetstores = df_assetstores.query(f"name=='{assetstore_name}'")
@@ -156,15 +162,17 @@ def get_assetstore_uuid(gc, assetstore_name: str) -> Optional[str]:
         return None
 
     assetstore_uuid = df_assetstores.index.item()
-    
+
     logger.info(
         f"Found assetstore id={assetstore_uuid} for assetstore={assetstore_name}"
     )
 
     return assetstore_uuid
 
-def create_s3_assetstore(gc, name: str, bucket: str, access: str, 
-                         secret: str, service: str) -> Optional[str]:
+
+def create_s3_assetstore(
+    gc, name: str, bucket: str, access: str, secret: str, service: str
+) -> Optional[str]:
     """
     Creates a s3 assetstore.
 
@@ -176,10 +184,12 @@ def create_s3_assetstore(gc, name: str, bucket: str, access: str,
         service (string) : url of the s3 host
 
     Returns:
-        string: DSA assetstore uuid. Or an error in the post request. 
+        string: DSA assetstore uuid. Or an error in the post request.
     """
-    request_url = (f"assetstore?name={name}&type=2&bucket={bucket}&accessKeyId={access}" +
-                   f"&secret={secret}&service={service}") 
+    request_url = (
+        f"assetstore?name={name}&type=2&bucket={bucket}&accessKeyId={access}"
+        + f"&secret={secret}&service={service}"
+    )
     try:
         gc.post(request_url)
         logger.debug(f"Created assetstore {name}")
@@ -188,11 +198,13 @@ def create_s3_assetstore(gc, name: str, bucket: str, access: str,
     except Exception as err:
         logger.error(f"Couldn't create assetstore {name}: {err}")
         raise RuntimeError("Unable to create s3 assetstore")
-    
+
     return new_assetstore_uuid
 
-def import_assetstore_to_folder(gc, assetstore_uuid: str, 
-                                destination_uuid: str) -> Optional[str]:
+
+def import_assetstore_to_folder(
+    gc, assetstore_uuid: str, destination_uuid: str
+) -> Optional[str]:
     """
     Imports the assetstore to the specified destination folder.
 
@@ -204,15 +216,18 @@ def import_assetstore_to_folder(gc, assetstore_uuid: str,
     Returns:
         None, raises error if post request fails
     """
-    request_url = f"assetstore/{assetstore_uuid}/import"  
-    params      = { 'destinationId' : destination_uuid, 
-                    'destinationType' : 'folder',
-                    'importPath' : '/'
-                  } 
+    request_url = f"assetstore/{assetstore_uuid}/import"
+    params = {
+        "destinationId": destination_uuid,
+        "destinationType": "folder",
+        "importPath": "/",
+    }
     try:
         gc.post(request_url, parameters=params)
-        logger.debug(f"Importing from assetstore id {assetstore_uuid}" + 
-                     f"to destination id {destination_uuid}")
+        logger.debug(
+            f"Importing from assetstore id {assetstore_uuid}"
+            + f"to destination id {destination_uuid}"
+        )
     except Exception as err:
         logger.error(f"Couldn't import assetstore id {assetstore_uuid} : {err}")
         raise RuntimeError("Unable to import assetstore to collection")
@@ -290,6 +305,7 @@ def get_item_uuid(gc, image_name: str, collection_name: str) -> Optional[str]:
     logger.warning(f"Image file {image_name} not found")
     return None
 
+
 def get_item_uuid_by_folder(gc, image_name: str, folder_uuid: str) -> Optional[str]:
     """Returns the DSA item uuid from the provided folder
 
@@ -310,7 +326,7 @@ def get_item_uuid_by_folder(gc, image_name: str, folder_uuid: str) -> Optional[s
             f"Error in item get request: {err.response.status_code}, {err.response.text}"
         )
         return None
-    
+
     if uuid_response is not None and len(uuid_response) > 0:
         # multiple entries can come up based on substring matches, return the correct item id by checking name field in dictionary.
         for uuid_response_dict in uuid_response:
@@ -326,8 +342,7 @@ def get_item_uuid_by_folder(gc, image_name: str, folder_uuid: str) -> Optional[s
     return None
 
 
-
-def copy_item(gc, item_id: str,  destination_id: str):
+def copy_item(gc, item_id: str, destination_id: str):
     """
     Copies the item to the destination.
 
@@ -343,8 +358,9 @@ def copy_item(gc, item_id: str,  destination_id: str):
         logger.error(f"Error copying item: {err}")
         raise RuntimeError("Can not copy item")
 
+
 def push_annotation_to_dsa_image(
-    item_uuid: str, dsa_annotation_json: Dict[str, any], uri: str, gc
+    item_uuid: str, annotation_file_urlpath: str, uri: str, gc: girder_client.GirderClient, storage_options: dict = {},
 ):
     """Pushes annotation to DSA, adding given item_uuid (slide-specific id)
 
@@ -363,10 +379,21 @@ def push_annotation_to_dsa_image(
     # updating or deleting an existing annotation for a large annotation
     # document results in timeout.
     try:
-        gc.post(
-            f"/annotation?itemId={item_uuid}",
-            data=orjson.dumps(dsa_annotation_json).decode(),
-        )
+        fs, path = fsspec.core.url_to_fs(annotation_file_urlpath, **storage_options)
+        size = fs.size(path)
+        reference = {
+            'identifier': f'{Path(path).stem}-AnnotationFile',
+            'itemId': item_uuid
+        }
+        with fs.open(path) as of:
+            gc.uploadFile(
+                item_uuid,
+                of,
+                Path(path).name,
+                size,
+                reference=orjson.dumps(reference).decode()
+            )
+
 
     except requests.exceptions.HTTPError as err:
         raise RuntimeError(
@@ -413,7 +440,6 @@ def system_check(gc):
         _ = gc.get("/system/check")
 
     except requests.exceptions.HTTPError as err:
-
         logger.error("Please check your host or credentials")
         logger.error(err)
         return 1
@@ -568,36 +594,26 @@ def get_slide_annotation(
 
     logger.debug("Starting request for annotation")
     try:
-        annotation_id_response = gc.get(f"/annotation?itemId={item_uuid}")
-        annotation_id = None
-        for annot_dict in annotation_id_response:
-            try:
-                if (
-                    annot_dict.get("annotation")
-                    and annot_dict.get("annotation").get("name") == annotation_name
-                ):
-                    annotation_id = annot_dict.get("_id")
-                    annotation_response = gc.get(f"/annotation/{annotation_id}")
-
-                    break
-            except AttributeError:
-                break
+        annotation_response = gc.get(f"/annotation?itemId={item_uuid}&name={annotation_name}")
 
     except Exception as err:
         logger.error(f"Error in annotation get request: {err}")
         return None
 
     # get annotation json from response
-    if "annotation" in annotation_response:
-        annotation = annotation_response["annotation"]
+    if annotation_response:
+        annotation_response = annotation_response[0]
+        annotation = annotation_response['annotation']
     else:
-        logger.error(f"No annotation found for slide {slide_id}")
+        logger.info(f"No annotation found for slide {slide_id}")
         return None
+
 
     # get additional slide-level metadata from response
     date_created = annotation_response["created"]
     date_updated = annotation_response["updated"]
 
+    annotation_id = annotation_response["_id"]
     creator_id = annotation_response["creatorId"]
     creator_updated_id = annotation_response["updatedId"]
     annotation_name = annotation["name"]
@@ -615,6 +631,7 @@ def get_slide_annotation(
     creator_login_updated = creator_updated_response["login"]
 
     slide_metadata = {
+        "annotation_id": annotation_id,
         "annotation_name": annotation_name,
         "date": date_created,
         "date_updated": date_updated,

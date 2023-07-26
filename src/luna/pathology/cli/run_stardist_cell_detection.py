@@ -38,7 +38,16 @@ def stardist_simple(
     Returns:
         pd.DataFrame: metadata about function call
     """
+
     config = get_config(vars())
+    fs, output_path = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+    slide_id = Path(config["slide_urlpath"]).stem
+    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
+    if fs.exists(output_header_file):
+        logger.info(f"outputs already exist: {config['output_urlpath']}")
+        return
 
     df = stardist_simple_main(
         config["slide_urlpath"],
@@ -51,12 +60,7 @@ def stardist_simple(
         config["output_storage_options"],
     )
 
-    slide_id = Path(config["slide_urlpath"]).stem
 
-    fs, output_path = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
-    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
     with fs.open(output_header_file, "wb") as of:
         df.to_parquet(of)
 
@@ -170,6 +174,15 @@ def stardist_cell_lymphocyte(
     """
     config = get_config(vars())
 
+    fs, output_path = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+    slide_id = Path(config["slide_urlpath"]).stem
+    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
+    if fs.exists(output_header_file):
+        logger.info(f"outputs already exist: {config['output_urlpath']}")
+        return
+
     df = stardist_cell_lymphocyte_main(
         config["slide_urlpath"],
         config["output_urlpath"],
@@ -179,12 +192,7 @@ def stardist_cell_lymphocyte(
         config["output_storage_options"],
     )
 
-    slide_id = Path(config["slide_urlpath"]).stem
 
-    fs, output_path = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
-    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
     with fs.open(output_header_file, "wb") as of:
         df.to_parquet(of)
 

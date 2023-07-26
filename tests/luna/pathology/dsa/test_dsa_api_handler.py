@@ -3,12 +3,12 @@ from girder_client import GirderClient
 
 from luna.pathology.dsa.dsa_api_handler import (
     get_annotation_uuid,
+    get_assetstore_uuid,
     get_collection_metadata,
     get_collection_uuid,
+    get_folder_uuid,
     get_item_uuid,
     get_slide_annotation,
-    get_folder_uuid,
-    get_assetstore_uuid
 )
 
 
@@ -126,13 +126,17 @@ def test_get_slide_annotation(monkeypatch):
                 }
             ]
 
-        if args[1] == "/annotation?itemId=321":
+        if args[1] == "/annotation?itemId=321&name=regional":
             return [
                 {
                     "name": "123.svs",
                     "_id": "a-321",
                     "baseParentId": "c-0001",
                     "_modelType": "annotation",
+                    "created": "2022/03/07",
+                    "updated": "2022/03/07",
+                    "creatorId": "u-123",
+                    "updatedId": "u-123",
                     "annotation": {"name": "regional"},
                 }
             ]
@@ -198,10 +202,16 @@ def test_get_slide_no_annotation(monkeypatch):
 
     assert res is None
 
+
 def test_get_folder_uuid(monkeypatch):
     def mock_listFolder(*args, **kwargs):
         return [
-            {"name" : "test-folder", "_id": "f-1234", "parentCollection" : "collection", "parentId" : "f-4321"}
+            {
+                "name": "test-folder",
+                "_id": "f-1234",
+                "parentCollection": "collection",
+                "parentId": "f-4321",
+            }
         ]
 
     monkeypatch.setattr(GirderClient, "listFolder", mock_listFolder)
@@ -210,10 +220,16 @@ def test_get_folder_uuid(monkeypatch):
     res = get_folder_uuid(gc, "test-folder", "collection", "f-4321")
     assert res == "f-1234"
 
+
 def test_get_folder_uuid_missing(monkeypatch):
     def mock_listFolder(*args, **kwargs):
         return [
-            {"name" : "test-folder", "_id": "f-1234", "parentCollection" : "collection", "parentId" : "f-4321"}
+            {
+                "name": "test-folder",
+                "_id": "f-1234",
+                "parentCollection": "collection",
+                "parentId": "f-4321",
+            }
         ]
 
     monkeypatch.setattr(GirderClient, "listFolder", mock_listFolder)
@@ -222,28 +238,24 @@ def test_get_folder_uuid_missing(monkeypatch):
     res = get_folder_uuid(gc, "missing-test-folder", "collection", "f-4321")
     assert res is None
 
+
 def test_get_assetstore_uuid(monkeypatch):
     def mock_get(*args, **kwargs):
-        return [
-            {"name" : "test-assetstore", "_id" : "a-1000"}
-        ]
+        return [{"name": "test-assetstore", "_id": "a-1000"}]
+
     monkeypatch.setattr(GirderClient, "get", mock_get)
     gc = GirderClient(apiUrl="http://localhost/api/v1")
 
     res = get_assetstore_uuid(gc, "test-assetstore")
     assert res == "a-1000"
 
+
 def test_get_assetstore_uuid_missing(monkeypatch):
     def mock_get(*args, **kwargs):
-        return [
-            {"name" : "test-assetstore", "_id" : "a-1000"}
-        ]
+        return [{"name": "test-assetstore", "_id": "a-1000"}]
+
     monkeypatch.setattr(GirderClient, "get", mock_get)
     gc = GirderClient(apiUrl="http://localhost/api/v1")
 
     res = get_assetstore_uuid(gc, "missing-test-assetstore")
     assert res is None
-
-
-
-

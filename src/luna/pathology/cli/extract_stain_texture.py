@@ -110,21 +110,19 @@ def extract_stain_texture(
     Returns:
         dict: metadata about function call
     """
-    slide_file = open(slide_image_urlpath, "rb", **storage_options)
-    slide = tiffslide.TiffSlide(slide_file)
-    # oslide = openslide.OpenSlide(slide_image_urlpath)
+    with open(slide_image_urlpath, "rb", **storage_options) as slide_file:
+        slide = tiffslide.TiffSlide(slide_file)
+        # oslide = openslide.OpenSlide(slide_image_urlpath)
 
-    logger.info(f"Slide dimensions {slide.dimensions}")
-    sample_arr = get_downscaled_thumbnail(slide, stain_sample_factor)
+        logger.info(f"Slide dimensions {slide.dimensions}")
+        sample_arr = get_downscaled_thumbnail(slide, stain_sample_factor)
+
     slide_full_generator, slide_full_level = get_full_resolution_generator(
-        slide_file, tile_size=tile_size
+        slide_image_urlpath, tile_size=tile_size, storage_options=storage_options
     )
 
-    mask_file = open(slide_mask_urlpath, "rb", **storage_options)
-    mask = tiffslide.TiffSlide(mask_file)
-    logger.info(f"Mask dimensions {mask.dimensions}")
     mask_full_generator, mask_full_level = get_full_resolution_generator(
-        mask_file, tile_size=tile_size
+        slide_mask_urlpath, tile_size=tile_size, storage_options=storage_options
     )
 
     stain_vectors = get_stain_vectors_macenko(sample_arr)
@@ -209,8 +207,6 @@ def extract_stain_texture(
         .astype(float)
     )
     logger.info(df_result)
-    slide_file.close()
-    mask_file.close()
 
     return df_result
 
