@@ -8,6 +8,7 @@ import fire
 import fsspec
 import pandas as pd
 from dask.distributed import Client, progress
+from fsspec import open  # type: ignore
 from loguru import logger
 from multimethod import multimethod
 from pandera.typing import DataFrame
