@@ -46,6 +46,10 @@ class StoredTile(Tile):
     tile_store: str
 
 
+class LabeledTile(StoredTile):
+    Classification: str
+
+
 class TileSchema(pa.DataFrameModel):
     class Config:
         dtype = PydanticModel(Tile)
@@ -55,4 +59,10 @@ class TileSchema(pa.DataFrameModel):
 class StoredTileSchema(pa.DataFrameModel):
     class Config:
         dtype = PydanticModel(StoredTile)
+        coerce = True
+
+
+class LabeledTileSchema(pa.DataFrameModel):
+    class Config:
+        dtype = PydanticModel(LabeledTile)
         coerce = True

@@ -15,9 +15,10 @@ import pandas as pd
 from fsspec import open  # type: ignore
 from loguru import logger
 from PIL import Image
-from shapely import box, Polygon, MultiPolygon
+from shapely import MultiPolygon, box
 from typing_extensions import TypedDict
 
+from luna.common.models import LabeledTileSchema
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import address_to_coord
 from luna.pathology.dsa.utils import vectorize_np_array_bitmask_by_pixel_value
@@ -150,7 +151,9 @@ def save_dsa_annotation(
     try:
         with open(output_url, "w", **storage_options).open() as outfile:
             json.dump(dsa_annotation, outfile)
-        logger.info(f"Saved {len(dsa_annotation['elements'])} to {fs.unstrip_protocol(str(output_url))}")
+        logger.info(
+            f"Saved {len(dsa_annotation['elements'])} to {fs.unstrip_protocol(str(output_url))}"
+        )
         return output_url
     except Exception as exc:
         logger.error(exc)
@@ -261,25 +264,23 @@ def stardist_polygon_main(
 @timed
 @save_metadata
 def stardist_polygon_tile(
-    stardist_urlpath: str = "???",
+    object_urlpath: str = "???",
     tiles_urlpath: str = "???",
     image_filename: str = "???",
     annotation_name_prefix: str = "???",
-    tile_column: str = "Classification",
     output_urlpath: str = "???",
     line_colors: dict[str, str] = {},
     fill_colors: dict[str, str] = {},
     storage_options: dict = {},
     local_config: str = "",
 ):
-    """Build DSA annotation json from stardist geojson classification results
+    """Build DSA annotation json from stardist geojson classification and labeled tiles
 
     Args:
-        stardist_urlpath (string): URL/path to stardist geojson classification results json
+        object_urlpath (string): URL/path to object geojson classification results
         tiles_urlpath (string): URL/path to tiles manifest parquet
         image_filename (string): name of the image file in DSA e.g. 123.svs
         annotation_name_prefix (string): name of the annotation to be displayed in DSA
-        tile_column (string): name of column with tile classification in the tiles manifest
         output_urlpath (string): URL/path prefix to save annotations
         line_colors (dict): user-provided line color map with {feature name:rgb values}
         fill_colors (dict): user-provided fill color map with {feature name:rgba values}
@@ -291,10 +292,9 @@ def stardist_polygon_tile(
     """
     config = get_config(vars())
     dsa_annotations = stardist_polygon_tile_main(
-        config["stardist_urlpath"],
+        config["object_urlpath"],
         config["tiles_urlpath"],
         config["annotation_name_prefix"],
-        config["tile_column"],
         config["line_colors"],
         config["fill_colors"],
         config["storage_options"],
@@ -312,19 +312,33 @@ def stardist_polygon_tile(
 
 
 def stardist_polygon_tile_main(
-    stardist_urlpath: str,
+    object_urlpath: str,
     tiles_urlpath: str,
     annotation_name_prefix: str,
-    tile_column: str,
     line_colors: dict[str, str],
     fill_colors: dict[str, str],
     storage_options: dict,
 ):
+    """Build DSA annotation json from stardist geojson classification and labeled tiles
+
+    Args:
+        object_urlpath (string): URL/path to stardist geojson classification results
+        tiles_urlpath (string): URL/path to tiles manifest parquet
+        annotation_name_prefix (string): name of the annotation to be displayed in DSA
+        output_urlpath (string): URL/path prefix to save annotations
+        line_colors (dict): user-provided line color map with {feature name:rgb values}
+        fill_colors (dict): user-provided fill color map with {feature name:rgba values}
+        storage_options (dict): storage options to pass to read/write functions
+
+    Returns:
+        dict: DSA annotations
+    """
     with open(tiles_urlpath, **storage_options) as of:
         tiles_df = pd.read_parquet(of)
+    LabeledTileSchema.validate(tiles_df.reset_index())
     logger.info(f"Read tiles manifest with {len(tiles_df)} tiles")
 
-    with open(stardist_urlpath, **storage_options) as of:
+    with open(object_urlpath, **storage_options) as of:
         object_gdf = gpd.read_file(of)
 
     logger.info(f"Read {len(object_gdf)} stardist objects")
@@ -343,10 +357,10 @@ def stardist_polygon_tile_main(
     )
 
     object_tiles = object_gdf.sjoin(tiles_gdf, how="left", predicate="within")
-    logger.info(f"Spatially joined stardist objects with tiles manifest")
+    logger.info("Spatially joined stardist objects with tiles manifest")
     tile_elements = {}
     for _, row in object_tiles.iterrows():
-        tile_label = row[tile_column]
+        tile_label = row["Classification"]
         if pd.isnull(tile_label):
             tile_label = "unclassified"
 
@@ -354,7 +368,7 @@ def stardist_polygon_tile_main(
             tile_elements[tile_label] = []
 
         label_name = row["classification"]["name"]
-        multipolygon = row['geometry']
+        multipolygon = row["geometry"]
         if type(multipolygon) != MultiPolygon:
             multipolygon = MultiPolygon([multipolygon])
         for polygon in list(multipolygon.geoms):

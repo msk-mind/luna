@@ -216,7 +216,7 @@ def infer_tile_labels(
             storage_options,
             output_storage_options,
         )
-        
+
         df = df.reset_index().set_index("address")
     else:
         raise RuntimeError(
@@ -249,6 +249,7 @@ def infer_tile_labels(
                 for data, index in tqdm(loader, file=sys.stdout)
             ]
         )
+
 
     if hasattr(ttm, "column_labels"):
         logger.info(f"Mapping column labels -> {ttm.column_labels}")
