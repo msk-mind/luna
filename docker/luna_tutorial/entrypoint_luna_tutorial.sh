@@ -26,6 +26,9 @@ done
 echo $SCHEDULER_ADDR > "$DASK_ADDR_FILE"
 
 dask worker "$SCHEDULER_ADDR" > "$WORKER_LOG" 2>&1 &
-echo "Dask cluster is now running"
+echo "Dask scheduler is running at $SCHEDULER_ADDR"
+
+LUNA_DASK_SCHEDULER="$SCHEDULER_ADDR"
+export LUNA_DASK_SCHEDULER
 
 jupyter notebook --ip 0.0.0.0 --notebook-dir="$HOME/vmount" > ~/vmount/logs/tutorial.log 2>&1 

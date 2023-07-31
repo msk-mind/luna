@@ -1,6 +1,7 @@
 import itertools
 import json
 import os
+import re
 import subprocess
 import tempfile
 import time
@@ -33,6 +34,26 @@ MASK_KEYS = ["username", "user", "password", "pw"]
 def _get_args_dict(fn, args, kwargs):
     args_names = fn.__code__.co_varnames[: fn.__code__.co_argcount]
     return {**dict(zip(args_names, args)), **kwargs}
+
+
+def validate_dask_address(addr: str) -> bool:
+    """
+    Return True if `addr` appears to be a valid address for a dask scheduler.
+
+    The typical format for this will be something like 'tcp://192.168.0.37:8786',
+    but there could be a hostname instead of an IP address, and maybe some other
+    URL schemes are supported.  This function will be used to check whether a 
+    user-defined dask scheduler address is plausible, or obviously invalid.
+    """
+    HOSTPORT_RE = re.compile(
+        r"""^(?P<scheme> tcp):
+        // (?P<host>\d{1,3}[.]\d{1,3}[.]\d{1,3}[.]\d{1,3} |
+           [A-Za-z][A-Za-z0-9.-]*[A-Za-z0-9] |
+           [A-Za-z])
+         : (?P<port>\d+)$""",
+        re.VERBOSE
+    )
+    return bool(HOSTPORT_RE.match(addr))
 
 
 def save_metadata(func):
