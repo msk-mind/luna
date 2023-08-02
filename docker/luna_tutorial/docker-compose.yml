@@ -39,7 +39,7 @@ services:
       - ${PWD}/vmount/db:/db
 
   luna_tutorial:
-    image: ${USER_NAME}_luna_tutorial_main:v0.0.2
+    image: ${USER_NAME}_luna_tutorial_main:v0.0.6
     container_name: ${USER_NAME}_luna_tutorial
     build:
       context: ../..
@@ -61,21 +61,6 @@ services:
       - "8786:8786"
     volumes:
       - ${PWD}/vmount:/home/${USER_NAME}/vmount
-
-  # # bash -c "dask scheduler --port 8786 >> ~/vmount/logs/dask_scheduler.log 2>&1"
-  # # bash -c vmount/start_dask.sh
-  # dask_cluster:
-  #   image: ${USER_NAME}_luna_tutorial_main:v0.0.1
-  #   container_name: ${USER_NAME}_dask_cluster
-  #   user: ${USER_ID}
-  #   restart: unless-stopped
-  #   ports:
-  #     - "8787:8787"
-  #     - "8786:8786"
-  #   command: |
-  #       bash -c "bash $HOME/vmount/start_dask.sh"
-  #   volumes:
-  #     - ${PWD}/vmount:/home/${USER_NAME}/vmount
 
   minio:
     image: minio/minio:RELEASE.2022-05-04T07-45-27Z

@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from luna.common.utils import get_config, save_metadata, timed
+from luna.common.dask import configure_dask_client
 from luna.pathology.analysis.ml import (
     HDF5Dataset,
     TorchTransformModel,
@@ -192,7 +193,7 @@ def infer_tile_labels(
         with open(tiles_urlpath, **storage_options) as of:
             df = pd.read_parquet(of).reset_index().set_index("address")
     elif tile_size is not None:
-        Client(**dask_options)
+        configure_dask_client(**dask_options)
         slide_id = Path(slide_urlpath).stem
         tiles_h5_urlpath = str(Path(output_urlpath) / f"{slide_id}.tiles.h5")
 

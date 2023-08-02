@@ -14,7 +14,7 @@ from tiffslide import TiffSlide
 
 
 from luna.common.models import TileSchema
-from luna.common.dask import get_or_create_dask_client
+from luna.common.dask import get_or_create_dask_client, configure_dask_client
 from luna.common.utils import get_config, grouper, local_cache_urlpath, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.cli.run_tissue_detection import detect_tissue
@@ -52,7 +52,7 @@ def cli(
     """
     config = get_config(vars())
 
-    Client(**config["dask_options"])
+    configure_dask_client(**config["dask_options"])
 
     slide_id = Path(config["slide_urlpath"]).stem
     fs, output_urlpath_prefix = fsspec.core.url_to_fs(

@@ -42,19 +42,42 @@ def prune_empty_delayed(tasks):
     return [mock_return(task) for task in dask.compute(*tasks) if task is not None]
 
 
-def get_or_create_dask_client():
+def configure_dask_client(**kwargs):
     try:
-        scheduler = os.getenv(DASK_ADDRESS_VAR)
-        if scheduler:
+        if kwargs:
+            Client(**kwargs)
+        elif scheduler := os.getenv(DASK_ADDRESS_VAR):
             if not validate_dask_address(scheduler):
                 raise ValueError(f"Env var {DASK_ADDRESS_VAR} has illegal value '{scheduler}'")
-            client = get_client(scheduler)
+            get_client(scheduler)
         else:
             client = get_client()
     except ValueError as exc:
         logger.warning(f"Error connecting to Dask scheduler.  Reverting to LocalCluster.\n{exc}")
         client = Client(threads_per_worker=1)
     return client
+
+
+def get_or_create_dask_client():
+    try:
+        client = get_client()
+    except ValueError as exc:
+        client = Client(threads_per_worker=1)
+    return client
+
+# def get_or_create_dask_client():
+#     try:
+#         scheduler = os.getenv(DASK_ADDRESS_VAR)
+#         if scheduler:
+#             if not validate_dask_address(scheduler):
+#                 raise ValueError(f"Env var {DASK_ADDRESS_VAR} has illegal value '{scheduler}'")
+#             client = get_client(scheduler)
+#         else:
+#             client = get_client()
+#     except ValueError as exc:
+#         logger.warning(f"Error connecting to Dask scheduler.  Reverting to LocalCluster.\n{exc}")
+#         client = Client(threads_per_worker=1)
+#     return client
 
 
 def get_local_dask_directory():

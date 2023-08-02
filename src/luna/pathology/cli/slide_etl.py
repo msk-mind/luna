@@ -75,6 +75,8 @@ def cli(
     if config["debug_limit"] > 0:
         slide_paths = slide_paths[: config["debug_limit"]]
 
+    configure_dask_client()
+
     if len(slide_paths) == 0:
         return None
 
