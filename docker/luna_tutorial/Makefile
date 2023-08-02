@@ -77,9 +77,11 @@ run:    ## launch the docker containers (minio, dremio, dsa, etc.)
 	make summary
 
 
-dask:    ## launch a dask scheduler container
-	mkdir -p vmount/logs
-	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d dask_cluster
+run-tutorial:    ## launch just the main jupyter container
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose up -d luna_tutorial
+
+stop-tutorial:    ## launch just the main jupyter container
+	USER_ID=$(USER_ID) USER_NAME=$(USER_NAME) GROUP_NAME=$(GROUP_NAME) GROUP_ID=$(GROUP_ID) PWD=$(PWD) DOCKER_PATH=$(DOCKER_PATH) docker-compose down luna_tutorial
 
 summary:    ## describe how to connect to the running services
 	@echo
