@@ -43,13 +43,17 @@ def prune_empty_delayed(tasks):
 
 
 def configure_dask_client(**kwargs):
+    """Instantiate a Dask client according to the given configuration.  This should only
+    be called once in a given program.  The client created here can always be retrieved
+    (where needed) using get_or_create_dask_client().
+    """
     try:
         if kwargs:
-            Client(**kwargs)
+            client = Client(**kwargs)
         elif scheduler := os.getenv(DASK_ADDRESS_VAR):
             if not validate_dask_address(scheduler):
                 raise ValueError(f"Env var {DASK_ADDRESS_VAR} has illegal value '{scheduler}'")
-            get_client(scheduler)
+            client = get_client(scheduler)
         else:
             client = get_client()
     except ValueError as exc:

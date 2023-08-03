@@ -13,7 +13,7 @@ from geojson import Feature, FeatureCollection, Point, Polygon
 from loguru import logger
 from shapely.geometry import shape
 
-from luna.common.dask import get_or_create_dask_client
+from luna.common.dask import get_or_create_dask_client, configure_dask_client
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.dsa.dsa_api_handler import (
     get_annotation_df,
@@ -51,6 +51,8 @@ def cli(
         pd.DataFrame: metadata from function call
     """
     config = get_config(vars())
+
+    configure_dask_client()
 
     df_full_annotation_data = dsa_annotation_etl(
         config["dsa_endpoint"],

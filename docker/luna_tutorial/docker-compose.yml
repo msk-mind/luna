@@ -39,7 +39,7 @@ services:
       - ${PWD}/vmount/db:/db
 
   luna_tutorial:
-    image: ${USER_NAME}_luna_tutorial_main:v0.0.6
+    image: ${USER_NAME}_luna_tutorial_main:v0.0.7
     container_name: ${USER_NAME}_luna_tutorial
     build:
       context: ../..
