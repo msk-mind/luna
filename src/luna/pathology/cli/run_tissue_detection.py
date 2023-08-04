@@ -18,7 +18,7 @@ from skimage.color import rgb2gray  # type: ignore
 from skimage.filters import threshold_otsu  # type: ignore
 from tiffslide import TiffSlide
 
-from luna.common.dask import get_or_create_dask_client
+from luna.common.dask import get_or_create_dask_client, configure_dask_client
 from luna.common.models import SlideSchema, Tile
 from luna.common.utils import get_config, grouper, local_cache_urlpath, save_metadata, timed
 from luna.pathology.cli.generate_tiles import generate_tiles
@@ -119,7 +119,7 @@ def cli(
     """
     config = get_config(vars())
 
-    Client(**config['dask_options'])
+    configure_dask_client(**config['dask_options'])
 
     if not config["tile_size"] and not config["tiles_urlpath"]:
         raise fire.core.FireError("Specify either tiles_urlpath or tile_size")

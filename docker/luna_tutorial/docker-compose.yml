@@ -11,7 +11,7 @@
 version: '3'
 services:
   girder:
-    image: ${USER_NAME}_luna_tutorial_girder:v0.0.1
+    image: ${USER_NAME}_luna_tutorial_girder:v0.0.3
     container_name: ${USER_NAME}_girder
     build:
       context: .
@@ -23,12 +23,13 @@ services:
         - GROUP_NAME=${GROUP_NAME}
     restart: unless-stopped
     ports:
-      - "8081:8080"
+      - "8080:8080"
     volumes:
       - ${PWD}/vmount/assetstore:/home/${USER_NAME}/vmount/assetstore
       - ${PWD}/vmount:/home/${USER_NAME}/vmount
     depends_on:
       - mongodb
+
   mongodb:
     image: "mongo:5.0.8"
     container_name: ${USER_NAME}_mongodb
@@ -36,8 +37,9 @@ services:
     command: --nojournal
     volumes:
       - ${PWD}/vmount/db:/db
+
   luna_tutorial:
-    image: ${USER_NAME}_luna_tutorial_main:v0.0.1
+    image: ${USER_NAME}_luna_tutorial_main:v0.0.7
     container_name: ${USER_NAME}_luna_tutorial
     build:
       context: ../..
@@ -53,19 +55,20 @@ services:
     user: ${USER_ID}
     restart: unless-stopped
     ports:
-      - "8889:8888"
-      - "6007:6006"
-    command: |
-      bash -c "jupyter notebook --ip 0.0.0.0 --notebook-dir=~/vmount >> ~/vmount/logs/tutorial.log 2>&1"
+      - "8888:8888"
+      - "6006:6006"
+      - "8787:8787"
+      - "8786:8786"
     volumes:
       - ${PWD}/vmount:/home/${USER_NAME}/vmount
+
   minio:
     image: minio/minio:RELEASE.2022-05-04T07-45-27Z
     container_name: ${USER_NAME}_minio
     command: server /data --console-address ":9001"
     ports:
-      - "9001:9000"
-      - "9501:9001"
+      - "9002:9000"
+      - "9500:9001"
     environment:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: password1
@@ -84,9 +87,9 @@ services:
     image: dremio/dremio-oss:21.1
     container_name: ${USER_NAME}_dremio
     ports:
-      - "9048:9047"
-      - "31011:31010"
-      - "45679:45678"
+      - "9047:9047"
+      - "31010:31010"
+      - "45678:45678"
     volumes:
     - ${PWD}/vmount:/data
 

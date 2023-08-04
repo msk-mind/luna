@@ -13,7 +13,7 @@ from geojson import Feature, FeatureCollection, Point, Polygon
 from loguru import logger
 from shapely.geometry import shape
 
-from luna.common.dask import get_or_create_dask_client
+from luna.common.dask import get_or_create_dask_client, configure_dask_client
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.dsa.dsa_api_handler import (
     get_annotation_df,
@@ -52,6 +52,8 @@ def cli(
     """
     config = get_config(vars())
 
+    configure_dask_client()
+
     df_full_annotation_data = dsa_annotation_etl(
         config["dsa_endpoint"],
         config["collection_name"],
@@ -66,7 +68,7 @@ def cli(
         config["output_urlpath"], **config["storage_options"]
     )
 
-    slide_annotation_dataset_path = (
+    slide_annotation_dataset_path = str(
         Path(output_path)
         / f"slide_annotation_dataset_{config['collection_name']}_{config['annotation_name']}.parquet"
     )
@@ -261,7 +263,7 @@ class DsaAnnotationProcessor:
 
         fs, urlpath = fsspec.core.url_to_fs(self.output_urlpath, **self.storage_options)
 
-        slide_geojson_path = Path(urlpath) / f"{slide_id}.annotation.geojson"
+        slide_geojson_path = str(Path(urlpath) / f"{slide_id}.annotation.geojson")
         with fs.open(slide_geojson_path, "w") as fp:
             json.dump(feature_collection, fp)  # Finally, save it!
 

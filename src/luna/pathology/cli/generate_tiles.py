@@ -14,7 +14,7 @@ from multimethod import multimethod
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
-from luna.common.dask import get_or_create_dask_client
+from luna.common.dask import get_or_create_dask_client, configure_dask_client
 from luna.common.models import SlideSchema, Tile, TileSchema
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import (
@@ -54,7 +54,7 @@ def cli(
     """
     config = get_config(vars())
 
-    Client(**config["dask_options"])
+    configure_dask_client(**config['dask_options'])
 
     output_filesystem, output_urlpath_prefix = fsspec.core.url_to_fs(
         config["output_urlpath"], **config["output_storage_options"]

@@ -12,7 +12,7 @@ from multimethod import multimethod
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
-from luna.common.dask import get_or_create_dask_client
+from luna.common.dask import get_or_create_dask_client, configure_dask_client
 from luna.common.models import Slide, SlideSchema
 from luna.common.utils import apply_csv_filter, get_config, timed
 from luna.pathology.common.utils import (
@@ -74,6 +74,8 @@ def cli(
         )
     if config["debug_limit"] > 0:
         slide_paths = slide_paths[: config["debug_limit"]]
+
+    configure_dask_client()
 
     if len(slide_paths) == 0:
         return None

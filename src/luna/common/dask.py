@@ -6,12 +6,19 @@ from functools import partial
 import dask
 from dask.distributed import Client, get_client, get_worker, worker_client
 
+from luna.common.utils import validate_dask_address
+
 logger = logging.getLogger(__name__)
 
+# Constants
 LENGTH_MANY_TASKS = (
     50000  # When should we warn the user they are possibly paying a high price?
 )
 
+DASK_ADDRESS_VAR = "LUNA_DASK_SCHEDULER"
+
+
+# Code
 
 def prune_empty_delayed(tasks):
     """
@@ -35,12 +42,46 @@ def prune_empty_delayed(tasks):
     return [mock_return(task) for task in dask.compute(*tasks) if task is not None]
 
 
+def configure_dask_client(**kwargs):
+    """Instantiate a Dask client according to the given configuration.  This should only
+    be called once in a given program.  The client created here can always be retrieved
+    (where needed) using get_or_create_dask_client().
+    """
+    try:
+        if kwargs:
+            client = Client(**kwargs)
+        elif scheduler := os.getenv(DASK_ADDRESS_VAR):
+            if not validate_dask_address(scheduler):
+                raise ValueError(f"Env var {DASK_ADDRESS_VAR} has illegal value '{scheduler}'")
+            client = get_client(scheduler)
+        else:
+            client = get_client()
+    except ValueError as exc:
+        logger.warning(f"Error connecting to Dask scheduler.  Reverting to LocalCluster.\n{exc}")
+        client = Client(threads_per_worker=1)
+    return client
+
+
 def get_or_create_dask_client():
     try:
         client = get_client()
-    except ValueError:
+    except ValueError as exc:
         client = Client(threads_per_worker=1)
     return client
+
+# def get_or_create_dask_client():
+#     try:
+#         scheduler = os.getenv(DASK_ADDRESS_VAR)
+#         if scheduler:
+#             if not validate_dask_address(scheduler):
+#                 raise ValueError(f"Env var {DASK_ADDRESS_VAR} has illegal value '{scheduler}'")
+#             client = get_client(scheduler)
+#         else:
+#             client = get_client()
+#     except ValueError as exc:
+#         logger.warning(f"Error connecting to Dask scheduler.  Reverting to LocalCluster.\n{exc}")
+#         client = Client(threads_per_worker=1)
+#     return client
 
 
 def get_local_dask_directory():

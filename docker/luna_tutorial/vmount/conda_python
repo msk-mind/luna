@@ -1,0 +1,7 @@
+#!/bin/bash
+. ${HOME}/.bashrc
+. /usr/local/bin/_activate_current_env.sh
+# echo python3 "$@"
+python3 "$@"
+
+
