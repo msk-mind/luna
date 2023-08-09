@@ -519,7 +519,6 @@ def get_scale_factor_at_magnification(
     Returns:
         int: scale factor required to achieve requested magnification
     """
-
     # First convert to float to handle true integers encoded as string floats (e.g. '20.000')
     mag_value = float(slide.properties["aperio.AppMag"])
 

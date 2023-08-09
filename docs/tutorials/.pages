@@ -9,4 +9,5 @@ nav:
     - Snakemake: '5_end-to-end-pipeline.ipynb'
     - Digital Slide Archive (DSA) Visualization: '6_dsa-tools.ipynb'
     - DSA Annotation: '7_dsa-annotation.ipynb'
+    - Spatial Analysis: 'spatial_stats.ipynb'
 
