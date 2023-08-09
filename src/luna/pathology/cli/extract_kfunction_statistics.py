@@ -65,7 +65,7 @@ def cli(
         df_stats.to_parquet(of)
 
     properties = {
-        "slide_tiles": output_tile_header,
+        "slide_tiles": str(output_tile_header),
     }
 
     return properties

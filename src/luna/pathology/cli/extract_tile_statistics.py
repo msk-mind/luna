@@ -50,7 +50,7 @@ def cli(
     with fs.open(output_feature_file, "wb") as f:
         df_feature_data.to_parquet(f)
 
-    properties = {"feature_data": output_feature_file}
+    properties = {"feature_data": str(output_feature_file)}
 
     return properties
 
