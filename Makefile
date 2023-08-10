@@ -115,7 +115,7 @@ build-docs: ## mkdocs build
 
 serve-docs: ## serve docs locally
 	$(CONDA_ACTIVATE) $(VENV)
-	mkdocs serve --dirtyreload
+	mkdocs serve --dirtyreload -a 0.0.0.0:8000
 
 deploy-docs: ## deploy docs
 	$(CONDA_ACTIVATE) $(VENV)

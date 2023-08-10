@@ -9,7 +9,7 @@ from dask.distributed import progress
 from loguru import logger
 from tqdm.contrib.itertools import product
 
-from luna.common.dask import get_or_create_dask_client
+from luna.common.dask import get_or_create_dask_client, configure_dask_client
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import coord_to_address
 from luna.pathology.spatial.stats import Kfunction
@@ -43,6 +43,9 @@ def cli(
         pd.DataFrame: metadata about function call
     """
     config = get_config(vars())
+
+    configure_dask_client()
+
     df_stats = extract_kfunction(
         config["input_cell_objects_urlpath"],
         config["tile_size"],
@@ -62,7 +65,7 @@ def cli(
         df_stats.to_parquet(of)
 
     properties = {
-        "slide_tiles": output_tile_header,
+        "slide_tiles": str(output_tile_header),
     }
 
     return properties

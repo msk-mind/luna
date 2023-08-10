@@ -68,8 +68,8 @@ def stardist_simple(
     logger.info(df)
 
     properties = {
-        "cell_objects": output_header_file,
-        "feature_data": output_header_file,
+        "cell_objects": str(output_header_file),
+        "feature_data": str(output_header_file),
         "spatial": True,
         "total_cells": len(df),
         "segment_keys": {"slide_id": slide_id},
@@ -200,8 +200,8 @@ def stardist_cell_lymphocyte(
     logger.info(df)
 
     properties = {
-        "cell_objects": output_header_file,
-        "feature_data": output_header_file,
+        "cell_objects": str(output_header_file),
+        "feature_data": str(output_header_file),
         "spatial": True,
         "total_cells": len(df),
         "segment_keys": {"slide_id": slide_id},

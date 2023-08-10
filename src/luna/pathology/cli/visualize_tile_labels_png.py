@@ -69,17 +69,19 @@ def cli(
         config["output_urlpath"], **config["output_storage_options"]
     )
 
+    images = {}
     for score_type, thumbnail_overlayed in thumbnails_overlayed.items():
-        output_file = (
-            Path(output_path_prefix)
-            / f"tile_scores_and_labels_visualization_{score_type}.png"
-        )
+        output_file = f"{output_path_prefix}/tile_scores_and_labels_visualization_{score_type}.png"
         thumbnail_overlayed = Image.fromarray(thumbnail_overlayed)
         with fs.open(output_file, "wb") as of:
             thumbnail_overlayed.save(of)
+        images[score_type] = output_file
         logger.info(f"Saved {score_type} visualization at {output_file}")
 
-    properties = {"data": fs.unstrip_protocol(output_path_prefix)}
+    properties = {
+        "data": fs.unstrip_protocol(output_path_prefix),
+        "images": images,
+    }
 
     return properties
 
@@ -123,16 +125,24 @@ def visualize_tiles(
 
     with open(slide_urlpath, **storage_options) as of:
         slide = tiffslide.TiffSlide(of)
+
         to_mag_scale_factor = get_scale_factor_at_magnification(
             slide, requested_magnification=requested_magnification
         )
+
         # Create thumbnail image for scoring
         sample_arr = get_downscaled_thumbnail(slide, to_mag_scale_factor)
 
         # See if we need to adjust scale_factor to account for different units
         if mpp_units:
-            unit_sf = float(slide.properties["openslide.mpp-x"])
-            to_mag_scale_factor *= unit_sf
+            unit_sf = 0.0
+            for mpp_key in ("aperio.MPP", "openslide.mpp-x"):
+                if mpp_key in slide.properties:
+                    unit_sf = float(slide.properties[mpp_key])
+            if unit_sf:
+                to_mag_scale_factor *= unit_sf
+            else:
+                logger.warning("No MPP scale factor was recognized in slide properties.")
 
     # only visualize tile scores that were able to be computed
     all_score_types = set(plot_labels)
