@@ -629,3 +629,4 @@ def get_tile_color(score: Union[str, float]) -> Optional[npt.ArrayLike]:
     else:
         print("Invalid Score Type")
         return None
+
