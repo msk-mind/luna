@@ -356,6 +356,18 @@ def get_tile_from_slide(
     return tile
 
 
+def resize_array(
+    arr: np.ndarray,
+    factor: int,
+    resample: Image.Resampling = Image.Resampling.NEAREST,
+):
+    image = Image.fromarray(arr)
+    x, y = image.size
+    new_x, new_y = int(x / factor), int(y / factor)
+    image = image.resize((new_x, new_y), resample)
+    return np.array(image)
+
+
 def get_tile_arrays(
     indices: List[int],
     input_slide_urlpath: str,

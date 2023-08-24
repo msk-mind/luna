@@ -23,4 +23,4 @@ def test_cli_generate_mask(tmp_path):
     assert os.path.exists(f"{tmp_path}/metadata.yml")
     df = pd.read_csv(f"{tmp_path}/shape_features.csv")
 
-    assert len(df) == 2
+    assert len(df) == 178

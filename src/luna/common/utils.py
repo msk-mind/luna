@@ -204,7 +204,6 @@ def rebase_schema_numeric(df):
 
         df[col] = df[col].astype(float, errors="ignore")
 
-
 def rebase_schema_mixed(df):
     """
     Tries to convert all columns with mixed types to strings.
@@ -220,7 +219,6 @@ def rebase_schema_mixed(df):
             df[col] = df[col].astype(str)
         if df[col].dtype == list:
             df[col] = df[col].astype(str)
-
 
 def generate_uuid_binary(content, prefix):
     """

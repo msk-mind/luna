@@ -32,7 +32,7 @@ staintools = "^2.1.2"
 pandas = "^1.5.1"
 pyradiomics = "^3.0.1"
 itk = "^5.2.1"
-shapely = "^1.8.5"
+shapely = "^2.0.1"
 ijson = "^3.1.4"
 geojson = "^2.5.0"
 orjson = "^3.8.1"
@@ -76,6 +76,8 @@ pandera = {extras = ["io"], version = "^0.14.5"}
 multimethod = "^1.9.1"
 trimesh = "^3.22.0"
 python-dotenv = "^1.0.0"
+geopandas = "^0.13.2"
+Rtree = "^1.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.2.0"
@@ -148,6 +150,7 @@ visualize_tiles_png = 'luna.pathology.cli.visualize_tile_labels_png:fire_cli'
 train_tissue_classifier = 'luna.pathology.cli.train_tissue_classifier:fire_cli'
 generate_tile_mask = 'luna.pathology.cli.generate_tile_mask:fire_cli'
 extract_shape_features = 'luna.pathology.cli.extract_shape_features:fire_cli'
+extract_tile_shape_features = 'luna.pathology.cli.extract_tile_shape_features:fire_cli'
 run_stardist_cell_detection = 'luna.pathology.cli.run_stardist_cell_detection:fire_cli'
 
 # radiology

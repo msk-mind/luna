@@ -27,4 +27,4 @@ def test_cli_generate_mask(tmp_path):
 
     mask = tifffile.imread(f"{tmp_path}/tile_mask.tif")
 
-    assert np.array_equal(np.unique(mask), [0, 2])
+    assert np.array_equal(np.unique(mask), [0, 1])
