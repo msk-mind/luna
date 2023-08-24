@@ -60,16 +60,18 @@ def stardist_simple(
         config["output_storage_options"],
     )
 
-
     with fs.open(output_header_file, "wb") as of:
         df.to_parquet(of)
 
     logger.info("generated cell data:")
     logger.info(df)
 
+    output_geojson_file = Path(output_path) / f"cell_detections.geojson"
+
     properties = {
         "cell_objects": str(output_header_file),
         "feature_data": str(output_header_file),
+        "geojson_features": str(output_geojson_file),
         "spatial": True,
         "total_cells": len(df),
         "segment_keys": {"slide_id": slide_id},
@@ -108,13 +110,12 @@ def stardist_simple_main(
         pd.DataFrame: cell detections
     """
     fs, slide_path = fsspec.core.url_to_fs(slide_urlpath, **storage_options)
-
     ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
 
     slide_filename = Path(slide_path).name
-    docker_image = "mskmind/qupath-stardist:latest"
+    docker_image = "mskmind/qupath-stardist:current"
     command = f"QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy"
-    logger.info("Launching docker container:")
+    logger.info(f"Launching QuPath via {docker_image} ...")
     logger.info(
         f"\tvolumes={slide_urlpath}:'/inputs/{slide_filename}', {slide_path}:'/output_dir'"
     )
@@ -199,9 +200,12 @@ def stardist_cell_lymphocyte(
     logger.info("generated cell data:")
     logger.info(df)
 
+    output_geojson_file = Path(output_path) / f"cell_detections.geojson"
+
     properties = {
         "cell_objects": str(output_header_file),
         "feature_data": str(output_header_file),
+        "geojson_features": str(output_geojson_file),
         "spatial": True,
         "total_cells": len(df),
         "segment_keys": {"slide_id": slide_id},

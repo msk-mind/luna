@@ -32,3 +32,8 @@ docker/luna_tutorial/vmount/assetstore
 
 build_artifacts
 # conda smithy ci-skeleton end
+
+# vim artifacts
+*~
+*.swp
+*.swo
