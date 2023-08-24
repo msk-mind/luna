@@ -23,7 +23,7 @@ geojson_base = {"type": "FeatureCollection", "features": []}
 def build_geojson_from_pointclick_json(
     labelsets: dict, labelset: str, sv_json: List[dict]
 ) -> list:
-    """Build geoJSON m slideviewer JSON
+    """Build geoJSON from slideviewer JSON
 
     This method extracts point annotations from a slideviwer json object and
     converts them to a standardized geoJSON format

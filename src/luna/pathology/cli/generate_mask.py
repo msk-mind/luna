@@ -30,16 +30,15 @@ def cli(
 ):
     """Generate a full resolution mask image (.tif) from vector annotations (polygons, shapes)
 
-    \b
     Inputs:
         input_slide_image: slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
-        input_slide_roi: roi containing vector shapes (*.annotations, *.json)
-    \b
+        input_slide_roi: region-of-interest (ROI) XML file containing vector shapes (*.annotations)
+
     Outputs:
         slide_mask
-    \b
+
     Example:
-        generate_mask ./slides/10001.svs ./halo/10001.job18484.annotations
+        generate_mask slides/10001.svs halo/10001.job18484.annotations
             -an Tumor
             -o ./masks/10001/
     """
@@ -84,9 +83,9 @@ def generate_mask(
     Take into account positive and negative spaces.  Essentially rasterizes a polygon file.
 
     Args:
-        slide_urlpath (str): slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...) absolute or relative path. prefix with scheme to use alternative file systems.
-        roi_urlpath (str):  halo or other polygonal annotation file (.xml, .geojson) absolute or relative path. prefix with scheme to use alternative file systems.
-        output_urlpath (str): output/working absolute or relative path. prefix with scheme to use alternative file systems.
+        slide_urlpath (str): slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...).
+        roi_urlpath (str):  halo or other polygonal annotation file (.xml).
+        output_urlpath (str): output/working absolute or relative path.
         annotation_name (str): name of annotation layer to use
         storage_options (dict): storage options that make sense for the file storage used
 
