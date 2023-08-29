@@ -34,7 +34,7 @@ def test_stain(tmp_path, dask_client):
             "tests/testdata/pathology/123.svs",
             "--output-urlpath",
             str(tmp_path),
-            "--requested-magnification",
+            "--thumbnail-magnification",
             str(5),
             "--tile-size",
             str(256),

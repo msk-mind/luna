@@ -93,7 +93,8 @@ def cli(
     tiles_urlpath: str = "",
     filter_query: str = "???",
     tile_size: Optional[int] = None,
-    requested_magnification: Optional[int] = None,
+    thumbnail_magnification: Optional[int] = None,
+    tile_magnification: Optional[int] = None,
     batch_size: int = 2000,
     output_urlpath: str = ".",
     dask_options: dict = {},
@@ -107,7 +108,7 @@ def cli(
         tiles_urlpath (str): url/path to tiles manifest (parquet)
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
         tile_size (int): size of tiles to use (at the requested magnification)
-        requested_magnification (Optional[int]): Magnification scale at which to perform computation
+        thumbnail_magnification (Optional[int]): Magnification scale at which to perform computation
         output_urlpath (str): Output url/path prefix
         dask_options (dict): dask options
         storage_options (dict): storage options to pass to reading functions
@@ -137,11 +138,12 @@ def cli(
         config["slide_urlpath"],
         config["tiles_urlpath"],
         config["tile_size"],
-        config["requested_magnification"],
+        config["thumbnail_magnification"],
+        config["tile_magnification"],
         config["filter_query"],
         config["batch_size"],
         config["storage_options"],
-        config["output_urlpath"] + "/" + slide_id,
+        config["output_urlpath"],
         config["output_storage_options"],
     )
     with open(output_header_file, "wb", **config["output_storage_options"]) as of:
@@ -159,7 +161,8 @@ def cli(
 def detect_tissue(
     slide_manifest: DataFrame,
     tile_size: int,
-    requested_magnification: Optional[int] = None,
+    thumbnail_magnification: Optional[int] = None,
+    tile_magnification: Optional[int] = None,
     filter_query: str = "",
     batch_size: int = 2000,
     storage_options: dict = {},
@@ -172,7 +175,8 @@ def detect_tissue(
         df = detect_tissue(
             row.url,
             tile_size,
-            requested_magnification,
+            thumbnail_magnification,
+            tile_magnification,
             filter_query,
             batch_size,
             storage_options,
@@ -191,7 +195,7 @@ def detect_tissue(
 #            row.id: client.submit(detect_tissue,
 #                                  row.url,
 #                                  tile_size,
-#                                  requested_magnification,
+#                                  thumbnail_magnification,
 #                                  filter_query,
 #                                  storage_options,
 #                                  output_urlpath_prefix,
@@ -210,7 +214,8 @@ def detect_tissue(
 def detect_tissue(
     slide_urlpaths: Union[str, list[str]],
     tile_size: int,
-    requested_magnification: Optional[int] = None,
+    thumbnail_magnification: Optional[int] = None,
+    tile_magnification: Optional[int] = None,
     filter_query: str = "",
     batch_size: int = 2000,
     storage_options: dict = {},
@@ -225,7 +230,8 @@ def detect_tissue(
             slide_urlpath,
             "",
             tile_size,
-            requested_magnification,
+            thumbnail_magnification,
+            tile_magnification,
             filter_query,
             batch_size,
             storage_options,
@@ -248,7 +254,8 @@ def detect_tissue(
     slide_urlpath: str,
     tiles_urlpath: str = "",
     tile_size: Optional[int] = None,
-    requested_magnification: Optional[int] = None,
+    thumbnail_magnification: Optional[int] = None,
+    tile_magnification: Optional[int] = None,
     filter_query: str = "",
     batch_size: int = 2000,
     storage_options: dict = {},
@@ -259,7 +266,7 @@ def detect_tissue(
     Args:
         slide_urlpath (str): slide url/path
         tile_size (int): size of tiles to use (at the requested magnification)
-        requested_magnification (Optional[int]): Magnification scale at which to perform computation
+        thumbnail_magnification (Optional[int]): Magnification scale at which to perform computation
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
         storage_options (dict): storage options to pass to reading functions
         output_urlpath_prefix (str): output url/path prefix
@@ -274,14 +281,14 @@ def detect_tissue(
         with open(tiles_urlpath, **storage_options) as of:
             tiles_df = pd.read_parquet(of)
     elif type(tile_size) == int:
-        tiles_df = generate_tiles(slide_urlpath, tile_size, storage_options)
+        tiles_df = generate_tiles(slide_urlpath, tile_size, storage_options, tile_magnification)
     else:
         raise RuntimeError("Specify tile_size or tile_urlpath")
 
     with TiffSlide(slide_urlpath) as slide:
         logger.info(f"Slide dimensions {slide.dimensions}")
         to_mag_scale_factor = get_scale_factor_at_magnification(
-            slide, requested_magnification=requested_magnification
+            slide, requested_magnification=thumbnail_magnification
         )
         logger.info(f"Thumbnail scale factor: {to_mag_scale_factor}")
         # Original thumbnail
@@ -291,7 +298,7 @@ def detect_tissue(
     with TiffSlide(slide_urlpath) as slide:
         logger.info(f"Slide dimensions {slide.dimensions}")
         to_mag_scale_factor = get_scale_factor_at_magnification(
-            slide, requested_magnification=requested_magnification
+            slide, requested_magnification=thumbnail_magnification
         )
         logger.info(f"Thumbnail scale factor: {to_mag_scale_factor}")
         # Original thumbnail
