@@ -79,6 +79,7 @@ python-dotenv = "^1.0.0"
 geopandas = "^0.13.2"
 Rtree = "^1.0.1"
 spython = "^0.3.0"
+adlfs = "^2023.8.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.2.0"
