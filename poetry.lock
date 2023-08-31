@@ -1,4 +1,23 @@
 [[package]]
+name = "adlfs"
+version = "2023.8.0"
+description = "Access Azure Datalake Gen1 with fsspec and dask"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+
+[package.dependencies]
+aiohttp = ">=3.7.0"
+azure-core = ">=1.23.1,<2.0.0"
+azure-datalake-store = ">=0.0.46,<0.1"
+azure-identity = "*"
+azure-storage-blob = ">=12.12.0"
+fsspec = ">=2021.10.1"
+
+[package.extras]
+docs = ["furo", "myst-parser", "numpydoc", "sphinx"]
+
+[[package]]
 name = "aiobotocore"
 version = "2.4.2"
 description = "Async client for aws services using botocore and aiohttp"
@@ -194,6 +213,66 @@ docs = ["furo", "myst-parser", "sphinx", "sphinx-notfound-page", "sphinxcontrib-
 tests = ["attrs", "zope.interface"]
 tests-no-zope = ["cloudpickle", "hypothesis", "mypy (>=0.971,<0.990)", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "pytest-xdist"]
 tests_no_zope = ["cloudpickle", "hypothesis", "mypy (>=0.971,<0.990)", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "pytest-xdist"]
+
+[[package]]
+name = "azure-core"
+version = "1.29.1"
+description = "Microsoft Azure Core Library for Python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+requests = ">=2.18.4"
+six = ">=1.11.0"
+typing-extensions = ">=4.3.0"
+
+[package.extras]
+aio = ["aiohttp (>=3.0)"]
+
+[[package]]
+name = "azure-datalake-store"
+version = "0.0.53"
+description = "Azure Data Lake Store Filesystem Client Library for Python"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+cffi = "*"
+msal = ">=1.16.0,<2"
+requests = ">=2.20.0"
+
+[[package]]
+name = "azure-identity"
+version = "1.14.0"
+description = "Microsoft Azure Identity Library for Python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+azure-core = ">=1.11.0,<2.0.0"
+cryptography = ">=2.5"
+msal = ">=1.20.0,<2.0.0"
+msal-extensions = ">=0.3.0,<2.0.0"
+
+[[package]]
+name = "azure-storage-blob"
+version = "12.17.0"
+description = "Microsoft Azure Blob Storage Client Library for Python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+azure-core = ">=1.28.0,<2.0.0"
+cryptography = ">=2.1.4"
+isodate = ">=0.6.1"
+typing-extensions = ">=4.3.0"
+
+[package.extras]
+aio = ["azure-core[aio] (>=1.28.0,<2.0.0)"]
 
 [[package]]
 name = "babel"
@@ -1880,7 +1959,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "large-image"
-version = "1.23.3"
+version = "1.23.5"
 description = "Python modules to work with large, multiresolution images."
 category = "main"
 optional = false
@@ -1888,51 +1967,51 @@ python-versions = ">=3.6"
 
 [package.dependencies]
 cachetools = "*"
-large-image-source-pil = {version = ">=1.23.3", optional = true, markers = "extra == \"pil\""}
+large-image-source-pil = {version = ">=1.23.5", optional = true, markers = "extra == \"pil\""}
 numpy = "*"
 palettable = "*"
 Pillow = "*"
 
 [package.extras]
-all = ["large-image-converter (>=1.23.3)", "large-image-source-bioformats (>=1.23.3)", "large-image-source-deepzoom (>=1.23.3)", "large-image-source-dicom (>=1.23.3)", "large-image-source-dummy (>=1.23.3)", "large-image-source-gdal (>=1.23.3)", "large-image-source-mapnik (>=1.23.3)", "large-image-source-multi (>=1.23.3)", "large-image-source-nd2 (>=1.23.3)", "large-image-source-ometiff (>=1.23.3)", "large-image-source-openjpeg (>=1.23.3)", "large-image-source-openslide (>=1.23.3)", "large-image-source-pil (>=1.23.3)", "large-image-source-pil[all] (>=1.23.3)", "large-image-source-rasterio (>=1.23.3)", "large-image-source-rasterio[all] (>=1.23.3)", "large-image-source-test (>=1.23.3)", "large-image-source-tiff (>=1.23.3)", "large-image-source-tifffile (>=1.23.3)", "large-image-source-vips (>=1.23.3)", "matplotlib", "psutil (>=4.2.0)", "pylibmc (>=1.5.1)", "pyvips", "simplejpeg", "simplejpeg (<1.6.6)"]
-bioformats = ["large-image-source-bioformats (>=1.23.3)"]
+all = ["large-image-converter (>=1.23.5)", "large-image-source-bioformats (>=1.23.5)", "large-image-source-deepzoom (>=1.23.5)", "large-image-source-dicom (>=1.23.5)", "large-image-source-dummy (>=1.23.5)", "large-image-source-gdal (>=1.23.5)", "large-image-source-mapnik (>=1.23.5)", "large-image-source-multi (>=1.23.5)", "large-image-source-nd2 (>=1.23.5)", "large-image-source-ometiff (>=1.23.5)", "large-image-source-openjpeg (>=1.23.5)", "large-image-source-openslide (>=1.23.5)", "large-image-source-pil (>=1.23.5)", "large-image-source-pil[all] (>=1.23.5)", "large-image-source-rasterio (>=1.23.5)", "large-image-source-rasterio[all] (>=1.23.5)", "large-image-source-test (>=1.23.5)", "large-image-source-tiff (>=1.23.5)", "large-image-source-tifffile (>=1.23.5)", "large-image-source-vips (>=1.23.5)", "matplotlib", "psutil (>=4.2.0)", "pylibmc (>=1.5.1)", "pyvips", "simplejpeg", "simplejpeg (<1.6.6)"]
+bioformats = ["large-image-source-bioformats (>=1.23.5)"]
 colormaps = ["matplotlib"]
-converter = ["large-image-converter (>=1.23.3)"]
-deepzoom = ["large-image-source-deepzoom (>=1.23.3)"]
-dicom = ["large-image-source-dicom (>=1.23.3)"]
-dummy = ["large-image-source-dummy (>=1.23.3)"]
-gdal = ["large-image-source-gdal (>=1.23.3)"]
-mapnik = ["large-image-source-mapnik (>=1.23.3)"]
+converter = ["large-image-converter (>=1.23.5)"]
+deepzoom = ["large-image-source-deepzoom (>=1.23.5)"]
+dicom = ["large-image-source-dicom (>=1.23.5)"]
+dummy = ["large-image-source-dummy (>=1.23.5)"]
+gdal = ["large-image-source-gdal (>=1.23.5)"]
+mapnik = ["large-image-source-mapnik (>=1.23.5)"]
 memcached = ["pylibmc (>=1.5.1)"]
-multi = ["large-image-source-multi (>=1.23.3)"]
-nd2 = ["large-image-source-nd2 (>=1.23.3)"]
-ometiff = ["large-image-source-ometiff (>=1.23.3)"]
-openjpeg = ["large-image-source-openjpeg (>=1.23.3)"]
-openslide = ["large-image-source-openslide (>=1.23.3)"]
+multi = ["large-image-source-multi (>=1.23.5)"]
+nd2 = ["large-image-source-nd2 (>=1.23.5)"]
+ometiff = ["large-image-source-ometiff (>=1.23.5)"]
+openjpeg = ["large-image-source-openjpeg (>=1.23.5)"]
+openslide = ["large-image-source-openslide (>=1.23.5)"]
 performance = ["psutil (>=4.2.0)", "simplejpeg", "simplejpeg (<1.6.6)"]
-pil = ["large-image-source-pil (>=1.23.3)"]
-rasterio = ["large-image-source-rasterio (>=1.23.3)"]
-sources = ["large-image-source-bioformats (>=1.23.3)", "large-image-source-deepzoom (>=1.23.3)", "large-image-source-dicom (>=1.23.3)", "large-image-source-dummy (>=1.23.3)", "large-image-source-gdal (>=1.23.3)", "large-image-source-mapnik (>=1.23.3)", "large-image-source-multi (>=1.23.3)", "large-image-source-nd2 (>=1.23.3)", "large-image-source-ometiff (>=1.23.3)", "large-image-source-openjpeg (>=1.23.3)", "large-image-source-openslide (>=1.23.3)", "large-image-source-pil (>=1.23.3)", "large-image-source-rasterio (>=1.23.3)", "large-image-source-test (>=1.23.3)", "large-image-source-tiff (>=1.23.3)", "large-image-source-tifffile (>=1.23.3)", "large-image-source-vips (>=1.23.3)"]
-test = ["large-image-source-test (>=1.23.3)"]
-tiff = ["large-image-source-tiff (>=1.23.3)"]
-tifffile = ["large-image-source-tifffile (>=1.23.3)"]
+pil = ["large-image-source-pil (>=1.23.5)"]
+rasterio = ["large-image-source-rasterio (>=1.23.5)"]
+sources = ["large-image-source-bioformats (>=1.23.5)", "large-image-source-deepzoom (>=1.23.5)", "large-image-source-dicom (>=1.23.5)", "large-image-source-dummy (>=1.23.5)", "large-image-source-gdal (>=1.23.5)", "large-image-source-mapnik (>=1.23.5)", "large-image-source-multi (>=1.23.5)", "large-image-source-nd2 (>=1.23.5)", "large-image-source-ometiff (>=1.23.5)", "large-image-source-openjpeg (>=1.23.5)", "large-image-source-openslide (>=1.23.5)", "large-image-source-pil (>=1.23.5)", "large-image-source-rasterio (>=1.23.5)", "large-image-source-test (>=1.23.5)", "large-image-source-tiff (>=1.23.5)", "large-image-source-tifffile (>=1.23.5)", "large-image-source-vips (>=1.23.5)"]
+test = ["large-image-source-test (>=1.23.5)"]
+tiff = ["large-image-source-tiff (>=1.23.5)"]
+tifffile = ["large-image-source-tifffile (>=1.23.5)"]
 tiledoutput = ["pyvips"]
-vips = ["large-image-source-vips (>=1.23.3)"]
+vips = ["large-image-source-vips (>=1.23.5)"]
 
 [[package]]
 name = "large-image-source-pil"
-version = "1.23.3"
+version = "1.23.5"
 description = "A Pillow tilesource for large_image."
 category = "main"
 optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
-large-image = ">=1.23.3"
+large-image = ">=1.23.5"
 
 [package.extras]
 all = ["pillow-heif", "rawpy"]
-girder = ["girder-large-image (>=1.23.3)"]
+girder = ["girder-large-image (>=1.23.5)"]
 
 [[package]]
 name = "locket"
@@ -2313,6 +2392,37 @@ description = "More routines for operating on iterables, beyond itertools"
 category = "main"
 optional = false
 python-versions = ">=3.7"
+
+[[package]]
+name = "msal"
+version = "1.23.0"
+description = "The Microsoft Authentication Library (MSAL) for Python library enables your app to access the Microsoft Cloud by supporting authentication of users with Microsoft Azure Active Directory accounts (AAD) and Microsoft Accounts (MSA) using industry standard OAuth2 and OpenID Connect."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+cryptography = ">=0.6,<44"
+PyJWT = {version = ">=1.0.0,<3", extras = ["crypto"]}
+requests = ">=2.0.0,<3"
+
+[package.extras]
+broker = ["pymsalruntime (>=0.13.2,<0.14)"]
+
+[[package]]
+name = "msal-extensions"
+version = "1.0.0"
+description = "Microsoft Authentication Library extensions (MSAL EX) provides a persistence API that can save your data on disk, encrypted on Windows, macOS and Linux. Concurrent data access will be coordinated by a file lock mechanism."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+msal = ">=0.4.1,<2.0.0"
+portalocker = [
+    {version = ">=1.0,<3", markers = "python_version >= \"3.5\" and platform_system != \"Windows\""},
+    {version = ">=1.6,<3", markers = "python_version >= \"3.5\" and platform_system == \"Windows\""},
+]
 
 [[package]]
 name = "msgpack"
@@ -3005,6 +3115,22 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
+name = "portalocker"
+version = "2.7.0"
+description = "Wraps the portalocker recipe for easy usage"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[package.dependencies]
+pywin32 = {version = ">=226", markers = "platform_system == \"Windows\""}
+
+[package.extras]
+docs = ["sphinx (>=1.7.1)"]
+redis = ["redis"]
+tests = ["pytest (>=5.4.1)", "pytest-cov (>=2.8.1)", "pytest-mypy (>=0.8.0)", "pytest-timeout (>=2.1.0)", "redis", "sphinx (>=6.0.0)"]
+
+[[package]]
 name = "pre-commit"
 version = "2.21.0"
 description = "A framework for managing and maintaining multi-language pre-commit hooks."
@@ -3172,6 +3298,23 @@ python-versions = ">=3.7"
 
 [package.extras]
 plugins = ["importlib-metadata"]
+
+[[package]]
+name = "pyjwt"
+version = "2.8.0"
+description = "JSON Web Token implementation in Python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+cryptography = {version = ">=3.4.0", optional = true, markers = "extra == \"crypto\""}
+
+[package.extras]
+crypto = ["cryptography (>=3.4.0)"]
+dev = ["coverage[toml] (==5.0.4)", "cryptography (>=3.4.0)", "pre-commit", "pytest (>=6.0.0,<7.0.0)", "sphinx (>=4.5.0,<5.0.0)", "sphinx-rtd-theme", "zope.interface"]
+docs = ["sphinx (>=4.5.0,<5.0.0)", "sphinx-rtd-theme", "zope.interface"]
+tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
 
 [[package]]
 name = "pykwalify"
@@ -4744,9 +4887,13 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.12"
-content-hash = "17db7d244fbc8cd3cc3b0648eae216100903ed3882c37f7bf1074e17f6bd24ec"
+content-hash = "0e4ea0ad97396e576795f5f34622b94bdf191a6b3d175375d2f278e54aaaa1db"
 
 [metadata.files]
+adlfs = [
+    {file = "adlfs-2023.8.0-py3-none-any.whl", hash = "sha256:3eb248a3c2a30b419f1147bd7676d156b5219f96ef7f11d47166afd2a3bdb07e"},
+    {file = "adlfs-2023.8.0.tar.gz", hash = "sha256:07e804f6df4593acfcaf01025b162e30ac13e523d3570279c98b2d91a18026d9"},
+]
 aiobotocore = [
     {file = "aiobotocore-2.4.2-py3-none-any.whl", hash = "sha256:4acd1ebe2e44be4b100aa553910bda899f6dc090b3da2bc1cf3d5de2146ed208"},
     {file = "aiobotocore-2.4.2.tar.gz", hash = "sha256:0603b74a582dffa7511ce7548d07dc9b10ec87bc5fb657eb0b34f9bd490958bf"},
@@ -4912,6 +5059,22 @@ async-timeout = [
 attrs = [
     {file = "attrs-22.2.0-py3-none-any.whl", hash = "sha256:29e95c7f6778868dbd49170f98f8818f78f3dc5e0e37c0b1f474e3561b240836"},
     {file = "attrs-22.2.0.tar.gz", hash = "sha256:c9227bfc2f01993c03f68db37d1d15c9690188323c067c641f1a35ca58185f99"},
+]
+azure-core = [
+    {file = "azure-core-1.29.1.zip", hash = "sha256:68e5bb6e3a3230ec202001cc5cb88e57f11c441c8345e921a9ffb8c370abf936"},
+    {file = "azure_core-1.29.1-py3-none-any.whl", hash = "sha256:6bcefa1f70ff7bf3c39c07c73d8a21df73288eff7e6a1031eb8cfae71cc7bed4"},
+]
+azure-datalake-store = [
+    {file = "azure-datalake-store-0.0.53.tar.gz", hash = "sha256:05b6de62ee3f2a0a6e6941e6933b792b800c3e7f6ffce2fc324bc19875757393"},
+    {file = "azure_datalake_store-0.0.53-py2.py3-none-any.whl", hash = "sha256:a30c902a6e360aa47d7f69f086b426729784e71c536f330b691647a51dc42b2b"},
+]
+azure-identity = [
+    {file = "azure-identity-1.14.0.zip", hash = "sha256:72441799f8c5c89bfe21026965e266672a7c5d050c2c65119ef899dd5362e2b1"},
+    {file = "azure_identity-1.14.0-py3-none-any.whl", hash = "sha256:edabf0e010eb85760e1dd19424d5e8f97ba2c9caff73a16e7b30ccbdbcce369b"},
+]
+azure-storage-blob = [
+    {file = "azure-storage-blob-12.17.0.zip", hash = "sha256:c14b785a17050b30fc326a315bdae6bc4a078855f4f94a4c303ad74a48dc8c63"},
+    {file = "azure_storage_blob-12.17.0-py3-none-any.whl", hash = "sha256:0016e0c549a80282d7b4920c03f2f4ba35c53e6e3c7dbcd2a4a8c8eb3882c1e7"},
 ]
 babel = [
     {file = "Babel-2.11.0-py3-none-any.whl", hash = "sha256:1ad3eca1c885218f6dce2ab67291178944f810a10a9b5f3cb8382a5a232b64fe"},
@@ -6136,12 +6299,12 @@ kiwisolver = [
     {file = "kiwisolver-1.4.4.tar.gz", hash = "sha256:d41997519fcba4a1e46eb4a2fe31bc12f0ff957b2b81bac28db24744f333e955"},
 ]
 large-image = [
-    {file = "large-image-1.23.3.tar.gz", hash = "sha256:f176d51b3cefd05c93e4ac6386b5e573a57b9009a3141ac48eec1823c0dc20c9"},
-    {file = "large_image-1.23.3-py3-none-any.whl", hash = "sha256:7669bb12983e8c4a40303af5ce560360f31af6d33174931c42b6ae6508a120a5"},
+    {file = "large-image-1.23.5.tar.gz", hash = "sha256:20b5540317f147b6ee185c33de2e06a9b9bd4e852e1ef0950008efacc00de57d"},
+    {file = "large_image-1.23.5-py3-none-any.whl", hash = "sha256:eda204ef87ff5de0540a98f02024ad92d7bf73f5116bb791fa4741b59e951885"},
 ]
 large-image-source-pil = [
-    {file = "large-image-source-pil-1.23.3.tar.gz", hash = "sha256:e6c97dbd6a7aa3ea0958a5b745dcb79f3eb07e42779846bb0076e71cf9b8aa4a"},
-    {file = "large_image_source_pil-1.23.3-py3-none-any.whl", hash = "sha256:eb4b6233acf5eb506eda651627958ca8fb8be0f9b6f5739d28dd61ba9136b003"},
+    {file = "large-image-source-pil-1.23.5.tar.gz", hash = "sha256:53be3a219fdd255dab27388f4718672bc5df835083c5ed17869ef79666656a3e"},
+    {file = "large_image_source_pil-1.23.5-py3-none-any.whl", hash = "sha256:a2eaa6d6eaea1b116dbd77fcc58d907cfa5c6c4a66be0525140f3a3b3085f356"},
 ]
 locket = [
     {file = "locket-1.0.0-py2.py3-none-any.whl", hash = "sha256:b6c819a722f7b6bd955b80781788e4a66a55628b858d347536b7e81325a3a5e3"},
@@ -6412,6 +6575,14 @@ mock = [
 more-itertools = [
     {file = "more-itertools-9.0.0.tar.gz", hash = "sha256:5a6257e40878ef0520b1803990e3e22303a41b5714006c32a3fd8304b26ea1ab"},
     {file = "more_itertools-9.0.0-py3-none-any.whl", hash = "sha256:250e83d7e81d0c87ca6bd942e6aeab8cc9daa6096d12c5308f3f92fa5e5c1f41"},
+]
+msal = [
+    {file = "msal-1.23.0-py2.py3-none-any.whl", hash = "sha256:3342e0837a047007f9d479e814b559c3219767453d57920dc40a31986862048b"},
+    {file = "msal-1.23.0.tar.gz", hash = "sha256:25c9a33acf84301f93d1fdbe9f1a9c60cd38af0d5fffdbfa378138fc7bc1e86b"},
+]
+msal-extensions = [
+    {file = "msal-extensions-1.0.0.tar.gz", hash = "sha256:c676aba56b0cce3783de1b5c5ecfe828db998167875126ca4b47dc6436451354"},
+    {file = "msal_extensions-1.0.0-py2.py3-none-any.whl", hash = "sha256:91e3db9620b822d0ed2b4d1850056a0f133cba04455e62f11612e40f5502f2ee"},
 ]
 msgpack = [
     {file = "msgpack-1.0.4-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:4ab251d229d10498e9a2f3b1e68ef64cb393394ec477e3370c457f9430ce9250"},
@@ -6935,6 +7106,10 @@ poetry-core = [
     {file = "poetry-core-1.0.8.tar.gz", hash = "sha256:951fc7c1f8d710a94cb49019ee3742125039fc659675912ea614ac2aa405b118"},
     {file = "poetry_core-1.0.8-py2.py3-none-any.whl", hash = "sha256:54b0fab6f7b313886e547a52f8bf52b8cf43e65b2633c65117f8755289061924"},
 ]
+portalocker = [
+    {file = "portalocker-2.7.0-py2.py3-none-any.whl", hash = "sha256:a07c5b4f3985c3cf4798369631fb7011adb498e2a46d8440efc75a8f29a0f983"},
+    {file = "portalocker-2.7.0.tar.gz", hash = "sha256:032e81d534a88ec1736d03f780ba073f047a06c478b06e2937486f334e955c51"},
+]
 pre-commit = [
     {file = "pre_commit-2.21.0-py2.py3-none-any.whl", hash = "sha256:e2f91727039fc39a92f58a588a25b87f936de6567eed4f0e673e0507edc75bad"},
     {file = "pre_commit-2.21.0.tar.gz", hash = "sha256:31ef31af7e474a8d8995027fefdfcf509b5c913ff31f2015b4ec4beb26a6f658"},
@@ -7087,6 +7262,10 @@ pyflakes = [
 pygments = [
     {file = "Pygments-2.15.1-py3-none-any.whl", hash = "sha256:db2db3deb4b4179f399a09054b023b6a586b76499d36965813c71aa8ed7b5fd1"},
     {file = "Pygments-2.15.1.tar.gz", hash = "sha256:8ace4d3c1dd481894b2005f560ead0f9f19ee64fe983366be1a21e171d12775c"},
+]
+pyjwt = [
+    {file = "PyJWT-2.8.0-py3-none-any.whl", hash = "sha256:59127c392cc44c2da5bb3192169a91f429924e17aff6534d70fdc02ab3e04320"},
+    {file = "PyJWT-2.8.0.tar.gz", hash = "sha256:57e28d156e3d5c10088e0c68abb90bfac3df82b40a71bd0daa20c65ccd5c23de"},
 ]
 pykwalify = [
     {file = "pykwalify-1.8.0-py2.py3-none-any.whl", hash = "sha256:731dfa87338cca9f559d1fca2bdea37299116e3139b73f78ca90a543722d6651"},
