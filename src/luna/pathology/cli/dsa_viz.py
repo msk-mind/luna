@@ -144,17 +144,17 @@ def save_dsa_annotation(
     annotation_name_replaced = dsa_annotation["name"].replace(" ", "_")
 
     fs, output_urlpath_prefix = fsspec.core.url_to_fs(output_urlpath, **storage_options)
-    output_url = (
+    output_path = (
         Path(output_urlpath_prefix) / f"{annotation_name_replaced}_{image_id}.json"
     )
 
     try:
-        with open(output_url, "w", **storage_options).open() as outfile:
+        with fs.open(output_path, "w").open() as outfile:
             json.dump(dsa_annotation, outfile)
         logger.info(
-            f"Saved {len(dsa_annotation['elements'])} to {fs.unstrip_protocol(str(output_url))}"
+            f"Saved {len(dsa_annotation['elements'])} to {fs.unstrip_protocol(str(output_path))}"
         )
-        return output_url
+        return fs.unstrip_protocol(str(output_path))
     except Exception as exc:
         logger.error(exc)
         return None

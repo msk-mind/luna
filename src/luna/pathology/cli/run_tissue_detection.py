@@ -8,7 +8,7 @@ import fire  # type: ignore
 import fsspec  # type: ignore
 import numpy as np
 import pandas as pd
-from dask.distributed import Client, progress
+from dask.distributed import progress
 from fsspec import open  # type: ignore
 from loguru import logger
 from multimethod import multimethod
@@ -18,9 +18,15 @@ from skimage.color import rgb2gray  # type: ignore
 from skimage.filters import threshold_otsu  # type: ignore
 from tiffslide import TiffSlide
 
-from luna.common.dask import get_or_create_dask_client, configure_dask_client
+from luna.common.dask import configure_dask_client, get_or_create_dask_client
 from luna.common.models import SlideSchema, Tile
-from luna.common.utils import get_config, grouper, local_cache_urlpath, save_metadata, timed
+from luna.common.utils import (
+    get_config,
+    grouper,
+    local_cache_urlpath,
+    save_metadata,
+    timed,
+)
 from luna.pathology.cli.generate_tiles import generate_tiles
 from luna.pathology.common.utils import (
     get_array_from_tile,
@@ -120,7 +126,7 @@ def cli(
     """
     config = get_config(vars())
 
-    configure_dask_client(**config['dask_options'])
+    configure_dask_client(**config["dask_options"])
 
     if not config["tile_size"] and not config["tiles_urlpath"]:
         raise fire.core.FireError("Specify either tiles_urlpath or tile_size")
@@ -130,9 +136,7 @@ def cli(
     )
 
     slide_id = Path(urlparse(config["slide_urlpath"]).path).stem
-    output_header_file = (
-        Path(output_urlpath_prefix) / f"{slide_id}.tiles.parquet"
-    )
+    output_header_file = Path(output_urlpath_prefix) / f"{slide_id}.tiles.parquet"
 
     df = detect_tissue(
         config["slide_urlpath"],
@@ -146,8 +150,8 @@ def cli(
         config["output_urlpath"],
         config["output_storage_options"],
     )
-    with open(output_header_file, "wb", **config["output_storage_options"]) as of:
-        print(f"saving to {output_header_file}")
+    with output_filesystem.open(output_header_file, "wb") as of:
+        logger.info(f"saving to {output_header_file}")
         df.to_parquet(of)
         properties = {
             "tiles_manifest": output_header_file,
@@ -281,7 +285,9 @@ def detect_tissue(
         with open(tiles_urlpath, **storage_options) as of:
             tiles_df = pd.read_parquet(of)
     elif type(tile_size) == int:
-        tiles_df = generate_tiles(slide_urlpath, tile_size, storage_options, tile_magnification)
+        tiles_df = generate_tiles(
+            slide_urlpath, tile_size, storage_options, tile_magnification
+        )
     else:
         raise RuntimeError("Specify tile_size or tile_urlpath")
 
@@ -399,8 +405,12 @@ def detect_tissue(
         deconv_sample_arr = pull_stain_channel(
             sample_arr_filtered, vectors=stain_vectors
         )
-        with open(output_urlpath_prefix + "/deconv_sample_arr.png", "wb") as f:
-            Image.fromarray(deconv_sample_arr).save(f, "png", **output_storage_options)
+        with open(
+            output_urlpath_prefix + "/deconv_sample_arr.png",
+            "wb",
+            **output_storage_options,
+        ) as f:
+            Image.fromarray(deconv_sample_arr).save(f, "png")
 
         logger.info("Saving stain masks")
         stain0_mask = np.where(

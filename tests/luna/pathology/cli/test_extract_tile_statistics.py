@@ -33,3 +33,25 @@ def test_cli_extract_tile_statistics(tmp_path):
         "Centroid X µm_pct100",
     ]:
         assert col in cols
+
+
+def test_cli_extract_tile_statistics_s3(s3fs_client):
+    s3fs_client.mkdirs("tiletest", exist_ok=True)
+    s3fs_client.put(
+        "tests/testdata/pathology/test_tile_stats.parquet", "tiletest/test/"
+    )
+    fire.Fire(
+        cli,
+        [
+            "--tiles-urlpath",
+            "s3://tiletest/test/test_tile_stats.parquet",
+            "--output-urlpath",
+            "s3://tiletest/out/",
+            "--storage_options",
+            "{'key': '', 'secret': '', 'client_kwargs': {'endpoint_url': '"
+            + s3fs_client.client_kwargs["endpoint_url"]
+            + "'}}",
+        ],
+    )
+
+    assert s3fs_client.exists("s3://tiletest/out/test_tile_stats_tile_stats.parquet")

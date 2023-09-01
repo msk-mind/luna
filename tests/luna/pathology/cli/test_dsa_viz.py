@@ -21,6 +21,29 @@ def verify_cleanup(output_file):
     os.remove(str(Path(output_file).parent) + "/metadata.yml")
 
 
+def test_stardist_polygon_s3(s3fs_client):
+    s3fs_client.mkdirs("dsatest", exist_ok=True)
+    s3fs_client.put(
+        "tests/testdata/pathology/test_object_classification.geojson",
+        "s3://dsatest/test/",
+    )
+    fire.Fire(
+        stardist_polygon,
+        [
+            "--local_config",
+            "tests/testdata/pathology/stardist_polygon_s3.yml",
+            "--storage_options",
+            "{'key': '', 'secret': '', 'client_kwargs': {'endpoint_url': '"
+            + s3fs_client.client_kwargs["endpoint_url"]
+            + "'}}",
+        ],
+    )
+
+    assert s3fs_client.exists(
+        "s3://dsatest/out/StarDist_Segmentations_with_Lymphocyte_Classifications_123.json"
+    )
+
+
 def test_stardist_polygon():
     fire.Fire(
         stardist_polygon,

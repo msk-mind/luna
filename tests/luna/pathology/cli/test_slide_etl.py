@@ -14,6 +14,35 @@ def env(monkeypatch):
     monkeypatch.setenv("HOSTNAME", "localhost")
 
 
+def test_slide_etl_s3(s3fs_client, dask_client):
+    s3fs_client.mkdirs("etltest", exist_ok=True)
+    s3fs_client.put(
+        "tests/testdata/pathology/test-project/wsi/123.svs", "etltest/test/"
+    )
+    s3fs_client.put(
+        "tests/testdata/pathology/test-project/wsi/fake_slide.svs", "etltest/test/"
+    )
+    fire.Fire(
+        cli,
+        [
+            "--slide_urlpath",
+            "s3://etltest/test/",
+            "--output-urlpath",
+            "s3://etltest/out",
+            "--project_name",
+            "TEST-00-000",
+            "--comment",
+            "Test ingestion",
+            "--storage_options",
+            "{'key': '', 'secret': '', 'client_kwargs': {'endpoint_url': '"
+            + s3fs_client.client_kwargs["endpoint_url"]
+            + "'}}",
+        ],
+    )
+
+    assert s3fs_client.exists("etltest/out/slide_ingest_TEST-00-000.parquet")
+
+
 def test_slide_etl(tmp_path, dask_client):
     fire.Fire(
         cli,

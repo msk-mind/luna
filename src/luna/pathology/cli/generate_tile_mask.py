@@ -13,7 +13,7 @@ from loguru import logger
 from multimethod import multimethod
 
 from luna.common.models import TileSchema
-from luna.common.utils import get_config, save_metadata, timed
+from luna.common.utils import get_config, local_cache_urlpath, save_metadata, timed
 
 
 @timed
@@ -56,19 +56,15 @@ def cli(
         slide_width,
         slide_height,
         config["label_cols"],
+        config["output_urlpath"],
+        config["output_storage_options"],
     )
 
-    fs, output_urlpath_prefix = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
+    fs, output_path = fsspec.core.url_to_fs(config["output_urlpath"])
 
-    slide_mask = Path(output_urlpath_prefix) / "tile_mask.tif"
-    logger.info(f"Saving output mask to {slide_mask}")
-    with fs.open(slide_mask, "wb") as of:
-        tifffile.imwrite(of, mask_arr)
-
+    slide_mask = Path(output_path) / "tile_mask.tif"
     properties = {
-        "slide_mask": slide_mask,
+        "slide_mask": fs.unstrip_protocol(str(slide_mask)),
         "mask_values": mask_values,
         "mask_size": mask_arr.shape,
     }
@@ -81,6 +77,8 @@ def convert_tiles_to_mask(
     tiles_df: pd.DataFrame,
     slide: tiffslide.TiffSlide,
     label_cols: Union[str, List[str]],
+    output_urlpath: str,
+    output_storage_options: dict,
 ):
     """Converts categorical tile labels to a slide image mask. This mask can be used for feature extraction and spatial analysis.
 
@@ -96,15 +94,27 @@ def convert_tiles_to_mask(
 
     slide_width = slide.dimensions[0]
     slide_height = slide.dimensions[1]
-    return convert_tiles_to_mask(tiles_df, slide_width, slide_height, label_cols)
+    return convert_tiles_to_mask(
+        tiles_df,
+        slide_width,
+        slide_height,
+        label_cols,
+        output_urlpath,
+        output_storage_options,
+    )
 
 
 @multimethod
+@local_cache_urlpath(
+    dir_key_write_mode={"output_urlpath": "w"},
+)
 def convert_tiles_to_mask(
     tiles_df: pd.DataFrame,
     slide_width: int,
     slide_height: int,
     label_cols: Union[str, List[str]],
+    output_urlpath: str,
+    output_storage_options: dict,
 ):
     """Converts categorical tile labels to a slide image mask. This mask can be used for feature extraction and spatial analysis.
 
@@ -143,6 +153,11 @@ def convert_tiles_to_mask(
         mask_arr[y : y + extent, x : x + extent] = value
 
         logger.info(f"{address}, {row['mask']}, {value}")
+
+    slide_mask = Path(output_urlpath) / "tile_mask.tif"
+    logger.info(f"Saving output mask to {slide_mask}")
+    with open(slide_mask, "wb") as of:
+        tifffile.imwrite(of, mask_arr)
 
     return mask_arr, mask_values
 

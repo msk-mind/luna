@@ -42,7 +42,7 @@ def validate_dask_address(addr: str) -> bool:
 
     The typical format for this will be something like 'tcp://192.168.0.37:8786',
     but there could be a hostname instead of an IP address, and maybe some other
-    URL schemes are supported.  This function will be used to check whether a 
+    URL schemes are supported.  This function will be used to check whether a
     user-defined dask scheduler address is plausible, or obviously invalid.
     """
     HOSTPORT_RE = re.compile(
@@ -51,7 +51,7 @@ def validate_dask_address(addr: str) -> bool:
            [A-Za-z][A-Za-z0-9.-]*[A-Za-z0-9] |
            [A-Za-z])
          : (?P<port>\d+)$""",
-        re.VERBOSE
+        re.VERBOSE,
     )
     return bool(HOSTPORT_RE.match(addr))
 
@@ -88,7 +88,6 @@ def local_cache_urlpath(
             args_dict = _get_args_dict(func, args, kwargs)
             new_args_dict = args_dict.copy()
 
-            filesystem = None
             tmp_dir_dest = []
             for key, write_mode in dir_key_write_mode.items():
                 if not args_dict[key]:
@@ -99,11 +98,11 @@ def local_cache_urlpath(
                 fs, dir = fsspec.core.url_to_fs(
                     args_dict[key], **args_dict.get(storage_options_key, {})
                 )
-                if fs.protocol != "file" and 'cache' not in fs.protocol:
+                if fs.protocol != "file" and "cache" not in fs.protocol:
                     new_args_dict[storage_options_key] = {"auto_mkdir": True}
                     tmp_dir = tempfile.TemporaryDirectory()
                     new_args_dict[key] = tmp_dir.name
-                    tmp_dir_dest.append((tmp_dir, dir))
+                    tmp_dir_dest.append((tmp_dir, dir, fs))
 
             result = None
             with ExitStack() as stack:
@@ -116,7 +115,7 @@ def local_cache_urlpath(
                     fs, path = fsspec.core.url_to_fs(
                         args_dict[key], **args_dict.get(storage_options_key, {})
                     )
-                    if 'cache' not in fs.protocol:
+                    if "cache" not in fs.protocol:
                         simplecache_fs = fsspec.filesystem("simplecache", fs=fs)
 
                         of = simplecache_fs.open(path, write_mode)
@@ -125,8 +124,8 @@ def local_cache_urlpath(
 
                 result = func(**new_args_dict)
 
-            for tmp_dir, dest in tmp_dir_dest:
-                copy_files(tmp_dir.name, dest, destination_filesystem=filesystem)
+            for tmp_dir, dest, fs in tmp_dir_dest:
+                copy_files(tmp_dir.name, dest, destination_filesystem=fs)
 
             return result
 
@@ -204,6 +203,7 @@ def rebase_schema_numeric(df):
 
         df[col] = df[col].astype(float, errors="ignore")
 
+
 def rebase_schema_mixed(df):
     """
     Tries to convert all columns with mixed types to strings.
@@ -219,6 +219,7 @@ def rebase_schema_mixed(df):
             df[col] = df[col].astype(str)
         if df[col].dtype == list:
             df[col] = df[col].astype(str)
+
 
 def generate_uuid_binary(content, prefix):
     """

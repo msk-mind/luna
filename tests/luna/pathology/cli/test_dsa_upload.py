@@ -4,7 +4,7 @@ from girder_client import GirderClient
 from luna.pathology.cli.dsa_upload import cli
 
 
-def test_upload(monkeypatch):
+def test_upload(monkeypatch, s3fs_client):
     def mock_get(*args, **kwargs):
         if args[1] == "/system/check":
             return {}
@@ -62,5 +62,32 @@ def test_upload(monkeypatch):
             "user",
             "--password",
             "pw",
+        ],
+    )
+
+    s3fs_client.mkdirs("testupload", exist_ok=True)
+    s3fs_client.put(
+        "tests/luna/pathology/cli/testouts/Tile-Based_Pixel_Classifier_Inference_123.json",
+        "testupload/json/",
+    )
+    fire.Fire(
+        cli,
+        [
+            "--dsa_endpoint_url",
+            "http://localhost:8080/",
+            "--annotation_file_urlpath",
+            "s3://testupload/json/" + "Tile-Based_Pixel_Classifier_Inference_123.json",
+            "--image_filename",
+            "123.svs",
+            "--collection_name",
+            "test_collection",
+            "--username",
+            "user",
+            "--password",
+            "pw",
+            "--storage_options",
+            "{'key': '', 'secret': '', 'client_kwargs': {'endpoint_url': '"
+            + s3fs_client.client_kwargs["endpoint_url"]
+            + "'}}",
         ],
     )

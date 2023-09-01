@@ -1,13 +1,13 @@
 # General imports
 import itertools
+import json
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import List, Optional
 
 import fire
 import fsspec
 import geopandas as gpd
-import json
 import numpy as np
 import pandas as pd
 import tiffslide
@@ -22,38 +22,47 @@ from luna.pathology.cli.extract_shape_features import extract_shape_features
 from luna.pathology.cli.generate_tile_mask import convert_tiles_to_mask
 from luna.pathology.common.utils import resize_array
 
+
 class StatisticalDescriptors(str, Enum):
-    ALL = 'All'
-    QUANTILES = 'Quantiles'
-    STATS = 'Stats'
-    DENSITY = 'Density'
+    ALL = "All"
+    QUANTILES = "Quantiles"
+    STATS = "Stats"
+    DENSITY = "Density"
+
 
 STATISTICAL_DESCRIPTOR_PERCENTILES = np.arange(0.1, 1, 0.1)
 STATISTICAL_DESCRIPTOR_MAP = {
     StatisticalDescriptors.STATS: ["min", "mean", "median", "max", "sum"],
     StatisticalDescriptors.DENSITY: ["var", "skew", ("kurt", kurtosis)],
-    StatisticalDescriptors.QUANTILES: [(f"{p:.0%}", lambda x: x.quantile(p)) for p in STATISTICAL_DESCRIPTOR_PERCENTILES],
+    StatisticalDescriptors.QUANTILES: [
+        (f"{p:.0%}", lambda x: x.quantile(p))
+        for p in STATISTICAL_DESCRIPTOR_PERCENTILES
+    ],
 }
 STATISTICAL_DESCRIPTOR_MAP[StatisticalDescriptors.ALL] = list(
-    itertools.chain(*STATISTICAL_DESCRIPTOR_MAP.values()))
+    itertools.chain(*STATISTICAL_DESCRIPTOR_MAP.values())
+)
+
 
 class CellularFeatures(str, Enum):
-    ALL = 'All'
-    NUCLEUS = 'Nucleus'
-    CELL = 'Cell'
-    CYTOPLASM = 'Cytoplasm'
-    MEMBRANE = 'Membrane'
+    ALL = "All"
+    NUCLEUS = "Nucleus"
+    CELL = "Cell"
+    CYTOPLASM = "Cytoplasm"
+    MEMBRANE = "Membrane"
 
 
 class PropertyType(str, Enum):
-    ALL = 'All'
-    GEOMETRIC = 'Geometric'
-    STAIN = 'Stain'
+    ALL = "All"
+    GEOMETRIC = "Geometric"
+    STAIN = "Stain"
+
 
 PROPERTY_TYPE_MAP = {
-    PropertyType.GEOMETRIC: ['Cell', 'Nucleus'],
-    PropertyType.STAIN: ['Hematoxylin', 'Eosin', 'DAB'],
+    PropertyType.GEOMETRIC: ["Cell", "Nucleus"],
+    PropertyType.STAIN: ["Hematoxylin", "Eosin", "DAB"],
 }
+
 
 @timed
 @save_metadata
@@ -64,7 +73,7 @@ def cli(
     output_urlpath: str = ".",
     resize_factor: int = 16,
     detection_probability_threshold: Optional[float] = None,
-    statistical_descriptors: str  = StatisticalDescriptors.ALL,
+    statistical_descriptors: str = StatisticalDescriptors.ALL,
     cellular_features: str = CellularFeatures.ALL,
     property_type: str = PropertyType.ALL,
     storage_options: dict = {},
@@ -117,9 +126,9 @@ def cli(
 
     slide_id = Path(config["slide_urlpath"]).stem
 
-    statistical_descriptors = config['statistical_descriptors'].capitalize()
-    cellular_features = config['cellular_features'].capitalize()
-    property_type = config['property_type'].capitalize()
+    statistical_descriptors = config["statistical_descriptors"].capitalize()
+    cellular_features = config["cellular_features"].capitalize()
+    property_type = config["property_type"].capitalize()
 
     df = extract_tile_shape_features(
         object_gdf,
@@ -154,7 +163,7 @@ def extract_tile_shape_features(
     resize_factor: int = 16,
     detection_probability_threshold: Optional[float] = None,
     slide_id: str = "",
-    statistical_descriptors: StatisticalDescriptors  = StatisticalDescriptors.ALL,
+    statistical_descriptors: StatisticalDescriptors = StatisticalDescriptors.ALL,
     cellular_features: CellularFeatures = CellularFeatures.ALL,
     property_type: PropertyType = PropertyType.ALL,
     include_smaller_regions: bool = False,
@@ -192,6 +201,9 @@ def extract_tile_shape_features(
     Returns:
         dict: output paths and the number of features generated
     """
+    import pdb
+
+    pdb.set_trace()
     LabeledTileSchema.validate(tiles_df.reset_index())
 
     tile_area = tiles_df.iloc[0].tile_size ** 2
@@ -205,21 +217,24 @@ def extract_tile_shape_features(
         ent["Parent"] = "whole_region"
         ent["Class"] = i
         ent["variable"] = f"Joint Entropy to {j}"
-        ent["value"] = entropy(counts[[i,j]], base=2)
+        ent["value"] = entropy(counts[[i, j]], base=2)
         joint_entropy.append(ent)
 
     entropy_df = pd.DataFrame(joint_entropy)
 
     shannon_entropy = entropy(counts, base=2)
-    entropy_df = entropy_df.append({
-        "Parent": "whole_region",
-        "Class": "All",
-        "variable": "Entropy",
-        "value": shannon_entropy
-    }, ignore_index=True)
+    entropy_df = entropy_df.append(
+        {
+            "Parent": "whole_region",
+            "Class": "All",
+            "variable": "Entropy",
+            "value": shannon_entropy,
+        },
+        ignore_index=True,
+    )
 
     slide_area = counts * tile_area
-    slide_area.index.name = 'Parent'
+    slide_area.index.name = "Parent"
 
     mask, mask_values = convert_tiles_to_mask(
         tiles_df, slide_width, slide_height, "Classification"
@@ -248,8 +263,10 @@ def extract_tile_shape_features(
     try:
         measurement_keys = list(gdf.measurements.iloc[0].keys())
         gdf = gdf.join(gdf.measurements.apply(lambda x: pd.Series(x)))
-    except:
-        measurements = gdf.measurements.apply(lambda x: pd.DataFrame(json.loads(x)).set_index('name').squeeze())
+    except Exception:
+        measurements = gdf.measurements.apply(
+            lambda x: pd.DataFrame(json.loads(x)).set_index("name").squeeze()
+        )
         measurement_keys = list(measurements.columns.values)
         gdf = gdf.join(measurements)
     gdf = gdf.join(gdf.classification.apply(lambda x: pd.Series(x)))
@@ -271,10 +288,8 @@ def extract_tile_shape_features(
     agg_df["Object Counts"] = gb.size()
 
     agg_df["Normalized Cell Density"] = agg_df["Object Counts"] / slide_area
-    if 'Cell: Area µm^2 sum' in agg_df.columns:
-        agg_df["Cell Density"] = agg_df["Cell: Area µm^2 sum"] / (
-            slide_area / 4
-        )
+    if "Cell: Area µm^2 sum" in agg_df.columns:
+        agg_df["Cell Density"] = agg_df["Cell: Area µm^2 sum"] / (slide_area / 4)
 
     logger.info(
         "Calculating obj count log ratios between all tile label obj classification groups"
@@ -301,8 +316,7 @@ def extract_tile_shape_features(
 
     if property_type != PropertyType.ALL:
         property_types = PROPERTY_TYPE_MAP[property_type]
-        agg_df = agg_df.filter(regex='|'.join(property_types))
-
+        agg_df = agg_df.filter(regex="|".join(property_types))
 
     mdf = pd.melt(agg_df.reset_index(), id_vars=["Parent", "Class"]).dropna()
     mdf = pd.concat([mdf, ratio_df.reset_index(), shape_features_df, entropy_df])
@@ -310,7 +324,9 @@ def extract_tile_shape_features(
     if slide_id:
         mdf.insert(loc=0, column="slide_id", value=slide_id)
 
-    mdf[['Parent', 'Class', 'variable']] = mdf[['Parent', 'Class', 'variable']].replace(r"_", " ", regex=True)
+    mdf[["Parent", "Class", "variable"]] = mdf[["Parent", "Class", "variable"]].replace(
+        r"_", " ", regex=True
+    )
 
     return mdf
 
