@@ -76,6 +76,8 @@ def cli(
     statistical_descriptors: str = StatisticalDescriptors.ALL,
     cellular_features: str = CellularFeatures.ALL,
     property_type: str = PropertyType.ALL,
+    include_smaller_regions: bool = False,
+    label_cols: List[str] = None,
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
@@ -92,6 +94,8 @@ def cli(
         statistical_descriptors (str): statistical descriptors to calculate. One of All, Quantiles, Stats, or Density
         cellular_features (str): cellular features to include. One of All, Nucleus, Cell, Cytoplasm, and Membrane
         property_type (str): properties to include. One of All, Geometric, or Stain
+        include_smaller_regions (bool): include smaller regions in output
+        label_cols (List[str]): list of score columns to use for the classification. Tile is classified as the column with the max score
         storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
         local_config (str): local config yaml file
@@ -141,6 +145,8 @@ def cli(
         statistical_descriptors,
         cellular_features,
         property_type,
+        config["include_smaller_regions"],
+        config["label_cols"],
     )
 
     with fs.open(output_fpath, "wb") as of:
@@ -167,6 +173,7 @@ def extract_tile_shape_features(
     cellular_features: CellularFeatures = CellularFeatures.ALL,
     property_type: PropertyType = PropertyType.ALL,
     include_smaller_regions: bool = False,
+    label_cols: List[str] = None,
     properties: List[str] = [
         "area",
         "convex_area",
@@ -195,15 +202,14 @@ def extract_tile_shape_features(
         statistical_descriptors (StatisticalDescriptors): statistical descriptors to calculate
         cellular_features (CellularFeatures): cellular features to include
         property_type (PropertyType): properties to include
+        label_cols (List[str]): list of score columns to use for the classification. Tile is classified as the column with the max score
         properties (List[str]): list of whole slide image properties to
             extract. Needs to be parquet compatible (numeric).
-
     Returns:
         dict: output paths and the number of features generated
     """
-    import pdb
-
-    pdb.set_trace()
+    if label_cols:
+        tiles_df["Classification"] = tiles_df[label_cols].idxmax(axis=1)
     LabeledTileSchema.validate(tiles_df.reset_index())
 
     tile_area = tiles_df.iloc[0].tile_size ** 2
@@ -260,6 +266,9 @@ def extract_tile_shape_features(
 
     logger.info("Spatially joining tiles and objects")
     gdf = object_gdf.sjoin(tiles_gdf, how="inner", predicate="within")
+    if len(gdf) == 0:
+        logger.info("No objects found within tiles")
+        return None
     try:
         measurement_keys = list(gdf.measurements.iloc[0].keys())
         gdf = gdf.join(gdf.measurements.apply(lambda x: pd.Series(x)))

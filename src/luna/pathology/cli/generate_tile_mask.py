@@ -77,8 +77,8 @@ def convert_tiles_to_mask(
     tiles_df: pd.DataFrame,
     slide: tiffslide.TiffSlide,
     label_cols: Union[str, List[str]],
-    output_urlpath: str,
-    output_storage_options: dict,
+    output_urlpath: str = "",
+    output_storage_options: dict = {},
 ):
     """Converts categorical tile labels to a slide image mask. This mask can be used for feature extraction and spatial analysis.
 
@@ -113,8 +113,8 @@ def convert_tiles_to_mask(
     slide_width: int,
     slide_height: int,
     label_cols: Union[str, List[str]],
-    output_urlpath: str,
-    output_storage_options: dict,
+    output_urlpath: str = "",
+    output_storage_options: dict = {},
 ):
     """Converts categorical tile labels to a slide image mask. This mask can be used for feature extraction and spatial analysis.
 
@@ -154,10 +154,11 @@ def convert_tiles_to_mask(
 
         logger.info(f"{address}, {row['mask']}, {value}")
 
-    slide_mask = Path(output_urlpath) / "tile_mask.tif"
-    logger.info(f"Saving output mask to {slide_mask}")
-    with open(slide_mask, "wb") as of:
-        tifffile.imwrite(of, mask_arr)
+    if output_urlpath:
+        slide_mask = Path(output_urlpath) / "tile_mask.tif"
+        logger.info(f"Saving output mask to {slide_mask}")
+        with open(slide_mask, "wb") as of:
+            tifffile.imwrite(of, mask_arr)
 
     return mask_arr, mask_values
 

@@ -90,7 +90,7 @@ def local_cache_urlpath(
 
             tmp_dir_dest = []
             for key, write_mode in dir_key_write_mode.items():
-                if not args_dict[key]:
+                if key not in args_dict or not args_dict[key]:
                     continue
                 storage_options_key = "storage_options"
                 if "w" in write_mode:
@@ -107,7 +107,7 @@ def local_cache_urlpath(
             result = None
             with ExitStack() as stack:
                 for key, write_mode in file_key_write_mode.items():
-                    if not args_dict[key]:
+                    if key not in args_dict or not args_dict[key]:
                         continue
                     storage_options_key = "storage_options"
                     if "w" in write_mode:
