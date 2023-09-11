@@ -19,21 +19,21 @@ docs = ["furo", "myst-parser", "numpydoc", "sphinx"]
 
 [[package]]
 name = "aiobotocore"
-version = "2.4.2"
+version = "2.5.4"
 description = "Async client for aws services using botocore and aiohttp"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
-aiohttp = ">=3.3.1"
-aioitertools = ">=0.5.1"
-botocore = ">=1.27.59,<1.27.60"
-wrapt = ">=1.10.10"
+aiohttp = ">=3.3.1,<4.0.0"
+aioitertools = ">=0.5.1,<1.0.0"
+botocore = ">=1.31.17,<1.31.18"
+wrapt = ">=1.10.10,<2.0.0"
 
 [package.extras]
-awscli = ["awscli (>=1.25.60,<1.25.61)"]
-boto3 = ["boto3 (>=1.24.59,<1.24.60)"]
+awscli = ["awscli (>=1.29.17,<1.29.18)"]
+boto3 = ["boto3 (>=1.28.17,<1.28.18)"]
 
 [[package]]
 name = "aiohttp"
@@ -373,7 +373,7 @@ typing-extensions = ">=3.10.0"
 
 [[package]]
 name = "botocore"
-version = "1.27.59"
+version = "1.31.17"
 description = "Low-level, data-driven core of boto 3."
 category = "main"
 optional = false
@@ -385,7 +385,7 @@ python-dateutil = ">=2.1,<3.0.0"
 urllib3 = ">=1.25.4,<1.27"
 
 [package.extras]
-crt = ["awscrt (==0.14.0)"]
+crt = ["awscrt (==0.16.26)"]
 
 [[package]]
 name = "bracex"
@@ -1091,19 +1091,20 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "fsspec"
-version = "2022.10.0"
+version = "2023.6.0"
 description = "File-system specification"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 
 [package.extras]
 abfs = ["adlfs"]
 adl = ["adlfs"]
 arrow = ["pyarrow (>=1)"]
 dask = ["dask", "distributed"]
+devel = ["pytest", "pytest-cov"]
 dropbox = ["dropbox", "dropboxdrivefs", "requests"]
-entrypoints = ["importlib-metadata"]
+full = ["adlfs", "aiohttp (!=4.0.0a0,!=4.0.0a1)", "dask", "distributed", "dropbox", "dropboxdrivefs", "fusepy", "gcsfs", "libarchive-c", "ocifs", "panel", "paramiko", "pyarrow (>=1)", "pygit2", "requests", "s3fs", "smbprotocol", "tqdm"]
 fuse = ["fusepy"]
 gcs = ["gcsfs"]
 git = ["pygit2"]
@@ -1959,7 +1960,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "large-image"
-version = "1.23.5"
+version = "1.23.6"
 description = "Python modules to work with large, multiresolution images."
 category = "main"
 optional = false
@@ -1967,51 +1968,51 @@ python-versions = ">=3.6"
 
 [package.dependencies]
 cachetools = "*"
-large-image-source-pil = {version = ">=1.23.5", optional = true, markers = "extra == \"pil\""}
+large-image-source-pil = {version = ">=1.23.6", optional = true, markers = "extra == \"pil\""}
 numpy = "*"
 palettable = "*"
 Pillow = "*"
 
 [package.extras]
-all = ["large-image-converter (>=1.23.5)", "large-image-source-bioformats (>=1.23.5)", "large-image-source-deepzoom (>=1.23.5)", "large-image-source-dicom (>=1.23.5)", "large-image-source-dummy (>=1.23.5)", "large-image-source-gdal (>=1.23.5)", "large-image-source-mapnik (>=1.23.5)", "large-image-source-multi (>=1.23.5)", "large-image-source-nd2 (>=1.23.5)", "large-image-source-ometiff (>=1.23.5)", "large-image-source-openjpeg (>=1.23.5)", "large-image-source-openslide (>=1.23.5)", "large-image-source-pil (>=1.23.5)", "large-image-source-pil[all] (>=1.23.5)", "large-image-source-rasterio (>=1.23.5)", "large-image-source-rasterio[all] (>=1.23.5)", "large-image-source-test (>=1.23.5)", "large-image-source-tiff (>=1.23.5)", "large-image-source-tifffile (>=1.23.5)", "large-image-source-vips (>=1.23.5)", "matplotlib", "psutil (>=4.2.0)", "pylibmc (>=1.5.1)", "pyvips", "simplejpeg", "simplejpeg (<1.6.6)"]
-bioformats = ["large-image-source-bioformats (>=1.23.5)"]
+all = ["large-image-converter (>=1.23.6)", "large-image-source-bioformats (>=1.23.6)", "large-image-source-deepzoom (>=1.23.6)", "large-image-source-dicom (>=1.23.6)", "large-image-source-dummy (>=1.23.6)", "large-image-source-gdal (>=1.23.6)", "large-image-source-mapnik (>=1.23.6)", "large-image-source-multi (>=1.23.6)", "large-image-source-nd2 (>=1.23.6)", "large-image-source-ometiff (>=1.23.6)", "large-image-source-openjpeg (>=1.23.6)", "large-image-source-openslide (>=1.23.6)", "large-image-source-pil (>=1.23.6)", "large-image-source-pil[all] (>=1.23.6)", "large-image-source-rasterio (>=1.23.6)", "large-image-source-rasterio[all] (>=1.23.6)", "large-image-source-test (>=1.23.6)", "large-image-source-tiff (>=1.23.6)", "large-image-source-tifffile (>=1.23.6)", "large-image-source-vips (>=1.23.6)", "matplotlib", "psutil (>=4.2.0)", "pylibmc (>=1.5.1)", "pyvips", "simplejpeg", "simplejpeg (<1.6.6)"]
+bioformats = ["large-image-source-bioformats (>=1.23.6)"]
 colormaps = ["matplotlib"]
-converter = ["large-image-converter (>=1.23.5)"]
-deepzoom = ["large-image-source-deepzoom (>=1.23.5)"]
-dicom = ["large-image-source-dicom (>=1.23.5)"]
-dummy = ["large-image-source-dummy (>=1.23.5)"]
-gdal = ["large-image-source-gdal (>=1.23.5)"]
-mapnik = ["large-image-source-mapnik (>=1.23.5)"]
+converter = ["large-image-converter (>=1.23.6)"]
+deepzoom = ["large-image-source-deepzoom (>=1.23.6)"]
+dicom = ["large-image-source-dicom (>=1.23.6)"]
+dummy = ["large-image-source-dummy (>=1.23.6)"]
+gdal = ["large-image-source-gdal (>=1.23.6)"]
+mapnik = ["large-image-source-mapnik (>=1.23.6)"]
 memcached = ["pylibmc (>=1.5.1)"]
-multi = ["large-image-source-multi (>=1.23.5)"]
-nd2 = ["large-image-source-nd2 (>=1.23.5)"]
-ometiff = ["large-image-source-ometiff (>=1.23.5)"]
-openjpeg = ["large-image-source-openjpeg (>=1.23.5)"]
-openslide = ["large-image-source-openslide (>=1.23.5)"]
+multi = ["large-image-source-multi (>=1.23.6)"]
+nd2 = ["large-image-source-nd2 (>=1.23.6)"]
+ometiff = ["large-image-source-ometiff (>=1.23.6)"]
+openjpeg = ["large-image-source-openjpeg (>=1.23.6)"]
+openslide = ["large-image-source-openslide (>=1.23.6)"]
 performance = ["psutil (>=4.2.0)", "simplejpeg", "simplejpeg (<1.6.6)"]
-pil = ["large-image-source-pil (>=1.23.5)"]
-rasterio = ["large-image-source-rasterio (>=1.23.5)"]
-sources = ["large-image-source-bioformats (>=1.23.5)", "large-image-source-deepzoom (>=1.23.5)", "large-image-source-dicom (>=1.23.5)", "large-image-source-dummy (>=1.23.5)", "large-image-source-gdal (>=1.23.5)", "large-image-source-mapnik (>=1.23.5)", "large-image-source-multi (>=1.23.5)", "large-image-source-nd2 (>=1.23.5)", "large-image-source-ometiff (>=1.23.5)", "large-image-source-openjpeg (>=1.23.5)", "large-image-source-openslide (>=1.23.5)", "large-image-source-pil (>=1.23.5)", "large-image-source-rasterio (>=1.23.5)", "large-image-source-test (>=1.23.5)", "large-image-source-tiff (>=1.23.5)", "large-image-source-tifffile (>=1.23.5)", "large-image-source-vips (>=1.23.5)"]
-test = ["large-image-source-test (>=1.23.5)"]
-tiff = ["large-image-source-tiff (>=1.23.5)"]
-tifffile = ["large-image-source-tifffile (>=1.23.5)"]
+pil = ["large-image-source-pil (>=1.23.6)"]
+rasterio = ["large-image-source-rasterio (>=1.23.6)"]
+sources = ["large-image-source-bioformats (>=1.23.6)", "large-image-source-deepzoom (>=1.23.6)", "large-image-source-dicom (>=1.23.6)", "large-image-source-dummy (>=1.23.6)", "large-image-source-gdal (>=1.23.6)", "large-image-source-mapnik (>=1.23.6)", "large-image-source-multi (>=1.23.6)", "large-image-source-nd2 (>=1.23.6)", "large-image-source-ometiff (>=1.23.6)", "large-image-source-openjpeg (>=1.23.6)", "large-image-source-openslide (>=1.23.6)", "large-image-source-pil (>=1.23.6)", "large-image-source-rasterio (>=1.23.6)", "large-image-source-test (>=1.23.6)", "large-image-source-tiff (>=1.23.6)", "large-image-source-tifffile (>=1.23.6)", "large-image-source-vips (>=1.23.6)"]
+test = ["large-image-source-test (>=1.23.6)"]
+tiff = ["large-image-source-tiff (>=1.23.6)"]
+tifffile = ["large-image-source-tifffile (>=1.23.6)"]
 tiledoutput = ["pyvips"]
-vips = ["large-image-source-vips (>=1.23.5)"]
+vips = ["large-image-source-vips (>=1.23.6)"]
 
 [[package]]
 name = "large-image-source-pil"
-version = "1.23.5"
+version = "1.23.6"
 description = "A Pillow tilesource for large_image."
 category = "main"
 optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
-large-image = ">=1.23.5"
+large-image = ">=1.23.6"
 
 [package.extras]
 all = ["pillow-heif", "rawpy"]
-girder = ["girder-large-image (>=1.23.5)"]
+girder = ["girder-large-image (>=1.23.6)"]
 
 [[package]]
 name = "locket"
@@ -3852,20 +3853,20 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "s3fs"
-version = "2022.10.0"
+version = "2023.6.0"
 description = "Convenient Filesystem interface over S3"
 category = "main"
 optional = false
-python-versions = ">= 3.7"
+python-versions = ">= 3.8"
 
 [package.dependencies]
-aiobotocore = ">=2.4.0,<2.5.0"
+aiobotocore = ">=2.5.0,<2.6.0"
 aiohttp = "<4.0.0a0 || >4.0.0a0,<4.0.0a1 || >4.0.0a1"
-fsspec = "2022.10.0"
+fsspec = "2023.6.0"
 
 [package.extras]
-awscli = ["aiobotocore[awscli] (>=2.4.0,<2.5.0)"]
-boto3 = ["aiobotocore[boto3] (>=2.4.0,<2.5.0)"]
+awscli = ["aiobotocore[awscli] (>=2.5.0,<2.6.0)"]
+boto3 = ["aiobotocore[boto3] (>=2.5.0,<2.6.0)"]
 
 [[package]]
 name = "scantree"
@@ -4887,7 +4888,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.12"
-content-hash = "0e4ea0ad97396e576795f5f34622b94bdf191a6b3d175375d2f278e54aaaa1db"
+content-hash = "94d643c68985a9b1bb7e6276c0c31c4f34e7ce7a418cf42367d81624d8d93041"
 
 [metadata.files]
 adlfs = [
@@ -4895,8 +4896,8 @@ adlfs = [
     {file = "adlfs-2023.8.0.tar.gz", hash = "sha256:07e804f6df4593acfcaf01025b162e30ac13e523d3570279c98b2d91a18026d9"},
 ]
 aiobotocore = [
-    {file = "aiobotocore-2.4.2-py3-none-any.whl", hash = "sha256:4acd1ebe2e44be4b100aa553910bda899f6dc090b3da2bc1cf3d5de2146ed208"},
-    {file = "aiobotocore-2.4.2.tar.gz", hash = "sha256:0603b74a582dffa7511ce7548d07dc9b10ec87bc5fb657eb0b34f9bd490958bf"},
+    {file = "aiobotocore-2.5.4-py3-none-any.whl", hash = "sha256:4b32218728ca3d0be83835b604603a0cd6c329066e884bb78149334267f92440"},
+    {file = "aiobotocore-2.5.4.tar.gz", hash = "sha256:60341f19eda77e41e1ab11eef171b5a98b5dbdb90804f5334b6f90e560e31fae"},
 ]
 aiohttp = [
     {file = "aiohttp-3.8.5-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:a94159871304770da4dd371f4291b20cac04e8c94f11bdea1c3478e557fbe0d8"},
@@ -5115,8 +5116,8 @@ bokeh = [
     {file = "bokeh-2.4.3.tar.gz", hash = "sha256:ef33801161af379665ab7a34684f2209861e3aefd5c803a21fbbb99d94874b03"},
 ]
 botocore = [
-    {file = "botocore-1.27.59-py3-none-any.whl", hash = "sha256:69d756791fc024bda54f6c53f71ae34e695ee41bbbc1743d9179c4837a4929da"},
-    {file = "botocore-1.27.59.tar.gz", hash = "sha256:eda4aed6ee719a745d1288eaf1beb12f6f6448ad1fa12f159405db14ba9c92cf"},
+    {file = "botocore-1.31.17-py3-none-any.whl", hash = "sha256:6ac34a1d34aa3750e78b77b8596617e2bab938964694d651939dba2cbde2c12b"},
+    {file = "botocore-1.31.17.tar.gz", hash = "sha256:396459065dba4339eb4da4ec8b4e6599728eb89b7caaceea199e26f7d824a41c"},
 ]
 bracex = [
     {file = "bracex-2.3.post1-py3-none-any.whl", hash = "sha256:351b7f20d56fb9ea91f9b9e9e7664db466eb234188c175fd943f8f755c807e73"},
@@ -5650,8 +5651,8 @@ frozenlist = [
     {file = "frozenlist-1.3.3.tar.gz", hash = "sha256:58bcc55721e8a90b88332d6cd441261ebb22342e238296bb330968952fbb3a6a"},
 ]
 fsspec = [
-    {file = "fsspec-2022.10.0-py3-none-any.whl", hash = "sha256:6b7c6ab3b476cdf17efcfeccde7fca28ef5a48f73a71010aaceec5fc15bf9ebf"},
-    {file = "fsspec-2022.10.0.tar.gz", hash = "sha256:cb6092474e90487a51de768170f3afa50ca8982c26150a59072b16433879ff1d"},
+    {file = "fsspec-2023.6.0-py3-none-any.whl", hash = "sha256:1cbad1faef3e391fba6dc005ae9b5bdcbf43005c9167ce78c915549c352c869a"},
+    {file = "fsspec-2023.6.0.tar.gz", hash = "sha256:d0b2f935446169753e7a5c5c55681c54ea91996cc67be93c39a154fb3a2742af"},
 ]
 future = [
     {file = "future-0.18.2.tar.gz", hash = "sha256:b1bead90b70cf6ec3f0710ae53a525360fa360d306a86583adc6bf83a4db537d"},
@@ -6299,12 +6300,12 @@ kiwisolver = [
     {file = "kiwisolver-1.4.4.tar.gz", hash = "sha256:d41997519fcba4a1e46eb4a2fe31bc12f0ff957b2b81bac28db24744f333e955"},
 ]
 large-image = [
-    {file = "large-image-1.23.5.tar.gz", hash = "sha256:20b5540317f147b6ee185c33de2e06a9b9bd4e852e1ef0950008efacc00de57d"},
-    {file = "large_image-1.23.5-py3-none-any.whl", hash = "sha256:eda204ef87ff5de0540a98f02024ad92d7bf73f5116bb791fa4741b59e951885"},
+    {file = "large-image-1.23.6.tar.gz", hash = "sha256:2141b9b84822c913a6db10f82b5c7a1a273189bd409032732cfc5904ba916977"},
+    {file = "large_image-1.23.6-py3-none-any.whl", hash = "sha256:7087f5ef436918d648e944b032d9d275349d13860243f00cc9367f7c31e15050"},
 ]
 large-image-source-pil = [
-    {file = "large-image-source-pil-1.23.5.tar.gz", hash = "sha256:53be3a219fdd255dab27388f4718672bc5df835083c5ed17869ef79666656a3e"},
-    {file = "large_image_source_pil-1.23.5-py3-none-any.whl", hash = "sha256:a2eaa6d6eaea1b116dbd77fcc58d907cfa5c6c4a66be0525140f3a3b3085f356"},
+    {file = "large-image-source-pil-1.23.6.tar.gz", hash = "sha256:362f89f2477a893dcd2dafa25c6eec607182e3556c2997859471949c88b16077"},
+    {file = "large_image_source_pil-1.23.6-py3-none-any.whl", hash = "sha256:aca9a6cf9f46994288a6257b785e572e23f47669a94ea7d9200cfdaec261068b"},
 ]
 locket = [
     {file = "locket-1.0.0-py2.py3-none-any.whl", hash = "sha256:b6c819a722f7b6bd955b80781788e4a66a55628b858d347536b7e81325a3a5e3"},
@@ -7806,8 +7807,8 @@ rtree = [
     {file = "ruamel.yaml.clib-0.2.7.tar.gz", hash = "sha256:1f08fd5a2bea9c4180db71678e850b995d2a5f4537be0e94557668cf0f5f9497"},
 ]
 s3fs = [
-    {file = "s3fs-2022.10.0-py3-none-any.whl", hash = "sha256:1e134c3577171699feb7c1a0c4713260d5b48296e1708737ff940baef6e2c153"},
-    {file = "s3fs-2022.10.0.tar.gz", hash = "sha256:e8deb80f20bd0b2059141b874fdb9d6aeb8cce35312ea5f2c02b225a78a00406"},
+    {file = "s3fs-2023.6.0-py3-none-any.whl", hash = "sha256:d1a0a423d0d2e17fb2a193d9531935dc3f45ba742693448a461b6b34f6a92a24"},
+    {file = "s3fs-2023.6.0.tar.gz", hash = "sha256:63fd8ddf05eb722de784b7b503196107f2a518061298cf005a8a4715b4d49117"},
 ]
 scantree = [
     {file = "scantree-0.0.1.tar.gz", hash = "sha256:2a8b163de0e4b2f9e4f37f8caf3f0b265172bbf174111e1bebc7955581895b39"},

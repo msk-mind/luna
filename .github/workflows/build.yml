@@ -6,16 +6,23 @@ jobs:
   build:
 
     runs-on: ubuntu-20.04
+
+    services:
+      localstack:
+        image: localstack/localstack
+        ports:
+          - "4566:4566"
+          - "4510-4559:4510-4559"
+
     container:
       image: mambaorg/micromamba:1.0.0
       options: --user root
-
     steps:
 
       - name: Install required packages
         run: |
           apt-get update
-          apt-get install -y build-essential libgdal-dev liblapack-dev libblas-dev gfortran libgl1 git curl make
+          apt-get install -y build-essential libgdal-dev liblapack-dev libblas-dev gfortran libgl1 git curl make python3-pip
           git config --system --add safe.directory *
 
       - uses: actions/checkout@v3
@@ -52,6 +59,7 @@ jobs:
         run: |
           . ./venv/bin/activate
           export LUNA_HOME=$PWD
+          export LOCALSTACK_ENDPOINT_URL=http://localstack:4566
           pytest -v --capture=tee-sys --show-capture=all tests --cov-report=xml --junitxml=./luna-tests/results.xml
 
       - name: Build mkdocs

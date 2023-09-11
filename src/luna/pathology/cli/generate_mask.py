@@ -13,7 +13,7 @@ from loguru import logger
 from PIL import Image
 from skimage.measure import block_reduce
 
-from luna.common.utils import get_config, save_metadata, timed
+from luna.common.utils import get_config, local_cache_urlpath, save_metadata, timed
 from luna.pathology.common.utils import convert_xml_to_mask, get_layer_names
 
 
@@ -71,6 +71,11 @@ def cli(
     return properties
 
 
+@local_cache_urlpath(
+    dir_key_write_mode={
+        "output_urlpath": "w",
+    }
+)
 def generate_mask(
     slide_urlpath: str,
     roi_urlpath: str,
@@ -99,11 +104,8 @@ def generate_mask(
         slide = tiffslide.TiffSlide(of)
         thumbnail = slide.get_thumbnail((1000, 1000))
 
-    fs, output_urlpath_prefix = fsspec.core.url_to_fs(
-        output_urlpath, **output_storage_options
-    )
-    with fs.open(Path(output_urlpath_prefix) / "slide_thumbnail.png", "wb") as of:
-        thumbnail.save(of)
+    with open(Path(output_urlpath) / "slide_thumbnail.png", "wb") as of:
+        thumbnail.save(of, format="PNG")
 
     wsi_shape = (
         slide.dimensions[1],
@@ -130,11 +132,11 @@ def generate_mask(
         )
     ).get_thumbnail((1000, 1000))
 
-    with fs.open(Path(output_urlpath_prefix) / "mask_thumbnail.png", "wb") as of:
-        mask_thumbnail.save(of)
+    with open(Path(output_urlpath) / "mask_thumbnail.png", "wb") as of:
+        mask_thumbnail.save(of, format="PNG")
 
-    slide_mask_file = Path(output_urlpath_prefix) / "mask_full_res.tif"
-    with fs.open(slide_mask_file, "wb") as of:
+    slide_mask_file = Path(output_urlpath) / "mask_full_res.tif"
+    with open(slide_mask_file, "wb") as of:
         tifffile.imwrite(of, mask_arr)
 
     return pd.DataFrame(mask_properties)

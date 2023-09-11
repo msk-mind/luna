@@ -71,11 +71,14 @@ def cli(
 
     images = {}
     for score_type, thumbnail_overlayed in thumbnails_overlayed.items():
-        output_file = f"{output_path_prefix}/tile_scores_and_labels_visualization_{score_type}.png"
+        output_file = (
+            Path(output_path_prefix)
+            / f"tile_scores_and_labels_visualization_{score_type}.png"
+        )
         thumbnail_overlayed = Image.fromarray(thumbnail_overlayed)
         with fs.open(output_file, "wb") as of:
-            thumbnail_overlayed.save(of)
-        images[score_type] = output_file
+            thumbnail_overlayed.save(of, format="PNG")
+        images[score_type] = str(output_file)
         logger.info(f"Saved {score_type} visualization at {output_file}")
 
     properties = {
@@ -142,7 +145,9 @@ def visualize_tiles(
             if unit_sf:
                 to_mag_scale_factor *= unit_sf
             else:
-                logger.warning("No MPP scale factor was recognized in slide properties.")
+                logger.warning(
+                    "No MPP scale factor was recognized in slide properties."
+                )
 
     # only visualize tile scores that were able to be computed
     all_score_types = set(plot_labels)
