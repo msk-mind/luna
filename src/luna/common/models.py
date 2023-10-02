@@ -12,12 +12,12 @@ class Slide(BaseModel):
     slide_size: int
     uuid: str
     url: str
-    channel0_R: Optional[float]
-    channel0_G: Optional[float]
-    channel0_B: Optional[float]
-    channel1_R: Optional[float]
-    channel1_G: Optional[float]
-    channel1_B: Optional[float]
+    channel0_R: Optional[float] = None
+    channel0_G: Optional[float] = None
+    channel0_B: Optional[float] = None
+    channel1_R: Optional[float] = None
+    channel1_G: Optional[float] = None
+    channel1_B: Optional[float] = None
 
     class Config:
         extra = "allow"
