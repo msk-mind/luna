@@ -16,11 +16,15 @@ from fsspec import open  # type: ignore
 from loguru import logger
 from PIL import Image
 from shapely import MultiPolygon, box
+from tiffslide import TiffSlide
 from typing_extensions import TypedDict
 
 from luna.common.models import LabeledTileSchema
 from luna.common.utils import get_config, save_metadata, timed
-from luna.pathology.common.utils import address_to_coord
+from luna.pathology.common.utils import (
+    address_to_coord,
+    get_scale_factor_at_magnification,
+)
 from luna.pathology.dsa.utils import vectorize_np_array_bitmask_by_pixel_value
 
 # Base DSA jsons
@@ -181,7 +185,8 @@ def stardist_polygon(
         output_urlpath (string): URL/path prefix to save annotations
         line_colors (dict): user-provided line color map with {feature name:rgb values}
         fill_colors (dict): user-provided fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
         local_config (string): local config YAML file
 
     Returns:
@@ -291,7 +296,8 @@ def stardist_polygon_tile(
         output_urlpath (string): URL/path prefix to save annotations
         line_colors (dict): user-provided line color map with {feature name:rgb values}
         fill_colors (dict): user-provided fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
         local_config (string): local config YAML file
 
     Returns:
@@ -439,7 +445,8 @@ def stardist_cell(
         annotation_name (string): name of the annotation to be displayed in DSA
         line_colors (dict, optional): line color map with {feature name:rgb values}
         fill_colors (dict, optional): fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
         local_config (string): local config YAML file
 
     Returns:
@@ -562,7 +569,8 @@ def regional_polygon(
         annotation_name (string): name of the annotation to be displayed in DSA
         line_colors (dict, optional): line color map with {feature name:rgb values}
         fill_colors (dict, optional): fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
         local_config (string): local config yaml file
 
     Returns:
@@ -667,7 +675,8 @@ def qupath_polygon(
         e.g. ["Tumor", "Stroma", ...]
         line_colors (dict, optional): line color map with {feature name:rgb values}
         fill_colors (dict, optional): fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
         local_config (string): local config yaml file
 
     Returns:
@@ -791,7 +800,9 @@ def bitmask_polygon(
         line_colors (dict, optional): line color map with {feature name:rgb values}
         fill_colors (dict, optional): fill color map with {feature name:rgba values}
         scale_factor (int, optional): scale to match the image on DSA.
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
+        local_config (string): local config yaml file
 
     Returns:
         dict: annotation file path
@@ -881,9 +892,11 @@ def heatmap(
     annotation_name: str = "???",
     column: str = "???",
     tile_size: int = "???",  # type: ignore
-    scale_factor: Optional[int] = 1,
+    scale_factor: Optional[int] = None,
     fill_colors: dict[str, str] = {},
     line_colors: dict[str, str] = {},
+    slide_urlpath: str = "",
+    tile_magnification: Optional[int] = None,
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
@@ -905,7 +918,10 @@ def heatmap(
         scale_factor (int, optional): scale to match the image on DSA.
         line_colors (dict, optional): line color map with {feature name:rgb values}
         fill_colors (dict, optional): fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        slide_urlpath (str): slide url/path to determine scale factor
+        tile_magnification (Optional[int]): tile magnification to determine scale factor
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
         local_config (string): local config yaml file
 
     Returns:
@@ -932,6 +948,8 @@ def heatmap(
         config["scale_factor"],
         config["fill_colors"],
         config["line_colors"],
+        config['slide_urlpath'],
+        config['tile_magnification'],
         config["storage_options"],
     )
     annotation_filepath = save_dsa_annotation(fs, output_path, dsa_annotation)
@@ -946,6 +964,8 @@ def heatmap_main(
     scale_factor: Optional[int],
     fill_colors: Optional[dict[str, str]],
     line_colors: Optional[dict[str, str]],
+    slide_urlpath: str,
+    tile_magnification: Optional[int],
     storage_options: dict,
 ):
     """Generate heatmap based on the tile scores
@@ -962,6 +982,8 @@ def heatmap_main(
         scale_factor (int, optional): scale to match the image on DSA.
         line_colors (Optional[dict[str,str]]): line color map with {feature name:rgb values}
         fill_colors (Optional[dict[str,str]]): fill color map with {feature name:rgba values}
+        slide_urlpath (str): slide url/path to determine scale factor
+        tile_magnification (Optional[int]): tile magnification to determine scale factor
         storage_options (dict): storage options to pass to read/write functions
 
     Returns:
@@ -969,6 +991,11 @@ def heatmap_main(
     """
     if type(column) == str:
         column = [column]
+
+    if not scale_factor and slide_urlpath and tile_magnification:
+        with open(slide_urlpath, **storage_options) as of:
+            slide = TiffSlide(of)
+            scale_factor = get_scale_factor_at_magnification(slide, tile_magnification)
 
     with open(input_urlpath, **storage_options) as of:
         df = pd.read_parquet(of).reset_index()
@@ -1041,7 +1068,9 @@ def bmp_polygon(
         line_colors (dict[str,str], optional): line color map with {feature name:rgb values}
         fill_colors (dict[str,str], optional): fill color map with {feature name:rgba values}
         scale_factor (int, optional): scale to match image DSA.
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
+        local_config (string): local config yaml file
 
     Returns:
         dict: annotation file path
