@@ -15,6 +15,7 @@ from luna.common.models import ShapeFeaturesSchema
 def cli(
     shape_features_urlpaths: Union[str,List[str]] = "???",
     output_urlpath: str = ".",
+    fraction_not_null: float = 0.5,
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
@@ -24,6 +25,7 @@ def cli(
     Args:
         shape_features_urlpaths (List[str]): URL/paths to shape featurs parquet files
         output_urlpath (str): URL/path to output parquet file
+        fraction_not_null (float): fraction not null to keep column to keep in wide format
         storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
         local_config (str): local config yaml file
@@ -61,6 +63,7 @@ def cli(
     df.variable = df.variable.str.replace('µ','u').replace(r'(: |:)', ' ', regex=True).replace('[^a-zA-Z0-9 \n]', '', regex=True)
     wide_path = Path(path_prefix) / 'wide_shape_features.parquet'
     wide_df = df.pivot(index="slide_id", columns=["Parent", "Class", "variable"], values="value")
+    wide_df = wide_df.loc[:, wide_df.isna().sum() < len(wide_df) * config['fraction_not_null']]
     with fs.open(wide_path, 'wb', **config["output_storage_options"]) as of:
         wide_df.to_parquet(of)
 

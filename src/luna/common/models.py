@@ -29,7 +29,7 @@ class ShapeFeaturesSchema(pa.DataFrameModel):
     Parent: Series[str]
     Class: Series[str]
     variable: Series[str]
-    value: Series
+    value: Series = pa.Field(nullable=True)
 
 
 class SlideSchema(pa.DataFrameModel):
