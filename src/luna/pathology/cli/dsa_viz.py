@@ -116,48 +116,47 @@ def get_dsa_annotation(elements: list, annotation_name: str, description: str = 
 
     return dsa_annotation
 
-
-def save_dsa_annotation(
-    dsa_annotation: dict,
+def get_annotation_output_fs_path(
+    annotation_name: str,
     output_urlpath: str,
     image_filename: str,
     storage_options: dict,
 ):
-    """Helper function to save annotation elements to a json file.
-
-    Args:
-        dsa_annotation (dict): DSA annotations
-        output_urlpath (string): url/path to a directory to save the annotation file
-        image_filename (string): name of the image in DSA e.g. 123.svs
-        storage_options (dict): options for storage functions
-
-    Returns:
-        string: annotation file path. None if error in writing the file.
-    """
-
     result = re.search(image_id_regex, image_filename)
     if result:
         image_id = result.group(1)
     else:
         raise InvalidImageIdException(f"Invalid image filename: {image_filename}")
 
-    annotation_name_replaced = dsa_annotation["name"].replace(" ", "_")
+    annotation_name_replaced = annotation_name.replace(" ", "_")
 
     fs, output_urlpath_prefix = fsspec.core.url_to_fs(output_urlpath, **storage_options)
     output_path = (
-        Path(output_urlpath_prefix) / f"{annotation_name_replaced}_{image_id}.json"
+        Path(output_urlpath) / f"{annotation_name_replaced}_{image_id}.json"
     )
+    return fs, str(output_path)
 
-    try:
-        with fs.open(output_path, "w").open() as outfile:
-            json.dump(dsa_annotation, outfile)
-        logger.info(
-            f"Saved {len(dsa_annotation['elements'])} to {fs.unstrip_protocol(str(output_path))}"
-        )
-        return fs.unstrip_protocol(str(output_path))
-    except Exception as exc:
-        logger.error(exc)
-        return None
+
+def save_dsa_annotation(
+    filesystem: fsspec.spec.AbstractFileSystem,
+    output_path: str,
+    dsa_annotation: dict,
+):
+    """Helper function to save annotation elements to a json file.
+
+    Args:
+        filesystem (fsspec.spec.AbstractFileSystem): filessytem
+        output_path (string): path to a directory to save the annotation file
+
+    Returns:
+        string: annotation file path. None if error in writing the file.
+    """
+    with filesystem.open(output_path, "w") as outfile:
+        json.dump(dsa_annotation, outfile)
+    logger.info(
+        f"Saved {len(dsa_annotation['elements'])} to {filesystem.unstrip_protocol(str(output_path))}"
+    )
+    return filesystem.unstrip_protocol(str(output_path))
 
 
 @timed
@@ -170,6 +169,7 @@ def stardist_polygon(
     line_colors: dict[str, str] = {},
     fill_colors: dict[str, str] = {},
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from stardist geojson classification results
@@ -188,6 +188,16 @@ def stardist_polygon(
         dict[str,str]: annotation file path
     """
     config = get_config(vars())
+    fs, output_path = get_annotation_output_fs_path(
+        config['annotation_name'],
+        config['output_urlpath'],
+        config['image_filename'],
+        config['output_storage_options'],
+    )
+    if fs.exists(output_path):
+        logger.info(f"Output file exists: {fs.unstrip_protocol(output_path)}")
+        return
+
     dsa_annotation = stardist_polygon_main(
         config["input_urlpath"],
         config["annotation_name"],
@@ -195,13 +205,9 @@ def stardist_polygon(
         config["fill_colors"],
         config["storage_options"],
     )
-    annotatation_filepath = save_dsa_annotation(
-        dsa_annotation,
-        config["output_urlpath"],
-        config["image_filename"],
-        config["storage_options"],
-    )
-    return {"dsa_annotation": annotatation_filepath}
+    annotation_filepath = save_dsa_annotation(fs, output_path, dsa_annotation)
+
+    return {"dsa_annotation": annotation_filepath}
 
 
 def stardist_polygon_main(
@@ -272,6 +278,7 @@ def stardist_polygon_tile(
     line_colors: dict[str, str] = {},
     fill_colors: dict[str, str] = {},
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from stardist geojson classification and labeled tiles
@@ -291,6 +298,15 @@ def stardist_polygon_tile(
         dict[str,str]: annotation file path
     """
     config = get_config(vars())
+    fs, output_path_glob = get_annotation_output_fs_path(
+        config['annotation_name_prefix'] + "_*",
+        config['output_urlpath'],
+        config['image_filename'],
+        config['output_storage_options'],
+    )
+    if len(fs.glob(output_path_glob)) > 0:
+        logger.info(f"Output file exists: {output_path_glob}")
+        return
     dsa_annotations = stardist_polygon_tile_main(
         config["object_urlpath"],
         config["tiles_urlpath"],
@@ -301,12 +317,13 @@ def stardist_polygon_tile(
     )
     metadata = {}
     for tile_label, dsa_annotation in dsa_annotations.items():
-        annotation_filepath = save_dsa_annotation(
-            dsa_annotation,
-            config["output_urlpath"],
-            config["image_filename"],
-            config["storage_options"],
+        fs, output_path = get_annotation_output_fs_path(
+            config["annotation_name_prefix"] + "_" + tile_label,
+            config['output_urlpath'],
+            config['image_filename'],
+            config['storage_options'],
         )
+        annotation_filepath = save_dsa_annotation(fs, output_path, dsa_annotation)
         metadata["dsa_annotation_" + tile_label] = annotation_filepath
     return metadata
 
@@ -405,6 +422,7 @@ def stardist_cell(
     line_colors: Optional[dict[str, str]] = None,
     fill_colors: Optional[dict[str, str]] = None,
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from TSV classification data generated by
@@ -428,6 +446,16 @@ def stardist_cell(
         dict[str,str]: annotation file path
     """
     config = get_config(vars())
+    fs, output_path = get_annotation_output_fs_path(
+        config['annotation_name'],
+        config['output_urlpath'],
+        config['image_filename'],
+        config['output_storage_options'],
+    )
+    if fs.exists(output_path):
+        logger.info(f"Output file exists: {fs.unstrip_protocol(output_path)}")
+        return
+
     dsa_annotation = stardist_cell_main(
         config["input_urlpath"],
         config["annotation_name"],
@@ -435,13 +463,8 @@ def stardist_cell(
         config["fill_colors"],
         config["storage_options"],
     )
-    annotatation_filepath = save_dsa_annotation(
-        dsa_annotation,
-        config["output_urlpath"],
-        config["image_filename"],
-        config["storage_options"],
-    )
-    return {"dsa_annotation": annotatation_filepath}
+    annotation_filepath = save_dsa_annotation(fs, output_path, dsa_annotation)
+    return {"dsa_annotation": annotation_filepath}
 
 
 def stardist_cell_main(
@@ -528,6 +551,7 @@ def regional_polygon(
     line_colors: Optional[dict[str, str]] = None,
     fill_colors: Optional[dict[str, str]] = None,
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from regional annotation geojson
@@ -547,6 +571,16 @@ def regional_polygon(
 
     config = get_config(vars())
 
+    fs, output_path = get_annotation_output_fs_path(
+        config['annotation_name'],
+        config['output_urlpath'],
+        config['image_filename'],
+        config['output_storage_options'],
+    )
+    if fs.exists(output_path):
+        logger.info(f"Output file exists: {fs.unstrip_protocol(output_path)}")
+        return
+
     dsa_annotation = regional_polygon_main(
         config["input_urlpath"],
         config["annotation_name"],
@@ -555,13 +589,8 @@ def regional_polygon(
         config["storage_options"],
     )
 
-    annotatation_filepath = save_dsa_annotation(
-        dsa_annotation,
-        config["output_urlpath"],
-        config["image_filename"],
-        config["storage_options"],
-    )
-    return {"dsa_annotation": annotatation_filepath}
+    annotation_filepath = save_dsa_annotation(fs, output_path, dsa_annotation)
+    return {"dsa_annotation": annotation_filepath}
 
 
 def regional_polygon_main(
@@ -623,6 +652,7 @@ def qupath_polygon(
     line_colors: Optional[dict[str, str]] = None,
     fill_colors: Optional[dict[str, str]] = None,
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from Qupath polygon geojson
@@ -644,6 +674,15 @@ def qupath_polygon(
         dict: annotation file path
     """
     config = get_config(vars())
+    fs, output_path = get_annotation_output_fs_path(
+        config['annotation_name'],
+        config['output_urlpath'],
+        config['image_filename'],
+        config['output_storage_options'],
+    )
+    if fs.exists(output_path):
+        logger.info(f"Output file exists: {fs.unstrip_protocol(output_path)}")
+        return
     dsa_annotation = qupath_polygon_main(
         config["input_urlpath"],
         config["annotation_name"],
@@ -653,13 +692,8 @@ def qupath_polygon(
         config["storage_options"],
     )
 
-    annotatation_filepath = save_dsa_annotation(
-        dsa_annotation,
-        config["output_urlpath"],
-        config["image_filename"],
-        config["storage_options"],
-    )
-    return {"dsa_annotation": annotatation_filepath}
+    annotation_filepath = save_dsa_annotation(fs, output_path, dsa_annotation)
+    return {"dsa_annotation": annotation_filepath}
 
 
 def qupath_polygon_main(
@@ -741,6 +775,7 @@ def bitmask_polygon(
     fill_colors: Optional[dict[str, str]] = None,
     scale_factor: Optional[int] = None,
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from bitmask PNGs
@@ -762,6 +797,15 @@ def bitmask_polygon(
         dict: annotation file path
     """
     config = get_config(vars())
+    fs, output_path = get_annotation_output_fs_path(
+        config['annotation_name'],
+        config['output_urlpath'],
+        config['image_filename'],
+        config['output_storage_options'],
+    )
+    if fs.exists(output_path):
+        logger.info(f"Output file exists: {fs.unstrip_protocol(output_path)}")
+        return
     dsa_annotation = bitmask_polygon_main(
         config["input_map"],
         config["annotation_name"],
@@ -770,13 +814,8 @@ def bitmask_polygon(
         config["scale_factor"],
         config["storage_options"],
     )
-    annotatation_filepath = save_dsa_annotation(
-        dsa_annotation,
-        config["output_urlpath"],
-        config["image_filename"],
-        config["storage_options"],
-    )
-    return {"dsa_annotation": annotatation_filepath}
+    annotation_filepath = save_dsa_annotation(fs, output_path, dsa_annotation)
+    return {"dsa_annotation": annotation_filepath}
 
 
 def bitmask_polygon_main(
@@ -846,6 +885,7 @@ def heatmap(
     fill_colors: dict[str, str] = {},
     line_colors: dict[str, str] = {},
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Generate heatmap based on the tile scores
@@ -872,9 +912,21 @@ def heatmap(
         dict: annotation file path. None if error in writing the file.
     """
     config = get_config(vars())
+    annotation_name = config["annotation_name"]
+    if config['column']:
+        annotation_name = config["column"] + "_" + config["annotation_name"]
+    fs, output_path = get_annotation_output_fs_path(
+        annotation_name,
+        config['output_urlpath'],
+        config['image_filename'],
+        config['output_storage_options'],
+    )
+    if fs.exists(output_path):
+        logger.info(f"Output file exists: {fs.unstrip_protocol(output_path)}")
+        return
     dsa_annotation = heatmap_main(
         config["input_urlpath"],
-        config["annotation_name"],
+        annotation_name,
         config["column"],
         config["tile_size"],
         config["scale_factor"],
@@ -882,13 +934,8 @@ def heatmap(
         config["line_colors"],
         config["storage_options"],
     )
-    annotatation_filepath = save_dsa_annotation(
-        dsa_annotation,
-        config["output_urlpath"],
-        config["image_filename"],
-        config["storage_options"],
-    )
-    return {"dsa_annotation": annotatation_filepath}
+    annotation_filepath = save_dsa_annotation(fs, output_path, dsa_annotation)
+    return {"dsa_annotation": annotation_filepath}
 
 
 def heatmap_main(
@@ -962,9 +1009,6 @@ def heatmap_main(
         element["points"] = coords
         elements.append(element)
 
-    if len(column) == 1:
-        annotation_name = column[0] + "_" + annotation_name
-
     return get_dsa_annotation(elements, annotation_name)
 
 
@@ -980,6 +1024,7 @@ def bmp_polygon(
     fill_colors: Optional[dict[str, str]] = None,
     scale_factor: Optional[int] = 1,
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from a BMP with multiple labels.
@@ -1002,6 +1047,15 @@ def bmp_polygon(
         dict: annotation file path
     """
     config = get_config(vars())
+    fs, output_path = get_annotation_output_fs_path(
+        config['annotation_name'],
+        config['output_urlpath'],
+        config['image_filename'],
+        config['output_storage_options'],
+    )
+    if fs.exists(output_path):
+        logger.info(f"Output file exists: {fs.unstrip_protocol(output_path)}")
+        return
     dsa_annotation = bmp_polygon_main(
         config["input_urlpath"],
         config["label_map"],
@@ -1011,13 +1065,8 @@ def bmp_polygon(
         config["storage_options"],
     )
 
-    annotatation_filepath = save_dsa_annotation(
-        dsa_annotation,
-        config["output_urlpath"],
-        config["image_filename"],
-        config["storage_options"],
-    )
-    return {"dsa_annotation": annotatation_filepath}
+    annotation_filepath = save_dsa_annotation(fs, output_path, dsa_annotation)
+    return {"dsa_annotation": annotation_filepath}
 
 
 def bmp_polygon_main(

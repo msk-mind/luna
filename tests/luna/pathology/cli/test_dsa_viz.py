@@ -14,12 +14,6 @@ from luna.pathology.cli.dsa_viz import (  # bmp_polygon,
 )
 
 
-def verify_cleanup(output_file):
-    assert os.path.exists(output_file)
-    # cleanup
-    os.remove(output_file)
-    os.remove(str(Path(output_file).parent) + "/metadata.yml")
-
 
 def test_stardist_polygon_s3(s3fs_client):
     s3fs_client.mkdirs("dsatest", exist_ok=True)
@@ -44,51 +38,46 @@ def test_stardist_polygon_s3(s3fs_client):
     )
 
 
-def test_stardist_polygon():
+def test_stardist_polygon(tmp_path):
     fire.Fire(
         stardist_polygon,
         [
             "--local_config",
             "tests/testdata/pathology/stardist_polygon.yml",
+            "--output_urlpath", str(tmp_path)
         ],
     )
 
-    output_file = (
-        "tests/luna/pathology/cli/testouts"
-        "/StarDist_Segmentations_with_Lymphocyte_Classifications_123.json"
-    )
-    verify_cleanup(output_file)
+    output_file = tmp_path / "StarDist_Segmentations_with_Lymphocyte_Classifications_123.json"
+    assert os.path.exists(output_file)
 
 
-def test_stardist_cell():
+def test_stardist_cell(tmp_path):
     fire.Fire(
         stardist_cell,
         [
             "--local_config",
             "tests/testdata/pathology/stardist_cell.yml",
+            "--output_urlpath", str(tmp_path)
         ],
     )
 
-    output_file = (
-        "tests/luna/pathology/cli/testouts"
-        "/Points_of_Classsified_StarDist_Cells_123.json"
-    )
-    verify_cleanup(output_file)
+    output_file = tmp_path / "Points_of_Classsified_StarDist_Cells_123.json"
+    assert os.path.exists(output_file)
 
 
-def test_regional_polygon():
+def test_regional_polygon(tmp_path):
     fire.Fire(
         regional_polygon,
         [
             "--local_config",
             "tests/testdata/pathology" "/regional_polygon.yml",
+            "--output_urlpath", str(tmp_path)
         ],
     )
 
-    output_file = (
-        "tests/luna/pathology/cli/testouts" "/Slideviewer_Regional_Annotations_123.json"
-    )
-    verify_cleanup(output_file)
+    output_file = tmp_path / "Slideviewer_Regional_Annotations_123.json"
+    assert os.path.exists(output_file)
 
 
 def test_bitmask_polygon_invalid():
@@ -122,7 +111,7 @@ def test_bitmask_polygon():
 """
 
 
-def test_heatmap():
+def test_heatmap(tmp_path):
     fire.Fire(
         heatmap,
         [
@@ -131,24 +120,24 @@ def test_heatmap():
             "otsu_score",
             "--local_config",
             "tests/testdata/pathology" "/heatmap_config.yml",
+            "--output_urlpath", str(tmp_path)
         ],
     )
 
-    output_file = "tests/luna/pathology/cli/testouts" "/otsu_score_test_123.json"
-    verify_cleanup(output_file)
+    output_file = tmp_path / "otsu_score_test_123.json"
+    assert os.path.exists(output_file)
 
 
-def test_qupath_polygon():
+def test_qupath_polygon(tmp_path):
     fire.Fire(
         qupath_polygon,
         [
             "tests/testdata/pathology/region_annotation_results.geojson",
             "--local_config",
             "tests/testdata/pathology" "/qupath_polygon.yml",
+            "--output_urlpath", str(tmp_path)
         ],
     )
 
-    output_file = (
-        "tests/luna/pathology/cli/testouts" "/Qupath_Pixel_Classifier_Polygons_123.json"
-    )
-    verify_cleanup(output_file)
+    output_file = tmp_path / "Qupath_Pixel_Classifier_Polygons_123.json"
+    assert os.path.exists(output_file)

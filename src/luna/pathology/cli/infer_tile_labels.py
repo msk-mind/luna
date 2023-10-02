@@ -78,6 +78,21 @@ def cli(
     if not config["tile_size"] and not config["tiles_urlpath"]:
         raise fire.core.FireError("Specify either tiles_urlpath or tile_size")
 
+    if config['slide_urlpath']:
+        slide_id = Path(config["slide_urlpath"]).stem
+    else:
+        slide_id = Path(config["tiles_urlpath"]).stem.removesuffix('.tiles')
+
+    fs, output_path_prefix = fsspec.core.url_to_fs(
+        config["output_urlpath"], **config["output_storage_options"]
+    )
+
+    output_file = str(Path(output_path_prefix) / f"{slide_id}.tiles.parquet")
+
+    if fs.exists(output_file):
+        logger.info(f"outputs already exist {output_file}")
+        return
+
     df_output = infer_tile_labels(
         config["slide_urlpath"],
         config["tiles_urlpath"],
@@ -97,16 +112,6 @@ def cli(
         config["output_storage_options"],
     )
 
-    fs, output_path_prefix = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
-    if config['slide_urlpath']:
-        slide_id = Path(config["slide_urlpath"]).stem
-    else:
-        slide_id = Path(config["tiles_urlpath"]).stem.removesuffix('.tiles')
-
-    output_file = str(Path(output_path_prefix) / f"{slide_id}.tiles.parquet")
-    #
     with fs.open(output_file, "wb") as of:
         df_output.to_parquet(of)
 

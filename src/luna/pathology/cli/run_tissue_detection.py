@@ -138,6 +138,10 @@ def cli(
     slide_id = Path(urlparse(config["slide_urlpath"]).path).stem
     output_header_file = Path(output_urlpath_prefix) / f"{slide_id}.tiles.parquet"
 
+    if output_filesystem.exists(output_header_file):
+        logger.info(f"outputs already exist: {output_header_file}")
+        return
+
     df = detect_tissue(
         config["slide_urlpath"],
         config["tiles_urlpath"],
