@@ -14,4 +14,4 @@ Luna serves as the core computational library for multi-modality oncology data a
 * Pathology, radiology and clinical data workflows
 * A microservice-driven architecture allowing for integrations with other open-source
   libraries
-* [Tools](Tools) for building data visualizations and statistical models
+* Tools for building data visualizations and statistical models
