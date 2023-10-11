@@ -2,6 +2,7 @@ from typing import Optional
 
 import pandera as pa
 from pandera.engines.pandas_engine import PydanticModel
+from pandera.typing import Series
 from pydantic import BaseModel
 
 
@@ -21,6 +22,14 @@ class Slide(BaseModel):
 
     class Config:
         extra = "allow"
+
+
+class ShapeFeaturesSchema(pa.DataFrameModel):
+    slide_id: Series[str]
+    Parent: Series[str]
+    Class: Series[str]
+    variable: Series[str]
+    value: Series
 
 
 class SlideSchema(pa.DataFrameModel):

@@ -7,14 +7,13 @@ from urllib.parse import urlparse
 import fire
 import fsspec
 import pandas as pd
-from dask.distributed import Client, progress
-from fsspec import open  # type: ignore
+from dask.distributed import progress
 from loguru import logger
 from multimethod import multimethod
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
-from luna.common.dask import get_or_create_dask_client, configure_dask_client
+from luna.common.dask import configure_dask_client, get_or_create_dask_client
 from luna.common.models import SlideSchema, Tile, TileSchema
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.common.utils import (
@@ -54,7 +53,7 @@ def cli(
     """
     config = get_config(vars())
 
-    configure_dask_client(**config['dask_options'])
+    configure_dask_client(**config["dask_options"])
 
     output_filesystem, output_urlpath_prefix = fsspec.core.url_to_fs(
         config["output_urlpath"], **config["output_storage_options"]
@@ -71,8 +70,6 @@ def cli(
     with output_filesystem.open(output_header_file, "wb") as of:
         print(f"saving to {output_header_file}")
         df.to_parquet(of)
-
-    df.to_parquet(output_header_file)
 
     properties = {
         "slide_tiles": output_header_file,  # "Tiles" are the metadata that describe them

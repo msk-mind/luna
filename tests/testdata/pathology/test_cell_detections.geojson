@@ -1,0 +1,247 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "5868af7c-9aaf-4646-b618-e0a3cf74b94f",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              1024,
+              512
+            ],
+            [
+              1024,
+              1024
+            ],
+            [
+              512,
+              1024
+            ],
+            [
+              512,
+              512
+            ],
+            [
+              1024,
+              512
+            ]
+          ]
+        ]
+      },
+      "nucleusGeometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              1024,
+              512
+            ],
+            [
+              1024,
+              1024
+            ],
+            [
+              512,
+              1024
+            ],
+            [
+              512,
+              512
+            ],
+            [
+              1024,
+              512
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "objectType": "cell",
+        "classification": {
+          "name": "Other",
+          "color": [
+            0,
+            128,
+            128
+          ]
+        },
+        "measurements": {
+          "Detection probability": 0.5292551517486572,
+          "Nucleus: Area µm^2": 6.382274627685547,
+          "Nucleus: Length µm": 11.797134399414062,
+          "Nucleus: Circularity": 0.5762782692909241,
+          "Nucleus: Solidity": 0.8667085766792297,
+          "Nucleus: Max diameter µm": 4.351068496704102,
+          "Nucleus: Min diameter µm": 2.1037991046905518,
+          "Cell: Area µm^2": 17.556303024291992,
+          "Cell: Length µm": 23.23311424255371,
+          "Cell: Circularity": 0.40872207283973694,
+          "Cell: Solidity": 0.9029088020324707,
+          "Cell: Max diameter µm": 10.158203125,
+          "Cell: Min diameter µm": 2.384974956512451,
+          "Nucleus/Cell area ratio": 0.3634932041168213,
+          "Hematoxylin: Nucleus: Mean": -0.000493805855512619,
+          "Hematoxylin: Nucleus: Median": 0,
+          "Hematoxylin: Nucleus: Min": -0.002426416613161564,
+          "Hematoxylin: Nucleus: Max": 0,
+          "Hematoxylin: Nucleus: Std.Dev.": 0.0008414203184656799,
+          "Hematoxylin: Cytoplasm: Mean": -0.00014101243868935853,
+          "Hematoxylin: Cytoplasm: Median": 0,
+          "Hematoxylin: Cytoplasm: Min": -0.002426416613161564,
+          "Hematoxylin: Cytoplasm: Max": 0,
+          "Hematoxylin: Cytoplasm: Std.Dev.": 0.0005430461023934186,
+          "Hematoxylin: Membrane: Mean": -0.0002756152243819088,
+          "Hematoxylin: Membrane: Median": 0,
+          "Hematoxylin: Membrane: Min": -0.002426416613161564,
+          "Hematoxylin: Membrane: Max": 0,
+          "Hematoxylin: Membrane: Std.Dev.": 0.0007422485505230725,
+          "Hematoxylin: Cell: Mean": -0.00027708991547115147,
+          "Hematoxylin: Cell: Median": 0,
+          "Hematoxylin: Cell: Min": -0.002426416613161564,
+          "Hematoxylin: Cell: Max": 0,
+          "Hematoxylin: Cell: Std.Dev.": 0.000690072076395154,
+          "Eosin: Nucleus: Mean": 0.0010831642430275679,
+          "Eosin: Nucleus: Median": 0,
+          "Eosin: Nucleus: Min": 0,
+          "Eosin: Nucleus: Max": 0.005322350189089775,
+          "Eosin: Nucleus: Std.Dev.": 0.0018456572433933616,
+          "Eosin: Cytoplasm: Mean": 0.0003093110863119364,
+          "Eosin: Cytoplasm: Median": 0,
+          "Eosin: Cytoplasm: Min": 0,
+          "Eosin: Cytoplasm: Max": 0.005322350189089775,
+          "Eosin: Cytoplasm: Std.Dev.": 0.0011911727488040924,
+          "Eosin: Membrane: Mean": 0.000604562577791512,
+          "Eosin: Membrane: Median": 0,
+          "Eosin: Membrane: Min": 0,
+          "Eosin: Membrane: Max": 0.005322350189089775,
+          "Eosin: Membrane: Std.Dev.": 0.0016281238058581948,
+          "Eosin: Cell: Mean": 0.0006077972939237952,
+          "Eosin: Cell: Median": 0,
+          "Eosin: Cell: Min": 0,
+          "Eosin: Cell: Max": 0.005322350189089775,
+          "Eosin: Cell: Std.Dev.": 0.0015136746224015951
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "e38fc918-edeb-462e-9d80-ed48ad582746",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              1024,
+              1024
+            ],
+            [
+              1024,
+              1536
+            ],
+            [
+              512,
+              1024
+            ],
+            [
+              1024,
+              1024
+            ]
+          ]
+        ]
+      },
+      "nucleusGeometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              1024,
+              1024
+            ],
+            [
+              1024,
+              1536
+            ],
+            [
+              512,
+              1024
+            ],
+            [
+              1024,
+              1024
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "objectType": "cell",
+        "classification": {
+          "name": "Other",
+          "color": [
+            0,
+            128,
+            128
+          ]
+        },
+        "measurements": {
+          "Detection probability": 0.5048474073410034,
+          "Nucleus: Area µm^2": 17.445695877075195,
+          "Nucleus: Length µm": 16.216100692749023,
+          "Nucleus: Circularity": 0.8336912393569946,
+          "Nucleus: Solidity": 0.9987735748291016,
+          "Nucleus: Max diameter µm": 5.9278883934021,
+          "Nucleus: Min diameter µm": 4.082073211669922,
+          "Cell: Area µm^2": 62.91495895385742,
+          "Cell: Length µm": 31.527231216430664,
+          "Cell: Circularity": 0.795412003993988,
+          "Cell: Solidity": 1,
+          "Cell: Max diameter µm": 11.671957015991211,
+          "Cell: Min diameter µm": 7.069568157196045,
+          "Nucleus/Cell area ratio": 0.27726855874061584,
+          "Hematoxylin: Nucleus: Mean": -9.950973617378622e-05,
+          "Hematoxylin: Nucleus: Median": 0,
+          "Hematoxylin: Nucleus: Min": -0.0012107017682865262,
+          "Hematoxylin: Nucleus: Max": 0,
+          "Hematoxylin: Nucleus: Std.Dev.": 0.00033482859726063907,
+          "Hematoxylin: Cytoplasm: Mean": 0.0004395486612338573,
+          "Hematoxylin: Cytoplasm: Median": 0,
+          "Hematoxylin: Cytoplasm: Min": -0.0012107017682865262,
+          "Hematoxylin: Cytoplasm: Max": 0.007615597452968359,
+          "Hematoxylin: Cytoplasm: Std.Dev.": 0.0013808871153742075,
+          "Hematoxylin: Membrane: Mean": 0.000481207825941965,
+          "Hematoxylin: Membrane: Median": 0,
+          "Hematoxylin: Membrane: Min": -0.0012107017682865262,
+          "Hematoxylin: Membrane: Max": 0.007615597452968359,
+          "Hematoxylin: Membrane: Std.Dev.": 0.0016177298966795206,
+          "Hematoxylin: Cell: Mean": 0.0002852299658115953,
+          "Hematoxylin: Cell: Median": 0,
+          "Hematoxylin: Cell: Min": -0.0012107017682865262,
+          "Hematoxylin: Cell: Max": 0.007615597452968359,
+          "Hematoxylin: Cell: Std.Dev.": 0.0012042438611388206,
+          "Eosin: Nucleus: Mean": 0.00021827479940839112,
+          "Eosin: Nucleus: Median": 0,
+          "Eosin: Nucleus: Min": 0,
+          "Eosin: Nucleus: Max": 0.0026556767988950014,
+          "Eosin: Nucleus: Std.Dev.": 0.0007344471523538232,
+          "Eosin: Cytoplasm: Mean": -0.0003217500925529748,
+          "Eosin: Cytoplasm: Median": 0,
+          "Eosin: Cytoplasm: Min": -0.00605801772326231,
+          "Eosin: Cytoplasm: Max": 0.0026556767988950014,
+          "Eosin: Cytoplasm: Std.Dev.": 0.0011519433464854956,
+          "Eosin: Membrane: Mean": -0.000337043049512431,
+          "Eosin: Membrane: Median": 0,
+          "Eosin: Membrane: Min": -0.00605801772326231,
+          "Eosin: Membrane: Max": 0.0026556767988950014,
+          "Eosin: Membrane: Std.Dev.": 0.0013638195814564824,
+          "Eosin: Cell: Mean": -0.00016715472156647593,
+          "Eosin: Cell: Median": 0,
+          "Eosin: Cell: Min": -0.00605801772326231,
+          "Eosin: Cell: Max": 0.0026556767988950014,
+          "Eosin: Cell: Std.Dev.": 0.001076254528015852
+        }
+      }
+    }
+  ]
+}
