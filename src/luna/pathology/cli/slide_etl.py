@@ -12,7 +12,7 @@ from multimethod import multimethod
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
-from luna.common.dask import get_or_create_dask_client, configure_dask_client
+from luna.common.dask import configure_dask_client, get_or_create_dask_client
 from luna.common.models import Slide, SlideSchema
 from luna.common.utils import apply_csv_filter, get_config, timed
 from luna.pathology.common.utils import (
@@ -157,7 +157,13 @@ def slide_etl(
             for slide in slides
         ]
     df = DataFrame[SlideSchema](
-        pd.json_normalize([x.__dict__ for x in client.gather(futures)])
+        pd.json_normalize(
+            [
+                x.__dict__
+                | {"properties." + str(k): v for k, v in x.properties.items()}
+                for x in client.gather(futures)
+            ]
+        )
     )
 
     return df
