@@ -294,11 +294,22 @@ def extract_tile_shape_features(
     agg_funs = STATISTICAL_DESCRIPTOR_MAP[statistical_descriptors]
     agg_df = gb.agg(agg_funs)
     agg_df.columns = [" ".join(col).strip() for col in agg_df.columns.values]
-    agg_df["Object Counts"] = gb.size()
 
-    agg_df["Normalized Cell Density"] = agg_df["Object Counts"] / slide_area
+    cell_density = None
     if "Cell: Area µm^2 sum" in agg_df.columns:
-        agg_df["Cell Density"] = agg_df["Cell: Area µm^2 sum"] / (slide_area / 4)
+        cell_density = agg_df["Cell: Area µm^2 sum"] / (slide_area / 4)
+
+    if cellular_features != CellularFeatures.ALL:
+        agg_df = agg_df.filter(regex=cellular_features)
+
+    if property_type != PropertyType.ALL:
+        property_types = PROPERTY_TYPE_MAP[property_type]
+        agg_df = agg_df.filter(regex="|".join(property_types))
+
+    agg_df["Object Counts"] = gb.size()
+    agg_df["Normalized Cell Density"] = agg_df["Object Counts"] / slide_area
+    if cell_density is not None:
+        agg_df["Cell Density"] = cell_density
 
     logger.info(
         "Calculating obj count log ratios between all tile label obj classification groups"
@@ -319,13 +330,6 @@ def extract_tile_shape_features(
         },
         index=agg_df.index[idx0],
     )
-
-    if cellular_features != CellularFeatures.ALL:
-        agg_df = agg_df.filter(regex=cellular_features)
-
-    if property_type != PropertyType.ALL:
-        property_types = PROPERTY_TYPE_MAP[property_type]
-        agg_df = agg_df.filter(regex="|".join(property_types))
 
     mdf = pd.melt(agg_df.reset_index(), id_vars=["Parent", "Class"]).dropna()
     mdf = pd.concat([mdf, ratio_df.reset_index(), shape_features_df, entropy_df])
