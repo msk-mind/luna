@@ -11,12 +11,15 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import tiffslide
+from dask.distributed import progress
 from fsspec import open
 from loguru import logger
+from pandera.typing import DataFrame
 from scipy.stats import entropy, kurtosis
 from shapely import box
 
-from luna.common.models import LabeledTileSchema
+from luna.common.dask import get_or_create_dask_client
+from luna.common.models import LabeledTileSchema, SlideSchema
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.cli.extract_shape_features import extract_shape_features
 from luna.pathology.cli.generate_tile_mask import convert_tiles_to_mask
@@ -105,40 +108,17 @@ def cli(
     """
     config = get_config(vars())
 
-    fs, path = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
-
-    output_fpath = Path(path) / "shape_features.parquet"
-
-    if fs.exists(str(output_fpath)):
-        logger.info(
-            f"Output file already exist: {fs.unstrip_protocol(str(output_fpath))}"
-        )
-        return {}
-
-    with open(config["tiles_urlpath"], **config["storage_options"]) as of:
-        tiles_df = pd.read_parquet(of)
-
-    with open(config["slide_urlpath"], **config["storage_options"]) as of:
-        slide = tiffslide.TiffSlide(of)
-        slide_width = slide.dimensions[0]
-        slide_height = slide.dimensions[1]
-
-    with open(config["object_urlpath"], **config["storage_options"]) as of:
-        object_gdf = gpd.read_file(of)
-
     slide_id = Path(config["slide_urlpath"]).stem
 
     statistical_descriptors = config["statistical_descriptors"].capitalize()
     cellular_features = config["cellular_features"].capitalize()
     property_type = config["property_type"].capitalize()
 
-    df = extract_tile_shape_features(
-        object_gdf,
-        tiles_df,
-        slide_width,
-        slide_height,
+    properties = __extract_tile_shape_features(
+        config["object_urlpath"],
+        config["tiles_urlpath"],
+        config["slide_urlpath"],
+        config["output_urlpath"],
         config["resize_factor"],
         config["detection_probability_threshold"],
         slide_id,
@@ -147,25 +127,77 @@ def cli(
         property_type,
         config["include_smaller_regions"],
         config["label_cols"],
+        config["storage_options"],
+        config["output_storage_options"],
     )
-
-    with fs.open(output_fpath, "wb") as of:
-        df.to_parquet(of)
-
-    properties = {
-        "shape_features": fs.unstrip_protocol(str(output_fpath)),
-        "num_features": len(df),
-    }
-
-    logger.info(properties)
     return properties
 
 
 def extract_tile_shape_features(
-    object_gdf: gpd.GeoDataFrame,
-    tiles_df: pd.DataFrame,
-    slide_width: int,
-    slide_height: int,
+    slide_manifest: DataFrame[SlideSchema],
+    slide_urlpath: str,
+    output_urlpath: str,
+    resize_factor: int = 16,
+    detection_probability_threshold: Optional[float] = None,
+    statistical_descriptors: StatisticalDescriptors = StatisticalDescriptors.ALL,
+    cellular_features: CellularFeatures = CellularFeatures.ALL,
+    property_type: PropertyType = PropertyType.ALL,
+    include_smaller_regions: bool = False,
+    label_cols: List[str] = None,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+    objects_column="stardist_geojson_url",
+    properties: List[str] = [
+        "area",
+        "convex_area",
+        "eccentricity",
+        "equivalent_diameter",
+        "euler_number",
+        "extent",
+        "label",
+        "major_axis_length",
+        "minor_axis_length",
+        "perimeter",
+        "solidity",
+    ],
+):
+    client = get_or_create_dask_client()
+
+    futures = []
+    for row in slide_manifest.itertuples(name="Slide"):
+        future = client.submit(
+            __extract_tile_shape_features,
+            row[objects_column],
+            row.tiles_url,
+            row.url,
+            output_urlpath,
+            resize_factor,
+            detection_probability_threshold,
+            row.id,
+            statistical_descriptors,
+            cellular_features,
+            property_type,
+            include_smaller_regions,
+            label_cols,
+            storage_options,
+            output_storage_options,
+            properties,
+        )
+        futures.append(future)
+
+    progress(futures)
+    results = client.gather(futures)
+    for idx, result in results.enumerate():
+        slide_manifest.at[idx, "tile_shape_features_url"] = result["shape_features_url"]
+
+    return slide_manifest
+
+
+def __extract_tile_shape_features(
+    objects_urlpath: str,
+    tiles_urlpath: str,
+    slide_urlpath: str,
+    output_urlpath: str,
     resize_factor: int = 16,
     detection_probability_threshold: Optional[float] = None,
     slide_id: str = "",
@@ -174,6 +206,8 @@ def extract_tile_shape_features(
     property_type: PropertyType = PropertyType.ALL,
     include_smaller_regions: bool = False,
     label_cols: List[str] = None,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
     properties: List[str] = [
         "area",
         "convex_area",
@@ -191,10 +225,8 @@ def extract_tile_shape_features(
     """Extracts shape and spatial features (HIF features) from a slide mask.
 
      Args:
-        object_gdf (gpd.GeoDataFrame): URL/path to slide (tiffslide supported formats)
-        tiles_df (pd.DataFrame): URL/path to object file (geopandas supported formats)
-        slide_width (int): slide width
-        slide_height (int): slide height
+        objects (Union[str, gpd.GeoDataFrame]): URL/path to slide (tiffslide supported formats)
+        tiles (Union[str, pd.DataFrame]): URL/path to object file (geopandas supported formats)
         resize_factor (int): factor to downsample slide image
         detection_probability_threshold (Optional[float]): detection
             probability threshold
@@ -208,6 +240,31 @@ def extract_tile_shape_features(
     Returns:
         dict: output paths and the number of features generated
     """
+
+    ofs, path = fsspec.core.url_to_fs(
+        output_urlpath,
+        **output_storage_options,
+    )
+
+    output_fpath = Path(path) / "shape_features.parquet"
+
+    if ofs.exists(str(output_fpath)):
+        logger.info(
+            f"Output file already exist: {ofs.unstrip_protocol(str(output_fpath))}"
+        )
+        return {}
+
+    with open(tiles_urlpath, **storage_options) as of:
+        tiles_df = pd.read_parquet(of)
+
+    with open(objects_urlpath, **storage_options) as of:
+        object_gdf = gpd.read_file(of)
+
+    with open(slide_urlpath, **storage_options) as of:
+        slide = tiffslide.TiffSlide(of)
+        slide_width = slide.dimensions[0]
+        slide_height = slide.dimensions[1]
+
     if label_cols:
         tiles_df["Classification"] = tiles_df[label_cols].idxmax(axis=1)
     LabeledTileSchema.validate(tiles_df.reset_index())
@@ -337,7 +394,17 @@ def extract_tile_shape_features(
         r"_", " ", regex=True
     )
 
-    return mdf
+    with ofs.open(output_fpath, "wb") as of:
+        mdf.to_parquet(of)
+
+    props = {
+        "shape_features_url": ofs.unstrip_protocol(str(output_fpath)),
+        "num_features": len(mdf),
+    }
+
+    logger.info(props)
+
+    return props
 
 
 def fire_cli():

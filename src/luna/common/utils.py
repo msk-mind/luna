@@ -2,12 +2,13 @@ import itertools
 import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 import time
 import urllib
 import warnings
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from functools import wraps
 from importlib import import_module
 from io import BytesIO
@@ -77,8 +78,18 @@ def save_metadata(func):
     return wrapper
 
 
+@contextmanager
+def make_temp_directory():
+    temp_dir = tempfile.mkdtemp()
+    try:
+        yield temp_dir
+    finally:
+        shutil.rmtree(temp_dir)
+
+
 def local_cache_urlpath(
-    file_key_write_mode: dict[str, str] = {}, dir_key_write_mode: dict[str, str] = {}
+    file_key_write_mode: dict[str, str] = {},
+    dir_key_write_mode: dict[str, str] = {},
 ):
     """Decorator for caching url/paths locally"""
 

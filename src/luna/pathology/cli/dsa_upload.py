@@ -8,7 +8,9 @@ import girder_client
 import requests
 from fsspec import open
 from loguru import logger
+from pandera.typing import DataFrame
 
+from luna.common.models import SlideSchema
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.dsa.dsa_api_handler import (
     get_item_uuid,
@@ -85,7 +87,7 @@ def cli(
                     f"Unable to infer image_filename from {annotation_file_urlpath}"
                 )
             logger.info(f"Image filename inferred as {image_filename}")
-        dsa_uuid = upload_annotation_to_dsa(
+        dsa_uuid = _upload_annotation_to_dsa(
             config["dsa_endpoint_url"],
             annotation_file_urlpath,
             config["collection_name"],
@@ -104,6 +106,34 @@ def cli(
 
 
 def upload_annotation_to_dsa(
+    dsa_endpoint_url: str,
+    slide_manifest: DataFrame[SlideSchema],
+    annotation_column: str,
+    collection_name: str,
+    image_filename: str,
+    username: str,
+    password: str,
+    force: bool = False,
+    insecure: bool = False,
+    storage_options: dict = {},
+):
+    uuids = []
+    for slide in slide_manifest.itertuples(name="Slide"):
+        uuids += _upload_annotation_to_dsa(
+            dsa_endpoint_url,
+            slide[annotation_column],
+            collection_name,
+            image_filename,
+            username,
+            password,
+            force,
+            insecure,
+            storage_options,
+        )
+    return uuids
+
+
+def _upload_annotation_to_dsa(
     dsa_endpoint_url: str,
     annotation_file_urlpaths: Union[str, List[str]],
     collection_name: str,

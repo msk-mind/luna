@@ -1,15 +1,12 @@
 # General imports
 import itertools
 from pathlib import Path
-from typing import Optional, Union
-from urllib.parse import urlparse
+from typing import Optional
 
 import fire
 import fsspec
 import pandas as pd
-from dask.distributed import progress
 from loguru import logger
-from multimethod import multimethod
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
@@ -55,91 +52,55 @@ def cli(
 
     configure_dask_client(**config["dask_options"])
 
-    output_filesystem, output_urlpath_prefix = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
-    slide_id = Path(urlparse(config["slide_urlpath"]).path).stem
-    output_header_file = Path(output_urlpath_prefix) / f"{slide_id}.tiles.parquet"
-
-    df = generate_tiles(
+    properties = __generate_tiles(
         config["slide_urlpath"],
         config["tile_size"],
-        config["storage_options"],
+        config["output_urlpath"],
         config["requested_magnification"],
+        config["storage_options"],
+        config["output_storage_options"],
     )
-    with output_filesystem.open(output_header_file, "wb") as of:
-        print(f"saving to {output_header_file}")
-        df.to_parquet(of)
-
-    properties = {
-        "slide_tiles": output_header_file,  # "Tiles" are the metadata that describe them
-        "total_tiles": len(df),
-        "segment_keys": {"slide_id": str(slide_id)},
-    }
 
     return properties
 
 
-@multimethod
 def generate_tiles(
     slide_manifest: DataFrame[SlideSchema],
     tile_size: int,
-    storage_options: dict = {},
+    output_urlpath: str,
     requested_magnification: Optional[int] = None,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
 ) -> pd.DataFrame:
     client = get_or_create_dask_client()
-    futures = {
-        row.id: client.submit(
-            _generate_tiles,
-            row.url,
+
+    futures = []
+    for slide in slide_manifest.itertuples(name="Slide"):
+        future = client.submit(
+            __generate_tiles,
+            slide.url,
             tile_size,
-            storage_options,
+            output_urlpath,
             requested_magnification,
-        )
-        for row in slide_manifest.itertuples()
-    }
-    progress(futures)
-    results = client.gather(futures)
-    for k, v in results.items():
-        v["id"] = str(k)
-    tiles = pd.concat(results)
-    return tiles.merge(slide_manifest, on="id")
-
-
-@multimethod
-def generate_tiles(
-    slide_urlpaths: Union[str, list[str]],
-    tile_size: int,
-    storage_options: dict = {},
-    requested_magnification: Optional[int] = None,
-) -> pd.DataFrame:
-    if type(slide_urlpaths) == str:
-        slide_urlpaths = [slide_urlpaths]
-
-    client = get_or_create_dask_client()
-    futures = {
-        Path(urlparse(slide_urlpath).path).stem: client.submit(
-            _generate_tiles,
-            slide_urlpath,
-            tile_size,
             storage_options,
-            requested_magnification,
+            output_storage_options,
         )
-        for slide_urlpath in slide_urlpaths
-    }
-    progress(futures)
+        futures.append(future)
     results = client.gather(futures)
-    for k, v in results.items():
-        v["id"] = str(k)
-    return pd.concat(results)
+    for idx, result in enumerate(results):
+        slide_manifest.at[idx, "tiles_url"] = result["tiles_url"]
+
+    return slide_manifest
 
 
-def _generate_tiles(
+def __generate_tiles(
     slide_urlpath: str,
     tile_size: int,
-    storage_options: dict = {},
+    output_urlpath: str,
     requested_magnification: Optional[int] = None,
-) -> pd.DataFrame:
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+) -> dict:
     """Rasterize a slide into smaller tiles
 
     Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
@@ -156,6 +117,13 @@ def _generate_tiles(
     Returns:
         DataFrame[TileSchema]: tile manifest
     """
+    slide_id = Path(slide_urlpath).stem
+    ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
+    output_file = str(Path(output_path) / f"{slide_id}.tiles.parquet")
+    if ofs.exists(output_file):
+        logger.info("Output file exists: {ofs.unstrip_protocol(output_file)}")
+        return
+
     with fsspec.open(slide_urlpath, "rb", **storage_options) as f:
         slide = TiffSlide(f)
         logger.info(f"Slide size = [{slide.dimensions[0]},{slide.dimensions[1]}]")
@@ -222,7 +190,17 @@ def _generate_tiles(
     #        ])
     #    logger.info(f"lazy tiles: {lazy_arrays.shape}")
 
-    return tiles
+    with ofs.open(output_file, mode="wb") as of:
+        tiles.to_parquet(of)
+
+    properties = {
+        "tiles_url": ofs.unstrip_protocol(
+            output_file
+        ),  # "Tiles" are the metadata that describe them
+        "total_tiles": len(tiles),
+    }
+
+    return properties
 
 
 def fire_cli():

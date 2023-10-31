@@ -1,6 +1,7 @@
 # General imports
 import uuid
 from pathlib import Path
+from typing import List, Union
 
 import fire
 import fsspec
@@ -8,7 +9,6 @@ import pandas as pd
 from dask.distributed import progress
 from fsspec import open  # type: ignore
 from loguru import logger
-from multimethod import multimethod
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
@@ -108,9 +108,8 @@ def cli(
                 df.to_parquet(of)
 
 
-@multimethod
 def slide_etl(
-    slide_urls: list[str],
+    slide_urls: Union[str, List[str]],
     project_name: str,
     comment: str = "",
     storage_options: dict = {},
@@ -132,6 +131,8 @@ def slide_etl(
     Returns:
         df (DataFrame): dataframe containing the metadata of all the slides
     """
+    if isinstance(slide_urls, str):
+        slide_urls = [slide_urls]
 
     client = get_or_create_dask_client()
     sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
@@ -156,50 +157,11 @@ def slide_etl(
             )
             for slide in slides
         ]
+
     df = DataFrame[SlideSchema](
-        pd.json_normalize(
-            [
-                x.__dict__
-                | {"properties." + str(k): v for k, v in x.properties.items()}
-                for x in client.gather(futures)
-            ]
-        )
+        pd.json_normalize([x.__dict__ for x in client.gather(futures)])
     )
-
     return df
-
-
-@multimethod
-def slide_etl(
-    slide_url: str,
-    project_name: str,
-    comment: str = "",
-    storage_options: dict = {},
-    output_urlpath: str = "",
-    output_storage_options: dict = {},
-    no_copy: bool = False,
-) -> Slide:
-    """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
-
-    Args:
-        slide_url (str): path to slide image
-        project_name (str): project name underwhich the slides should reside
-        comment (str): comment and description of dataset
-        storage_options (dict): storage options to pass to reading functions
-        output_urlpath (str): url/path to output table
-        output_storage_options (dict): storage options to pass to writing functions
-
-
-    Returns:
-        slide (Slide): slide object
-    """
-
-    sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
-
-    slide = sb.get_slide(slide_url, project_name=project_name, comment=comment)
-    if not no_copy and output_urlpath:
-        slide = sb.copy_slide(slide, output_urlpath)
-    return slide
 
 
 class SlideBuilder:

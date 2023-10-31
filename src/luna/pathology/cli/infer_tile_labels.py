@@ -9,21 +9,22 @@ import fire
 import fsspec
 import pandas as pd
 import torch
-from dask.distributed import Client
-from fsspec import open
+from dask.distributed import progress
 from loguru import logger
+from pandera.typing import DataFrame
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from luna.common.utils import get_config, save_metadata, timed
-from luna.common.dask import configure_dask_client
+from luna.common.dask import configure_dask_client, get_or_create_dask_client
+from luna.common.utils import get_config, make_temp_directory, save_metadata, timed
 from luna.pathology.analysis.ml import (
     HDF5Dataset,
     TorchTransformModel,
     post_transform_to_2d,
 )
-from luna.pathology.cli.run_tissue_detection import detect_tissue
-from luna.pathology.cli.save_tiles import save_tiles
+from luna.pathology.cli.generate_tiles import __generate_tiles
+from luna.pathology.cli.run_tissue_detection import __detect_tissue, detect_tissue
+from luna.pathology.cli.save_tiles import _save_tiles, save_tiles
 
 
 @timed
@@ -78,63 +79,138 @@ def cli(
     if not config["tile_size"] and not config["tiles_urlpath"]:
         raise fire.core.FireError("Specify either tiles_urlpath or tile_size")
 
-    df_output = infer_tile_labels(
-        config["slide_urlpath"],
-        config["tiles_urlpath"],
-        config["tile_size"],
-        config["filter_query"],
-        config["requested_magnification"],
-        config["torch_model_repo_or_dir"],
-        config["model_name"],
-        config["num_cores"],
-        config["batch_size"],
-        config["output_urlpath"],
-        config["kwargs"],
-        config["use_gpu"],
-        config["dask_options"],
-        config["insecure"],
-        config["storage_options"],
-        config["output_storage_options"],
-    )
-
-    fs, output_path_prefix = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
-    if config['slide_urlpath']:
+    if config["slide_urlpath"]:
         slide_id = Path(config["slide_urlpath"]).stem
     else:
-        slide_id = Path(config["tiles_urlpath"]).stem.removesuffix('.tiles')
+        slide_id = Path(config["tiles_urlpath"]).stem.removesuffix(".tiles")
 
-    output_file = str(Path(output_path_prefix) / f"{slide_id}.tiles.parquet")
-    #
-    with fs.open(output_file, "wb") as of:
-        df_output.to_parquet(of)
+    tiles_urlpath = config["tiles_urlpath"]
+    with make_temp_directory() as temp_dir:
+        if not tiles_urlpath:
+            tiles_result = __generate_tiles(
+                config["slide_urlpath"],
+                config["tile_size"],
+                (Path(temp_dir) / "generate_tiles").as_uri(),
+                config["tile_magnification"],
+                config["storage_options"],
+            )
+            detect_tissue_result = __detect_tissue(
+                config["slide_urlpath"],
+                tiles_result["tiles_url"],
+                slide_id,
+                config["thumbnail_magnification"],
+                config["filter_query"],
+                config["batch_size"],
+                (Path(temp_dir) / "detect_tissue").as_uri(),
+                config["storage_options"],
+            )
+            save_tiles_result = _save_tiles(
+                detect_tissue_result["tiles_urlpath"],
+                config["slide_urlpath"],
+                (Path(temp_dir) / "save_tiles").as_uri(),
+                config["batch_size"],
+                config["storage_options"],
+            )
+            tiles_urlpath = save_tiles_result["tiles_url"]
 
-    # Save our properties and params
-    properties = {
-        "slide_tiles": output_file,
-        "feature_data": output_file,
-        "total_tiles": len(df_output),
-        "available_labels": list(df_output.columns),
-    }
-
-    return properties
+        return __infer_tile_labels(
+            tiles_urlpath,
+            slide_id,
+            config["output_urlpath"],
+            config["torch_model_repo_or_dir"],
+            config["model_name"],
+            config["num_cores"],
+            config["batch_size"],
+            config["kwargs"],
+            config["use_gpu"],
+            config["insecure"],
+            config["storage_options"],
+            config["output_storage_options"],
+        )
 
 
 def infer_tile_labels(
-    slide_urlpath: str,
+    slide_manifest: DataFrame,
+    tile_size: Optional[int] = None,
+    filter_query: str = "",
+    thumbnail_magnification: Optional[int] = None,
+    tile_magnification: Optional[int] = None,
+    torch_model_repo_or_dir: str = "",
+    model_name: str = "",
+    num_cores: int = 1,
+    batch_size: int = 2000,
+    output_urlpath: str = ".",
+    kwargs: dict = {},
+    use_gpu: bool = False,
+    dask_options: dict = {},
+    insecure: bool = False,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+) -> pd.DataFrame:
+    client = get_or_create_dask_client()
+    configure_dask_client(**dask_options)
+
+    if "tiles_url" not in slide_manifest.columns:
+        if tile_size is None:
+            raise RuntimeError("Need to have generated tiles or specify tile_size")
+        # generate tiles
+        slide_manifest = detect_tissue(
+            slide_manifest,
+            None,
+            tile_size=tile_size,
+            thumbnail_magnification=thumbnail_magnification,
+            tile_magnification=tile_magnification,
+            filter_query=filter_query,
+            batch_size=batch_size,
+            storage_options=storage_options,
+            output_urlpath=output_urlpath,
+            output_storage_options=output_storage_options,
+        )
+
+        slide_manifest = save_tiles(
+            slide_manifest,
+            output_urlpath,
+            batch_size,
+            storage_options,
+            output_storage_options,
+        )
+
+    futures = []
+    for row in slide_manifest.itertuples(name="Slide"):
+        future = client.submit(
+            __infer_tile_labels,
+            row.tiles_url,
+            row.id,
+            output_urlpath,
+            torch_model_repo_or_dir,
+            model_name,
+            num_cores,
+            batch_size,
+            kwargs,
+            use_gpu,
+            insecure,
+            storage_options,
+            output_storage_options,
+        )
+        futures.append(future)
+
+    progress(futures)
+    results = client.gather(futures)
+    for idx, result in results.enumerate():
+        slide_manifest.at[idx, "tiles_url"] = result
+    return slide_manifest
+
+
+def __infer_tile_labels(
     tiles_urlpath: str,
-    tile_size: Optional[int],
-    filter_query: str,
-    requested_magnification: Optional[int],
+    slide_id: str,
+    output_urlpath: str,
     torch_model_repo_or_dir: str,
     model_name: str,
     num_cores: int,
     batch_size: int,
-    output_urlpath: str,
     kwargs: dict,
     use_gpu: bool,
-    dask_options: dict,
     insecure: bool,
     storage_options: dict,
     output_storage_options: dict,
@@ -144,7 +220,6 @@ def infer_tile_labels(
     Decorates existing slide_tiles with additional columns corresponding to class prediction/scores from the model
 
     Args:
-        slide_urlpath (str): url/path to slide image (virtual slide formats compatible with TiffSlide, .svs, .tif, .scn, ...)
         tiles_urlpath (str): path to a slide-tile manifest file (.tiles.parquet)
         tile_size (int): size of tiles to use (at the requested magnification)
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
@@ -161,9 +236,25 @@ def infer_tile_labels(
     Returns:
         pd.DataFrame: augmented tiles dataframe
     """
-
     if insecure:
         ssl._create_default_https_context = ssl._create_unverified_context
+
+    ofs, output_path_prefix = fsspec.core.url_to_fs(
+        output_urlpath,
+        **output_storage_options,
+    )
+
+    output_file = str(Path(output_path_prefix) / f"{slide_id}.tiles.parquet")
+
+    if ofs.exists(output_file):
+        logger.info(f"outputs already exist: {output_file}")
+        return
+
+    tiles_df = (
+        pd.read_parquet(tiles_urlpath, storage_options=storage_options)
+        .reset_index()
+        .set_index("address")
+    )
 
     # Get our model and transforms and construct the Tile Dataset and Classifier
     if os.path.exists(torch_model_repo_or_dir):
@@ -188,41 +279,6 @@ def infer_tile_labels(
     if not isinstance(ttm, TorchTransformModel):
         raise RuntimeError(f"Not a valid model, loaded model was of type {type(ttm)}")
 
-    # load/generate tiles
-    if tiles_urlpath:
-        with open(tiles_urlpath, **storage_options) as of:
-            df = pd.read_parquet(of).reset_index().set_index("address")
-    elif tile_size is not None:
-        configure_dask_client(**dask_options)
-        slide_id = Path(slide_urlpath).stem
-        tiles_h5_urlpath = str(Path(output_urlpath) / f"{slide_id}.tiles.h5")
-
-        df = detect_tissue(
-            slide_urlpath,
-            tile_size=tile_size,
-            requested_magnification=requested_magnification,
-            filter_query=filter_query,
-            batch_size=batch_size,
-            storage_options=storage_options,
-            output_urlpath_prefix=output_urlpath + "/" + slide_id,
-            output_storage_options=output_storage_options,
-            )
-
-        df = save_tiles(
-            df,
-            slide_urlpath,
-            tiles_h5_urlpath,
-            batch_size,
-            storage_options,
-            output_storage_options,
-        )
-
-        df = df.reset_index().set_index("address")
-    else:
-        raise RuntimeError(
-            "Need to specify tiles_urlpath or both slide_urlpath and tile_size"
-        )
-
     pin_memory = False
     if use_gpu and torch.cuda.is_available():
         pin_memory = True
@@ -236,8 +292,10 @@ def infer_tile_labels(
     transform = ttm.transform
     ttm.model.to(device)
 
-    ds = HDF5Dataset(df, preprocess=preprocess, storage_options=storage_options)
-    loader = DataLoader(ds, num_workers=num_cores, batch_size=batch_size, pin_memory=pin_memory)
+    ds = HDF5Dataset(tiles_df, preprocess=preprocess, storage_options=storage_options)
+    loader = DataLoader(
+        ds, num_workers=num_cores, batch_size=batch_size, pin_memory=pin_memory
+    )
 
     # Generate aggregate dataframe
     with torch.no_grad():
@@ -250,17 +308,27 @@ def infer_tile_labels(
             ]
         )
 
-
     if hasattr(ttm, "column_labels"):
         logger.info(f"Mapping column labels -> {ttm.column_labels}")
         df_scores = df_scores.rename(columns=ttm.column_labels)
 
-    df_output = df.join(df_scores)
+    df_output = tiles_df.join(df_scores)
     df_output.columns = df_output.columns.astype(str)
     df_output.index.name = "address"
 
     logger.info(df_output)
-    return df_output
+
+    with ofs.open(output_file, "wb") as of:
+        df_output.to_parquet(of)
+
+    # Save our properties and params
+    properties = {
+        "tiles_url": ofs.unstrip_protocol(output_file),
+        "total_tiles": len(df_output),
+        "available_labels": list(df_output.columns),
+    }
+
+    return properties
 
 
 def fire_cli():
