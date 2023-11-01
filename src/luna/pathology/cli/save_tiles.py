@@ -37,10 +37,11 @@ def cli(
     Args:
         slide_urlpath (str): url/path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         tiles_urlpath (str): url/path to tile manifest (.parquet)
-        output_urlpath (str): output url/path prefix
         batch_size (int): size in batch dimension to chuck jobs
+        output_urlpath (str): output url/path prefix
         storage_options (dict): storage options to reading functions
         output_storage_options (dict): storage options to writing functions
+        dask_options (dict): dask options
         local_config (str): url/path to local config yaml file
 
     Returns:
