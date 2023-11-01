@@ -17,7 +17,7 @@ from skimage.filters import threshold_otsu  # type: ignore
 from tiffslide import TiffSlide
 
 from luna.common.dask import configure_dask_client, get_or_create_dask_client
-from luna.common.models import Tile
+from luna.common.models import SlideSchema, Tile
 from luna.common.utils import (
     get_config,
     local_cache_urlpath,
@@ -115,7 +115,9 @@ def cli(
         tiles_urlpath (str): url/path to tiles manifest (parquet)
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
         tile_size (int): size of tiles to use (at the requested magnification)
-        thumbnail_magnification (Optional[int]): Magnification scale at which to perform computation
+        thumbnail_magnification (Optional[int]): Magnification scale at which to create thumbnail for tissue detection
+        tile_magnification (Optional[int]): Magnification scale at which to generate tiles
+        batch_size (int): batch size for processing
         output_urlpath (str): Output url/path
         dask_options (dict): dask options
         storage_options (dict): storage options to pass to reading functions
@@ -163,7 +165,7 @@ def cli(
 
 
 def detect_tissue(
-    slide_manifest: DataFrame,
+    slide_manifest: DataFrame[SlideSchema],
     tile_size: Optional[int] = None,
     thumbnail_magnification: Optional[int] = None,
     tile_magnification: Optional[int] = None,
@@ -172,7 +174,22 @@ def detect_tissue(
     storage_options: dict = {},
     output_urlpath: str = ".",
     output_storage_options: dict = {},
-) -> pd.DataFrame:
+) -> DataFrame[SlideSchema]:
+    """Run simple/deterministic tissue detection algorithms based on a filter query, to reduce tiles to those (likely) to contain actual tissue
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        tile_size (int): size of tiles to use (at the requested magnification)
+        thumbnail_magnification (Optional[int]): Magnification scale at which to create thumbnail for tissue detection
+        tile_magnification (Optional[int]): Magnification scale at which to generate tiles
+        filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
+        batch_size (int): batch size for processing
+        storage_options (dict): storage options to pass to reading functions
+        output_urlpath (str): Output url/path
+        output_storage_options (dict): storage options to pass to writing functions
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+
+    """
     client = get_or_create_dask_client()
 
     with make_temp_directory() as temp_dir:

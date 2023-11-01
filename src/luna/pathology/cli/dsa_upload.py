@@ -117,9 +117,27 @@ def upload_annotation_to_dsa(
     insecure: bool = False,
     storage_options: dict = {},
 ):
-    uuids = []
+    """Upload annotation to DSA
+
+    Upload json annotation file as a new annotation to the image in the DSA collection.
+
+    Args:
+        dsa_endpoint_url (string): DSA API endpoint e.g. http://localhost:8080/api/v1
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        annotation_column (string): annotation column of slide_manifest containing the dsa url
+        collection_name (string): name of the collection in DSA
+        image_filename (string): name of the image file in DSA e.g. 123.svs. If not specified, infer from annotiaton_file_urpath
+        username (string): DSA username (defaults to environment variable DSA_USERNAME)
+        password (string): DSA password (defaults to environment variable DSA_PASSWORD)
+        force (bool): upload even if annotation with same name exists for the slide
+        insecure (bool): insecure ssl
+        storage_options (dict): options to pass to reading functions
+
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
     for slide in slide_manifest.itertuples(name="Slide"):
-        uuids += _upload_annotation_to_dsa(
+        uuids = _upload_annotation_to_dsa(
             dsa_endpoint_url,
             slide[annotation_column],
             collection_name,
@@ -130,7 +148,10 @@ def upload_annotation_to_dsa(
             insecure,
             storage_options,
         )
-    return uuids
+        slide_manifest.at[
+            slide.Index, annotation_column.replace("url", "uuid")
+        ] = uuids[0]
+    return slide_manifest
 
 
 def _upload_annotation_to_dsa(

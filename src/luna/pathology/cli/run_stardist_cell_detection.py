@@ -46,7 +46,7 @@ def stardist_simple_cli(
         local_config (str): local config yaml file
 
     Returns:
-        pd.DataFrame: metadata about function call
+        dict: metadata about function call
     """
 
     config = get_config(vars())
@@ -79,7 +79,29 @@ def stardist_simple(
     storage_options: dict,
     output_storage_options: dict,
     annotation_column: str = "stardist_geojson_url",
-) -> pd.DataFrame:
+) -> DataFrame[SlideSchema]:
+    """Run stardist using qupath CLI on slides in a slide manifest from
+    slide_etl. URIs to resulting GeoJSON will be stored in a specified column
+    of the returned slide manifest.
+
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        cell_expansion_size (float): size in pixels to expand cell cytoplasm
+        image_type (str): qupath image type (BRIGHTFIELD_H_DAB)
+        output_urlpath (str): output url/path
+        debug_opts (str): debug options passed as arguments to groovy script
+        num_cores (int): Number of cores to use for CPU parallelization
+        image (str): docker/singularity image
+        use_singularity (bool): use singularity instead of docker
+        max_heap_size (str): maximum heap size to pass to java options
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
+        annotation_column (str): name of column in resulting slide manifest to store GeoJson URIs
+
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
+
     client = get_or_create_dask_client()
 
     futures = []
@@ -122,8 +144,10 @@ def __stardist_simple(
     max_heap_size: str,
     storage_options: dict,
     output_storage_options: dict,
-) -> pd.DataFrame:
-    """Run stardist using qupath CLI
+) -> dict:
+    """Run stardist using qupath CLI on slides in a slide manifest from
+    slide_etl. URIs to resulting GeoJSON will be stored in a specified column
+    of the returned slide manifest.
 
     Args:
         slide_urlpath (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
@@ -139,7 +163,7 @@ def __stardist_simple(
         output_storage_options (dict): storage options to pass to writing functions
 
     Returns:
-        pd.DataFrame: cell detections
+        dict: run metadata
     """
     fs, slide_path = fsspec.core.url_to_fs(slide_urlpath, **storage_options)
     ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
@@ -228,7 +252,7 @@ def stardist_cell_lymphocyte_cli(
     max_heap_size: str = "64G",
     storage_options: dict = {},
     output_storage_options: dict = {},
-):
+) -> dict:
     """Run stardist using qupath CLI
 
     Args:
@@ -236,13 +260,14 @@ def stardist_cell_lymphocyte_cli(
         output_urlpath (str): output url/path
         num_cores (int): Number of cores to use for CPU parallelization
         use_gpu (bool): use GPU
+        image (str): docker/singularity image
         use_singularity (bool): use singularity instead of docker
         max_heap_size (str): maximum heap size to pass to java options
         storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
 
     Returns:
-        pd.DataFrame: cell detections
+        dict: run metadata
     """
     config = get_config(vars())
     slide_id = Path(config["slide_urlpath"]).stem
@@ -272,7 +297,24 @@ def stardist_cell_lymphocyte(
     storage_options: dict = {},
     output_storage_options: dict = {},
     annotation_column: str = "lymphocyte_geojson_url",
-):
+) -> DataFrame[SlideSchema]:
+    """Run stardist using qupath CLI
+
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        output_urlpath (str): output url/path
+        num_cores (int): Number of cores to use for CPU parallelization
+        use_gpu (bool): use GPU
+        image (str): docker/singularity image
+        use_singularity (bool): use singularity instead of docker
+        max_heap_size (str): maximum heap size to pass to java options
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
+        annotation_column (str): name of column in resulting slide manifest to store GeoJson URIs
+
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
     client = get_or_create_dask_client()
 
     futures = []
@@ -313,7 +355,7 @@ def __stardist_cell_lymphocyte(
     max_heap_size: str = "64G",
     storage_options: dict = {},
     output_storage_options: dict = {},
-) -> pd.DataFrame:
+) -> dict:
     """Run stardist using qupath CLI
 
     Args:
@@ -321,12 +363,13 @@ def __stardist_cell_lymphocyte(
         output_urlpath (str): output url/path
         num_cores (int): Number of cores to use for CPU parallelization
         use_gpu (bool): use GPU
+        image (str): docker/singularity image
         use_singularity (bool): use singularity instead of docker
         max_heap_size (str): maximum heap size to pass to java options
         storage_options (dict): storage options to pass to reading functions
 
     Returns:
-        pd.DataFrame: cell detections
+        dict: run metadata
     """
     fs, slide_path = fsspec.core.url_to_fs(slide_urlpath, **storage_options)
     ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)

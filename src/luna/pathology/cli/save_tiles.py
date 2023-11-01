@@ -68,7 +68,22 @@ def save_tiles(
     batch_size: int = 2000,
     storage_options: dict = {},
     output_storage_options: dict = {},
-):
+) -> DataFrame[SlideSchema]:
+    """Saves tiles to disk
+
+    Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
+    and the corresponding manifest/header file (tiles.parquet) is also generated
+
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        output_urlpath (str): output url/path prefix
+        batch_size (int): size in batch dimension to chuck jobs
+        storage_options (dict): storage options to reading functions
+        output_storage_options (dict): storage options to writing functions
+
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
     client = get_or_create_dask_client()
 
     if "tiles_url" not in slide_manifest.columns:

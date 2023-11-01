@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from luna.common.dask import configure_dask_client, get_or_create_dask_client
+from luna.common.models import SlideSchema
 from luna.common.utils import get_config, make_temp_directory, save_metadata, timed
 from luna.pathology.analysis.ml import (
     HDF5Dataset,
@@ -54,8 +55,9 @@ def cli(
     Args:
         slide_urlpath (str): url/path to slide image (virtual slide formats compatible with TiffSlide, .svs, .tif, .scn, ...)
         tiles_urlpath (str): path to a slide-tile manifest file (.tiles.csv)
-        tile_size (int): size of tiles to use (at the requested magnification)
+        tile_size (Optional[int]): size of tiles to use (at the requested magnification)
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
+        requested_magnification (Optional[int]): Magnification scale at which to perform computation
         torch_model_repo_or_dir (str): repository root name like (namespace/repo) at github.com to serve torch.hub models. Or path to a local model (e.g. msk-mind/luna-ml)
         model_name (str): torch hub model name (a nn.Module at the repo repo_name)
         num_cores (int): Number of cores to use for CPU parallelization
@@ -72,6 +74,7 @@ def cli(
         dict: metadata
     """
     config = get_config(vars())
+    configure_dask_client(**config["dask_options"])
 
     if not config["slide_urlpath"] and not config["tiles_urlpath"]:
         raise fire.core.FireError("Specify either tiles_urlpath or slide_urlpath")
@@ -130,7 +133,7 @@ def cli(
 
 
 def infer_tile_labels(
-    slide_manifest: DataFrame,
+    slide_manifest: DataFrame[SlideSchema],
     tile_size: Optional[int] = None,
     filter_query: str = "",
     thumbnail_magnification: Optional[int] = None,
@@ -142,13 +145,35 @@ def infer_tile_labels(
     output_urlpath: str = ".",
     kwargs: dict = {},
     use_gpu: bool = False,
-    dask_options: dict = {},
     insecure: bool = False,
     storage_options: dict = {},
     output_storage_options: dict = {},
-) -> pd.DataFrame:
+) -> DataFrame[SlideSchema]:
+    """Run inference using a model and transform definition (either local or using torch.hub)
+
+    Decorates existing tiles manifests with additional columns corresponding to class prediction/scores from the model
+
+    Args:
+        slide_manifest (DataFrame): slide manifest from slide_etl
+        tile_size (Optional[int]): size of tiles to use (at the requested magnification)
+        filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
+        thumbnail_magnification (Optional[int]): Magnification scale at which to detect tissue
+        tile_magnification (Optional[int]): Magnification scale at which to generate tiles
+        torch_model_repo_or_dir (str): repository root name like (namespace/repo) at github.com to serve torch.hub models. Or path to a local model (e.g. msk-mind/luna-ml)
+        model_name (str): torch hub model name (a nn.Module at the repo repo_name)
+        num_cores (int): Number of cores to use for CPU parallelization
+        batch_size (int): size in batch dimension to chuck inference (8-256 recommended, depending on memory usage)
+        output_urlpath (str): output/working directory
+        kwargs (dict): additional keywords to pass to model initialization
+        use_gpu (bool): use GPU if available
+        insecure (bool): insecure SSL
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
+
+    Returns:
+        pd.DataFrame: slide manifest
+    """
     client = get_or_create_dask_client()
-    configure_dask_client(**dask_options)
 
     if "tiles_url" not in slide_manifest.columns:
         if tile_size is None:
@@ -221,20 +246,20 @@ def __infer_tile_labels(
 
     Args:
         tiles_urlpath (str): path to a slide-tile manifest file (.tiles.parquet)
-        tile_size (int): size of tiles to use (at the requested magnification)
-        filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
-        requested_magnification (Optional[int]): Magnification scale at which to perform computation
+        slide_id (str): slide ID
+        output_urlpath (str): output/working directory
         torch_model_repo_or_dir (str): repository root name like (namespace/repo) at github.com to serve torch.hub models. Or path to a local model (e.g. msk-mind/luna-ml)
         model_name (str): torch hub model name (a nn.Module at the repo repo_name)
         num_cores (int): Number of cores to use for CPU parallelization
         batch_size (int): size in batch dimension to chuck inference (8-256 recommended, depending on memory usage)
-        output_urlpath (str): output/working directory
         kwargs (dict): additional keywords to pass to model initialization
+        use_gpu (bool): use GPU if available
+        insecure (bool): insecure SSL
         storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
 
     Returns:
-        pd.DataFrame: augmented tiles dataframe
+        dict: metadata
     """
     if insecure:
         ssl._create_default_https_context = ssl._create_unverified_context

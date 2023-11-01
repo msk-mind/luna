@@ -42,12 +42,13 @@ def cli(
 
 
     Args:
-        slide_url (str): path to slide image
+        slide_urlpath (str): path to slide image
         project_name (str): project name underwhich the slides should reside
         comment (str): comment and description of dataset
         subset_csv_urlpath (str): url/path to subset csv
-        storage_options (dict): storage options to pass to reading functions
+        debug_limit (int): limit number of slides
         output_urlpath (str): url/path to output table
+        storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
         local_config (str): url/path to YAML config file
         no_copy (bool): determines whether we copy slides to output_urlpath
@@ -120,16 +121,17 @@ def slide_etl(
     """Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
 
     Args:
-        slide_url (str): path to slide image
+        slide_urls (Union[str, List[str])): path to slide image(s)
         project_name (str): project name underwhich the slides should reside
         comment (str): comment and description of dataset
         storage_options (dict): storage options to pass to reading functions
         output_urlpath (str): url/path to output table
         output_storage_options (dict): storage options to pass to writing functions
+        no_copy (bool): do not copy slides to output path
 
 
     Returns:
-        df (DataFrame): dataframe containing the metadata of all the slides
+        DataFrame[SlideSchema]: dataframe containing the metadata of all the slides
     """
     if isinstance(slide_urls, str):
         slide_urls = [slide_urls]

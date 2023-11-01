@@ -135,7 +135,6 @@ def cli(
 
 def extract_tile_shape_features(
     slide_manifest: DataFrame[SlideSchema],
-    slide_urlpath: str,
     output_urlpath: str,
     resize_factor: int = 16,
     detection_probability_threshold: Optional[float] = None,
@@ -161,6 +160,27 @@ def extract_tile_shape_features(
         "solidity",
     ],
 ):
+    """Extracts shape and spatial features (HIF features) from a slide mask.
+
+     Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        output_urlpath (str): output URL/path
+        resize_factor (int): factor to downsample slide image
+        detection_probability_threshold (Optional[float]): detection probability threshold
+        statistical_descriptors (str): statistical descriptors to calculate. One of All, Quantiles, Stats, or Density
+        cellular_features (str): cellular features to include. One of All, Nucleus, Cell, Cytoplasm, and Membrane
+        property_type (str): properties to include. One of All, Geometric, or Stain
+        include_smaller_regions (bool): include smaller regions in output
+        label_cols (List[str]): list of score columns to use for the classification. Tile is classified as the column with the max score
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
+        local_config (str): local config yaml file
+        objects_column (str): slide manifest column name with stardist geoJSON URLs
+        properties (List[str]): properties to extract
+
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
     client = get_or_create_dask_client()
 
     futures = []
@@ -225,8 +245,10 @@ def __extract_tile_shape_features(
     """Extracts shape and spatial features (HIF features) from a slide mask.
 
      Args:
-        objects (Union[str, gpd.GeoDataFrame]): URL/path to slide (tiffslide supported formats)
-        tiles (Union[str, pd.DataFrame]): URL/path to object file (geopandas supported formats)
+        objects_urlpath (str): URL/path to object file (geopandas supported formats)
+        tiles_urlpath (str): URL/path to tiles manifest (parquet)
+        slide_urlpath (str): URL/path to slide (tiffslide supported formats)
+        output_urlpath (str): output URL/path
         resize_factor (int): factor to downsample slide image
         detection_probability_threshold (Optional[float]): detection
             probability threshold
@@ -234,7 +256,10 @@ def __extract_tile_shape_features(
         statistical_descriptors (StatisticalDescriptors): statistical descriptors to calculate
         cellular_features (CellularFeatures): cellular features to include
         property_type (PropertyType): properties to include
+        include_smaller_regions (bool): include smaller regions
         label_cols (List[str]): list of score columns to use for the classification. Tile is classified as the column with the max score
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
         properties (List[str]): list of whole slide image properties to
             extract. Needs to be parquet compatible (numeric).
     Returns:

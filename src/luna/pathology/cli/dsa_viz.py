@@ -207,9 +207,7 @@ def stardist_polygon_cli(
 
 def stardist_polygon(
     slide_manifest: DataFrame[SlideSchema],
-    object_urlpath: str,
     output_urlpath: str,
-    image_filename: str,
     annotation_name: str,
     line_colors: Dict[str, str],
     fill_colors: Dict[str, str],
@@ -218,6 +216,22 @@ def stardist_polygon(
     annotation_column: str = "stardist_polygon_geojson_url",
     output_column: str = "regional_dsa_url",
 ):
+    """Build DSA annotation json from stardist geojson classification results
+
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        output_urlpath (string): URL/path prefix to save annotations
+        annotation_name (string): name of the annotation to be displayed in DSA
+        line_colors (dict): user-provided line color map with {feature name:rgb values}
+        fill_colors (dict): user-provided fill color map with {feature name:rgba values}
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
+        annotation_column (string): column containing url to stardist polygon geojson
+        output_column (string): column with result url to add to slide_manifest
+
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
     if annotation_column not in slide_manifest.columns:
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
@@ -322,6 +336,7 @@ def stardist_polygon_tile_cli(
     line_colors: dict[str, str] = {},
     fill_colors: dict[str, str] = {},
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from stardist geojson classification and labeled tiles
@@ -334,7 +349,8 @@ def stardist_polygon_tile_cli(
         output_urlpath (string): URL/path prefix to save annotations
         line_colors (dict): user-provided line color map with {feature name:rgb values}
         fill_colors (dict): user-provided fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
         local_config (string): local config YAML file
 
     Returns:
@@ -357,10 +373,7 @@ def stardist_polygon_tile_cli(
 
 def stardist_polygon_tile(
     slide_manifest: DataFrame[SlideSchema],
-    object_urlpath: str,
-    tiles_urlpath: str,
     output_urlpath: str,
-    image_filename: str,
     annotation_name_prefix: str,
     line_colors: Dict[str, str],
     fill_colors: Dict[str, str],
@@ -369,6 +382,22 @@ def stardist_polygon_tile(
     annotation_column: str = "stardist_polygon_geojson_url",
     output_column_suffix: str = "regional_dsa_url",
 ):
+    """Build DSA annotation json from stardist geojson classification and labeled tiles
+
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest
+        annotation_name_prefix (string): name of the annotation to be displayed in DSA
+        output_urlpath (string): URL/path prefix to save annotations
+        line_colors (dict): user-provided line color map with {feature name:rgb values}
+        fill_colors (dict): user-provided fill color map with {feature name:rgba values}
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
+        annotation_column (string): column containing url to stardist polygon geojson
+        output_column_suffix (string): column suffix with result url to add to slide_manifest
+
+    Returns:
+        dict[str,str]: annotation file path
+    """
     if annotation_column not in slide_manifest.columns:
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
@@ -415,11 +444,13 @@ def __stardist_polygon_tile(
     Args:
         object_urlpath (string): URL/path to stardist geojson classification results
         tiles_urlpath (string): URL/path to tiles manifest parquet
-        annotation_name_prefix (string): name of the annotation to be displayed in DSA
         output_urlpath (string): URL/path prefix to save annotations
+        image_filename (string): name of the image file in DSA e.g. 123.svs
+        annotation_name_prefix (string): name of the annotation to be displayed in DSA
         line_colors (dict): user-provided line color map with {feature name:rgb values}
         fill_colors (dict): user-provided fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
 
     Returns:
         dict: DSA annotations
@@ -503,6 +534,7 @@ def stardist_cell_cli(
     line_colors: Optional[dict[str, str]] = None,
     fill_colors: Optional[dict[str, str]] = None,
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from TSV classification data generated by
@@ -519,7 +551,8 @@ def stardist_cell_cli(
         annotation_name (string): name of the annotation to be displayed in DSA
         line_colors (dict, optional): line color map with {feature name:rgb values}
         fill_colors (dict, optional): fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
         local_config (string): local config YAML file
 
     Returns:
@@ -542,7 +575,6 @@ def stardist_cell_cli(
 def stardist_cell(
     slide_manifest: DataFrame[SlideSchema],
     output_urlpath: str,
-    image_filename: str,
     annotation_name: str,
     line_colors: Optional[Dict[str, str]],
     fill_colors: Optional[Dict[str, str]],
@@ -551,6 +583,27 @@ def stardist_cell(
     annotation_column: str = "stardist_cell_tsv_url",
     output_column: str = "stardist_cell_dsa_url",
 ):
+    """Build DSA annotation json from TSV classification data generated by
+    stardist
+
+    Processes a cell classification data generated by Qupath/stardist and
+    adds the center coordinates of the cells
+    as annotation elements.
+
+    Args:
+        input_urlpath (string): URL/path to TSV classification data generated by stardist
+        output_urlpath (string): URL/path prefix for saving dsa annotation json
+        annotation_name (string): name of the annotation to be displayed in DSA
+        line_colors (dict, optional): line color map with {feature name:rgb values}
+        fill_colors (dict, optional): fill color map with {feature name:rgba values}
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
+        annotation_column (string): column containing url to stardist polygon geojson
+        output_column_suffix (string): column suffix with result url to add to slide_manifest
+
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
     if annotation_column not in slide_manifest.columns:
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
@@ -671,6 +724,7 @@ def regional_polygon_cli(
     line_colors: Optional[dict[str, str]] = None,
     fill_colors: Optional[dict[str, str]] = None,
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from regional annotation geojson
@@ -681,7 +735,8 @@ def regional_polygon_cli(
         annotation_name (string): name of the annotation to be displayed in DSA
         line_colors (dict, optional): line color map with {feature name:rgb values}
         fill_colors (dict, optional): fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
         local_config (string): local config yaml file
 
     Returns:
@@ -707,9 +762,7 @@ def regional_polygon_cli(
 def regional_polygon(
     slide_manifest: DataFrame[SlideSchema],
     output_urlpath: str,
-    image_filename: str,
     annotation_name: str,
-    classes_to_include: List,
     line_colors: Optional[Dict[str, str]],
     fill_colors: Optional[Dict[str, str]],
     storage_options: Dict,
@@ -717,6 +770,23 @@ def regional_polygon(
     annotation_column: str = "regional_geojson_url",
     output_column: str = "regional_dsa_url",
 ):
+    """Build DSA annotation json from regional annotation geojson
+
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest
+        output_urlpath (string): URL/path prefix for saving dsa annotation json
+        annotation_name (string): name of the annotation to be displayed in DSA
+        line_colors (dict, optional): line color map with {feature name:rgb values}
+        fill_colors (dict, optional): fill color map with {feature name:rgba values}
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
+        annotation_column (string): column containing url to regional geojson
+        output_column_suffix (string): column suffix with result url to add to slide_manifest
+
+    Returns:
+        DataFrame[SlideSchema]: slide schema
+    """
+
     if annotation_column not in slide_manifest.columns:
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
@@ -812,6 +882,7 @@ def qupath_polygon_cli(
     line_colors: Optional[dict[str, str]] = None,
     fill_colors: Optional[dict[str, str]] = None,
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from Qupath polygon geojson
@@ -826,8 +897,8 @@ def qupath_polygon_cli(
         e.g. ["Tumor", "Stroma", ...]
         line_colors (dict, optional): line color map with {feature name:rgb values}
         fill_colors (dict, optional): fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
-        output_storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
         local_config (string): local config yaml file
 
     Returns:
@@ -862,6 +933,26 @@ def qupath_polygon(
     annotation_column: str = "qupath_geojson_url",
     output_column: str = "qupath_dsa_url",
 ):
+    """Build DSA annotation json from Qupath polygon geojson
+
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        output_urlpath (string): URL/path prefix for saving the DSA compatible annotation
+        json
+        image_filename (string): name of the image file in DSA e.g. 123.svs
+        annotation_name (string): name of the annotation to be displayed in DSA
+        classes_to_include (list): list of classification labels to visualize
+        e.g. ["Tumor", "Stroma", ...]
+        line_colors (dict, optional): line color map with {feature name:rgb values}
+        fill_colors (dict, optional): fill color map with {feature name:rgba values}
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
+        annotation_column (string): column containing url to qupath geojson
+        output_column_suffix (string): column suffix with result url to add to slide_manifest
+
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
     if annotation_column not in slide_manifest.columns:
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
@@ -987,14 +1078,16 @@ def bitmask_polygon_cli(
 
     Args:
         input_map (map): map of {label:path_to_bitmask_png}
-        output_dir (string): directory to save the DSA compatible annotation
+        output_urlpath (string): url/path to save the DSA compatible annotation
         json
         image_filename (string): name of the image file in DSA e.g. 123.svs
         annotation_name (string): name of the annotation to be displayed in DSA
         line_colors (dict, optional): line color map with {feature name:rgb values}
         fill_colors (dict, optional): fill color map with {feature name:rgba values}
         scale_factor (int, optional): scale to match the image on DSA.
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
+        local_config (string): local config yaml file
 
     Returns:
         dict: annotation file path
@@ -1144,6 +1237,28 @@ def heatmap(
     storage_options: Dict,
     output_storage_options: Dict,
 ):
+    """Generate heatmap based on the tile scores
+
+    Creates a heatmap for the given column, using the color palette `viridis`
+    to set a fill value
+    - the color ranges from purple to yellow, for scores from 0 to 1.
+
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        output_urlpath (string): URL/path prefix to save the DSA compatible annotation
+        json
+        annotation_name (string): name of the annotation to be displayed in DSA
+        column (string): column to visualize e.g. tile_score
+        tile_size (int): size of tiles
+        scale_factor (int, optional): scale to match the image on DSA.
+        line_colors (dict, optional): line color map with {feature name:rgb values}
+        fill_colors (dict, optional): fill color map with {feature name:rgba values}
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
+
+    Returns:
+        dict: annotation file path. None if error in writing the file.
+    """
     if "tiles_url" not in slide_manifest.columns:
         raise ValueError("tiles_url not found in slide manifest")
     client = get_or_create_dask_client()
@@ -1199,9 +1314,10 @@ def __heatmap(
         column (list[string]): columns to visualize e.g. tile_score
         tile_size (int): size of tiles
         scale_factor (int, optional): scale to match the image on DSA.
-        line_colors (Optional[dict[str,str]]): line color map with {feature name:rgb values}
         fill_colors (Optional[dict[str,str]]): fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        line_colors (Optional[dict[str,str]]): line color map with {feature name:rgb values}
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
 
     Returns:
         dict: DSA annotation
@@ -1272,6 +1388,7 @@ def bmp_polygon_cli(
     fill_colors: Optional[Dict[str, str]] = None,
     scale_factor: Optional[int] = 1,
     storage_options: Dict = {},
+    output_storage_options: Dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from a BMP with multiple labels.
@@ -1288,7 +1405,8 @@ def bmp_polygon_cli(
         line_colors (dict[str,str], optional): line color map with {feature name:rgb values}
         fill_colors (dict[str,str], optional): fill color map with {feature name:rgba values}
         scale_factor (int, optional): scale to match image DSA.
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
 
     Returns:
         dict: annotation file path
@@ -1323,6 +1441,27 @@ def bmp_polygon(
     annotation_column: str = "bmp_polygon_url",
     output_column: str = "bmp_polygon_dsa_url",
 ):
+    """Build DSA annotation json from a BMP with multiple labels.
+
+    Vectorizes and simplifies contours per label.
+
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        output_urlpath (string): url/path prefix to save the DSA compatible annotation
+        json
+        label_map (dict[int,str]): map of label number to label name
+        annotation_name (string): name of the annotation to be displayed in DSA
+        line_colors (dict[str,str], optional): line color map with {feature name:rgb values}
+        fill_colors (dict[str,str], optional): fill color map with {feature name:rgba values}
+        scale_factor (int, optional): scale to match image DSA.
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
+        annotation_column (string): column containing url to BMP polygon
+        output_column_suffix (string): column suffix with result url to add to slide_manifest
+
+    Returns:
+        dict: annotation file path
+    """
     if annotation_column not in slide_manifest.columns:
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
@@ -1374,7 +1513,8 @@ def __bmp_polygon(
         line_colors (dict[str,str], optional): line color map with {feature name:rgb values}
         fill_colors (dict[str,str], optional): fill color map with {feature name:rgba values}
         scale_factor (int, optional): scale to match image DSA.
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
 
     Returns:
         dict: DSA annotation
