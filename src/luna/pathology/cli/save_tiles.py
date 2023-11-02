@@ -24,6 +24,7 @@ def cli(
     tiles_urlpath: str = "???",
     batch_size: int = 2000,
     output_urlpath: str = ".",
+    force: bool = False,
     storage_options: dict = {},
     output_storage_options: dict = {},
     dask_options: dict = {},
@@ -39,6 +40,7 @@ def cli(
         tiles_urlpath (str): url/path to tile manifest (.parquet)
         batch_size (int): size in batch dimension to chuck jobs
         output_urlpath (str): output url/path prefix
+        force (bool): overwrite outputs if they exist
         storage_options (dict): storage options to reading functions
         output_storage_options (dict): storage options to writing functions
         dask_options (dict): dask options
@@ -55,6 +57,7 @@ def cli(
         config["tiles_urlpath"],
         config["slide_urlpath"],
         config["output_urlpath"],
+        config["force"],
         config["batch_size"],
         config["storage_options"],
         config["output_storage_options"],
@@ -66,6 +69,7 @@ def cli(
 def save_tiles(
     slide_manifest: DataFrame[SlideSchema],
     output_urlpath: str,
+    force: bool = True,
     batch_size: int = 2000,
     storage_options: dict = {},
     output_storage_options: dict = {},
@@ -78,6 +82,7 @@ def save_tiles(
     Args:
         slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
         output_urlpath (str): output url/path prefix
+        force (bool): overwrite outputs if they exist
         batch_size (int): size in batch dimension to chuck jobs
         storage_options (dict): storage options to reading functions
         output_storage_options (dict): storage options to writing functions
@@ -104,6 +109,7 @@ def save_tiles(
             slide.tiles_url,
             slide.url,
             output_urlpath,
+            force,
             batch_size,
             storage_options,
             output_storage_options,
@@ -111,16 +117,14 @@ def save_tiles(
         futures.append(future)
 
     results = client.gather(futures)
-    for idx, result in enumerate(results):
-        slide_manifest.at[idx, "tiles_url"] = result["tiles_url"]
-
-    return slide_manifest
+    return slide_manifest.assign(tiles_url=[x["tiles_url"] for x in results])
 
 
 def _save_tiles(
     tiles_urlpath: str,
     slide_urlpath: str,
     output_urlpath: str,
+    force: bool,
     batch_size: int = 2000,
     storage_options: dict = {},
     output_storage_options: dict = {},

@@ -125,7 +125,7 @@ def save_dsa_annotation(
     dsa_annotation: dict,
     output_urlpath: str,
     image_filename: str,
-    storage_options: dict,
+    storage_options: dict = {},
 ):
     """Helper function to save annotation elements to a json file.
 
@@ -152,16 +152,15 @@ def save_dsa_annotation(
         Path(output_urlpath_prefix) / f"{annotation_name_replaced}_{image_id}.json"
     )
 
-    try:
-        with fs.open(output_path, "w").open() as outfile:
-            json.dump(dsa_annotation, outfile)
-        logger.info(
-            f"Saved {len(dsa_annotation['elements'])} to {fs.unstrip_protocol(str(output_path))}"
-        )
-        return fs.unstrip_protocol(str(output_path))
-    except Exception as exc:
-        logger.error(exc)
-        return None
+    if not fs.exists(output_urlpath_prefix):
+        fs.mkdir(output_urlpath_prefix)
+
+    with fs.open(output_path, "w") as outfile:
+        json.dump(dsa_annotation, outfile)
+    logger.info(
+        f"Saved {len(dsa_annotation['elements'])} to {fs.unstrip_protocol(str(output_path))}"
+    )
+    return fs.unstrip_protocol(str(output_path))
 
 
 @timed
@@ -171,9 +170,10 @@ def stardist_polygon_cli(
     image_filename: str = "???",
     annotation_name: str = "???",
     output_urlpath: str = "???",
-    line_colors: dict[str, str] = {},
-    fill_colors: dict[str, str] = {},
-    storage_options: dict = {},
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
     local_config: str = "",
 ):
     """Build DSA annotation json from stardist geojson classification results
@@ -209,12 +209,12 @@ def stardist_polygon(
     slide_manifest: DataFrame[SlideSchema],
     output_urlpath: str,
     annotation_name: str,
-    line_colors: Dict[str, str],
-    fill_colors: Dict[str, str],
-    storage_options: Dict,
-    output_storage_options: Dict,
-    annotation_column: str = "stardist_polygon_geojson_url",
-    output_column: str = "regional_dsa_url",
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
+    annotation_column: str = "",
+    output_column: str = "",
 ):
     """Build DSA annotation json from stardist geojson classification results
 
@@ -232,12 +232,17 @@ def stardist_polygon(
     Returns:
         DataFrame[SlideSchema]: slide manifest
     """
+    if not annotation_column:
+        annotation_column = f"{annotation_name}_geojson_url"
+    if not output_column:
+        output_column = f"{annotation_name}_dsa_url"
+
     if annotation_column not in slide_manifest.columns:
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
     futures = []
-    for row in slide_manifest.itertuples(name="Slide"):
-        image_filename = os.path.basename(row.url)
+    for _, row in slide_manifest.iterrows():
+        image_filename = os.path.basename(row["url"])
         future = client.submit(
             __stardist_polygon,
             row[annotation_column],
@@ -253,8 +258,8 @@ def stardist_polygon(
         futures.append(future)
     progress(futures)
     dsa_annotation_urls = client.gather(futures)
-    for dsa_annotation_url in dsa_annotation_urls:
-        slide_manifest.at[row.Index, output_column] = dsa_annotation_url
+    for idx, dsa_annotation_url in enumerate(dsa_annotation_urls):
+        slide_manifest.at[idx, output_column] = dsa_annotation_url
 
     return slide_manifest
 
@@ -264,10 +269,10 @@ def __stardist_polygon(
     output_urlpath: str,
     image_filename: str,
     annotation_name: str,
-    line_colors: Dict[str, str],
-    fill_colors: Dict[str, str],
-    storage_options: Dict,
-    output_storage_options: Dict,
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
 ):
     """Build DSA annotation from stardist geojson classification results
 
@@ -333,8 +338,8 @@ def stardist_polygon_tile_cli(
     image_filename: str = "???",
     annotation_name_prefix: str = "???",
     output_urlpath: str = "???",
-    line_colors: dict[str, str] = {},
-    fill_colors: dict[str, str] = {},
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
     storage_options: dict = {},
     output_storage_options: dict = {},
     local_config: str = "",
@@ -375,12 +380,12 @@ def stardist_polygon_tile(
     slide_manifest: DataFrame[SlideSchema],
     output_urlpath: str,
     annotation_name_prefix: str,
-    line_colors: Dict[str, str],
-    fill_colors: Dict[str, str],
-    storage_options: Dict,
-    output_storage_options: Dict,
-    annotation_column: str = "stardist_polygon_geojson_url",
-    output_column_suffix: str = "regional_dsa_url",
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
+    annotation_column: str = "",
+    output_column_suffix: str = "",
 ):
     """Build DSA annotation json from stardist geojson classification and labeled tiles
 
@@ -398,16 +403,20 @@ def stardist_polygon_tile(
     Returns:
         dict[str,str]: annotation file path
     """
+    if not annotation_column:
+        annotation_column = f"{annotation_name_prefix}_geojson_url"
+    if not output_column_suffix:
+        output_column_suffix = f"{annotation_name_prefix}_dsa_url"
     if annotation_column not in slide_manifest.columns:
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
     futures = []
-    for row in slide_manifest.itertuples(name="Slide"):
-        image_filename = os.path.basename(row.url)
+    for _, row in slide_manifest.iterrows():
+        image_filename = os.path.basename(row["url"])
         future = client.submit(
             __stardist_polygon_tile,
             row[annotation_column],
-            row.tiles_url,
+            row["tiles_url"],
             output_urlpath,
             image_filename,
             annotation_name_prefix,
@@ -419,13 +428,16 @@ def stardist_polygon_tile(
 
         futures.append(future)
     progress(futures)
-    dsa_annotation_url_map = client.gather(futures)
-    for tile_label, dsa_annotation_url in dsa_annotation_url_map.iteritems():
-        slide_manifest.at[
-            row.Index, f"{tile_label}_{output_column_suffix}"
-        ] = dsa_annotation_url
-
-    return slide_manifest
+    dsa_annotation_url_maps = client.gather(futures)
+    tile_labels = dsa_annotation_url_maps[0].keys()
+    return slide_manifest.assign(
+        **{
+            f"{tile_label}_{output_column_suffix}": [
+                x[tile_label] for x in dsa_annotation_url_maps
+            ]
+            for tile_label in tile_labels
+        }
+    )
 
 
 def __stardist_polygon_tile(
@@ -434,10 +446,10 @@ def __stardist_polygon_tile(
     output_urlpath: str,
     image_filename: str,
     annotation_name_prefix: str,
-    line_colors: Dict[str, str],
-    fill_colors: Dict[str, str],
-    storage_options: Dict,
-    output_storage_options: Dict,
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
 ):
     """Build DSA annotation json from stardist geojson classification and labeled tiles
 
@@ -576,12 +588,12 @@ def stardist_cell(
     slide_manifest: DataFrame[SlideSchema],
     output_urlpath: str,
     annotation_name: str,
-    line_colors: Optional[Dict[str, str]],
-    fill_colors: Optional[Dict[str, str]],
-    storage_options: Dict,
-    output_storage_options: Dict,
-    annotation_column: str = "stardist_cell_tsv_url",
-    output_column: str = "stardist_cell_dsa_url",
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
+    annotation_column: str = "",
+    output_column: str = "",
 ):
     """Build DSA annotation json from TSV classification data generated by
     stardist
@@ -604,12 +616,16 @@ def stardist_cell(
     Returns:
         DataFrame[SlideSchema]: slide manifest
     """
+    if not annotation_column:
+        annotation_column = f"{annotation_name}_tsv_url"
+    if not output_column:
+        output_column = f"{annotation_name}_dsa_url"
     if annotation_column not in slide_manifest.columns:
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
     futures = []
-    for row in slide_manifest.itertuples(name="Slide"):
-        image_filename = os.path.basename(row.url)
+    for _, row in slide_manifest.iterrows():
+        image_filename = os.path.basename(row["url"])
         future = client.submit(
             __stardist_cell,
             row[annotation_column],
@@ -625,10 +641,7 @@ def stardist_cell(
         futures.append(future)
     progress(futures)
     dsa_annotation_urls = client.gather(futures)
-    for dsa_annotation_url in dsa_annotation_urls:
-        slide_manifest.at[row.Index, output_column] = dsa_annotation_url
-
-    return slide_manifest
+    return slide_manifest.assign(**{output_column: dsa_annotation_urls})
 
 
 def __stardist_cell(
@@ -636,10 +649,10 @@ def __stardist_cell(
     output_urlpath: str,
     image_filename: str,
     annotation_name: str,
-    line_colors: Optional[dict[str, str]],
-    fill_colors: Optional[dict[str, str]],
-    storage_options: dict,
-    output_storage_options: dict,
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
 ):
     """Build DSA annotation json from TSV classification data generated by
     stardist
@@ -763,12 +776,12 @@ def regional_polygon(
     slide_manifest: DataFrame[SlideSchema],
     output_urlpath: str,
     annotation_name: str,
-    line_colors: Optional[Dict[str, str]],
-    fill_colors: Optional[Dict[str, str]],
-    storage_options: Dict,
-    output_storage_options: Dict,
-    annotation_column: str = "regional_geojson_url",
-    output_column: str = "regional_dsa_url",
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
+    annotation_column: str = "",
+    output_column: str = "",
 ):
     """Build DSA annotation json from regional annotation geojson
 
@@ -787,12 +800,16 @@ def regional_polygon(
         DataFrame[SlideSchema]: slide schema
     """
 
+    if not annotation_column:
+        annotation_column = f"{annotation_name}_geojson_url"
+    if not output_column:
+        output_column = f"{annotation_name}_dsa_url"
     if annotation_column not in slide_manifest.columns:
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
     futures = []
-    for row in slide_manifest.itertuples(name="Slide"):
-        image_filename = os.path.basename(row.url)
+    for _, row in slide_manifest.iterrows():
+        image_filename = os.path.basename(row["url"])
         future = client.submit(
             __regional_polygon,
             row[annotation_column],
@@ -808,10 +825,7 @@ def regional_polygon(
         futures.append(future)
     progress(futures)
     dsa_annotation_urls = client.gather(futures)
-    for dsa_annotation_url in dsa_annotation_urls:
-        slide_manifest.at[row.Index, output_column] = dsa_annotation_url
-
-    return slide_manifest
+    return slide_manifest.assign(**{output_column: dsa_annotation_urls})
 
 
 def __regional_polygon(
@@ -819,10 +833,10 @@ def __regional_polygon(
     output_urlpath: str,
     image_filename: str,
     annotation_name: str,
-    line_colors: Optional[dict[str, str]],
-    fill_colors: Optional[dict[str, str]],
-    storage_options: dict,
-    output_storage_options: dict,
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
 ):
     """Build DSA annotation json from regional annotation geojson
 
@@ -926,12 +940,12 @@ def qupath_polygon(
     image_filename: str,
     annotation_name: str,
     classes_to_include: List,
-    line_colors: Optional[Dict[str, str]],
-    fill_colors: Optional[Dict[str, str]],
-    storage_options: Dict,
-    output_storage_options: Dict,
-    annotation_column: str = "qupath_geojson_url",
-    output_column: str = "qupath_dsa_url",
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
+    annotation_column: str = "",
+    output_column: str = "",
 ):
     """Build DSA annotation json from Qupath polygon geojson
 
@@ -953,12 +967,16 @@ def qupath_polygon(
     Returns:
         DataFrame[SlideSchema]: slide manifest
     """
+    if not annotation_column:
+        annotation_column = f"{annotation_name}_geojson_url"
+    if not output_column:
+        output_column = f"{annotation_name}_dsa_url"
     if annotation_column not in slide_manifest.columns:
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
     futures = []
-    for row in slide_manifest.itertuples(name="Slide"):
-        image_filename = os.path.basename(row.url)
+    for _, row in slide_manifest.iterrows():
+        image_filename = os.path.basename(row["url"])
         future = client.submit(
             __qupath_polygon,
             row[annotation_column],
@@ -975,10 +993,7 @@ def qupath_polygon(
         futures.append(future)
     progress(futures)
     dsa_annotation_urls = client.gather(futures)
-    for dsa_annotation_url in dsa_annotation_urls:
-        slide_manifest.at[row.Index, output_column] = dsa_annotation_url
-
-    return slide_manifest
+    return slide_manifest.assign(**{output_column: dsa_annotation_urls})
 
 
 def __qupath_polygon(
@@ -987,10 +1002,10 @@ def __qupath_polygon(
     image_filename: str,
     annotation_name: str,
     classes_to_include: List,
-    line_colors: Optional[Dict[str, str]],
-    fill_colors: Optional[Dict[str, str]],
-    storage_options: Dict,
-    output_storage_options: Dict,
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
 ):
     """Build DSA annotation json from Qupath polygon geojson
 
@@ -1001,7 +1016,8 @@ def __qupath_polygon(
         e.g. ["Tumor", "Stroma", ...]
         line_colors (map, optional): line color map with {feature name:rgb values}
         fill_colors (map, optional): fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
 
     Returns:
         dict: dsa annotation
@@ -1112,8 +1128,8 @@ def bitmask_polygon(
     output_urlpath: str,
     image_filename: str,
     annotation_name: str,
-    line_colors: Optional[Dict[str, str]],
-    fill_colors: Optional[Dict[str, str]],
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
     scale_factor: Optional[int] = 1,
     storage_options: Dict = {},
     output_storage_options: Dict = {},
@@ -1180,9 +1196,10 @@ def heatmap_cli(
     column: str = "???",
     tile_size: int = "???",  # type: ignore
     scale_factor: Optional[int] = 1,
-    fill_colors: dict[str, str] = {},
-    line_colors: dict[str, str] = {},
+    fill_colors: Optional[dict[str, str]] = None,
+    line_colors: Optional[dict[str, str]] = None,
     storage_options: dict = {},
+    output_storage_options: dict = {},
     local_config: str = "",
 ):
     """Generate heatmap based on the tile scores
@@ -1202,7 +1219,8 @@ def heatmap_cli(
         scale_factor (int, optional): scale to match the image on DSA.
         line_colors (dict, optional): line color map with {feature name:rgb values}
         fill_colors (dict, optional): fill color map with {feature name:rgba values}
-        storage_options (dict): storage options to pass to read/write functions
+        storage_options (dict): storage options to pass to write functions
+        output_storage_options (dict): storage options to pass to write functions
         local_config (string): local config yaml file
 
     Returns:
@@ -1231,11 +1249,12 @@ def heatmap(
     annotation_name: str,
     column: List[str],
     tile_size: int,
-    scale_factor: Optional[int],
-    fill_colors: Optional[Dict[str, str]],
-    line_colors: Optional[Dict[str, str]],
-    storage_options: Dict,
-    output_storage_options: Dict,
+    scale_factor: Optional[int] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    line_colors: Optional[Dict[str, str]] = None,
+    output_column: str = "",
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
 ):
     """Generate heatmap based on the tile scores
 
@@ -1259,15 +1278,17 @@ def heatmap(
     Returns:
         dict: annotation file path. None if error in writing the file.
     """
+    if not output_column:
+        output_column = f"{annotation_name}_dsa_url"
     if "tiles_url" not in slide_manifest.columns:
         raise ValueError("tiles_url not found in slide manifest")
     client = get_or_create_dask_client()
     futures = []
-    for row in slide_manifest.itertuples(name="Slide"):
-        image_filename = os.path.basename(row.url)
+    for _, row in slide_manifest.iterrows():
+        image_filename = os.path.basename(row["url"])
         future = client.submit(
             __heatmap,
-            row.tiles_url,
+            row["tiles_url"],
             output_urlpath,
             image_filename,
             annotation_name,
@@ -1283,10 +1304,7 @@ def heatmap(
         futures.append(future)
     progress(futures)
     dsa_annotation_urls = client.gather(futures)
-    for dsa_annotation_url in dsa_annotation_urls:
-        slide_manifest.at[row.Index, "heatmap_url"] = dsa_annotation_url
-
-    return slide_manifest
+    return slide_manifest.assign(**{output_column: dsa_annotation_urls})
 
 
 def __heatmap(
@@ -1296,11 +1314,11 @@ def __heatmap(
     annotation_name: str,
     column: List[str],
     tile_size: int,
-    scale_factor: Optional[int],
-    fill_colors: Optional[Dict[str, str]],
-    line_colors: Optional[Dict[str, str]],
-    storage_options: Dict,
-    output_storage_options: Dict,
+    scale_factor: Optional[int] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
+    line_colors: Optional[Dict[str, str]] = None,
+    storage_options: Dict = {},
+    output_storage_options: Dict = {},
 ):
     """Generate heatmap based on the tile scores
 
@@ -1433,8 +1451,8 @@ def bmp_polygon(
     output_urlpath: str,
     label_map: Dict[int, str],
     annotation_name: str,
-    line_colors: Optional[Dict[str, str]],
-    fill_colors: Optional[Dict[str, str]],
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
     scale_factor: Optional[int] = 1,
     storage_options: Dict = {},
     output_storage_options: Dict = {},
@@ -1466,8 +1484,8 @@ def bmp_polygon(
         raise ValueError(f"{annotation_column} not found in slide manifest")
     client = get_or_create_dask_client()
     futures = []
-    for row in slide_manifest.itertuples(name="Slide"):
-        image_filename = os.path.basename(row.url)
+    for _, row in slide_manifest.iterrows():
+        image_filename = os.path.basename(row["url"])
         future = client.submit(
             __bmp_polygon,
             row[annotation_column],
@@ -1484,10 +1502,7 @@ def bmp_polygon(
         futures.append(future)
     progress(futures)
     dsa_annotation_urls = client.gather(futures)
-    for dsa_annotation_url in dsa_annotation_urls:
-        slide_manifest.at[row.Index, output_column] = dsa_annotation_url
-
-    return slide_manifest
+    return slide_manifest.assign(**{output_column: dsa_annotation_urls})
 
 
 def __bmp_polygon(
@@ -1496,8 +1511,8 @@ def __bmp_polygon(
     image_filename: str,
     label_map: Dict[int, str],
     annotation_name: str,
-    line_colors: Optional[Dict[str, str]],
-    fill_colors: Optional[Dict[str, str]],
+    line_colors: Optional[Dict[str, str]] = None,
+    fill_colors: Optional[Dict[str, str]] = None,
     scale_factor: Optional[int] = 1,
     storage_options: Dict = {},
     output_storage_options: Dict = {},

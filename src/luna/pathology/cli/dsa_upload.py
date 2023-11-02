@@ -136,6 +136,7 @@ def upload_annotation_to_dsa(
     Returns:
         DataFrame[SlideSchema]: slide manifest
     """
+    uuids = []
     for slide in slide_manifest.itertuples(name="Slide"):
         uuids = _upload_annotation_to_dsa(
             dsa_endpoint_url,
@@ -148,10 +149,8 @@ def upload_annotation_to_dsa(
             insecure,
             storage_options,
         )
-        slide_manifest.at[
-            slide.Index, annotation_column.replace("url", "uuid")
-        ] = uuids[0]
-    return slide_manifest
+        uuids.append(uuids[0])
+    return slide_manifest.assign(**{annotation_column: uuids})
 
 
 def _upload_annotation_to_dsa(

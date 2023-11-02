@@ -31,6 +31,7 @@ def cli(
     dask_options: dict = {},
     local_config: str = "",
     output_urlpath: str = ".",
+    force: bool = False,
 ) -> dict:
     """Rasterize a slide into smaller tiles, saving tile metadata as rows in a csv file
 
@@ -56,6 +57,7 @@ def cli(
         config["slide_urlpath"],
         config["tile_size"],
         config["output_urlpath"],
+        config["force"],
         config["requested_magnification"],
         config["storage_options"],
         config["output_storage_options"],
@@ -68,6 +70,7 @@ def generate_tiles(
     slide_manifest: DataFrame[SlideSchema],
     tile_size: int,
     output_urlpath: str,
+    force: bool = True,
     requested_magnification: Optional[int] = None,
     storage_options: dict = {},
     output_storage_options: dict = {},
@@ -81,22 +84,21 @@ def generate_tiles(
             slide.url,
             tile_size,
             output_urlpath,
+            force,
             requested_magnification,
             storage_options,
             output_storage_options,
         )
         futures.append(future)
     results = client.gather(futures)
-    for idx, result in enumerate(results):
-        slide_manifest.at[idx, "tiles_url"] = result["tiles_url"]
-
-    return slide_manifest
+    return slide_manifest.assign(tiles_url=[x["tiles_url"] for x in results])
 
 
 def __generate_tiles(
     slide_urlpath: str,
     tile_size: int,
     output_urlpath: str,
+    force: bool,
     requested_magnification: Optional[int] = None,
     storage_options: dict = {},
     output_storage_options: dict = {},
@@ -120,7 +122,7 @@ def __generate_tiles(
     slide_id = Path(slide_urlpath).stem
     ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
     output_file = str(Path(output_path) / f"{slide_id}.tiles.parquet")
-    if ofs.exists(output_file):
+    if not force and ofs.exists(output_file):
         logger.info("Output file exists: {ofs.unstrip_protocol(output_file)}")
         return
 

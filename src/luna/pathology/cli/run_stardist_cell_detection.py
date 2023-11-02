@@ -122,10 +122,9 @@ def stardist_simple(
         )
         futures.append(future)
     results = client.gather(futures)
-    for idx, result in enumerate(results):
-        slide_manifest.at[idx, annotation_column] = results["geojson_url"]
-
-    return slide_manifest
+    return slide_manifest.assign(
+        **{annotation_column: [x["geojson_url"] for x in results]}
+    )
 
 
 @local_cache_urlpath(
@@ -182,7 +181,7 @@ def __stardist_simple(
         runner_type = "SINGULARITY"
 
     slide_filename = Path(slide_path).name
-    command = f"QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy"
+    command = f"echo QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy"
     logger.info(f"Launching QuPath via {runner_type}:{image} ...")
     logger.info(
         f"\tvolumes={slide_urlpath}:'/inputs/{slide_filename}', {slide_path}:'/output_dir'"
@@ -319,10 +318,13 @@ def stardist_cell_lymphocyte(
 
     futures = []
     for row in slide_manifest.itertuples(name="Slide"):
+        fs, output_path = fsspec.core.url_to_fs(
+            output_urlpath, **output_storage_options
+        )
         future = client.submit(
             __stardist_cell_lymphocyte,
             row.url,
-            output_urlpath,
+            fs.unstrip_protocol(str(Path(output_path) / row.id)),
             row.id,
             num_cores,
             use_gpu,
@@ -334,10 +336,9 @@ def stardist_cell_lymphocyte(
         )
         futures.append(future)
     results = client.gather(futures)
-    for idx, result in enumerate(results):
-        slide_manifest.at[idx, annotation_column] = result["geojson_url"]
-
-    return slide_manifest
+    return slide_manifest.assign(
+        **{annotation_column: [x["geojson_url"] for x in results]}
+    )
 
 
 @local_cache_urlpath(

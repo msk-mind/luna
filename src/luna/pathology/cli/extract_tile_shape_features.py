@@ -146,6 +146,7 @@ def extract_tile_shape_features(
     storage_options: dict = {},
     output_storage_options: dict = {},
     objects_column="stardist_geojson_url",
+    annotation_column="tile_shape_features_url",
     properties: List[str] = [
         "area",
         "convex_area",
@@ -176,6 +177,7 @@ def extract_tile_shape_features(
         output_storage_options (dict): storage options to pass to writing functions
         local_config (str): local config yaml file
         objects_column (str): slide manifest column name with stardist geoJSON URLs
+        annotation_column (str): column to add to slide manifest with url to extracted features
         properties (List[str]): properties to extract
 
     Returns:
@@ -184,16 +186,16 @@ def extract_tile_shape_features(
     client = get_or_create_dask_client()
 
     futures = []
-    for row in slide_manifest.itertuples(name="Slide"):
+    for _, row in slide_manifest.iterrows():
         future = client.submit(
             __extract_tile_shape_features,
             row[objects_column],
-            row.tiles_url,
-            row.url,
+            row["tiles_url"],
+            row["url"],
             output_urlpath,
             resize_factor,
             detection_probability_threshold,
-            row.id,
+            row["id"],
             statistical_descriptors,
             cellular_features,
             property_type,
@@ -207,10 +209,10 @@ def extract_tile_shape_features(
 
     progress(futures)
     results = client.gather(futures)
-    for idx, result in results.enumerate():
-        slide_manifest.at[idx, "tile_shape_features_url"] = result["shape_features_url"]
 
-    return slide_manifest
+    return slide_manifest.assign(
+        **{annotation_column: [x["shape_features_url"] for x in results]}
+    )
 
 
 def __extract_tile_shape_features(

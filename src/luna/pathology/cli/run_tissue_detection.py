@@ -104,6 +104,7 @@ def cli(
     tile_magnification: Optional[int] = None,
     batch_size: int = 2000,
     output_urlpath: str = ".",
+    force: bool = False,
     dask_options: dict = {},
     storage_options: dict = {},
     output_storage_options: dict = {},
@@ -119,6 +120,7 @@ def cli(
         tile_magnification (Optional[int]): Magnification scale at which to generate tiles
         batch_size (int): batch size for processing
         output_urlpath (str): Output url/path
+        force (bool): overwrite outputs if they exist
         dask_options (dict): dask options
         storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
@@ -157,6 +159,7 @@ def cli(
             config["filter_query"],
             config["batch_size"],
             config["output_urlpath"],
+            config["force"],
             config["storage_options"],
             config["output_storage_options"],
         )
@@ -171,6 +174,7 @@ def detect_tissue(
     tile_magnification: Optional[int] = None,
     filter_query: str = "",
     batch_size: int = 2000,
+    force: bool = True,
     storage_options: dict = {},
     output_urlpath: str = ".",
     output_storage_options: dict = {},
@@ -183,6 +187,7 @@ def detect_tissue(
         tile_magnification (Optional[int]): Magnification scale at which to generate tiles
         filter_query (str): pandas query by which to filter tiles based on their various tissue detection scores
         batch_size (int): batch size for processing
+        force (bool): overwite outputs if they exist
         storage_options (dict): storage options to pass to reading functions
         output_urlpath (str): Output url/path
         output_storage_options (dict): storage options to pass to writing functions
@@ -213,6 +218,7 @@ def detect_tissue(
                 filter_query,
                 batch_size,
                 output_urlpath,
+                force,
                 storage_options,
                 output_storage_options,
             )
@@ -221,8 +227,9 @@ def detect_tissue(
 
         results = client.gather(futures)
 
-        for idx, result in enumerate(results):
-            slide_manifest.at[idx, "tiles_url"] = result["tiles_url"]
+        slide_manifest = slide_manifest.assign(
+            tiles_url=[x["tiles_url"] for x in results]
+        )
 
     return slide_manifest
 
@@ -240,6 +247,7 @@ def __detect_tissue(
     filter_query: str = "",
     batch_size: int = 2000,
     output_urlpath: str = ".",
+    force: bool = False,
     storage_options: dict = {},
     output_storage_options: dict = {},
 ) -> Dict:
@@ -247,8 +255,11 @@ def __detect_tissue(
         output_urlpath, **output_storage_options
     )
 
+    if not output_filesystem.exists(output_path):
+        output_filesystem.mkdir(output_path)
+
     tiles_output_path = str(Path(output_path) / f"{slide_id}.tiles.parquet")
-    if output_filesystem.exists(tiles_output_path):
+    if not force and output_filesystem.exists(tiles_output_path):
         logger.info(
             "Outputs already exist: {output_filesystem.unstrip_protocol(tiles_output_path)}"
         )

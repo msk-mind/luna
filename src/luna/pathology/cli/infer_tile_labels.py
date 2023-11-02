@@ -41,6 +41,7 @@ def cli(
     num_cores: int = 4,
     batch_size: int = 8,
     output_urlpath: str = ".",
+    force: bool = False,
     kwargs: dict = {},
     use_gpu: bool = False,
     dask_options: dict = {},
@@ -63,6 +64,7 @@ def cli(
         num_cores (int): Number of cores to use for CPU parallelization
         batch_size (int): size in batch dimension to chuck inference (8-256 recommended, depending on memory usage)
         output_urlpath (str): output/working directory
+        force (bool): overwrite outputs if they exist
         kwargs (dict): additional keywords to pass to model initialization
         use_gpu (bool): use GPU if available
         dask_options (dict): options to pass to dask client
@@ -94,6 +96,7 @@ def cli(
                 config["slide_urlpath"],
                 config["tile_size"],
                 (Path(temp_dir) / "generate_tiles").as_uri(),
+                config["force"],
                 config["tile_magnification"],
                 config["storage_options"],
             )
@@ -105,12 +108,14 @@ def cli(
                 config["filter_query"],
                 config["batch_size"],
                 (Path(temp_dir) / "detect_tissue").as_uri(),
+                config["force"],
                 config["storage_options"],
             )
             save_tiles_result = _save_tiles(
                 detect_tissue_result["tiles_urlpath"],
                 config["slide_urlpath"],
                 (Path(temp_dir) / "save_tiles").as_uri(),
+                config["force"],
                 config["batch_size"],
                 config["storage_options"],
             )
@@ -120,6 +125,7 @@ def cli(
             tiles_urlpath,
             slide_id,
             config["output_urlpath"],
+            config["force"],
             config["torch_model_repo_or_dir"],
             config["model_name"],
             config["num_cores"],
@@ -143,6 +149,7 @@ def infer_tile_labels(
     num_cores: int = 1,
     batch_size: int = 2000,
     output_urlpath: str = ".",
+    force: bool = True,
     kwargs: dict = {},
     use_gpu: bool = False,
     insecure: bool = False,
@@ -164,6 +171,7 @@ def infer_tile_labels(
         num_cores (int): Number of cores to use for CPU parallelization
         batch_size (int): size in batch dimension to chuck inference (8-256 recommended, depending on memory usage)
         output_urlpath (str): output/working directory
+        force (bool): overwrite outputs if they exist
         kwargs (dict): additional keywords to pass to model initialization
         use_gpu (bool): use GPU if available
         insecure (bool): insecure SSL
@@ -189,12 +197,14 @@ def infer_tile_labels(
             batch_size=batch_size,
             storage_options=storage_options,
             output_urlpath=output_urlpath,
+            force=force,
             output_storage_options=output_storage_options,
         )
 
         slide_manifest = save_tiles(
             slide_manifest,
             output_urlpath,
+            force,
             batch_size,
             storage_options,
             output_storage_options,
@@ -207,6 +217,7 @@ def infer_tile_labels(
             row.tiles_url,
             row.id,
             output_urlpath,
+            force,
             torch_model_repo_or_dir,
             model_name,
             num_cores,
@@ -221,15 +232,14 @@ def infer_tile_labels(
 
     progress(futures)
     results = client.gather(futures)
-    for idx, result in results.enumerate():
-        slide_manifest.at[idx, "tiles_url"] = result
-    return slide_manifest
+    return slide_manifest.assign(tiles_url=[x["tiles_url"] for x in results])
 
 
 def __infer_tile_labels(
     tiles_urlpath: str,
     slide_id: str,
     output_urlpath: str,
+    force: bool,
     torch_model_repo_or_dir: str,
     model_name: str,
     num_cores: int,
@@ -271,7 +281,7 @@ def __infer_tile_labels(
 
     output_file = str(Path(output_path_prefix) / f"{slide_id}.tiles.parquet")
 
-    if ofs.exists(output_file):
+    if not force and ofs.exists(output_file):
         logger.info(f"outputs already exist: {output_file}")
         return
 
