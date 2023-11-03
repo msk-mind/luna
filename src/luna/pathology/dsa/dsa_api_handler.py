@@ -1,16 +1,16 @@
 import json
-import fsspec
-from loguru import logger
 import time
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
+import fsspec
 import girder_client
 import histomicstk
 import histomicstk.annotations_and_masks.annotation_and_mask_utils
 import orjson
 import pandas as pd
 import requests
+from loguru import logger
 
 
 def get_collection_uuid(gc, collection_name: str) -> Optional[str]:
@@ -359,8 +359,31 @@ def copy_item(gc, item_id: str, destination_id: str):
         raise RuntimeError("Can not copy item")
 
 
+def check_annotation_exists(
+    gc: girder_client.GirderClient,
+    item_uuid: str,
+    annotation_name: str,
+    retry_count: str = 100,
+    delay: int = 15,
+) -> Optional[str]:
+    for _ in range(retry_count):
+        try:
+            data = gc.get(f"/annotation?itemId={item_uuid}&name={annotation_name}")
+            if len(data) > 0:
+                return data[0]["_id"]
+        except Exception:
+            pass
+        logger.debug(f"Waiting for {delay} before retrying")
+        time.sleep(delay)
+    return None
+
+
 def push_annotation_to_dsa_image(
-    item_uuid: str, annotation_file_urlpath: str, uri: str, gc: girder_client.GirderClient, storage_options: dict = {},
+    item_uuid: str,
+    annotation_file_urlpath: str,
+    uri: str,
+    gc: girder_client.GirderClient,
+    storage_options: dict = {},
 ):
     """Pushes annotation to DSA, adding given item_uuid (slide-specific id)
 
@@ -373,6 +396,9 @@ def push_annotation_to_dsa_image(
     Returns:
         int: 0 for successful upload, 1 otherwise
     """
+
+    annotation_name = Path(annotation_file_urlpath).name
+
     start = time.time()
 
     # always post a new annotation.
@@ -382,18 +408,17 @@ def push_annotation_to_dsa_image(
         fs, path = fsspec.core.url_to_fs(annotation_file_urlpath, **storage_options)
         size = fs.size(path)
         reference = {
-            'identifier': f'{Path(path).stem}-AnnotationFile',
-            'itemId': item_uuid
+            "identifier": f"{Path(path).stem}-AnnotationFile",
+            "itemId": item_uuid,
         }
         with fs.open(path) as of:
             gc.uploadFile(
                 item_uuid,
                 of,
-                Path(path).name,
+                annotation_name,
                 size,
-                reference=orjson.dumps(reference).decode()
+                reference=orjson.dumps(reference).decode(),
             )
-
 
     except requests.exceptions.HTTPError as err:
         raise RuntimeError(
@@ -401,10 +426,17 @@ def push_annotation_to_dsa_image(
             + err.response.text
         )
 
-    logger.info("Annotation successfully pushed to DSA.")
+    # Wait for annotation to be processed
+    annotation_id = check_annotation_exists(
+        gc, item_uuid, annotation_name, retry_count=100, delay=20
+    )
+    if annotation_id:
+        logger.info(f"Annotation successfully pushed to DSA as {annotation_id}.")
+
+    logger.info("Annotation pushed to DSA but still processing.")
     logger.info(f"Time to push annotation {time.time() - start}")
     logger.info(f"{uri}/histomics#?image={item_uuid}")
-    return item_uuid
+    return annotation_id
 
 
 def dsa_authenticate(gc, username, password):
@@ -590,11 +622,17 @@ def get_slide_annotation(
 
     item_uuid = get_item_uuid(gc, slide_id, collection_name)
 
+    if not item_uuid:
+        logger.info(f"Slide {slide_id} not found in {collection_name}")
+        return None
+
     # search for annotation
 
     logger.debug("Starting request for annotation")
     try:
-        annotation_response = gc.get(f"/annotation?itemId={item_uuid}&name={annotation_name}")
+        annotation_response = gc.get(
+            f"/annotation?itemId={item_uuid}&name={annotation_name}"
+        )
 
     except Exception as err:
         logger.error(f"Error in annotation get request: {err}")
@@ -603,11 +641,10 @@ def get_slide_annotation(
     # get annotation json from response
     if annotation_response:
         annotation_response = annotation_response[0]
-        annotation = annotation_response['annotation']
+        annotation = annotation_response["annotation"]
     else:
         logger.info(f"No annotation found for slide {slide_id}")
         return None
-
 
     # get additional slide-level metadata from response
     date_created = annotation_response["created"]
