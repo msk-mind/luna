@@ -359,7 +359,7 @@ def copy_item(gc, item_id: str, destination_id: str):
         raise RuntimeError("Can not copy item")
 
 
-def check_annotation_exists(
+def check_annotation_exists_with_retry(
     gc: girder_client.GirderClient,
     item_uuid: str,
     annotation_name: str,
@@ -427,13 +427,13 @@ def push_annotation_to_dsa_image(
         )
 
     # Wait for annotation to be processed
-    annotation_id = check_annotation_exists(
+    annotation_id = check_annotation_exists_with_retry(
         gc, item_uuid, annotation_name, retry_count=100, delay=20
     )
     if annotation_id:
         logger.info(f"Annotation successfully pushed to DSA as {annotation_id}.")
-
-    logger.info("Annotation pushed to DSA but still processing.")
+    else:
+        logger.info("Annotation pushed to DSA but still processing.")
     logger.info(f"Time to push annotation {time.time() - start}")
     logger.info(f"{uri}/histomics#?image={item_uuid}")
     return annotation_id
