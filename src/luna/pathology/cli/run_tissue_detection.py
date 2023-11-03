@@ -146,6 +146,7 @@ def cli(
                 config["slide_urlpath"],
                 config["tile_size"],
                 temp_dir,
+                config["force"],
                 config["tile_magnification"],
                 config["storage_options"],
             )
