@@ -137,7 +137,7 @@ def upload_annotation_to_dsa(
         DataFrame[SlideSchema]: slide manifest
     """
     uuids = []
-    for slide in slide_manifest.itertuples(name="Slide"):
+    for _, slide in slide_manifest.iterrows():
         uuids = _upload_annotation_to_dsa(
             dsa_endpoint_url,
             slide[annotation_column],
