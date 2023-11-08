@@ -133,37 +133,29 @@ def slide_etl(
     Returns:
         DataFrame[SlideSchema]: dataframe containing the metadata of all the slides
     """
+    sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
     if isinstance(slide_urls, str):
-        slide_urls = [slide_urls]
+        return __slide_etl(
+            sb, slide_urls, project_name, comment, output_urlpath, no_copy
+        )
 
     client = get_or_create_dask_client()
-    sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
 
     futures = [
         client.submit(
-            sb.get_slide,
-            url,
-            project_name=project_name,
-            comment=comment,
+            __slide_etl,
+            sb,
+            slide_url,
+            project_name,
+            comment,
+            output_urlpath,
+            no_copy,
         )
-        for url in slide_urls
+        for slide_url in slide_urls
     ]
     progress(futures)
-    slides = client.gather(futures)
-    if not no_copy and output_urlpath:
-        futures = [
-            client.submit(
-                sb.copy_slide,
-                slide,
-                output_urlpath,
-            )
-            for slide in slides
-        ]
-
-    df = DataFrame[SlideSchema](
-        pd.json_normalize([x.__dict__ for x in client.gather(futures)])
-    )
-    return df
+    dfs = client.gather(futures)
+    return pd.concat(dfs)
 
 
 class SlideBuilder:
@@ -236,6 +228,29 @@ class SlideBuilder:
 
     # Eventually it might be nice to automatically detect the stain type (at least H&E vs. DAB vs. Other)
     # def estimate_stain(self, slide):
+
+
+def __slide_etl(
+    sb: SlideBuilder,
+    slide_url: str,
+    project_name: str,
+    comment: str = "",
+    output_urlpath: str = "",
+    no_copy: bool = False,
+) -> DataFrame:
+    slide = sb.get_slide(
+        slide_url,
+        project_name=project_name,
+        comment=comment,
+    )
+    if not no_copy and output_urlpath:
+        slide = sb.copy_slide(
+            slide,
+            output_urlpath,
+        )
+
+    df = DataFrame[SlideSchema](pd.json_normalize(slide.__dict__))
+    return df
 
 
 def fire_cli():
