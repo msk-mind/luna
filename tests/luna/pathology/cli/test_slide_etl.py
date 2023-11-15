@@ -64,7 +64,7 @@ def test_slide_etl(tmp_path, dask_client):
     print(df)
 
     assert df.loc["123", "slide_size"] == 1938955
-    # assert df.loc["123", "properties.aperio.AppMag"] == 20
+    assert df.loc["123", "properties.aperio.AppMag"] == 20
     assert df.loc["123", "url"] == "file://" + os.path.join(tmp_path, "123.svs")
 
     assert os.path.exists(os.path.join(tmp_path, "123.svs"))
@@ -95,7 +95,7 @@ def test_slide_etl_subset(tmp_path, dask_client):
     print(df)
 
     assert df.loc["123", "slide_size"] == 1938955
-    # assert df.loc["123", "properties.aperio.AppMag"] == 20
+    assert df.loc["123", "properties.aperio.AppMag"] == 20
     assert df.loc["123", "url"] == "file://" + os.path.join(tmp_path, "123.svs")
 
     assert os.path.exists(os.path.join(tmp_path, "123.svs"))
