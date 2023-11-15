@@ -13,7 +13,7 @@ from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
 from luna.common.dask import configure_dask_client, get_or_create_dask_client
-from luna.common.models import Slide
+from luna.common.models import Slide, SlideSchema
 from luna.common.utils import apply_csv_filter, get_config, timed
 from luna.pathology.common.utils import (
     get_downscaled_thumbnail,
@@ -249,7 +249,7 @@ def __slide_etl(
             output_urlpath,
         )
 
-    return pd.json_normalize(slide.__dict__)
+    return DataFrame[SlideSchema](pd.json_normalize(slide.__dict__))
 
 
 def fire_cli():
