@@ -8,7 +8,9 @@ import girder_client
 import requests
 from fsspec import open
 from loguru import logger
+from pandera.typing import DataFrame
 
+from luna.common.models import SlideSchema
 from luna.common.utils import get_config, save_metadata, timed
 from luna.pathology.dsa.dsa_api_handler import (
     get_item_uuid,
@@ -85,7 +87,7 @@ def cli(
                     f"Unable to infer image_filename from {annotation_file_urlpath}"
                 )
             logger.info(f"Image filename inferred as {image_filename}")
-        dsa_uuid = upload_annotation_to_dsa(
+        dsa_uuid = _upload_annotation_to_dsa(
             config["dsa_endpoint_url"],
             annotation_file_urlpath,
             config["collection_name"],
@@ -104,6 +106,54 @@ def cli(
 
 
 def upload_annotation_to_dsa(
+    dsa_endpoint_url: str,
+    slide_manifest: DataFrame[SlideSchema],
+    annotation_column: str,
+    collection_name: str,
+    image_filename: str,
+    username: str,
+    password: str,
+    force: bool = False,
+    insecure: bool = False,
+    storage_options: dict = {},
+):
+    """Upload annotation to DSA
+
+    Upload json annotation file as a new annotation to the image in the DSA collection.
+
+    Args:
+        dsa_endpoint_url (string): DSA API endpoint e.g. http://localhost:8080/api/v1
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        annotation_column (string): annotation column of slide_manifest containing the dsa url
+        collection_name (string): name of the collection in DSA
+        image_filename (string): name of the image file in DSA e.g. 123.svs. If not specified, infer from annotiaton_file_urpath
+        username (string): DSA username (defaults to environment variable DSA_USERNAME)
+        password (string): DSA password (defaults to environment variable DSA_PASSWORD)
+        force (bool): upload even if annotation with same name exists for the slide
+        insecure (bool): insecure ssl
+        storage_options (dict): options to pass to reading functions
+
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
+    uuids = []
+    for _, slide in slide_manifest.iterrows():
+        uuids = _upload_annotation_to_dsa(
+            dsa_endpoint_url,
+            slide[annotation_column],
+            collection_name,
+            image_filename,
+            username,
+            password,
+            force,
+            insecure,
+            storage_options,
+        )
+        uuids.append(uuids[0])
+    return slide_manifest.assign(**{annotation_column: uuids})
+
+
+def _upload_annotation_to_dsa(
     dsa_endpoint_url: str,
     annotation_file_urlpaths: Union[str, List[str]],
     collection_name: str,

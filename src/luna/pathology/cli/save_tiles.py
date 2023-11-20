@@ -1,23 +1,19 @@
 # General imports
 from pathlib import Path
-from typing import Optional
 
+import dask.bag as db
 import fire
 import fsspec
-import pandas as pd
 import h5py
-from dask.distributed import Client, as_completed, progress
-from fsspec import open
+import pandas as pd
+from dask.diagnostics import ProgressBar
 from loguru import logger
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
-
-from luna.common.models import TileSchema
-from luna.common.dask import get_or_create_dask_client, configure_dask_client
-from luna.common.utils import get_config, grouper, local_cache_urlpath, save_metadata, timed
-from luna.pathology.cli.generate_tiles import generate_tiles
-from luna.pathology.cli.run_tissue_detection import detect_tissue
+from luna.common.dask import configure_dask_client, get_or_create_dask_client
+from luna.common.models import SlideSchema
+from luna.common.utils import get_config, local_cache_urlpath, save_metadata, timed
 from luna.pathology.common.utils import get_array_from_tile
 
 
@@ -25,9 +21,10 @@ from luna.pathology.common.utils import get_array_from_tile
 @save_metadata
 def cli(
     slide_urlpath: str = "???",
-    tiles_urlpath: str = "???",  
+    tiles_urlpath: str = "???",
     batch_size: int = 2000,
     output_urlpath: str = ".",
+    force: bool = False,
     storage_options: dict = {},
     output_storage_options: dict = {},
     dask_options: dict = {},
@@ -41,10 +38,12 @@ def cli(
     Args:
         slide_urlpath (str): url/path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         tiles_urlpath (str): url/path to tile manifest (.parquet)
-        output_urlpath (str): output url/path prefix
         batch_size (int): size in batch dimension to chuck jobs
+        output_urlpath (str): output url/path prefix
+        force (bool): overwrite outputs if they exist
         storage_options (dict): storage options to reading functions
         output_storage_options (dict): storage options to writing functions
+        dask_options (dict): dask options
         local_config (str): url/path to local config yaml file
 
     Returns:
@@ -54,42 +53,114 @@ def cli(
 
     configure_dask_client(**config["dask_options"])
 
-    slide_id = Path(config["slide_urlpath"]).stem
-    fs, output_urlpath_prefix = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
-    output_h5_path = str(Path(output_urlpath_prefix) / f"{slide_id}.tiles.h5")
-    output_h5_urlpath = fs.unstrip_protocol(output_h5_path)
-
-    output_header_path = str(Path(output_urlpath_prefix) / f"{slide_id}.tiles.parquet")
-    output_header_urlpath = fs.unstrip_protocol(output_h5_path)
-
-    if fs.exists(output_header_path) and fs.exists(output_h5_path):
-        logger.info(
-            f"outputs already exist: {output_h5_urlpath}, {output_header_urlpath}"
-        )
-        return
-
-    with open(config["tiles_urlpath"], **config['storage_options']) as of:
-        df = pd.read_parquet(of)
-
-    df = save_tiles(
-        df,
+    properties = _save_tiles(
+        config["tiles_urlpath"],
         config["slide_urlpath"],
-        output_h5_urlpath,
+        config["output_urlpath"],
+        config["force"],
         config["batch_size"],
         config["storage_options"],
         config["output_storage_options"],
     )
 
-    logger.info(df)
-    with fs.open(output_header_path, "wb") as of:
-        df.to_parquet(of)
+    return properties
+
+
+def save_tiles(
+    slide_manifest: DataFrame[SlideSchema],
+    output_urlpath: str,
+    force: bool = True,
+    batch_size: int = 2000,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+) -> DataFrame[SlideSchema]:
+    """Saves tiles to disk
+
+    Tiles addresses and arrays are saved as key-value pairs in (tiles.h5),
+    and the corresponding manifest/header file (tiles.parquet) is also generated
+
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        output_urlpath (str): output url/path prefix
+        force (bool): overwrite outputs if they exist
+        batch_size (int): size in batch dimension to chuck jobs
+        storage_options (dict): storage options to reading functions
+        output_storage_options (dict): storage options to writing functions
+
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
+    client = get_or_create_dask_client()
+
+    if "tiles_url" not in slide_manifest.columns:
+        raise ValueError("Generate tiles first")
+
+    output_filesystem, output_path_prefix = fsspec.core.url_to_fs(
+        output_urlpath, **output_storage_options
+    )
+
+    if not output_filesystem.exists(output_urlpath):
+        output_filesystem.mkdir(output_urlpath)
+
+    futures = []
+    for slide in slide_manifest.itertuples(name="Slide"):
+        future = client.submit(
+            _save_tiles,
+            slide.tiles_url,
+            slide.url,
+            output_urlpath,
+            force,
+            batch_size,
+            storage_options,
+            output_storage_options,
+        )
+        futures.append(future)
+
+    results = client.gather(futures)
+    return slide_manifest.assign(tiles_url=[x["tiles_url"] for x in results])
+
+
+def _save_tiles(
+    tiles_urlpath: str,
+    slide_urlpath: str,
+    output_urlpath: str,
+    force: bool,
+    batch_size: int = 2000,
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+):
+    slide_id = Path(slide_urlpath).stem
+    ofs, output_urlpath_prefix = fsspec.core.url_to_fs(
+        output_urlpath, **output_storage_options
+    )
+
+    output_h5_path = str(Path(output_urlpath_prefix) / f"{slide_id}.tiles.h5")
+    output_h5_url = ofs.unstrip_protocol(output_h5_path)
+
+    output_tiles_path = str(Path(output_urlpath_prefix) / f"{slide_id}.tiles.parquet")
+    output_tiles_url = ofs.unstrip_protocol(output_tiles_path)
+
+    if ofs.exists(output_tiles_path) and ofs.exists(output_h5_path):
+        logger.info(f"outputs already exist: {output_h5_url}, {output_tiles_url}")
+        return
+    tiles_df = __save_tiles(
+        tiles_urlpath,
+        slide_urlpath,
+        output_h5_path,
+        batch_size,
+        storage_options,
+        output_storage_options,
+    )
+
+    tiles_df["tile_store"] = output_h5_url
+    logger.info(tiles_df)
+    with ofs.open(output_tiles_path, "wb") as of:
+        tiles_df.to_parquet(of)
 
     properties = {
-        "slide_tiles": output_header_urlpath,  # "Tiles" are the metadata that describe them
-        "feature_data": output_header_urlpath,  # Tiles can act like feature data
-        "total_tiles": len(df),
+        "tiles_url": output_tiles_url,  # "Tiles" are the metadata that describe them
+        "feature_data": output_h5_url,  # Tiles can act like feature data
+        "total_tiles": len(tiles_df),
     }
 
     return properties
@@ -98,12 +169,13 @@ def cli(
 @local_cache_urlpath(
     file_key_write_mode={
         "slide_urlpath": "r",
+        "output_h5_path": "w",
     },
 )
-def save_tiles(
-    df: DataFrame[TileSchema],
+def __save_tiles(
+    tiles_urlpath: str,
     slide_urlpath: str,
-    output_urlpath: str,
+    output_h5_path: str,
     batch_size: int = 2000,
     storage_options: dict = {},
     output_storage_options: dict = {},
@@ -114,62 +186,36 @@ def save_tiles(
     and the corresponding manifest/header file (tiles.parquet) is also generated
 
     Args:
-        df (DataFrame[TileSchema]): tile manifest
+        tiles_urlpath (str): tile manifest
         slide_urlpath (str): url/path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
         output_urlpath (str): output url/path
         batch_size (int): size in batch dimension to chuck jobs
-        storage_options (dict): storage options to reading functions
         output_storage_options (dict): storage options to writing functions
 
     Returns:
         dict: metadata about function call
     """
-    logger.info(f"Now generating tiles with batch_size={batch_size}!")
-    df = _save_tiles(df, slide_urlpath, output_urlpath, batch_size, storage_options, output_storage_options)
-    df["tile_store"] = output_urlpath
-    return df
 
-@local_cache_urlpath(
-    file_key_write_mode={
-        "output_urlpath": "w",
-    },
-)
-def _save_tiles(
-    df,
-    slide_urlpath,
-    output_urlpath: str,
-    batch_size: int = 2000,
-    storage_options: dict = {},
-    output_storage_options: dict = {},
-):
-    """
-    save address:tile arrays key:value pair in hdf5
-    a separate function from save_tiles such that the tile_store in the tile df is the non-cached path
-    """
-    client = get_or_create_dask_client()
+    tiles_df = pd.read_parquet(tiles_urlpath, storage_options=storage_options)
+
+    get_or_create_dask_client()
+
     def f_many(iterator):
-        with open(slide_urlpath, **storage_options) as of:
-            slide = TiffSlide(of)
-            return [
-                (
-                    x.address,
-                    get_array_from_tile(x, slide),
-                )
-                for x in iterator
-            ]
+        with TiffSlide(slide_urlpath) as slide:
+            return [(x.address, get_array_from_tile(x, slide=slide)) for x in iterator]
 
-    chunks = grouper(df.itertuples(name="Tile"), batch_size)
+    chunks = db.from_sequence(
+        tiles_df.itertuples(name="Tile"), partition_size=batch_size
+    )
 
-    futures = client.map(f_many, chunks)
-    progress(futures)
+    ProgressBar().register()
+    results = chunks.map_partitions(f_many)
+    with h5py.File(output_h5_path, "w") as hfile:
+        for result in results.compute():
+            address, tile_arr = result
+            hfile.create_dataset(address, data=tile_arr)
 
-    with h5py.File(output_urlpath, "w") as hfile:
-        for future in as_completed(futures):
-            for result in future.result():
-                address, tile_arr = result
-                hfile.create_dataset(address, data=tile_arr)
-
-    return df
+    return tiles_df
 
 
 def fire_cli():

@@ -43,6 +43,10 @@ def cli(
         slide_mask_urlpath (str): URL/path to slide mask (*.tif)
         label_cols (List[str]): list of labels that coorespond to those in slide_mask_urlpath
         output_urlpath (str): output URL/path prefix
+        include_smaller_regions (bool): include the smaller regions (not just larget)
+        storage_options (dict): storage options to pass to read functions
+        output_storage_options (dict): storage options to pass to write functions
+        local_config (str): local config YAML file
 
     Returns:
         dict: output .tif path and the number of shapes for which features were generated

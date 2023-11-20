@@ -3,7 +3,7 @@ from typing import Optional
 import pandera as pa
 from pandera.engines.pandas_engine import PydanticModel
 from pandera.typing import Series
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Slide(BaseModel):
@@ -19,9 +19,9 @@ class Slide(BaseModel):
     channel1_R: Optional[float] = None
     channel1_G: Optional[float] = None
     channel1_B: Optional[float] = None
+    properties: Optional[dict] = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class ShapeFeaturesSchema(pa.DataFrameModel):
@@ -47,8 +47,7 @@ class Tile(BaseModel):
     tile_size: int
     tile_units: str
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 class StoredTile(Tile):

@@ -1,6 +1,5 @@
 input_urlpath: tests/testdata/pathology/test_object_detection.tsv
 image_filename: 123.svs
-output_urlpath: tests/luna/pathology/cli/testouts
 annotation_name: Points of Classsified StarDist Cells
 line_colors:
   Other: rgb(0, 255, 0)

@@ -1,6 +1,7 @@
 # General imports
 import uuid
 from pathlib import Path
+from typing import List, Union
 
 import fire
 import fsspec
@@ -8,7 +9,6 @@ import pandas as pd
 from dask.distributed import progress
 from fsspec import open  # type: ignore
 from loguru import logger
-from multimethod import multimethod
 from pandera.typing import DataFrame
 from tiffslide import TiffSlide
 
@@ -42,12 +42,13 @@ def cli(
 
 
     Args:
-        slide_url (str): path to slide image
+        slide_urlpath (str): path to slide image
         project_name (str): project name underwhich the slides should reside
         comment (str): comment and description of dataset
         subset_csv_urlpath (str): url/path to subset csv
-        storage_options (dict): storage options to pass to reading functions
+        debug_limit (int): limit number of slides
         output_urlpath (str): url/path to output table
+        storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
         local_config (str): url/path to YAML config file
         no_copy (bool): determines whether we copy slides to output_urlpath
@@ -108,9 +109,8 @@ def cli(
                 df.to_parquet(of)
 
 
-@multimethod
 def slide_etl(
-    slide_urls: list[str],
+    slide_urls: Union[str, List[str]],
     project_name: str,
     comment: str = "",
     storage_options: dict = {},
@@ -121,85 +121,41 @@ def slide_etl(
     """Ingest slides by adding them to a file or s3 based storage location and generating metadata about them
 
     Args:
-        slide_url (str): path to slide image
+        slide_urls (Union[str, List[str])): path to slide image(s)
         project_name (str): project name underwhich the slides should reside
         comment (str): comment and description of dataset
         storage_options (dict): storage options to pass to reading functions
         output_urlpath (str): url/path to output table
         output_storage_options (dict): storage options to pass to writing functions
+        no_copy (bool): do not copy slides to output path
 
 
     Returns:
-        df (DataFrame): dataframe containing the metadata of all the slides
+        DataFrame[SlideSchema]: dataframe containing the metadata of all the slides
     """
+    sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
+    if isinstance(slide_urls, str):
+        return __slide_etl(
+            sb, slide_urls, project_name, comment, output_urlpath, no_copy
+        )
 
     client = get_or_create_dask_client()
-    sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
 
     futures = [
         client.submit(
-            sb.get_slide,
-            url,
-            project_name=project_name,
-            comment=comment,
+            __slide_etl,
+            sb,
+            slide_url,
+            project_name,
+            comment,
+            output_urlpath,
+            no_copy,
         )
-        for url in slide_urls
+        for slide_url in slide_urls
     ]
     progress(futures)
-    slides = client.gather(futures)
-    if not no_copy and output_urlpath:
-        futures = [
-            client.submit(
-                sb.copy_slide,
-                slide,
-                output_urlpath,
-            )
-            for slide in slides
-        ]
-    df = DataFrame[SlideSchema](
-        pd.json_normalize(
-            [
-                x.__dict__
-                | {"properties." + str(k): v for k, v in x.properties.items()}
-                for x in client.gather(futures)
-            ]
-        )
-    )
-
-    return df
-
-
-@multimethod
-def slide_etl(
-    slide_url: str,
-    project_name: str,
-    comment: str = "",
-    storage_options: dict = {},
-    output_urlpath: str = "",
-    output_storage_options: dict = {},
-    no_copy: bool = False,
-) -> Slide:
-    """Ingest slide by adding them to a file or s3 based storage location and generating metadata about them
-
-    Args:
-        slide_url (str): path to slide image
-        project_name (str): project name underwhich the slides should reside
-        comment (str): comment and description of dataset
-        storage_options (dict): storage options to pass to reading functions
-        output_urlpath (str): url/path to output table
-        output_storage_options (dict): storage options to pass to writing functions
-
-
-    Returns:
-        slide (Slide): slide object
-    """
-
-    sb = SlideBuilder(storage_options, output_storage_options=output_storage_options)
-
-    slide = sb.get_slide(slide_url, project_name=project_name, comment=comment)
-    if not no_copy and output_urlpath:
-        slide = sb.copy_slide(slide, output_urlpath)
-    return slide
+    dfs = client.gather(futures)
+    return pd.concat(dfs)
 
 
 class SlideBuilder:
@@ -272,6 +228,28 @@ class SlideBuilder:
 
     # Eventually it might be nice to automatically detect the stain type (at least H&E vs. DAB vs. Other)
     # def estimate_stain(self, slide):
+
+
+def __slide_etl(
+    sb: SlideBuilder,
+    slide_url: str,
+    project_name: str,
+    comment: str = "",
+    output_urlpath: str = "",
+    no_copy: bool = False,
+) -> DataFrame:
+    slide = sb.get_slide(
+        slide_url,
+        project_name=project_name,
+        comment=comment,
+    )
+    if not no_copy and output_urlpath:
+        slide = sb.copy_slide(
+            slide,
+            output_urlpath,
+        )
+
+    return DataFrame[SlideSchema](pd.json_normalize(slide.__dict__))
 
 
 def fire_cli():

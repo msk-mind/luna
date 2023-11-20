@@ -5,14 +5,17 @@ import fire
 import fsspec
 import pandas as pd
 from loguru import logger
+from pandera.typing import DataFrame
 
+from luna.common.dask import get_or_create_dask_client
+from luna.common.models import SlideSchema
 from luna.common.runners import runner_provider
 from luna.common.utils import get_config, local_cache_urlpath, save_metadata, timed
 
 
 @timed
 @save_metadata
-def stardist_simple(
+def stardist_simple_cli(
     slide_urlpath: str = "???",
     cell_expansion_size: float = "???",  # type: ignore
     image_type: str = "???",
@@ -43,20 +46,12 @@ def stardist_simple(
         local_config (str): local config yaml file
 
     Returns:
-        pd.DataFrame: metadata about function call
+        dict: metadata about function call
     """
 
     config = get_config(vars())
-    fs, output_path = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
-    slide_id = Path(config["slide_urlpath"]).stem
-    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
-    if fs.exists(output_header_file):
-        logger.info(f"outputs already exist: {config['output_urlpath']}")
-        return
 
-    df = stardist_simple_main(
+    return __stardist_simple(
         config["slide_urlpath"],
         config["cell_expansion_size"],
         config["image_type"],
@@ -65,36 +60,78 @@ def stardist_simple(
         config["num_cores"],
         config["image"],
         config["use_singularity"],
-        config['max_heap_size'],
+        config["max_heap_size"],
         config["storage_options"],
         config["output_storage_options"],
     )
 
-    with fs.open(output_header_file, "wb") as of:
-        df.to_parquet(of)
 
-    logger.info("generated cell data:")
-    logger.info(df)
+def stardist_simple(
+    slide_manifest: DataFrame[SlideSchema],
+    cell_expansion_size: float,
+    image_type: str,
+    output_urlpath: str,
+    debug_opts: str,
+    num_cores: int,
+    image: str,
+    use_singularity: bool,
+    max_heap_size: str,
+    storage_options: dict,
+    output_storage_options: dict,
+    annotation_column: str = "stardist_geojson_url",
+) -> DataFrame[SlideSchema]:
+    """Run stardist using qupath CLI on slides in a slide manifest from
+    slide_etl. URIs to resulting GeoJSON will be stored in a specified column
+    of the returned slide manifest.
 
-    output_geojson_file = Path(output_path) / "cell_detections.geojson"
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        cell_expansion_size (float): size in pixels to expand cell cytoplasm
+        image_type (str): qupath image type (BRIGHTFIELD_H_DAB)
+        output_urlpath (str): output url/path
+        debug_opts (str): debug options passed as arguments to groovy script
+        num_cores (int): Number of cores to use for CPU parallelization
+        image (str): docker/singularity image
+        use_singularity (bool): use singularity instead of docker
+        max_heap_size (str): maximum heap size to pass to java options
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
+        annotation_column (str): name of column in resulting slide manifest to store GeoJson URIs
 
-    properties = {
-        "cell_objects": str(output_header_file),
-        "feature_data": str(output_header_file),
-        "geojson_features": str(output_geojson_file),
-        "spatial": True,
-        "total_cells": len(df),
-        "segment_keys": {"slide_id": slide_id},
-    }
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
 
-    return properties
+    client = get_or_create_dask_client()
+
+    futures = []
+    for row in slide_manifest.itertuples(name="Slide"):
+        future = client.submit(
+            __stardist_simple,
+            row.url,
+            cell_expansion_size,
+            image_type,
+            output_urlpath,
+            debug_opts,
+            num_cores,
+            image,
+            use_singularity,
+            max_heap_size,
+            storage_options,
+            output_storage_options,
+        )
+        futures.append(future)
+    results = client.gather(futures)
+    return slide_manifest.assign(
+        **{annotation_column: [x["geojson_url"] for x in results]}
+    )
 
 
 @local_cache_urlpath(
     file_key_write_mode={"slide_urlpath": "r"},
     dir_key_write_mode={"output_urlpath": "w"},
 )
-def stardist_simple_main(
+def __stardist_simple(
     slide_urlpath: str,
     cell_expansion_size: float,
     image_type: str,
@@ -106,8 +143,10 @@ def stardist_simple_main(
     max_heap_size: str,
     storage_options: dict,
     output_storage_options: dict,
-) -> pd.DataFrame:
-    """Run stardist using qupath CLI
+) -> dict:
+    """Run stardist using qupath CLI on slides in a slide manifest from
+    slide_etl. URIs to resulting GeoJSON will be stored in a specified column
+    of the returned slide manifest.
 
     Args:
         slide_urlpath (str): path to slide image (virtual slide formats compatible with openslide, .svs, .tif, .scn, ...)
@@ -123,12 +162,18 @@ def stardist_simple_main(
         output_storage_options (dict): storage options to pass to writing functions
 
     Returns:
-        pd.DataFrame: cell detections
+        dict: run metadata
     """
     fs, slide_path = fsspec.core.url_to_fs(slide_urlpath, **storage_options)
     ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
 
-    if ofs.protocol == 'file' and not ofs.exists(output_path):
+    slide_id = Path(slide_urlpath).stem
+    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
+    if ofs.exists(output_header_file):
+        logger.info(f"outputs already exist: {output_header_file}")
+        return
+
+    if ofs.protocol == "file" and not ofs.exists(output_path):
         ofs.mkdir(output_path)
 
     runner_type = "DOCKER"
@@ -136,7 +181,7 @@ def stardist_simple_main(
         runner_type = "SINGULARITY"
 
     slide_filename = Path(slide_path).name
-    command = f"QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy"
+    command = f"echo QuPath script --image /inputs/{slide_filename} --args [cellSize={cell_expansion_size},imageType={image_type},{debug_opts}] /scripts/stardist_simple.groovy"
     logger.info(f"Launching QuPath via {runner_type}:{image} ...")
     logger.info(
         f"\tvolumes={slide_urlpath}:'/inputs/{slide_filename}', {slide_path}:'/output_dir'"
@@ -159,8 +204,11 @@ def stardist_simple_main(
     }
     runner = runner_provider.get(runner_type, **runner_config)
     executor = runner.run()
-    for line in executor:
-        print(line)
+    try:
+        for line in executor:
+            logger.info(line)
+    except TypeError:
+        print(executor, "is not iterable")
 
     stardist_output = Path(output_path) / "cell_detections.tsv"
 
@@ -172,12 +220,28 @@ def stardist_simple_main(
         columns={"Centroid X µm": "x_coord", "Centroid Y µm": "y_coord"}
     )  # x,ys follow this convention
 
-    return df
+    with ofs.open(output_header_file, "wb") as of:
+        df.to_parquet(of)
+
+    logger.info("generated cell data:")
+    logger.info(df)
+
+    output_geojson_file = Path(output_path) / "cell_detections.geojson"
+
+    properties = {
+        "geojson_url": ofs.unstrip_protocol(str(output_geojson_file)),
+        "tsv_url": ofs.unstrip_protocol(str(stardist_output)),
+        "parquet_url": ofs.unstrip_protocol(str(output_header_file)),
+        "spatial": True,
+        "total_cells": len(df),
+    }
+
+    return properties
 
 
 @timed
 @save_metadata
-def stardist_cell_lymphocyte(
+def stardist_cell_lymphocyte_cli(
     slide_urlpath: str = "???",
     output_urlpath: str = ".",
     num_cores: int = 1,
@@ -187,7 +251,7 @@ def stardist_cell_lymphocyte(
     max_heap_size: str = "64G",
     storage_options: dict = {},
     output_storage_options: dict = {},
-):
+) -> dict:
     """Run stardist using qupath CLI
 
     Args:
@@ -195,28 +259,21 @@ def stardist_cell_lymphocyte(
         output_urlpath (str): output url/path
         num_cores (int): Number of cores to use for CPU parallelization
         use_gpu (bool): use GPU
+        image (str): docker/singularity image
         use_singularity (bool): use singularity instead of docker
         max_heap_size (str): maximum heap size to pass to java options
         storage_options (dict): storage options to pass to reading functions
         output_storage_options (dict): storage options to pass to writing functions
 
     Returns:
-        pd.DataFrame: cell detections
+        dict: run metadata
     """
     config = get_config(vars())
-
-    fs, output_path = fsspec.core.url_to_fs(
-        config["output_urlpath"], **config["output_storage_options"]
-    )
     slide_id = Path(config["slide_urlpath"]).stem
-    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
-    if fs.exists(output_header_file):
-        logger.info(f"outputs already exist: {config['output_urlpath']}")
-        return
-
-    df = stardist_cell_lymphocyte_main(
+    properties = __stardist_cell_lymphocyte(
         config["slide_urlpath"],
         config["output_urlpath"],
+        slide_id,
         config["num_cores"],
         config["use_gpu"],
         config["image"],
@@ -225,33 +282,11 @@ def stardist_cell_lymphocyte(
         config["storage_options"],
         config["output_storage_options"],
     )
-
-    with fs.open(output_header_file, "wb") as of:
-        df.to_parquet(of)
-
-    logger.info("generated cell data:")
-    logger.info(df)
-
-    output_geojson_file = Path(output_path) / "cell_detections.geojson"
-
-    properties = {
-        "cell_objects": str(output_header_file),
-        "feature_data": str(output_header_file),
-        "geojson_features": str(output_geojson_file),
-        "spatial": True,
-        "total_cells": len(df),
-        "segment_keys": {"slide_id": slide_id},
-    }
-
     return properties
 
 
-@local_cache_urlpath(
-    file_key_write_mode={"slide_urlpath": "r"},
-    dir_key_write_mode={"output_urlpath": "w"},
-)
-def stardist_cell_lymphocyte_main(
-    slide_urlpath: str,
+def stardist_cell_lymphocyte(
+    slide_manifest: DataFrame[SlideSchema],
     output_urlpath: str,
     num_cores: int,
     use_gpu: bool = False,
@@ -260,7 +295,68 @@ def stardist_cell_lymphocyte_main(
     max_heap_size: str = "64G",
     storage_options: dict = {},
     output_storage_options: dict = {},
-) -> pd.DataFrame:
+    annotation_column: str = "lymphocyte_geojson_url",
+) -> DataFrame[SlideSchema]:
+    """Run stardist using qupath CLI
+
+    Args:
+        slide_manifest (DataFrame[SlideSchema]): slide manifest from slide_etl
+        output_urlpath (str): output url/path
+        num_cores (int): Number of cores to use for CPU parallelization
+        use_gpu (bool): use GPU
+        image (str): docker/singularity image
+        use_singularity (bool): use singularity instead of docker
+        max_heap_size (str): maximum heap size to pass to java options
+        storage_options (dict): storage options to pass to reading functions
+        output_storage_options (dict): storage options to pass to writing functions
+        annotation_column (str): name of column in resulting slide manifest to store GeoJson URIs
+
+    Returns:
+        DataFrame[SlideSchema]: slide manifest
+    """
+    client = get_or_create_dask_client()
+
+    futures = []
+    for row in slide_manifest.itertuples(name="Slide"):
+        fs, output_path = fsspec.core.url_to_fs(
+            output_urlpath, **output_storage_options
+        )
+        future = client.submit(
+            __stardist_cell_lymphocyte,
+            row.url,
+            fs.unstrip_protocol(str(Path(output_path) / row.id)),
+            row.id,
+            num_cores,
+            use_gpu,
+            image,
+            use_singularity,
+            max_heap_size,
+            storage_options,
+            output_storage_options,
+        )
+        futures.append(future)
+    results = client.gather(futures)
+    return slide_manifest.assign(
+        **{annotation_column: [x["geojson_url"] for x in results]}
+    )
+
+
+@local_cache_urlpath(
+    file_key_write_mode={"slide_urlpath": "r"},
+    dir_key_write_mode={"output_urlpath": "w"},
+)
+def __stardist_cell_lymphocyte(
+    slide_urlpath: str,
+    output_urlpath: str,
+    slide_id: str,
+    num_cores: int,
+    use_gpu: bool = False,
+    image: str = "mskmind/qupath-stardist:0.4.3",
+    use_singularity: bool = False,
+    max_heap_size: str = "64G",
+    storage_options: dict = {},
+    output_storage_options: dict = {},
+) -> dict:
     """Run stardist using qupath CLI
 
     Args:
@@ -268,18 +364,23 @@ def stardist_cell_lymphocyte_main(
         output_urlpath (str): output url/path
         num_cores (int): Number of cores to use for CPU parallelization
         use_gpu (bool): use GPU
+        image (str): docker/singularity image
         use_singularity (bool): use singularity instead of docker
         max_heap_size (str): maximum heap size to pass to java options
         storage_options (dict): storage options to pass to reading functions
 
     Returns:
-        pd.DataFrame: cell detections
+        dict: run metadata
     """
     fs, slide_path = fsspec.core.url_to_fs(slide_urlpath, **storage_options)
-
     ofs, output_path = fsspec.core.url_to_fs(output_urlpath, **output_storage_options)
 
-    if ofs.protocol == 'file' and not ofs.exists(output_path):
+    output_header_file = Path(output_path) / f"{slide_id}_cell_objects.parquet"
+    if ofs.exists(output_header_file):
+        logger.info(f"outputs already exist: {output_header_file}")
+        return
+
+    if ofs.protocol == "file" and not ofs.exists(output_path):
         ofs.mkdir(output_path)
 
     qupath_cmd = "QuPath-cpu"
@@ -289,7 +390,6 @@ def stardist_cell_lymphocyte_main(
     runner_type = "DOCKER"
     if use_singularity:
         runner_type = "SINGULARITY"
-
 
     slide_filename = Path(slide_path).name
     command = f"{qupath_cmd} script --image /inputs/{slide_filename} /scripts/stardist_nuclei_and_lymphocytes.groovy"
@@ -316,8 +416,11 @@ def stardist_cell_lymphocyte_main(
     }
     runner = runner_provider.get(runner_type, **runner_config)
     executor = runner.run()
-    for line in executor:
-        print(line)
+    try:
+        for line in executor:
+            logger.info(line)
+    except TypeError:
+        print(executor, "is not iterable")
 
     stardist_output = Path(output_path) / "cell_detections.tsv"
 
@@ -329,14 +432,30 @@ def stardist_cell_lymphocyte_main(
         columns={"Centroid X µm": "x_coord", "Centroid Y µm": "y_coord"}
     )  # x,ys follow this convention
 
-    return df
+    with fs.open(output_header_file, "wb") as of:
+        df.to_parquet(of)
+
+    logger.info("generated cell data:")
+    logger.info(df)
+
+    output_geojson_file = Path(output_path) / "cell_detections.geojson"
+
+    properties = {
+        "geojson_url": ofs.unstrip_protocol(str(output_geojson_file)),
+        "tsv_url": ofs.unstrip_protocol(str(stardist_output)),
+        "parquet_url": ofs.unstrip_protocol(str(output_header_file)),
+        "spatial": True,
+        "total_cells": len(df),
+    }
+
+    return properties
 
 
 def fire_cli():
     fire.Fire(
         {
-            "simple": stardist_simple,
-            "cell-lymphocyte": stardist_cell_lymphocyte,
+            "simple": stardist_simple_cli,
+            "cell-lymphocyte": stardist_cell_lymphocyte_cli,
         }
     )
 
