@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 
 from luna.common.config import ConfigSet
-from luna.common.constants import DATA_CFG
 from luna.pathology.common.slideviewer_client import (
     download_sv_point_annotation,
     download_zip,
@@ -26,7 +25,7 @@ PROJECT = None
 zipfile_path = None
 PROJECT_PATH = None
 ROOT_PATH = None
-
+DATA_CFG = "DATA_CFG"
 
 def setup_module(module):
     """setup any state specific to the execution of the given module."""
