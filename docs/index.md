@@ -15,3 +15,6 @@ Luna serves as the core computational library for multi-modality oncology data a
 * A microservice-driven architecture allowing for integrations with other open-source
   libraries
 * Tools for building data visualizations and statistical models
+
+## Projects
+[Multimodal integration of radiology, pathology, and genomics for prediction of response to PD-L1 blockade in patients with non-small cell lung cancer](https://www.synapse.org/Synapse:syn26642505/wiki/615361)
